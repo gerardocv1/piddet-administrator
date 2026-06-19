@@ -4,10 +4,10 @@ import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import s from './screens.module.css';
 
-const ROL = { Administrador: 'primary', Cajero: 'info', Mesero: 'neutral', Cocina: 'warning' };
+const ROLE = { Administrador: 'primary', Cajero: 'info', Mesero: 'neutral', Cocina: 'warning' };
 
-export function Usuarios() {
-  const { data: rows, setData: setRows, loading, error } = useResource(api.usuarios, []);
+export function Users() {
+  const { data: rows, setData: setRows, loading, error } = useResource(api.users, []);
   const [open, setOpen] = React.useState(false);
   const [del, setDel] = React.useState(null);
 
@@ -18,7 +18,7 @@ export function Usuarios() {
       <span className={s.user}><Avatar name={r.name} size="sm" />{r.name}</span>
     ) },
     { key: 'tel', header: 'Teléfono', render: (r) => <span className={s.muted}>{r.tel}</span> },
-    { key: 'rol', header: 'Rol', render: (r) => <Badge variant={ROL[r.rol] || 'neutral'}>{r.rol}</Badge> },
+    { key: 'rol', header: 'Rol', render: (r) => <Badge variant={ROLE[r.rol] || 'neutral'}>{r.rol}</Badge> },
     { key: 'activo', header: 'Estado', render: (r) => (
       <span className={[s.status, r.activo ? s.on : s.off].join(' ')}>
         <span className={s.statusDot} />{r.activo ? 'Activo' : 'Inactivo'}

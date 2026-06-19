@@ -2,7 +2,7 @@ import React from 'react';
 import { Button } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
-import s from './Mesas.module.css';
+import s from './Tables.module.css';
 
 const ST = {
   libre: { label: 'Libre', dot: s.dotLibre, txt: s.txtLibre },
@@ -11,18 +11,18 @@ const ST = {
   reservada: { label: 'Reservada', dot: s.dotReservada, txt: s.txtReservada },
 };
 
-export function Mesas() {
-  const { data: mesas, setData: setMesas } = useResource(api.mesas, []);
+export function Tables() {
+  const { data: tables, setData: setTables } = useResource(api.tables, []);
 
   const cycle = (n) => {
     const order = ['libre', 'ocupada', 'cuenta'];
-    setMesas((ms) => ms.map((m) => {
+    setTables((ms) => ms.map((m) => {
       if (m.n !== n) return m;
       const next = order[(order.indexOf(m.st) + 1) % order.length] || 'libre';
       return { ...m, st: next, t: next === 'libre' ? undefined : '0 min', tot: next === 'libre' ? undefined : '$0' };
     }));
   };
-  const count = (st) => mesas.filter((m) => m.st === st).length;
+  const count = (st) => tables.filter((m) => m.st === st).length;
 
   return (
     <div className={s.page}>
@@ -37,7 +37,7 @@ export function Mesas() {
       </div>
 
       <div className={s.grid}>
-        {mesas.map((m) => {
+        {tables.map((m) => {
           const st = ST[m.st] || ST.libre;
           return (
             <div key={m.n} onClick={() => cycle(m.n)} title="Clic para cambiar estado" className={s.card}>

@@ -5,14 +5,14 @@ import styles from './Sidebar.module.css';
 const NAV = [
   { to: '/', label: 'Inicio', icon: 'fas fa-house', end: true },
   { section: 'Oferta' },
-  { to: '/productos', label: 'Productos', icon: 'fas fa-burger' },
-  { to: '/categorias', label: 'Categorías', icon: 'fas fa-tags' },
+  { to: '/products', label: 'Productos', icon: 'fas fa-burger' },
+  { to: '/categories', label: 'Categorías', icon: 'fas fa-tags' },
   { to: '/toppings', label: 'Toppings', icon: 'fas fa-bacon' },
   { section: 'Operación' },
-  { to: '/mesas', label: 'Mesas', icon: 'fas fa-chair', badge: 4 },
-  { to: '/tiendas', label: 'Tiendas', icon: 'fas fa-store' },
+  { to: '/tables', label: 'Mesas', icon: 'fas fa-chair', badge: 4 },
+  { to: '/stores', label: 'Tiendas', icon: 'fas fa-store' },
   { section: 'Cuentas' },
-  { to: '/usuarios', label: 'Usuarios', icon: 'fas fa-user' },
+  { to: '/users', label: 'Usuarios', icon: 'fas fa-user' },
   { to: '/roles', label: 'Roles', icon: 'fas fa-user-shield' },
 ];
 

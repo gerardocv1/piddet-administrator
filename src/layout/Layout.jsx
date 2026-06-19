@@ -8,12 +8,12 @@ import styles from './Layout.module.css';
 // Metadatos de cada ruta para el título y la migaja del topbar.
 const META = {
   '/': { title: 'Inicio', crumb: 'Resumen' },
-  '/productos': { title: 'Productos', crumb: 'Oferta' },
-  '/categorias': { title: 'Categorías', crumb: 'Oferta' },
+  '/products': { title: 'Productos', crumb: 'Oferta' },
+  '/categories': { title: 'Categorías', crumb: 'Oferta' },
   '/toppings': { title: 'Toppings', crumb: 'Oferta' },
-  '/mesas': { title: 'Mesas', crumb: 'Operación' },
-  '/tiendas': { title: 'Tiendas', crumb: 'Operación' },
-  '/usuarios': { title: 'Usuarios', crumb: 'Cuentas' },
+  '/tables': { title: 'Mesas', crumb: 'Operación' },
+  '/stores': { title: 'Tiendas', crumb: 'Operación' },
+  '/users': { title: 'Usuarios', crumb: 'Cuentas' },
   '/roles': { title: 'Roles', crumb: 'Cuentas' },
 };
 
@@ -38,7 +38,7 @@ export function Layout({ theme, onToggleTheme, onLogout }) {
 
   const switchCompany = (c) => {
     setCompany(c);
-    api.cambiarEmpresa(c.id).catch(() => {});
+    api.switchCompany(c.id).catch(() => {});
     navigate('/'); // los datos dependen del tenant: volver al inicio
   };
 

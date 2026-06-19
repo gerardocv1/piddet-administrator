@@ -20,10 +20,10 @@ const FILTERS = [
   { key: 'destacado', label: 'Solo destacados', icon: 'fas fa-star', type: 'toggle', onLabel: 'Destacados' },
 ];
 
-function precioNum(p) { return Number(String(p).replace(/[^0-9]/g, '')) || 0; }
+function priceNum(p) { return Number(String(p).replace(/[^0-9]/g, '')) || 0; }
 
-export function Productos() {
-  const { data: rows, setData: setRows, loading, error } = useResource(api.productos, []);
+export function Products() {
+  const { data: rows, setData: setRows, loading, error } = useResource(api.products, []);
   const [q, setQ] = React.useState('');
   const [filters, setFilters] = React.useState({ cat: [], estado: undefined, precio: undefined, destacado: false });
   const [open, setOpen] = React.useState(false);
@@ -35,7 +35,7 @@ export function Productos() {
     if (filters.estado === 'disp' && !r.avail) return false;
     if (filters.estado === 'agotado' && r.avail) return false;
     if (filters.precio) {
-      const n = precioNum(r.price);
+      const n = priceNum(r.price);
       if (filters.precio === 'lt10' && n >= 10000) return false;
       if (filters.precio === '10-20' && (n < 10000 || n > 20000)) return false;
       if (filters.precio === 'gt20' && n <= 20000) return false;

@@ -9,20 +9,20 @@ export const mockStats = [
   { label: 'Cancelados', value: '4', delta: '-1.1%', up: false },
 ];
 
-export const mockPedidos = [
+export const mockOrders = [
   { id: '#1042', cliente: 'María López', tienda: 'La Cevichería', total: '$54.000', estado: 'En cocina' },
   { id: '#1041', cliente: 'Carlos Mejía', tienda: 'Pizza Nostra', total: '$38.500', estado: 'Listo' },
   { id: '#1040', cliente: 'Ana Ruiz', tienda: 'Burguer Lab', total: '$22.000', estado: 'Entregado' },
   { id: '#1039', cliente: 'Jorge Díaz', tienda: 'La Cevichería', total: '$71.200', estado: 'Cancelado' },
 ];
 
-export const mockTiendas = [
+export const mockStores = [
   { id: 1, name: 'La Cevichería', open: true, pedidos: 18 },
   { id: 2, name: 'Pizza Nostra', open: true, pedidos: 11 },
   { id: 3, name: 'Burguer Lab', open: false, pedidos: 0 },
 ];
 
-export const mockProductos = [
+export const mockProducts = [
   { id: 1, name: 'Hamburguesa Clásica', cat: 'Hamburguesas', price: '$18.500', avail: true, destacado: true },
   { id: 2, name: 'Pizza Margarita', cat: 'Pizzas', price: '$32.000', avail: true, destacado: false },
   { id: 3, name: 'Limonada de coco', cat: 'Bebidas', price: '$9.000', avail: false, destacado: false },
@@ -31,7 +31,7 @@ export const mockProductos = [
   { id: 6, name: 'Papas a la francesa', cat: 'Acompañamientos', price: '$8.500', avail: false, destacado: false },
 ];
 
-export const mockMesas = [
+export const mockTables = [
   { n: 1, cap: 2, st: 'libre' }, { n: 2, cap: 4, st: 'ocupada', t: '24 min', tot: '$48.000' },
   { n: 3, cap: 4, st: 'cuenta', t: '52 min', tot: '$96.500' }, { n: 4, cap: 2, st: 'libre' },
   { n: 5, cap: 6, st: 'ocupada', t: '8 min', tot: '$31.000' }, { n: 6, cap: 4, st: 'reservada', t: '19:30' },
@@ -40,14 +40,14 @@ export const mockMesas = [
   { n: 11, cap: 4, st: 'libre' }, { n: 12, cap: 6, st: 'reservada', t: '20:00' },
 ];
 
-export const mockNotificaciones = [
+export const mockNotifications = [
   { type: 'pedido', title: 'Nuevo pedido #1043', sub: 'La Cevichería · $34.000', time: 'hace 2 min', unread: true },
   { type: 'mesa', title: 'Mesa 5 pidió la cuenta', sub: 'Salón principal', time: 'hace 8 min', unread: true },
   { type: 'alerta', title: 'Limonada de coco agotada', sub: 'Inventario en 0', time: 'hace 25 min', unread: false },
   { type: 'tienda', title: 'Burguer Lab cerró', sub: 'Fuera de horario', time: 'hace 1 h', unread: false },
 ];
 
-export const mockCategorias = [
+export const mockCategories = [
   { id: 1, name: 'Hamburguesas', productos: 8, orden: 1, activa: true },
   { id: 2, name: 'Pizzas', productos: 6, orden: 2, activa: true },
   { id: 3, name: 'Entradas', productos: 5, orden: 3, activa: true },
@@ -65,14 +65,14 @@ export const mockToppings = [
   { id: 6, name: 'Doble carne', grupo: 'Hamburguesas', price: '$6.000', avail: true },
 ];
 
-export const mockTiendasDetalle = [
+export const mockStoresDetail = [
   { id: 1, name: 'La Cevichería', open: true, dir: 'Cra. 43 #12-30', tel: '320 111 2233', pedidos: 18 },
   { id: 2, name: 'Pizza Nostra', open: true, dir: 'Cl. 10 #5-40', tel: '301 444 5566', pedidos: 11 },
   { id: 3, name: 'Burguer Lab', open: false, dir: 'Av. Las Vegas #80-21', tel: '315 777 8899', pedidos: 0 },
   { id: 4, name: 'Sushi Express', open: true, dir: 'Cra. 70 #1-15', tel: '300 222 3344', pedidos: 6 },
 ];
 
-export const mockUsuarios = [
+export const mockUsers = [
   { id: 1, name: 'Gerardo Cruz', tel: '300 123 4567', rol: 'Administrador', activo: true },
   { id: 2, name: 'María López', tel: '311 222 3344', rol: 'Cajero', activo: true },
   { id: 3, name: 'Carlos Mejía', tel: '320 555 6677', rol: 'Mesero', activo: true },
@@ -94,15 +94,15 @@ export const mockCompanies = [
 export function resolveMock(path) {
   const map = {
     '/stats': mockStats,
-    '/pedidos': mockPedidos,
-    '/tiendas': mockTiendas,
-    '/productos': mockProductos,
-    '/categorias': mockCategorias,
+    '/pedidos': mockOrders,
+    '/tiendas': mockStores,
+    '/productos': mockProducts,
+    '/categorias': mockCategories,
     '/toppings': mockToppings,
-    '/tiendas-detalle': mockTiendasDetalle,
-    '/usuarios': mockUsuarios,
-    '/mesas': mockMesas,
-    '/notificaciones': mockNotificaciones,
+    '/tiendas-detalle': mockStoresDetail,
+    '/usuarios': mockUsers,
+    '/mesas': mockTables,
+    '/notificaciones': mockNotifications,
     '/me': mockUser,
     '/company': mockCompany,
     '/companies': mockCompanies,

@@ -4,8 +4,8 @@ import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import s from './screens.module.css';
 
-export function Categorias() {
-  const { data: rows, setData: setRows, loading, error } = useResource(api.categorias, []);
+export function Categories() {
+  const { data: rows, setData: setRows, loading, error } = useResource(api.categories, []);
   const [open, setOpen] = React.useState(false);
   const [del, setDel] = React.useState(null);
 

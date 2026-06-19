@@ -16,7 +16,7 @@ export function Notifications() {
   const [open, setOpen] = React.useState(false);
   const [notis, setNotis] = React.useState([]);
 
-  React.useEffect(() => { api.notificaciones().then(setNotis).catch(() => {}); }, []);
+  React.useEffect(() => { api.notifications().then(setNotis).catch(() => {}); }, []);
 
   const unread = notis.filter((n) => n.unread).length;
   return (

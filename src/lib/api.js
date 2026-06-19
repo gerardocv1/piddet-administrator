@@ -42,6 +42,8 @@ async function request(path, { method = 'GET', body } = {}) {
   return res.status === 204 ? null : res.json();
 }
 
+// Nombres de método en inglés; las rutas (paths) se mantienen como las expone
+// el backend de Piddet. Si tu API usa otras rutas, ajústalas aquí.
 export const api = {
   // Auth
   login: (phone, password) => request('/auth/login', { method: 'POST', body: { phone, password } }),
@@ -49,29 +51,29 @@ export const api = {
   // Empresa (tenant)
   company: () => request('/company'),
   companies: () => request('/companies'),
-  cambiarEmpresa: (id) => request('/company/switch', { method: 'POST', body: { id } }),
+  switchCompany: (id) => request('/company/switch', { method: 'POST', body: { id } }),
   // Dashboard
   stats: () => request('/stats'),
-  pedidos: () => request('/pedidos'),
-  tiendas: () => request('/tiendas'),
+  orders: () => request('/pedidos'),
+  stores: () => request('/tiendas'),
   // Oferta
-  productos: () => request('/productos'),
-  crearProducto: (data) => request('/productos', { method: 'POST', body: data }),
-  actualizarProducto: (id, data) => request(`/productos/${id}`, { method: 'PUT', body: data }),
-  eliminarProducto: (id) => request(`/productos/${id}`, { method: 'DELETE' }),
-  categorias: () => request('/categorias'),
-  crearCategoria: (data) => request('/categorias', { method: 'POST', body: data }),
+  products: () => request('/productos'),
+  createProduct: (data) => request('/productos', { method: 'POST', body: data }),
+  updateProduct: (id, data) => request(`/productos/${id}`, { method: 'PUT', body: data }),
+  deleteProduct: (id) => request(`/productos/${id}`, { method: 'DELETE' }),
+  categories: () => request('/categorias'),
+  createCategory: (data) => request('/categorias', { method: 'POST', body: data }),
   toppings: () => request('/toppings'),
-  crearTopping: (data) => request('/toppings', { method: 'POST', body: data }),
+  createTopping: (data) => request('/toppings', { method: 'POST', body: data }),
   // Tiendas y usuarios
-  tiendasDetalle: () => request('/tiendas-detalle'),
-  usuarios: () => request('/usuarios'),
-  crearUsuario: (data) => request('/usuarios', { method: 'POST', body: data }),
+  storesDetail: () => request('/tiendas-detalle'),
+  users: () => request('/usuarios'),
+  createUser: (data) => request('/usuarios', { method: 'POST', body: data }),
   // Operación
-  mesas: () => request('/mesas'),
-  actualizarMesa: (n, data) => request(`/mesas/${n}`, { method: 'PUT', body: data }),
+  tables: () => request('/mesas'),
+  updateTable: (n, data) => request(`/mesas/${n}`, { method: 'PUT', body: data }),
   // Avisos
-  notificaciones: () => request('/notificaciones'),
+  notifications: () => request('/notificaciones'),
 };
 
 export { USE_MOCK };

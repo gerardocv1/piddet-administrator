@@ -3,10 +3,10 @@ import { Button, IconButton, Switch } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import s from './screens.module.css';
-import t from './Tiendas.module.css';
+import t from './Stores.module.css';
 
-export function Tiendas() {
-  const { data: rows, setData: setRows } = useResource(api.tiendasDetalle, []);
+export function Stores() {
+  const { data: rows, setData: setRows } = useResource(api.storesDetail, []);
 
   const toggle = (id) => setRows((rs) => rs.map((r) => r.id === id ? { ...r, open: !r.open } : r));
 

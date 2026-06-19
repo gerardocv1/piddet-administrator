@@ -5,17 +5,17 @@ import { useResource } from '../lib/useResource.js';
 import { api } from '../lib/api.js';
 import s from './Dashboard.module.css';
 
-const ESTADO = { 'En cocina': 'warning', 'Listo': 'info', 'Entregado': 'success', 'Cancelado': 'danger' };
+const STATUS = { 'En cocina': 'warning', 'Listo': 'info', 'Entregado': 'success', 'Cancelado': 'danger' };
 
 export function Dashboard() {
   const isMobile = useIsMobile();
   const { data: stats } = useResource(api.stats, []);
-  const { data: pedidos, loading: loadingPedidos, error: errorPedidos } = useResource(api.pedidos, []);
-  const { data: tiendas } = useResource(api.tiendas, []);
+  const { data: orders, loading: loadingOrders, error: errorOrders } = useResource(api.orders, []);
+  const { data: stores } = useResource(api.stores, []);
 
-  const openCount = tiendas.filter((x) => x.open).length;
-  const liveOrders = tiendas.reduce((a, x) => a + (x.pedidos || 0), 0);
-  const allOpen = tiendas.length > 0 && openCount === tiendas.length;
+  const openCount = stores.filter((x) => x.open).length;
+  const liveOrders = stores.reduce((a, x) => a + (x.pedidos || 0), 0);
+  const allOpen = stores.length > 0 && openCount === stores.length;
 
   // Pulso operativo (solo móvil): lo primero que ve el dueño al entrar.
   const pulse = (
@@ -24,7 +24,7 @@ export function Dashboard() {
         <span className={s.pulseLabel}>
           <span className={[s.pulseDot, allOpen ? s.ok : ''].filter(Boolean).join(' ')} />Tiendas
         </span>
-        <span className={s.pulseValue}>{openCount}<span className={s.pulseValueSub}> / {tiendas.length}</span></span>
+        <span className={s.pulseValue}>{openCount}<span className={s.pulseValueSub}> / {stores.length}</span></span>
         <span className={[s.pulseSub, allOpen ? s.ok : s.warn].join(' ')}>{allOpen ? 'Todas abiertas' : 'abiertas ahora'}</span>
       </div>
       <div className={[s.pulseCell, s.bordered].join(' ')}>
@@ -32,7 +32,7 @@ export function Dashboard() {
           <i className={`fas fa-fire-burner ${s.pulseIcon}`} />En curso
         </span>
         <span className={s.pulseValue}>{liveOrders}</span>
-        <span className={s.pulseSub}>pedidos activos</span>
+        <span className={s.pulseSub}>orders activos</span>
       </div>
     </div>
   );
@@ -42,7 +42,7 @@ export function Dashboard() {
     { key: 'cliente', header: 'Cliente', render: (o) => <span className={s.cellClient}><Avatar name={o.cliente} size="sm" />{o.cliente}</span> },
     { key: 'tienda', header: 'Tienda', render: (o) => <span className={s.cellStore}>{o.tienda}</span> },
     { key: 'total', header: 'Total', align: 'right', render: (o) => <span className={s.cellTotal}>{o.total}</span> },
-    { key: 'estado', header: 'Estado', render: (o) => <Badge variant={ESTADO[o.estado] || 'neutral'} dot>{o.estado}</Badge> },
+    { key: 'estado', header: 'Estado', render: (o) => <Badge variant={STATUS[o.estado] || 'neutral'} dot>{o.estado}</Badge> },
   ];
 
   const ordersPanel = (
@@ -50,7 +50,7 @@ export function Dashboard() {
       <Card.Header title="Pedidos recientes" action={<a href="#" onClick={(e) => e.preventDefault()} className={s.link}>Ver todos</a>} />
       {isMobile ? (
         <div>
-          {pedidos.map((o) => (
+          {orders.map((o) => (
             <div key={o.id} className={s.orderItem}>
               <Avatar name={o.cliente} size="sm" />
               <div className={s.orderMain}>
@@ -58,7 +58,7 @@ export function Dashboard() {
                   <span className={s.orderId}>{o.id}</span>
                   <span className={s.orderClient}>{o.cliente}</span>
                 </div>
-                <div className={s.orderBadge}><Badge variant={ESTADO[o.estado] || 'neutral'} dot>{o.estado}</Badge></div>
+                <div className={s.orderBadge}><Badge variant={STATUS[o.estado] || 'neutral'} dot>{o.estado}</Badge></div>
               </div>
               <div className={s.orderRight}>
                 <div className={s.orderTotal}>{o.total}</div>
@@ -68,7 +68,7 @@ export function Dashboard() {
           ))}
         </div>
       ) : (
-        <DataTable columns={orderColumns} rows={pedidos} loading={loadingPedidos} error={errorPedidos} empty="Sin pedidos recientes" />
+        <DataTable columns={orderColumns} rows={orders} loading={loadingOrders} error={errorOrders} empty="Sin pedidos recientes" />
       )}
     </Card>
   );
@@ -76,7 +76,7 @@ export function Dashboard() {
   const storesPanel = (
     <Card>
       <Card.Header title="Tiendas" />
-      {tiendas.map((x) => (
+      {stores.map((x) => (
         <div key={x.id} className={s.store}>
           <div className={s.storeLeft}>
             <span className={s.storeIcon}><i className="fas fa-store" /></span>
@@ -93,7 +93,7 @@ export function Dashboard() {
     </Card>
   );
 
-  // ─── Móvil: pulso → KPIs → tiendas (operativo) → pedidos ───
+  // ─── Móvil: pulso → KPIs → stores (operativo) → orders ───
   if (isMobile) {
     return (
       <div className={s.pageMobile}>

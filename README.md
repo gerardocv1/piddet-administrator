@@ -75,9 +75,15 @@ src/
     feedback/           Modal, Notifications
     navigation/         Sidebar, Topbar
     index.js            Barril: reexporta todo
-  screens/              Login, Dashboard, Productos, Categorias, Toppings,
-                        Mesas, Tiendas, Usuarios, Placeholder
+  screens/              Login, Dashboard, Products, Categories, Toppings,
+                        Tables, Stores, Users, Placeholder
 ```
+
+Convención de nomenclatura: el **código interno está en inglés** (archivos,
+componentes, métodos de `api`, variables y rutas `/products`, `/tables`, …).
+El **texto visible al usuario permanece en español**. Las **rutas de la API**
+(`/productos`, …) y las **claves del JSON** (`cat`, `avail`, `estado`, `rol`, …)
+se mantienen como las expone el backend.
 
 Cada componente y pantalla tiene su propio `*.module.css` (CSS Modules) que
 consume las variables de `tokens.css`. No hay estilos inline ni librerías de CSS:
