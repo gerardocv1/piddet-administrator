@@ -1,0 +1,26 @@
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: filter .15s ease;
+}
+.btn:not(:disabled):hover { filter: brightness(0.93); }
+.btn:disabled { cursor: not-allowed; opacity: 0.5; }
+
+.round { border-radius: var(--radius-pill); }
+
+/* ---- Variantes (tinte suave + texto realce) ---- */
+.primary { background: var(--color-primary-100); color: var(--color-primary-700); }
+.light { background: var(--gray-100); color: var(--gray-600); }
+.danger { background: var(--color-danger-100); color: var(--color-danger); }
+.success { background: var(--color-success-100); color: var(--color-success-fg); }
+.ghost { background: transparent; color: var(--gray-500); }
+
+/* ---- Tamaños ---- */
+.sm { width: 30px; height: 30px; font-size: 0.8rem; }
+.md { width: 38px; height: 38px; font-size: 0.95rem; }
+.lg { width: 46px; height: 46px; font-size: 0.95rem; }

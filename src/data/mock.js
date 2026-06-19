@@ -41,10 +41,10 @@ export const mockMesas = [
 ];
 
 export const mockNotificaciones = [
-  { icon: 'fas fa-receipt', tint: 'var(--color-primary-100)', fg: 'var(--color-primary)', title: 'Nuevo pedido #1043', sub: 'La Cevichería · $34.000', time: 'hace 2 min', unread: true },
-  { icon: 'fas fa-hand', tint: 'var(--color-warning-100)', fg: '#d6451f', title: 'Mesa 5 pidió la cuenta', sub: 'Salón principal', time: 'hace 8 min', unread: true },
-  { icon: 'fas fa-triangle-exclamation', tint: 'var(--color-danger-100)', fg: 'var(--color-danger)', title: 'Limonada de coco agotada', sub: 'Inventario en 0', time: 'hace 25 min', unread: false },
-  { icon: 'fas fa-store', tint: 'var(--gray-100)', fg: 'var(--gray-500)', title: 'Burguer Lab cerró', sub: 'Fuera de horario', time: 'hace 1 h', unread: false },
+  { type: 'pedido', title: 'Nuevo pedido #1043', sub: 'La Cevichería · $34.000', time: 'hace 2 min', unread: true },
+  { type: 'mesa', title: 'Mesa 5 pidió la cuenta', sub: 'Salón principal', time: 'hace 8 min', unread: true },
+  { type: 'alerta', title: 'Limonada de coco agotada', sub: 'Inventario en 0', time: 'hace 25 min', unread: false },
+  { type: 'tienda', title: 'Burguer Lab cerró', sub: 'Fuera de horario', time: 'hace 1 h', unread: false },
 ];
 
 export const mockCategorias = [

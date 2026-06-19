@@ -1,0 +1,18 @@
+.avatar {
+  border-radius: 50%;
+  object-fit: cover;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--gray-200);
+  color: var(--gray-600);
+  font-weight: 700;
+  font-family: var(--font-sans);
+  flex: 0 0 auto;
+  overflow: hidden;
+}
+
+.sm { width: 32px; height: 32px; font-size: 12.8px; }
+.md { width: 40px; height: 40px; font-size: 16px; }
+.lg { width: 48px; height: 48px; font-size: 19.2px; }
+.xl { width: 64px; height: 64px; font-size: 25.6px; }

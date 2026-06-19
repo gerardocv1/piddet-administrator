@@ -1,0 +1,41 @@
+.btn {
+  display: inline-flex;
+  width: auto;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  line-height: 1.2;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: filter .15s ease, background .15s ease;
+}
+
+.btn:disabled { cursor: not-allowed; opacity: 0.55; }
+
+/* ---- Variantes ---- */
+.primary { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+.dark { background: var(--brand-dark); color: #fff; border-color: var(--brand-dark); }
+.success { background: var(--color-success); color: #fff; border-color: var(--color-success); }
+.danger { background: var(--color-danger); color: #fff; border-color: var(--color-danger); }
+.secondary { background: var(--surface-card); color: var(--gray-700); border-color: var(--border-input); }
+.outlinePrimary { background: transparent; color: var(--color-primary); border-color: var(--color-primary); }
+
+.primary:hover:not(:disabled),
+.dark:hover:not(:disabled),
+.success:hover:not(:disabled),
+.danger:hover:not(:disabled) { filter: brightness(0.95); }
+.secondary:hover:not(:disabled) { background: var(--gray-100); }
+.outlinePrimary:hover:not(:disabled) { background: var(--color-primary-050); }
+
+/* ---- Tamaños ---- */
+.sm { padding: 0.375rem 0.875rem; font-size: var(--text-xs); }
+.md { padding: 0.55rem 1.1rem; font-size: var(--text-base); }
+.lg { padding: 0.8rem 1.6rem; font-size: var(--text-md); }
+
+/* ---- Modificadores ---- */
+.pill { border-radius: var(--radius-pill); }
+.block { display: flex; width: 100%; }
