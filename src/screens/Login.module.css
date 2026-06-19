@@ -1,0 +1,87 @@
+.themeBtn {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  z-index: 5;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border-color);
+  background: var(--surface-card);
+  color: var(--gray-500);
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.logo { font-family: var(--font-logo); font-weight: 800; letter-spacing: -0.02em; }
+.logo b { color: var(--color-primary); font-weight: 800; }
+.accent { color: var(--color-primary); }
+
+/* Contenido del formulario (compartido) */
+.formTitle { font-size: var(--text-2xl); font-weight: 700; color: var(--gray-900); margin: 0; }
+.formLead { color: var(--gray-500); font-size: var(--text-base); margin-top: 6px; }
+.form { display: flex; flex-direction: column; gap: 16px; }
+.remember {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--text-sm);
+  color: var(--gray-500);
+  margin: 2px 0 4px;
+}
+.remember input { accent-color: var(--color-primary); }
+
+/* ── Escritorio: panel partido ── */
+.split { position: relative; min-height: 100vh; display: flex; font-family: var(--font-sans); }
+.brand {
+  flex: 1 1 0;
+  background: var(--brand-dark);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 3rem;
+  color: var(--on-dark);
+}
+.brand .logo { font-size: 1.8rem; }
+.hero { font-size: 2rem; font-weight: 700; line-height: 1.25; max-width: 420px; }
+.heroSub { margin-top: 16px; color: rgba(255, 255, 255, 0.55); font-size: var(--text-md); max-width: 420px; line-height: 1.6; }
+.copyright { color: rgba(255, 255, 255, 0.4); font-size: var(--text-xs); }
+.formSide {
+  flex: 1 1 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  background: var(--surface-card);
+}
+.formBox { width: 100%; max-width: 360px; }
+.formLead.desktop { margin-bottom: 28px; }
+
+/* ── Móvil: cabecera de marca + formulario ── */
+.mobile {
+  position: relative;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-sans);
+  background: var(--surface-card);
+}
+.mHeader {
+  background: var(--brand-dark);
+  color: var(--on-dark);
+  padding: calc(1.8rem + env(safe-area-inset-top)) 1.5rem 1.7rem;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.mHeader .logo { font-size: 1.6rem; }
+.mHero { font-size: 1.3rem; font-weight: 700; line-height: 1.25; }
+.mForm {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 1.8rem 1.5rem calc(1.8rem + env(safe-area-inset-bottom));
+}
+.mBox { width: 100%; max-width: 440px; margin: 0 auto; }
+.formLead.mobileLead { margin-bottom: 22px; }

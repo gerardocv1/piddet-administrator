@@ -155,7 +155,7 @@
 }
 
 /* Transición suave al cambiar de tema */
-body, .pd-topbar, .pd-sidebar { transition: background-color .25s ease, border-color .25s ease, color .25s ease; }
+body { transition: background-color .25s ease, border-color .25s ease, color .25s ease; }
 
 /* ---- Reset mínimo ---- */
 *, *::before, *::after { box-sizing: border-box; }

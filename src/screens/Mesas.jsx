@@ -1,19 +1,18 @@
 import React from 'react';
 import { Button } from '../components';
 import { api } from '../lib/api.js';
+import { useResource } from '../lib/useResource.js';
+import s from './Mesas.module.css';
 
 const ST = {
-  libre: { label: 'Libre', dot: 'var(--color-success)', txt: '#1aae6f' },
-  ocupada: { label: 'Ocupada', dot: 'var(--color-primary)', txt: 'var(--color-primary-700)' },
-  cuenta: { label: 'Por pagar', dot: 'var(--color-warning)', txt: '#d6451f' },
-  reservada: { label: 'Reservada', dot: 'var(--color-info)', txt: '#0b9cb8' },
+  libre: { label: 'Libre', dot: s.dotLibre, txt: s.txtLibre },
+  ocupada: { label: 'Ocupada', dot: s.dotOcupada, txt: s.txtOcupada },
+  cuenta: { label: 'Por pagar', dot: s.dotCuenta, txt: s.txtCuenta },
+  reservada: { label: 'Reservada', dot: s.dotReservada, txt: s.txtReservada },
 };
 
 export function Mesas() {
-  const [mesas, setMesas] = React.useState([]);
-  const [hover, setHover] = React.useState(null);
-
-  React.useEffect(() => { api.mesas().then(setMesas).catch(() => {}); }, []);
+  const { data: mesas, setData: setMesas } = useResource(api.mesas, []);
 
   const cycle = (n) => {
     const order = ['libre', 'ocupada', 'cuenta'];
@@ -26,35 +25,33 @@ export function Mesas() {
   const count = (st) => mesas.filter((m) => m.st === st).length;
 
   return (
-    <div style={{ maxWidth: 'var(--container-max)', display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <div style={{ display: 'flex', gap: 26, flexWrap: 'wrap', alignItems: 'center', background: 'var(--surface-card)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-lg)', padding: '1rem 1.5rem' }}>
-        {Object.entries(ST).map(([k, s]) => (
-          <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 'var(--text-sm)', color: 'var(--gray-600)' }}>
-            <span style={{ width: 9, height: 9, borderRadius: '50%', background: s.dot }} />{s.label} <strong style={{ color: 'var(--gray-800)' }}>{count(k)}</strong>
+    <div className={s.page}>
+      <div className={s.legend}>
+        {Object.entries(ST).map(([k, st]) => (
+          <div key={k} className={s.legendItem}>
+            <span className={[s.legendDot, st.dot].join(' ')} />{st.label} <strong>{count(k)}</strong>
           </div>
         ))}
-        <div style={{ flex: 1 }} />
+        <div className={s.spacer} />
         <Button size="sm" variant="secondary" icon="fas fa-plus">Añadir mesa</Button>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(168px, 1fr))', gap: 14 }}>
+      <div className={s.grid}>
         {mesas.map((m) => {
-          const s = ST[m.st];
-          const hot = hover === m.n;
+          const st = ST[m.st] || ST.libre;
           return (
-            <div key={m.n} onClick={() => cycle(m.n)} onMouseEnter={() => setHover(m.n)} onMouseLeave={() => setHover(null)} title="Clic para cambiar estado"
-              style={{ background: 'var(--surface-card)', border: `1px solid ${hot ? 'var(--color-primary)' : 'var(--border-color)'}`, borderRadius: 'var(--radius-lg)', padding: '1.1rem 1.2rem', cursor: 'pointer', transition: 'border-color .12s ease' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-400)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700 }}>Mesa {m.n}</span>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 'var(--text-xs)', fontWeight: 700, color: s.txt }}>
-                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: s.dot }} />{s.label}
+            <div key={m.n} onClick={() => cycle(m.n)} title="Clic para cambiar estado" className={s.card}>
+              <div className={s.cardTop}>
+                <span className={s.cardLabel}>Mesa {m.n}</span>
+                <span className={[s.cardStatus, st.txt].join(' ')}>
+                  <span className={[s.statusDot, st.dot].join(' ')} />{st.label}
                 </span>
               </div>
-              <div style={{ fontSize: '2.3rem', fontWeight: 800, color: 'var(--gray-900)', lineHeight: 1.1, margin: '6px 0 10px' }}>{m.n}</div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 10, borderTop: '1px solid var(--gray-100)', fontSize: 'var(--text-xs)', color: 'var(--gray-500)' }}>
-                <span><i className="fas fa-user" style={{ marginRight: 4 }} />{m.cap}</span>
-                {m.t ? <span><i className="far fa-clock" style={{ marginRight: 4 }} />{m.t}</span> : <span>—</span>}
-                {m.tot && <strong style={{ color: 'var(--gray-700)' }}>{m.tot}</strong>}
+              <div className={s.number}>{m.n}</div>
+              <div className={s.cardFoot}>
+                <span><i className="fas fa-user" />{m.cap}</span>
+                {m.t ? <span><i className="far fa-clock" />{m.t}</span> : <span>—</span>}
+                {m.tot && <strong>{m.tot}</strong>}
               </div>
             </div>
           );

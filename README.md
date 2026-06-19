@@ -61,10 +61,12 @@ Después, para cada cambio: `git add .` → `git commit -m "..."` → `git push`
 ```
 src/
   main.jsx              Punto de entrada
-  App.jsx               Sesión + navegación + tema (claro/oscuro) + empresa activa
+  App.jsx               Router (react-router-dom) + sesión + tema (claro/oscuro)
+  layout/Layout.jsx     Chrome de la app autenticada: Sidebar + Topbar + <Outlet>
   styles/tokens.css     Variables de diseño + tema oscuro ([data-theme="dark"]) + reset
   lib/api.js            Cliente de API (fetch real o mock según VITE_API_URL)
   lib/useIsMobile.js    Hook responsive
+  lib/useResource.js    Hook de carga de datos con estados loading/error/reload
   data/mock.js          Datos de ejemplo para el modo demo
   components/           Componentes reutilizables, agrupados por categoría
     core/               Button, IconButton, Badge, Avatar, Card
@@ -74,8 +76,14 @@ src/
     navigation/         Sidebar, Topbar
     index.js            Barril: reexporta todo
   screens/              Login, Dashboard, Productos, Categorias, Toppings,
-                        Mesas, Tiendas, Usuarios
+                        Mesas, Tiendas, Usuarios, Placeholder
 ```
+
+Cada componente y pantalla tiene su propio `*.module.css` (CSS Modules) que
+consume las variables de `tokens.css`. No hay estilos inline ni librerías de CSS:
+el hover/focus y el responsive viven en CSS nativo. Para cambiar un color o un
+espaciado, edita la variable en `tokens.css` y se propaga a toda la app (incluido
+el tema oscuro).
 
 ### Componentes (`src/components/`)
 Organizados en subcarpetas por categoría (**core / forms / data / feedback /
@@ -85,8 +93,12 @@ import { Button, Card, DataTable, Badge, Switch, Modal } from './components';
 ```
 Disponibles: `Button`, `IconButton`, `Badge`, `Avatar`, `Card`, `Input`,
 `Select`, `Checkbox`, `Switch`, `Modal`, `DataTable`, `FilterBar`, `StatStrip`, `Sidebar`,
-`Topbar`, `Notifications`. Todos con estilos inline basados en las variables CSS
+`Topbar`, `Notifications`. Todos con CSS Modules basados en las variables CSS
 de `tokens.css` — sin librerías de estilos.
+
+> **`DataTable`** — además de `columns`/`rows`, centraliza los estados de la lista:
+> pásale `loading`, `error` y `empty` y muestra el indicador correcto. Combínalo con
+> `useResource(api.x)` para no repetir el patrón de carga en cada pantalla.
 
 > **`FilterBar`** — filtros responsive estilo e-commerce (MercadoLibre): dropdowns
 > inline cuando son pocos; botón "Filtros" + modal/bottom-sheet que **acumula** las
@@ -131,7 +143,7 @@ esas variables, así que heredan el tema sin cambios.
 | GET | `/tiendas-detalle` | `[{ id, name, open, dir, tel, pedidos }]` |
 | GET | `/usuarios` | `[{ id, name, tel, rol, activo }]` |
 | GET | `/mesas` | `[{ n, cap, st, t, tot }]` |
-| GET | `/notificaciones` | `[{ icon, tint, fg, title, sub, time, unread }]` |
+| GET | `/notificaciones` | `[{ type, title, sub, time, unread }]` (type: `pedido`\|`mesa`\|`alerta`\|`tienda`) |
 
 Ajusta rutas, headers o forma de los datos en `src/lib/api.js` para que calce con
 tu backend.
