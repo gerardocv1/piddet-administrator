@@ -1,32 +1,46 @@
 import React from 'react';
+import styles from './DataTable.module.css';
 
-/** Tabla de listados flat (encabezado gris en mayúsculas, filas con hairline). */
-export function DataTable({ columns = [], rows = [], rowKey = 'id', empty = 'Sin registros' }) {
-  const th = {
-    textAlign: 'left', padding: '0.8rem 1.5rem', fontSize: 'var(--text-xs)', fontWeight: 700,
-    textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--gray-500)',
-    borderBottom: '1px solid var(--border-color)', whiteSpace: 'nowrap',
-  };
-  const td = { padding: '0.9rem 1.5rem', fontSize: 'var(--text-base)', color: 'var(--gray-700)', verticalAlign: 'middle' };
+/**
+ * Tabla de listados flat (encabezado gris en mayúsculas, filas con hairline).
+ * En móvil hace scroll horizontal con ancho mínimo. Centraliza los estados
+ * de carga, error y vacío para que todas las pantallas se vean igual.
+ *
+ * columns: [{ key, header, width?, align?: 'left'|'right'|'center', render?: (row) => node }]
+ */
+export function DataTable({ columns = [], rows = [], rowKey = 'id', empty = 'Sin registros', loading = false, error = null }) {
+  const colSpan = columns.length;
   return (
-    <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: 'var(--font-sans)' }}>
-      <thead>
-        <tr>{columns.map((c) => <th key={c.key} style={{ ...th, width: c.width, textAlign: c.align || 'left' }}>{c.header}</th>)}</tr>
-      </thead>
-      <tbody>
-        {rows.length === 0 && (
-          <tr><td colSpan={columns.length} style={{ ...td, textAlign: 'center', color: 'var(--gray-400)', padding: '2.5rem' }}>{empty}</td></tr>
-        )}
-        {rows.map((r, i) => (
-          <tr key={r[rowKey] ?? i} style={{ borderTop: i ? '1px solid var(--gray-100)' : 'none' }}>
+    <div className={styles.scroll}>
+      <table className={styles.table}>
+        <thead>
+          <tr>
             {columns.map((c) => (
-              <td key={c.key} style={{ ...td, textAlign: c.align || 'left' }}>
-                {c.render ? c.render(r) : r[c.key]}
-              </td>
+              <th key={c.key} className={styles.th} style={{ width: c.width, textAlign: c.align || 'left' }}>{c.header}</th>
             ))}
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {loading && (
+            <tr><td colSpan={colSpan} className={`${styles.td} ${styles.empty}`}><i className="fas fa-spinner fa-spin" /> Cargando…</td></tr>
+          )}
+          {!loading && error && (
+            <tr><td colSpan={colSpan} className={`${styles.td} ${styles.error}`}><i className="fas fa-triangle-exclamation" /> {error}</td></tr>
+          )}
+          {!loading && !error && rows.length === 0 && (
+            <tr><td colSpan={colSpan} className={`${styles.td} ${styles.empty}`}>{empty}</td></tr>
+          )}
+          {!loading && !error && rows.map((r, i) => (
+            <tr key={r[rowKey] ?? i} className={styles.row}>
+              {columns.map((c) => (
+                <td key={c.key} className={styles.td} style={{ textAlign: c.align || 'left' }}>
+                  {c.render ? c.render(r) : r[c.key]}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
