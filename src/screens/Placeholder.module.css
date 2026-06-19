@@ -1,0 +1,11 @@
+.box {
+  background: var(--surface-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 3rem;
+  max-width: 560px;
+  text-align: center;
+}
+.icon { font-size: 1.6rem; color: var(--color-primary); }
+.title { margin-top: 14px; color: var(--gray-800); }
+.text { color: var(--gray-500); font-size: var(--text-base); }
