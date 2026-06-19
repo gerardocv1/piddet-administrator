@@ -1,0 +1,224 @@
+/* ============================================================
+   Piddet — tokens de diseño (línea visual "B2" flat)
+   Variables CSS globales: colores, tipografía, espaciado, sombras.
+   ============================================================ */
+@import url('https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300;0,400;0,600;0,700;0,800;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&display=swap');
+
+:root {
+  /* ---- Marca (naranja) ---- */
+  --color-primary: #ff7c00;
+  --color-primary-600: #e06e00;
+  --color-primary-700: #b85a00;
+  --color-primary-300: #ffac4d;
+  --color-primary-100: #ffe8d1;
+  --color-primary-050: #fff6ed;
+  --gradient-primary: linear-gradient(87deg, #ff7c00 0%, #ffab3e 100%);
+
+  /* ---- Color secundario (teal, combina con el naranja) ---- */
+  --color-accent: #0ea5a3;
+  --color-accent-100: rgba(14, 165, 163, 0.16);
+
+  /* ---- Marca oscura (sidebar / login) ---- */
+  --brand-dark: #0b2630;
+  --brand-dark-2: #123845;
+
+  /* ---- Neutros (slate) ---- */
+  --gray-900: #172b4d;
+  --gray-800: #32325d;
+  --gray-700: #525f7f;
+  --gray-600: #6b7a90;
+  --gray-500: #8898aa;
+  --gray-400: #adb5bd;
+  --gray-300: #ced4da;
+  --gray-200: #e9ecef;
+  --gray-100: #f6f9fc;
+  --white: #ffffff;
+
+  /* ---- Superficies ---- */
+  --bg-body: #fbfbfc;
+  --surface-card: #ffffff;
+  --border-color: #e9ecef;
+  --border-input: #cdd2dc;
+
+  /* ---- Semánticos ---- */
+  --color-success: #2dce89;
+  --color-success-100: #d8f6e7;
+  --color-info: #11cdef;
+  --color-info-100: #d5f6fc;
+  --color-warning: #fb6340;
+  --color-warning-100: #fee2da;
+  --color-danger: #f5365c;
+  --color-danger-100: #fdd9e1;
+
+  /* ---- Texto ---- */
+  --text-heading: var(--gray-900);
+  --text-body: var(--gray-700);
+  --text-muted: var(--gray-500);
+
+  /* ---- Tipografía ---- */
+  --font-sans: 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-logo: 'Baloo 2', 'Open Sans', sans-serif; /* sustituto de MaditaBold */
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-base: 0.875rem;
+  --text-md: 1rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.625rem;
+  --text-2xl: 2rem;
+
+  /* ---- Radios ---- */
+  --radius-sm: 0.25rem;
+  --radius: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-pill: 50rem;
+
+  /* ---- Sombras (uso mínimo en la línea flat) ---- */
+  --shadow-xs: 0 0 0.5rem rgba(136, 152, 170, 0.12);
+  --shadow-lg: 0 0.5rem 2rem 0 rgba(23, 43, 77, 0.18);
+
+  /* ---- Overlay / scrim de modales ---- */
+  --overlay-bg: rgba(12, 16, 22, 0.55);
+
+  /* ---- Foco ---- */
+  --ring-primary: 0 0 0 3px rgba(255, 124, 0, 0.22);
+
+  /* ---- Layout ---- */
+  --sidebar-w: 244px;
+  --topbar-h: 66px;
+  --container-max: 1180px;
+}
+
+/* ============================================================
+   Tema oscuro — se activa con <html data-theme="dark">.
+   Reasigna la escala de neutros (invertida), superficies y
+   tintes semánticos; el resto de componentes usan estas vars.
+   ============================================================ */
+[data-theme="dark"] {
+  /* Neutros invertidos: 900 = texto claro · 100 = fondo sutil */
+  --gray-900: #f4f6fa;
+  --gray-800: #e6eaf1;
+  --gray-700: #cdd5e1;
+  --gray-600: #aab3c2;
+  --gray-500: #8a94a6;
+  --gray-400: #6c7689;
+  --gray-300: #475066;
+  --gray-200: #333d50;
+  --gray-100: #222b3a;
+  --white: #ffffff;
+
+  /* Superficies */
+  --bg-body: #11161f;
+  --surface-card: #1a212e;
+  --border-color: #2a3343;
+  --border-input: #3a4456;
+
+  /* Texto (derivado de la escala) */
+  --text-heading: var(--gray-900);
+  --text-body: var(--gray-700);
+  --text-muted: var(--gray-500);
+
+  /* Tintes semánticos suaves para fondo oscuro */
+  --color-primary-700: #ffb066;
+  --color-primary-100: rgba(255, 124, 0, 0.22);
+  --color-primary-050: rgba(255, 124, 0, 0.12);
+  --color-success-100: rgba(45, 206, 137, 0.18);
+  --color-info-100: rgba(17, 205, 239, 0.18);
+  --color-warning-100: rgba(251, 99, 64, 0.18);
+  --color-danger-100: rgba(245, 54, 92, 0.18);
+
+  /* Sombras más profundas */
+  --shadow-xs: 0 0 0.5rem rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 0.5rem 2rem 0 rgba(0, 0, 0, 0.55);
+  --ring-primary: 0 0 0 3px rgba(255, 124, 0, 0.30);
+
+  /* Panel de marca: petróleo apenas elevado sobre --bg-body. */
+  --brand-dark: #0e2c35;
+  --brand-dark-2: #15404c;
+
+  /* Scrim neutro y algo más opaco sobre una UI ya oscura */
+  --overlay-bg: rgba(0, 0, 0, 0.62);
+}
+
+/* Transición suave al cambiar de tema */
+body, .pd-topbar, .pd-sidebar { transition: background-color .25s ease, border-color .25s ease, color .25s ease; }
+
+/* ---- Reset mínimo ---- */
+*, *::before, *::after { box-sizing: border-box; }
+html, body, #root { height: 100%; }
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: 1.5;
+  color: var(--text-body);
+  background: var(--bg-body);
+  -webkit-font-smoothing: antialiased;
+}
+h1, h2, h3, h4, h5, h6 { margin: 0; color: var(--text-heading); font-weight: 700; line-height: 1.2; }
+a { color: var(--color-primary); text-decoration: none; }
+button { font-family: var(--font-sans); }
+::placeholder { color: var(--gray-400); }
+
+/* ============================================================
+   Capa responsive — usa !important para sobreponerse a los
+   estilos inline de los componentes en pantallas pequeñas.
+   ============================================================ */
+
+/* Utilidades de visibilidad */
+.pd-hide-desktop { display: none !important; }
+
+@media (max-width: 860px) {
+  /* Menú lateral como cajón deslizante */
+  .pd-sidebar {
+    position: fixed !important;
+    top: 0; left: 0; bottom: 0;
+    z-index: 60;
+    transform: translateX(-100%);
+    transition: transform .22s ease;
+    box-shadow: var(--shadow-lg);
+  }
+  .pd-sidebar.is-open { transform: none !important; }
+
+  .pd-overlay {
+    position: fixed; inset: 0; z-index: 55;
+    background: rgba(19, 35, 63, 0.45);
+  }
+
+  /* Mostrar/ocultar según dispositivo */
+  .pd-hide-mobile { display: none !important; }
+  .pd-hide-desktop { display: inline-flex !important; }
+
+  /* Barra superior compacta */
+  .pd-topbar { padding: 0 1rem !important; gap: 0.6rem !important; }
+  .pd-topbar h1 { font-size: var(--text-lg) !important; }
+
+  /* Menos relleno del contenido */
+  .pd-main { padding: 1.1rem !important; }
+
+  /* Grillas que colapsan a una columna */
+  .pd-grid-main { grid-template-columns: 1fr !important; }
+  .pd-statstrip { grid-template-columns: 1fr 1fr !important; }
+  /* Bordes correctos en el KPI 2×2: sin borde izq en la 1ª col, borde sup en la 2ª fila */
+  .pd-statstrip > div:nth-child(2n+1) { border-left: none !important; }
+  .pd-statstrip > div:nth-child(n+3) { border-top: 1px solid var(--border-color); }
+
+  /* Tablas con scroll horizontal */
+  .pd-table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .pd-table-scroll > table { min-width: 560px; }
+
+  /* Barra de herramientas y pestañas */
+  .pd-tabs { max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .pd-tabs::-webkit-scrollbar { height: 0; }
+
+  /* Login: ocultar panel de marca, apilar */
+  .pd-login-brand { display: none !important; }
+  .pd-login-form { padding: 2rem 1.5rem !important; }
+}
+
+@media (max-width: 480px) {
+  .pd-statstrip { grid-template-columns: 1fr !important; }
+  .pd-statstrip > div { border-left: none !important; border-top: 1px solid var(--border-color); }
+  .pd-statstrip > div:first-child { border-top: none; }
+}
