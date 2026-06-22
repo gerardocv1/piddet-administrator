@@ -1,12 +1,12 @@
 import React from 'react';
-import { Button, IconButton, Switch } from '../components';
+import { Button, IconButton, Switch, Spinner } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import s from './screens.module.css';
 import t from './Stores.module.css';
 
 export function Stores() {
-  const { data: rows, setData: setRows } = useResource(api.storesDetail, []);
+  const { data: rows, setData: setRows, loading, error } = useResource(api.storesDetail, []);
 
   const toggle = (id) => setRows((rs) => rs.map((r) => r.id === id ? { ...r, open: !r.open } : r));
 
@@ -18,6 +18,11 @@ export function Stores() {
         <Button variant="primary" icon="fas fa-plus">Añadir tienda</Button>
       </div>
 
+      {loading ? (
+        <Spinner center label="Cargando tiendas…" />
+      ) : error ? (
+        <div className={s.stateError}><i className="fas fa-triangle-exclamation" /> {error}</div>
+      ) : (
       <div className={t.grid}>
         {rows.map((x) => (
           <div key={x.id} className={t.card}>
@@ -47,6 +52,7 @@ export function Stores() {
           </div>
         ))}
       </div>
+      )}
     </div>
   );
 }

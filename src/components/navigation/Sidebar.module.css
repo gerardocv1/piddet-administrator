@@ -178,6 +178,45 @@
   padding: 1px 7px;
 }
 
+/* ── Grupo desplegable ── */
+.group { display: block; }
+.groupBtn {
+  width: 100%;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  text-align: left;
+}
+.groupBtn.parentActive { color: var(--on-dark); }
+.groupChev {
+  font-size: 0.6rem;
+  color: rgba(255, 255, 255, 0.4);
+  transition: transform .15s;
+}
+.groupChev.open { transform: rotate(180deg); }
+
+.subnav { margin: 1px 0 2px; }
+.sublink {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.5rem 0.75rem 0.5rem 1.65rem;
+  margin: 1px 0;
+  border-radius: var(--radius);
+  text-decoration: none;
+  font-size: var(--text-sm);
+  font-weight: 400;
+  color: var(--on-dark-muted);
+  background: transparent;
+  transition: background .12s ease, color .12s ease;
+}
+.sublink:hover { background: var(--on-dark-surface-hover); color: var(--on-dark); }
+.sublink.active { background: rgba(0, 0, 0, 0.28); color: var(--on-dark); font-weight: 600; }
+.sublink .icon { width: 18px; text-align: center; font-size: 0.85rem; color: inherit; }
+.sublink.active .icon { color: var(--color-primary); }
+.sublink .label { flex: 1; }
+
 .foot { padding: 0.9rem 1rem; border-top: 1px solid rgba(255, 255, 255, 0.08); }
 .logout {
   display: flex;

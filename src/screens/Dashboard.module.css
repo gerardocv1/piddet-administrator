@@ -16,6 +16,17 @@
 
 .link { font-size: var(--text-sm); color: var(--color-primary); font-weight: 600; }
 
+/* Estado de error de un panel del dashboard (la carga la cubre el Spinner). */
+.panelState {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 2rem;
+  color: var(--color-danger);
+  font-size: var(--text-base);
+}
+
 /* ── Pulso operativo (móvil) ── */
 .pulse {
   background: var(--surface-card);

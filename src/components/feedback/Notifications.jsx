@@ -1,5 +1,5 @@
 import React from 'react';
-import { api } from '../../lib/api.js';
+import { Spinner } from '../core/Spinner.jsx';
 import styles from './Notifications.module.css';
 
 // La presentación (icono + color) se decide aquí a partir del `type` que envía
@@ -14,9 +14,12 @@ const TYPE = {
 /** Campana con panel de notificaciones desplegable. */
 export function Notifications() {
   const [open, setOpen] = React.useState(false);
+  // El módulo de notificaciones aún no tiene endpoint en backend: no se consulta hasta
+  // implementarlo (reactivar con `useResource(api.notifications, [])`). Mientras tanto la
+  // campana se muestra vacía sin disparar peticiones.
   const [notis, setNotis] = React.useState([]);
-
-  React.useEffect(() => { api.notifications().then(setNotis).catch(() => {}); }, []);
+  const loading = false;
+  const error = null;
 
   const unread = notis.filter((n) => n.unread).length;
   return (
@@ -35,7 +38,13 @@ export function Notifications() {
               <button onClick={() => setNotis((ns) => ns.map((n) => ({ ...n, unread: false })))} className={styles.markRead}>Marcar leídas</button>
             </div>
             <div className={styles.list}>
-              {notis.map((n, i) => {
+              {loading ? (
+                <Spinner center label="Cargando…" />
+              ) : error ? (
+                <div className={styles.state}><i className="fas fa-triangle-exclamation" /> {error}</div>
+              ) : notis.length === 0 ? (
+                <div className={styles.state}>No tienes notificaciones.</div>
+              ) : notis.map((n, i) => {
                 const t = TYPE[n.type] || TYPE.tienda;
                 return (
                   <div key={i} className={[styles.item, n.unread ? styles.unread : ''].filter(Boolean).join(' ')}>

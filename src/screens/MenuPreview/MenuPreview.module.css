@@ -1,0 +1,61 @@
+/* Contenedor de la vista "Generar menú": pantalla completa con barra de acciones y lienzo
+   centrado. La barra no se imprime; en impresión el lienzo ocupa toda la hoja. */
+
+.screen {
+  min-height: 100vh;
+  background: var(--bg-body);
+}
+
+/* ── Barra de acciones (sticky, oculta al imprimir) ── */
+.toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 12px 20px;
+  background: var(--surface-card);
+  border-bottom: 1px solid var(--border-color);
+}
+.toolbarRight {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+/* Selects compactos (diseño, color, fondo), sin ancho de formulario. */
+.controlSelect {
+  min-width: 150px;
+}
+
+/* ── Lienzo donde se monta la carta ── */
+.canvas {
+  padding: 32px 20px 56px;
+}
+
+.state {
+  max-width: 520px;
+  margin: 64px auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  text-align: center;
+  color: var(--text-muted);
+}
+.state i { color: var(--color-primary); }
+
+@media (max-width: 720px) {
+  .canvas { padding: 18px 12px 40px; }
+}
+
+/* ── Impresión: sin chrome, sin fondo gris ── */
+@media print {
+  .screen { background: #fff; }
+  .toolbar { display: none; }
+  .canvas { padding: 0; }
+}

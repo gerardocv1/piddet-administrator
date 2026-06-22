@@ -1,28 +1,59 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import styles from './Sidebar.module.css';
-
-const NAV = [
-  { to: '/', label: 'Inicio', icon: 'fas fa-house', end: true },
-  { section: 'Oferta' },
-  { to: '/products', label: 'Productos', icon: 'fas fa-burger' },
-  { to: '/categories', label: 'Categorías', icon: 'fas fa-tags' },
-  { to: '/toppings', label: 'Toppings', icon: 'fas fa-bacon' },
-  { section: 'Operación' },
-  { to: '/tables', label: 'Mesas', icon: 'fas fa-chair', badge: 4 },
-  { to: '/stores', label: 'Tiendas', icon: 'fas fa-store' },
-  { section: 'Cuentas' },
-  { to: '/users', label: 'Usuarios', icon: 'fas fa-user' },
-  { to: '/roles', label: 'Roles', icon: 'fas fa-user-shield' },
-];
+import { HOME_ITEM, MODULE_GROUPS, canAccess } from '../../lib/permissions/modules.js';
+import { usePermissions } from '../../lib/permissions/usePermissions.js';
 
 const initials = (s = '') => s.split(' ').filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
+
+/** Grupo desplegable del menú: el padre expande/colapsa y agrupa rutas hijas. Se abre solo
+ * si alguna ruta hija está activa. */
+function NavGroup({ item, onClose }) {
+  const { pathname } = useLocation();
+  const childActive = item.children.some((c) => pathname === c.to || pathname.startsWith(`${c.to}/`));
+  const [open, setOpen] = React.useState(childActive);
+  React.useEffect(() => { if (childActive) setOpen(true); }, [childActive]);
+
+  return (
+    <div className={styles.group}>
+      <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open}
+        className={[styles.link, styles.groupBtn, childActive ? styles.parentActive : ''].filter(Boolean).join(' ')}>
+        <i className={`${item.icon} ${styles.icon}`} />
+        <span className={styles.label}>{item.label}</span>
+        <i className={`fas fa-chevron-down ${styles.groupChev} ${open ? styles.open : ''}`} />
+      </button>
+      {open && (
+        <div className={styles.subnav}>
+          {item.children.map((c) => (
+            <NavLink key={c.to} to={c.to} onClick={onClose}
+              className={({ isActive }) => [styles.sublink, isActive ? styles.active : ''].filter(Boolean).join(' ')}>
+              <i className={`${c.icon} ${styles.icon}`} />
+              <span className={styles.label}>{c.label}</span>
+            </NavLink>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 /** Menú lateral oscuro fijo, con selector de EMPRESA (tenant SaaS), secciones
  * y resaltado naranja del activo. En móvil funciona como cajón deslizante. */
 export function Sidebar({ onLogout, open = false, onClose, company, companies = [], onSwitchCompany }) {
   const [picker, setPicker] = React.useState(false);
   const multi = companies.length > 1;
+  const { permissions } = usePermissions();
+
+  // Solo módulos con permiso; grupos sin módulos visibles se omiten (incluida su cabecera).
+  // En items desplegables se filtran las rutas hijas y se descarta el padre si queda vacío.
+  const groups = MODULE_GROUPS
+    .map((g) => ({
+      section: g.section,
+      items: g.items
+        .map((m) => (m.children ? { ...m, children: m.children.filter((c) => canAccess(c.to, permissions)) } : m))
+        .filter((m) => (m.children ? m.children.length > 0 : canAccess(m.to, permissions))),
+    }))
+    .filter((g) => g.items.length > 0);
 
   return (
     <nav className={[styles.sidebar, open ? styles.open : ''].filter(Boolean).join(' ')}>
@@ -70,15 +101,27 @@ export function Sidebar({ onLogout, open = false, onClose, company, companies = 
       )}
 
       <div className={styles.nav}>
-        {NAV.map((n, i) => n.section ? (
-          <div key={`s${i}`} className={styles.section}>{n.section}</div>
-        ) : (
-          <NavLink key={n.to} to={n.to} end={n.end} onClick={onClose}
-            className={({ isActive }) => [styles.link, isActive ? styles.active : ''].filter(Boolean).join(' ')}>
-            <i className={`${n.icon} ${styles.icon}`} />
-            <span className={styles.label}>{n.label}</span>
-            {n.badge != null && <span className={styles.badge}>{n.badge}</span>}
-          </NavLink>
+        <NavLink to={HOME_ITEM.to} end={HOME_ITEM.end} onClick={onClose}
+          className={({ isActive }) => [styles.link, isActive ? styles.active : ''].filter(Boolean).join(' ')}>
+          <i className={`${HOME_ITEM.icon} ${styles.icon}`} />
+          <span className={styles.label}>{HOME_ITEM.label}</span>
+        </NavLink>
+        {groups.map((g) => (
+          <React.Fragment key={g.section}>
+            <div className={styles.section}>{g.section}</div>
+            {g.items.map((n) => (
+              n.children ? (
+                <NavGroup key={n.label} item={n} onClose={onClose} />
+              ) : (
+                <NavLink key={n.to} to={n.to} onClick={onClose}
+                  className={({ isActive }) => [styles.link, isActive ? styles.active : ''].filter(Boolean).join(' ')}>
+                  <i className={`${n.icon} ${styles.icon}`} />
+                  <span className={styles.label}>{n.label}</span>
+                  {n.badge != null && <span className={styles.badge}>{n.badge}</span>}
+                </NavLink>
+              )
+            ))}
+          </React.Fragment>
         ))}
       </div>
 

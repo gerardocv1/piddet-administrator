@@ -1,4 +1,5 @@
 import React from 'react';
+import { Spinner } from '../core/Spinner.jsx';
 import styles from './DataTable.module.css';
 
 /**
@@ -22,7 +23,7 @@ export function DataTable({ columns = [], rows = [], rowKey = 'id', empty = 'Sin
         </thead>
         <tbody>
           {loading && (
-            <tr><td colSpan={colSpan} className={`${styles.td} ${styles.empty}`}><i className="fas fa-spinner fa-spin" /> Cargando…</td></tr>
+            <tr><td colSpan={colSpan} className={`${styles.td} ${styles.empty}`}><Spinner size="sm" label="Cargando…" /></td></tr>
           )}
           {!loading && error && (
             <tr><td colSpan={colSpan} className={`${styles.td} ${styles.error}`}><i className="fas fa-triangle-exclamation" /> {error}</td></tr>

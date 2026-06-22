@@ -1,0 +1,151 @@
+/* Diseño "Clásico" de la carta. Página centrada apta para A4 (~820px), tono cálido claro.
+   Pensada tanto para pantalla como para impresión: los saltos respetan ítems y categorías. */
+
+.page {
+  width: 820px;
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 40px 48px 56px;
+  /* Color principal y fondo configurables (variables --carta-* inyectadas por MenuPreview);
+     con respaldo a los tokens por si no llega tema. */
+  --carta-accent: var(--color-primary);
+  --carta-accent-strong: var(--color-primary-700);
+  --carta-accent-soft: var(--color-primary-050);
+  --carta-accent-on-soft: var(--color-primary-300);
+  --carta-bg: #fffdf8;
+  background: var(--carta-bg);
+  color: var(--text-body);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+}
+
+/* ── Encabezado: compañía + nombre del menú ── */
+.header {
+  text-align: center;
+  margin-bottom: 28px;
+}
+.logo {
+  max-height: 88px;
+  max-width: 280px;
+  object-fit: contain;
+}
+.wordmark {
+  font-family: var(--font-logo);
+  font-weight: 800;
+  font-size: 2.4rem;
+  line-height: 1.1;
+  color: var(--carta-accent);
+  letter-spacing: 0.01em;
+}
+.menuName {
+  font-family: var(--font-logo);
+  font-weight: 700;
+  font-size: var(--text-xl);
+  color: var(--gray-900);
+  margin-top: 6px;
+}
+.menuDesc {
+  margin: 6px 0 0;
+  font-size: var(--text-base);
+  font-style: italic;
+  color: var(--text-muted);
+}
+.headerRule {
+  display: block;
+  width: 72px;
+  height: 3px;
+  margin: 18px auto 0;
+  background: var(--carta-accent);
+  border-radius: var(--radius-pill);
+}
+
+/* ── Categoría ── */
+.category {
+  margin-top: 30px;
+  break-inside: avoid;
+}
+/* Cabecera de categoría: título (con filetes) + selector de plantilla (solo pantalla). */
+.catHead {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+.catTitle {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 0;
+}
+.frameSelect {
+  flex-shrink: 0;
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  color: var(--text-body);
+  background: var(--surface-card);
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius);
+  padding: 4px 8px;
+}
+.catTitle::before,
+.catTitle::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border-color);
+}
+.catTitle span {
+  font-family: var(--font-logo);
+  font-weight: 700;
+  font-size: var(--text-md);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--carta-accent-strong);
+}
+
+/* La presentación de los productos de cada categoría vive en los frames (./frames). */
+
+/* ── Pie ── */
+.footer {
+  margin-top: 36px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-color);
+  text-align: center;
+  font-size: var(--text-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* ── Responsive (pantalla angosta) ── */
+@media (max-width: 720px) {
+  .page { padding: 28px 22px 40px; }
+}
+
+/* ── Impresión: márgenes de hoja controlados, color exacto, sin cortes feos ── */
+@page {
+  size: A4;
+  margin: 12mm;
+}
+@media print {
+  .page {
+    width: 100%;
+    /* Margen lateral extra al imprimir para que los productos no queden pegados a los bordes. */
+    padding: 6mm 14mm;
+    box-shadow: none;
+    border-radius: 0;
+    /* Imprime el fondo elegido (los pasteles/crema) en lugar de blanco forzado. */
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .category { break-inside: avoid; }
+  /* El selector de plantilla es solo para edición en pantalla; nunca se imprime. */
+  .frameSelect { display: none; }
+  .wordmark,
+  .catTitle span,
+  .headerRule {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

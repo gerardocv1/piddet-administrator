@@ -1,0 +1,37 @@
+/* Ruedita de carga. La pista (track) es el color del contexto atenuado y el
+   arco activo el color pleno; al heredar currentColor se adapta a cualquier fondo. */
+.spinner {
+  display: inline-block;
+  border-radius: 50%;
+  border-style: solid;
+  border-color: color-mix(in srgb, currentColor 22%, transparent);
+  border-top-color: currentColor;
+  animation: spin 0.6s linear infinite;
+  flex-shrink: 0;
+}
+
+.sm { width: 1rem;   height: 1rem;   border-width: 2px; }
+.md { width: 1.5rem; height: 1.5rem; border-width: 2px; }
+.lg { width: 2.5rem; height: 2.5rem; border-width: 3px; }
+
+.wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  color: var(--gray-500);
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+}
+
+/* Zona/panel a la espera de datos: bloque centrado con aire. */
+.center {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 2.5rem;
+}
+
+.label { color: var(--gray-500); }
+
+@keyframes spin { to { transform: rotate(360deg); } }

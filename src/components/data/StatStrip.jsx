@@ -1,8 +1,17 @@
 import React from 'react';
+import { Spinner } from '../core/Spinner.jsx';
 import styles from './StatStrip.module.css';
 
-/** Franja de KPIs: un solo panel con columnas separadas por borde (estilo flat). */
-export function StatStrip({ stats = [] }) {
+/** Franja de KPIs: un solo panel con columnas separadas por borde (estilo flat).
+ *  Mientras `loading`, muestra una ruedita en lugar de una franja vacía. */
+export function StatStrip({ stats = [], loading = false }) {
+  if (loading) {
+    return (
+      <div className={styles.strip} style={{ '--cols': 1 }}>
+        <Spinner center label="Cargando indicadores…" />
+      </div>
+    );
+  }
   return (
     <div className={styles.strip} style={{ '--cols': stats.length || 1 }}>
       {stats.map((s) => (

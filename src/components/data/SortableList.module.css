@@ -1,0 +1,31 @@
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.row {
+  background: var(--surface-card);
+  border-radius: var(--radius);
+}
+.row.dragging {
+  position: relative;
+  z-index: 2;
+  box-shadow: var(--shadow-lg);
+}
+
+/* Agarre de arrastre. `touch-action: none` evita el scroll del navegador al arrastrar en móvil. */
+.handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border: none;
+  background: none;
+  color: var(--gray-400);
+  cursor: grab;
+  touch-action: none;
+}
+.handle:hover { color: var(--gray-600); }
+.handle:active { cursor: grabbing; }
+.handle:focus-visible { outline: none; box-shadow: var(--ring-primary); border-radius: var(--radius-sm); }

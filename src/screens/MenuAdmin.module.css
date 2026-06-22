@@ -1,0 +1,84 @@
+/* Estilos compartidos por la gestión de categorías de menú y la administración de un menú. */
+
+.headerBar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.headerText { min-width: 0; }
+.headerTitle { font-size: var(--text-lg); color: var(--gray-900); margin: 0; }
+.headerSub { margin: 2px 0 0; color: var(--gray-500); font-size: var(--text-sm); }
+.spacer { flex: 1; min-width: 0; }
+
+.hint {
+  margin: 0;
+  color: var(--gray-500);
+  font-size: var(--text-sm);
+}
+
+.formError {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border-radius: var(--radius);
+  background: var(--color-danger-100);
+  color: var(--color-danger-fg);
+  font-size: var(--text-sm);
+}
+
+/* Fila reordenable (contenido interno de SortableList) */
+.rowInner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 14px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  background: var(--surface-card);
+}
+.info { min-width: 0; flex: 1; }
+.name { font-weight: 600; color: var(--gray-800); }
+.desc {
+  font-size: var(--text-sm);
+  color: var(--gray-500);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rowActions { display: inline-flex; gap: 6px; flex: 0 0 auto; }
+
+/* Producto dentro de una categoría */
+.price { font-weight: 600; color: var(--gray-800); margin-right: 4px; }
+.priceOwn { color: var(--gray-500); font-weight: 400; font-size: var(--text-sm); }
+
+/* Grupo de categoría en la administración del menú */
+.group { display: flex; flex-direction: column; gap: 10px; }
+.groupHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--gray-100);
+}
+.groupName { font-weight: 700; color: var(--gray-900); }
+.groupCount { color: var(--gray-400); font-size: var(--text-sm); font-weight: 600; }
+.groupEmpty { color: var(--gray-400); font-size: var(--text-sm); padding: 4px 2px; }
+
+.stack { display: flex; flex-direction: column; gap: 22px; }
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 2.5rem;
+  color: var(--gray-500);
+  text-align: center;
+}
+.empty i { font-size: 1.6rem; color: var(--gray-400); }
+
+/* Filas de resultados del Autocomplete de productos (vía renderOption) */
+.resultName { font-weight: 600; color: var(--gray-800); flex: 1; min-width: 0; }
+.resultMeta { color: var(--gray-500); font-size: var(--text-sm); }

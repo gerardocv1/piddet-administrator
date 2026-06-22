@@ -63,6 +63,18 @@
 
 .list { max-height: 320px; overflow-y: auto; }
 
+/* Carga/error/vacío del panel de notificaciones. */
+.state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1.75rem 1rem;
+  color: var(--gray-500);
+  font-size: var(--text-base);
+  text-align: center;
+}
+
 .item {
   display: flex;
   gap: 12px;

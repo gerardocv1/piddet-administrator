@@ -1,0 +1,165 @@
+/* Frames: plantillas de presentación de los productos de una categoría dentro del diseño Clásico.
+   Heredan las variables --carta-* (color/fondo) que MenuPreview inyecta en la página. */
+
+/* ── Miniatura (tamaño por frame vía clases g2Thumb/listThumb/heroImg) ── */
+.thumb,
+.thumbFallback {
+  border-radius: var(--radius-lg);
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.thumbFallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--carta-accent-soft);
+  color: var(--carta-accent-on-soft);
+}
+
+/* ── Bloque de texto del producto (compartido) ── */
+.body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.itemTop {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.itemName {
+  font-size: var(--text-md);
+  font-weight: 700;
+  color: var(--gray-900);
+  line-height: 1.25;
+}
+.itemNameLg { font-size: var(--text-lg); }
+.leader {
+  flex: 1;
+  min-width: 12px;
+  align-self: flex-end;
+  margin-bottom: 4px;
+  border-bottom: 1px dotted var(--gray-300);
+}
+.itemPrice {
+  font-weight: 800;
+  font-size: var(--text-md);
+  color: var(--carta-accent);
+  white-space: nowrap;
+}
+.itemPriceLg { font-size: var(--text-lg); }
+.itemDesc {
+  margin: 4px 0 0;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+/* ── Frame: 2 columnas con foto (por defecto) ── */
+.grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 22px 32px;
+}
+.g2Row {
+  display: grid;
+  grid-template-columns: 104px 1fr;
+  gap: 14px;
+  break-inside: avoid;
+}
+.g2Thumb { width: 104px; height: 104px; font-size: 1.8rem; }
+
+/* ── Frame: 1 columna con foto grande (lista destacada) ── */
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.listRow {
+  display: grid;
+  grid-template-columns: 132px 1fr;
+  gap: 18px;
+  align-items: center;
+  break-inside: avoid;
+}
+.listThumb { width: 132px; height: 132px; font-size: 2rem; }
+
+/* ── Frame: 2 columnas sin foto (texto + precio) ── */
+.grid2Text {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px 32px;
+}
+
+/* ── Frame: 3 columnas sin foto (compacto, ideal bebidas) ── */
+.grid3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px 26px;
+}
+.g3Item { break-inside: avoid; }
+
+/* ── Frame: destacado (Hero) — primer producto grande + resto en lista ── */
+.hero {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 30px;
+  align-items: start;
+}
+.heroMain { break-inside: avoid; }
+.heroImg {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  font-size: 3rem;
+}
+.heroBody { margin-top: 12px; }
+.heroList {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.heroRow { break-inside: avoid; }
+
+/* ── Frame: destacado con foto (banner) + lista a lo ancho ── */
+.bannerFrame {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+.banner {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 22px;
+  align-items: center;
+  break-inside: avoid;
+}
+.bannerImg { width: 240px; height: 180px; font-size: 3rem; }
+.bannerList {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+@media (max-width: 720px) {
+  .grid2,
+  .grid2Text,
+  .grid3,
+  .hero,
+  .banner { grid-template-columns: 1fr; }
+}
+
+@media print {
+  .g2Row,
+  .listRow,
+  .g3Item,
+  .heroMain,
+  .heroRow,
+  .thumb,
+  .thumbFallback { break-inside: avoid; }
+  .thumbFallback,
+  .itemPrice {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

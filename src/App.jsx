@@ -4,15 +4,33 @@ import { Layout } from './layout/Layout.jsx';
 import { Login } from './screens/Login.jsx';
 import { Dashboard } from './screens/Dashboard.jsx';
 import { Products } from './screens/Products.jsx';
+import { ProductDetail } from './screens/ProductDetail.jsx';
+import { ProductCategories } from './screens/ProductCategories.jsx';
 import { Tables } from './screens/Tables.jsx';
-import { Categories } from './screens/Categories.jsx';
-import { Toppings } from './screens/Toppings.jsx';
+import { Menus } from './screens/Menus.jsx';
+import { MenuDetail } from './screens/MenuDetail.jsx';
+import { MenuPreview } from './screens/MenuPreview/MenuPreview.jsx';
 import { Stores } from './screens/Stores.jsx';
 import { Users } from './screens/Users.jsx';
 import { Placeholder } from './screens/Placeholder.jsx';
+import { NoModules } from './screens/NoModules.jsx';
+import { auth as authLib } from './lib/auth/index.js';
+import { RequireAuth } from './lib/auth/RequireAuth.jsx';
+import { RequirePermission } from './lib/permissions/RequirePermission.jsx';
+import { usePermissions } from './lib/permissions/usePermissions.js';
+import { canAccess, firstAccessible } from './lib/permissions/modules.js';
+
+// Landing de la raíz: muestra el Inicio si está habilitado; si no, redirige al primer módulo
+// accesible; si no hay ninguno, muestra el estado "sin módulos".
+function Home() {
+  const { permissions } = usePermissions();
+  if (canAccess('/', permissions)) return <Dashboard />;
+  const first = firstAccessible(permissions);
+  return first ? <Navigate to={first} replace /> : <NoModules />;
+}
 
 export default function App() {
-  const [auth, setAuth] = React.useState(!!localStorage.getItem('piddet_token'));
+  const [auth, setAuth] = React.useState(() => authLib.isAuthenticated());
   const [theme, setTheme] = React.useState(() => localStorage.getItem('piddet_theme') || 'light');
 
   // Aplica y persiste el tema (también afecta al login).
@@ -22,24 +40,39 @@ export default function App() {
   }, [theme]);
   const toggleTheme = () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'));
 
-  const logout = () => { localStorage.removeItem('piddet_token'); setAuth(false); };
+  // Cierre de sesión forzado (refresh fallido / 401 definitivo) → expulsa a /login.
+  React.useEffect(() => authLib.onSessionExpired(() => setAuth(false)), []);
+
+  // Al (re)entrar con sesión, carga permisos (si el caché venció) y funcionalidades (si no hay).
+  React.useEffect(() => { if (auth) { authLib.loadPermissions(); authLib.loadFunctionalities(); } }, [auth]);
+
+  const logout = () => { authLib.logout(); setAuth(false); };
 
   return (
     <BrowserRouter>
       <Routes>
+        {/* Única vista pública */}
         <Route path="/login"
           element={auth ? <Navigate to="/" replace /> : <Login onLogin={() => setAuth(true)} theme={theme} onToggleTheme={toggleTheme} />} />
-        <Route path="/"
-          element={auth ? <Layout theme={theme} onToggleTheme={toggleTheme} onLogout={logout} /> : <Navigate to="/login" replace />}>
-          <Route index element={<Dashboard />} />
-          <Route path="products" element={<Products />} />
-          <Route path="categories" element={<Categories />} />
-          <Route path="toppings" element={<Toppings />} />
-          <Route path="tables" element={<Tables />} />
-          <Route path="stores" element={<Stores />} />
-          <Route path="users" element={<Users />} />
-          <Route path="roles" element={<Placeholder name="Roles" />} />
-          <Route path="*" element={<Placeholder name="No encontrado" />} />
+
+        {/* Todo lo demás exige sesión: el guard redirige a /login si no hay token */}
+        <Route element={<RequireAuth authed={auth} />}>
+          {/* Carta del menú a pantalla completa (fuera del Layout: sin sidebar/topbar) */}
+          <Route path="/menus/:menuId/preview"
+            element={<RequirePermission path="/menus"><MenuPreview /></RequirePermission>} />
+          <Route path="/" element={<Layout theme={theme} onToggleTheme={toggleTheme} onLogout={logout} />}>
+            <Route index element={<Home />} />
+            <Route path="products" element={<RequirePermission path="/products"><Products /></RequirePermission>} />
+            <Route path="products/:itemId" element={<RequirePermission path="/products"><ProductDetail /></RequirePermission>} />
+            <Route path="product-categories" element={<RequirePermission path="/product-categories"><ProductCategories /></RequirePermission>} />
+            <Route path="menus" element={<RequirePermission path="/menus"><Menus /></RequirePermission>} />
+            <Route path="menus/:menuId" element={<RequirePermission path="/menus"><MenuDetail /></RequirePermission>} />
+            <Route path="tables" element={<RequirePermission path="/tables"><Tables /></RequirePermission>} />
+            <Route path="stores" element={<RequirePermission path="/stores"><Stores /></RequirePermission>} />
+            <Route path="users" element={<RequirePermission path="/users"><Users /></RequirePermission>} />
+            <Route path="roles" element={<RequirePermission path="/roles"><Placeholder name="Roles" /></RequirePermission>} />
+            <Route path="*" element={<Placeholder name="No encontrado" />} />
+          </Route>
         </Route>
       </Routes>
     </BrowserRouter>

@@ -33,3 +33,8 @@
   transition: left .2s cubic-bezier(.4, 1.4, .6, 1);
 }
 .track.on .knob { left: 23px; }
+
+/* Variante pequeña (listados densos) */
+.sm .track { width: 36px; height: 20px; }
+.sm .knob { width: 15px; height: 15px; top: 2.5px; left: 2.5px; }
+.sm .track.on .knob { left: 18.5px; }

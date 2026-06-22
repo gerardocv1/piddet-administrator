@@ -1,5 +1,5 @@
 import React from 'react';
-import { StatStrip, Card, Badge, Avatar, DataTable } from '../components';
+import { StatStrip, Card, Badge, Avatar, DataTable, Spinner } from '../components';
 import { useIsMobile } from '../lib/useIsMobile.js';
 import { useResource } from '../lib/useResource.js';
 import { api } from '../lib/api.js';
@@ -9,9 +9,9 @@ const STATUS = { 'En cocina': 'warning', 'Listo': 'info', 'Entregado': 'success'
 
 export function Dashboard() {
   const isMobile = useIsMobile();
-  const { data: stats } = useResource(api.stats, []);
+  const { data: stats, loading: loadingStats } = useResource(api.stats, []);
   const { data: orders, loading: loadingOrders, error: errorOrders } = useResource(api.orders, []);
-  const { data: stores } = useResource(api.stores, []);
+  const { data: stores, loading: loadingStores, error: errorStores } = useResource(api.stores, []);
 
   const openCount = stores.filter((x) => x.open).length;
   const liveOrders = stores.reduce((a, x) => a + (x.pedidos || 0), 0);
@@ -49,6 +49,11 @@ export function Dashboard() {
     <Card>
       <Card.Header title="Pedidos recientes" action={<a href="#" onClick={(e) => e.preventDefault()} className={s.link}>Ver todos</a>} />
       {isMobile ? (
+        loadingOrders ? (
+          <Spinner center label="Cargando pedidos…" />
+        ) : errorOrders ? (
+          <div className={s.panelState}><i className="fas fa-triangle-exclamation" /> {errorOrders}</div>
+        ) : (
         <div>
           {orders.map((o) => (
             <div key={o.id} className={s.orderItem}>
@@ -67,6 +72,7 @@ export function Dashboard() {
             </div>
           ))}
         </div>
+        )
       ) : (
         <DataTable columns={orderColumns} rows={orders} loading={loadingOrders} error={errorOrders} empty="Sin pedidos recientes" />
       )}
@@ -76,7 +82,11 @@ export function Dashboard() {
   const storesPanel = (
     <Card>
       <Card.Header title="Tiendas" />
-      {stores.map((x) => (
+      {loadingStores ? (
+        <Spinner center label="Cargando tiendas…" />
+      ) : errorStores ? (
+        <div className={s.panelState}><i className="fas fa-triangle-exclamation" /> {errorStores}</div>
+      ) : stores.map((x) => (
         <div key={x.id} className={s.store}>
           <div className={s.storeLeft}>
             <span className={s.storeIcon}><i className="fas fa-store" /></span>
@@ -98,7 +108,7 @@ export function Dashboard() {
     return (
       <div className={s.pageMobile}>
         {pulse}
-        <StatStrip stats={stats} />
+        <StatStrip stats={stats} loading={loadingStats} />
         {storesPanel}
         {ordersPanel}
       </div>
@@ -108,7 +118,7 @@ export function Dashboard() {
   // ─── Escritorio: grid 2fr / 1fr ───
   return (
     <div className={s.page}>
-      <StatStrip stats={stats} />
+      <StatStrip stats={stats} loading={loadingStats} />
       <div className={s.grid}>
         {ordersPanel}
         {storesPanel}

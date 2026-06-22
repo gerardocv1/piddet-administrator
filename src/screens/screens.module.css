@@ -41,6 +41,30 @@
 .status.off { color: var(--gray-400); }
 .statusDot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
 
+/* Estado de error para zonas con layout propio (grids de Tiendas/Mesas, etc.).
+   El estado de carga lo cubre el componente Spinner. */
+.stateError {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 2.5rem;
+  color: var(--color-danger);
+  font-size: var(--text-base);
+}
+
 /* Filas de formularios dentro de modales */
 .formCol { display: flex; flex-direction: column; gap: 14px; }
 .formGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+/* Error inline dentro de un formulario/modal */
+.formError {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border-radius: var(--radius);
+  background: var(--color-danger-100);
+  color: var(--color-danger-fg);
+  font-size: var(--text-sm);
+}

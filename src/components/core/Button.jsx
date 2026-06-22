@@ -1,4 +1,5 @@
 import React from 'react';
+import { Spinner } from './Spinner.jsx';
 import styles from './Button.module.css';
 
 const VARIANT_CLASS = {
@@ -11,10 +12,12 @@ const VARIANT_CLASS = {
 };
 const SIZE_CLASS = { sm: styles.sm, md: styles.md, lg: styles.lg };
 
-/** Botón de acción — estilo flat (sin sombra). Naranja para la acción principal. */
+/** Botón de acción — estilo flat (sin sombra). Naranja para la acción principal.
+ *  `loading` muestra una ruedita y deshabilita el botón mientras se espera una
+ *  respuesta del servidor, para dar feedback al usuario en cualquier acción async. */
 export function Button({
   variant = 'primary', size = 'md', pill = false, block = false,
-  disabled = false, icon = null, iconRight = null, children, className = '', ...rest
+  disabled = false, loading = false, icon = null, iconRight = null, children, className = '', ...rest
 }) {
   const cls = [
     styles.btn,
@@ -26,10 +29,10 @@ export function Button({
   ].filter(Boolean).join(' ');
 
   return (
-    <button className={cls} disabled={disabled} {...rest}>
-      {icon && <i className={icon} aria-hidden="true" />}
+    <button className={cls} disabled={disabled || loading} aria-busy={loading || undefined} {...rest}>
+      {loading ? <Spinner size="sm" /> : (icon && <i className={icon} aria-hidden="true" />)}
       {children}
-      {iconRight && <i className={iconRight} aria-hidden="true" />}
+      {!loading && iconRight && <i className={iconRight} aria-hidden="true" />}
     </button>
   );
 }

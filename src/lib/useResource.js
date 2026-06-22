@@ -4,7 +4,7 @@ import React from 'react';
  * Carga datos de la API con estados unificados de carga/error y recarga.
  * Reemplaza el patrón `api.x().then(set).catch(() => {})` que tragaba errores.
  *
- *   const { data, loading, error, reload, setData } = useResource(api.products, []);
+ *   const { data, loading, error, reload, setData } = useResource(api.items, []);
  *
  * `fetcher` debe ser estable (referencia de `api.*`). `initial` es el valor
  * mientras carga. `deps` reejecuta el fetch cuando cambian.

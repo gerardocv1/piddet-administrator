@@ -1,8 +1,9 @@
 import React from 'react';
-import { Button } from '../components';
+import { Button, Spinner } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import s from './Tables.module.css';
+import scn from './screens.module.css';
 
 const ST = {
   libre: { label: 'Libre', dot: s.dotLibre, txt: s.txtLibre },
@@ -12,7 +13,7 @@ const ST = {
 };
 
 export function Tables() {
-  const { data: tables, setData: setTables } = useResource(api.tables, []);
+  const { data: tables, setData: setTables, loading, error } = useResource(api.tables, []);
 
   const cycle = (n) => {
     const order = ['libre', 'ocupada', 'cuenta'];
@@ -36,6 +37,11 @@ export function Tables() {
         <Button size="sm" variant="secondary" icon="fas fa-plus">Añadir mesa</Button>
       </div>
 
+      {loading ? (
+        <Spinner center label="Cargando mesas…" />
+      ) : error ? (
+        <div className={scn.stateError}><i className="fas fa-triangle-exclamation" /> {error}</div>
+      ) : (
       <div className={s.grid}>
         {tables.map((m) => {
           const st = ST[m.st] || ST.libre;
@@ -57,6 +63,7 @@ export function Tables() {
           );
         })}
       </div>
+      )}
     </div>
   );
 }

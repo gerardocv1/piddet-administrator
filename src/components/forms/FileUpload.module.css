@@ -1,0 +1,96 @@
+.root { display: flex; flex-direction: column; gap: 10px; }
+
+/* Zona para elegir imagen (sin imagen en edición) */
+.dropzone {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 180px;
+  padding: 16px;
+  border: 1.5px dashed var(--border-input);
+  border-radius: var(--radius-lg);
+  background: var(--surface-card);
+  cursor: pointer;
+  overflow: hidden;
+  transition: border-color 0.15s, background 0.15s;
+}
+.dropzone:hover { border-color: var(--color-primary-300); background: var(--color-primary-050); }
+
+.placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: var(--gray-500);
+  font-size: var(--text-sm);
+}
+.placeholder i { font-size: 1.7rem; color: var(--gray-400); }
+
+.current { max-width: 100%; max-height: 220px; border-radius: var(--radius); object-fit: contain; }
+
+.overlayHint {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--gray-900) 60%, transparent);
+  color: #fff;
+  font-size: var(--text-xs);
+}
+
+/* Lienzo de edición (react-easy-crop necesita un contenedor con position:relative y altura) */
+.stage {
+  position: relative;
+  width: 100%;
+  height: 280px;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--gray-900);
+}
+
+/* Controles de edición */
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.spacer { flex: 1; min-width: 0; }
+
+.ctrlBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius);
+  background: var(--surface-card);
+  color: var(--gray-700);
+  font: inherit;
+  font-size: var(--text-sm);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.ctrlBtn:hover { border-color: var(--color-primary-300); background: var(--color-primary-050); color: var(--color-primary); }
+
+.zoom { display: inline-flex; align-items: center; gap: 8px; color: var(--gray-400); }
+.zoom input { accent-color: var(--color-primary); width: 130px; }
+
+.input { display: none; }
+
+.hint { font-size: var(--text-sm); color: var(--gray-500); }
+.error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border-radius: var(--radius);
+  background: var(--color-danger-100);
+  color: var(--color-danger-fg);
+  font-size: var(--text-sm);
+}
