@@ -1,6 +1,6 @@
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Button, IconButton, Input, Select, Textarea, Modal, Spinner, SortableList, Autocomplete } from '../components';
+import { Button, IconButton, Input, Select, Textarea, Modal, Spinner, SortableList, Autocomplete, Dropdown } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import s from './screens.module.css';
@@ -153,9 +153,14 @@ export function MenuDetail() {
         <span className={t.catName}>{c.name}</span>
         <span className={t.catCount}>{countByCat.get(c.id) || 0}</span>
       </button>
-      <span className={t.catActions}>
-        <IconButton icon="fas fa-pen" variant="light" title="Editar categoría" size="sm" onClick={() => setEditCat(c)} />
-        <IconButton icon="fas fa-trash" variant="danger" title="Eliminar categoría" size="sm" onClick={() => setDelCat(c)} />
+      <span className={t.catActions} onClick={(e) => e.stopPropagation()}>
+        <Dropdown
+          trigger={<IconButton icon="fas fa-ellipsis-vertical" variant="light" size="sm" title="Acciones de la categoría" />}
+          items={[
+            { label: 'Editar', icon: 'fas fa-pen', onClick: () => setEditCat(c) },
+            { label: 'Eliminar', icon: 'fas fa-trash', variant: 'danger', onClick: () => setDelCat(c) },
+          ]}
+        />
       </span>
     </div>
   );
@@ -288,16 +293,16 @@ export function MenuDetail() {
 
       <Modal open={!!del} size="sm" title="Quitar producto" onClose={() => setDel(null)}
         footer={<>
-          <Button variant="secondary" size="sm" onClick={() => setDel(null)}>Cancelar</Button>
-          <Button variant="danger" size="sm" icon="fas fa-trash" loading={saving} onClick={removeItem}>Quitar</Button>
+          <Button variant="secondary" onClick={() => setDel(null)}>Cancelar</Button>
+          <Button variant="danger" icon="fas fa-trash" loading={saving} onClick={removeItem}>Quitar</Button>
         </>}>
         ¿Quitar <strong>{del?.name}</strong> de este menú?
       </Modal>
 
       <Modal open={!!delCat} size="sm" title="Eliminar categoría" onClose={() => setDelCat(null)}
         footer={<>
-          <Button variant="secondary" size="sm" onClick={() => setDelCat(null)}>Cancelar</Button>
-          <Button variant="danger" size="sm" icon="fas fa-trash" loading={saving} onClick={removeCat}>Eliminar</Button>
+          <Button variant="secondary" onClick={() => setDelCat(null)}>Cancelar</Button>
+          <Button variant="danger" icon="fas fa-trash" loading={saving} onClick={removeCat}>Eliminar</Button>
         </>}>
         ¿Eliminar la categoría <strong>{delCat?.name}</strong> de este menú?
         {(countByCat.get(delCat?.id) || 0) > 0 && (
@@ -342,8 +347,8 @@ function AddProductModal({ menuId, categories, defaultCat, onClose, onAdded }) {
   return (
     <Modal open title="Agregar producto" subtitle="Busca un producto y asígnale categoría y precio" size="lg" onClose={onClose}
       footer={<>
-        <Button variant="secondary" size="sm" onClick={onClose}>Cancelar</Button>
-        <Button variant="primary" size="sm" loading={saving} disabled={!sel || !catId} onClick={submit}>Agregar</Button>
+        <Button variant="secondary" onClick={onClose}>Cancelar</Button>
+        <Button variant="primary" loading={saving} disabled={!sel || !catId} onClick={submit}>Agregar</Button>
       </>}>
       <div className={s.formCol}>
         <Autocomplete
@@ -400,8 +405,8 @@ function EditItemModal({ menuId, item, categories, onClose, onSaved }) {
   return (
     <Modal open title="Editar producto" subtitle={item.name} onClose={onClose}
       footer={<>
-        <Button variant="secondary" size="sm" onClick={onClose}>Cancelar</Button>
-        <Button variant="primary" size="sm" loading={saving} onClick={submit}>Guardar</Button>
+        <Button variant="secondary" onClick={onClose}>Cancelar</Button>
+        <Button variant="primary" loading={saving} onClick={submit}>Guardar</Button>
       </>}>
       <div className={s.formCol}>
         <Select label="Categoría" value={catId} onChange={(e) => setCatId(e.target.value)}
@@ -441,8 +446,8 @@ function CategoryModal({ menuId, category, onClose, onSaved }) {
     <Modal open title={editing ? 'Editar categoría' : 'Nueva categoría'}
       subtitle="Las categorías pertenecen a este menú y definen cómo se agrupan sus productos" onClose={onClose}
       footer={<>
-        <Button variant="secondary" size="sm" onClick={onClose}>Cancelar</Button>
-        <Button variant="primary" size="sm" loading={saving} onClick={submit}>Guardar</Button>
+        <Button variant="secondary" onClick={onClose}>Cancelar</Button>
+        <Button variant="primary" loading={saving} onClick={submit}>Guardar</Button>
       </>}>
       <div className={s.formCol}>
         <Input label="Nombre de la categoría" icon="fas fa-layer-group" placeholder="Ej. Entradas"

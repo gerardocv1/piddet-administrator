@@ -17,6 +17,7 @@ import { auth } from './auth/index.js';
 import { accountService } from './services/account.js';
 import { companyService } from './services/company.js';
 import { dashboardService } from './services/dashboard.js';
+import { metricsService } from './services/metrics.js';
 import { itemsService } from './services/items.js';
 import { itemCategoriesService } from './services/itemCategories.js';
 import { itemTypesService } from './services/itemTypes.js';
@@ -38,6 +39,7 @@ export const api = {
   ...accountService,
   ...companyService,
   ...dashboardService,
+  ...metricsService,
   ...itemsService,
   ...itemCategoriesService,
   ...itemTypesService,

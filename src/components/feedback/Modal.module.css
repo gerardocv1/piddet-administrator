@@ -86,8 +86,14 @@
   background: var(--gray-100);
   flex: 0 0 auto;
 }
+/* En móvil (bottom-sheet): los botones SIEMPRE a la derecha (no estirados) y un
+   padding inferior generoso para que el footer no quede pegado al borde de la pantalla. */
 .footer[data-sheet='true'] {
-  justify-content: stretch;
-  padding: 0.9rem 1.4rem calc(0.9rem + env(safe-area-inset-bottom));
+  justify-content: flex-end;
+  padding: 1rem 1.4rem calc(1.5rem + env(safe-area-inset-bottom));
   background: var(--surface-card);
 }
+
+/* Separación entre el contenido del body y el footer en el bottom-sheet,
+   para que el body no quede tan pegado a la parte de abajo (mínimo 2rem). */
+.panel[data-sheet='true'] .body { padding-bottom: 2rem; }

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useDisplay } from '../display.js';
 import s from './frames.module.css';
 
 // Utilidades compartidas por los frames (plantillas de presentación de productos por categoría).
@@ -25,16 +26,18 @@ export function ItemThumb({ srcs, alt, className = '' }) {
 }
 
 // Bloque de texto del producto: nombre + filete + precio, y descripción debajo.
-// `emphasis` agranda nombre/precio (para el producto destacado del frame Hero).
-export function ItemBody({ it, emphasis = false }) {
+// Tamaño de letra uniforme en todos los frames: lo que distingue al producto destacado
+// es su foto/diseño (más grande), no el tamaño del texto.
+export function ItemBody({ it }) {
+  const show = useDisplay();
   return (
     <div className={s.body}>
       <div className={s.itemTop}>
-        <h3 className={`${s.itemName} ${emphasis ? s.itemNameLg : ''}`}>{it.name}</h3>
-        <span className={s.leader} aria-hidden="true" />
-        <span className={`${s.itemPrice} ${emphasis ? s.itemPriceLg : ''}`}>{fmtPrice(it.price)}</span>
+        <h3 className={s.itemName}>{it.name}</h3>
+        <span className={`${s.leader} ${show.leaders ? '' : s.leaderHidden}`} aria-hidden="true" />
+        <span className={s.itemPrice}>{fmtPrice(it.price)}</span>
       </div>
-      {it.description && <p className={s.itemDesc}>{it.description}</p>}
+      {show.itemDesc && it.description && <p className={s.itemDesc}>{it.description}</p>}
     </div>
   );
 }

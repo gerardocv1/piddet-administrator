@@ -74,3 +74,14 @@
 .txtOcupada { color: var(--color-primary-700); }
 .txtCuenta { color: var(--color-warning-fg); }
 .txtReservada { color: var(--color-info-fg); }
+
+/* Compactación en móvil: la cifra de la mesa y la rejilla aprovechan mejor el
+   espacio en pantallas pequeñas. */
+@media (max-width: 860px) {
+  .page { gap: 14px; }
+  .grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+  .number { font-size: 1.9rem; margin: 4px 0 8px; }
+}
+@media (max-width: 480px) {
+  .number { font-size: 1.6rem; }
+}

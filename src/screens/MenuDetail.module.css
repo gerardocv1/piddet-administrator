@@ -136,6 +136,10 @@
 .catActions { display: inline-flex; gap: 2px; flex: 0 0 auto; opacity: 0; transition: opacity .12s ease; }
 .catRow:hover .catActions,
 .catActive.catRow .catActions { opacity: 1; }
+/* En táctil no hay hover: el menú de acciones se muestra siempre. */
+@media (max-width: 860px) {
+  .catActions { opacity: 1; }
+}
 
 /* Botón "Nueva categoría": borde punteado, discreto */
 .newCatBtn {
@@ -298,6 +302,7 @@
 
 /* ── Responsive: en móvil el panel deja de ser sticky y se apila ── */
 @media (max-width: 860px) {
-  .layout { grid-template-columns: 1fr; }
-  .sidebar { position: static; }
+  .layout { grid-template-columns: 1fr; gap: 12px; }
+  .sidebar { position: static; padding: 12px; }
+  .card { padding: 14px; }
 }

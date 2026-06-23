@@ -178,6 +178,9 @@
   padding: 1px 7px;
 }
 
+/* Indicador de enlace externo (abre en otra pestaña). */
+.ext { font-size: 0.7rem; opacity: 0.5; }
+
 /* ── Grupo desplegable ── */
 .group { display: block; }
 .groupBtn {

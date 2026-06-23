@@ -27,14 +27,18 @@
 .delta.up { color: var(--color-success-fg); }
 .delta i { margin-right: 6px; }
 
-/* KPI 2×2 en tablet, 1 columna en móvil — sin !important, gana la regla del @media */
+/* KPI 2×2 en tablet y móvil — sin !important, gana la regla del @media */
 @media (max-width: 860px) {
   .strip { grid-template-columns: 1fr 1fr; }
+  .item { padding: 1.1rem 1.2rem; }
   .item:nth-child(2n+1) { border-left: none; }
   .item:nth-child(n+3) { border-top: 1px solid var(--border-color); }
+  .value { font-size: 1.6rem; }
 }
+/* Teléfono: se mantiene 2×2 (no 1 columna) y se compacta la tipografía */
 @media (max-width: 480px) {
-  .strip { grid-template-columns: 1fr; }
-  .item { border-left: none; border-top: 1px solid var(--border-color); }
-  .item:first-child { border-top: none; }
+  .item { padding: 0.85rem 0.9rem; }
+  .label { font-size: 0.65rem; letter-spacing: 0.03em; }
+  .value { font-size: 1.25rem; margin-top: 3px; }
+  .delta { font-size: var(--text-xs); }
 }

@@ -1,12 +1,12 @@
 import React from 'react';
 import styles from './Select.module.css';
 
-/** Select nativo con el estilo de los inputs. */
-export function Select({ label, icon, hint, options = [], children, className = '', wrapClassName = '', ...rest }) {
+/** Select nativo con el estilo de los inputs. `size`: 'md' (por defecto) | 'sm' (compacto). */
+export function Select({ label, icon, hint, size = 'md', options = [], children, className = '', wrapClassName = '', ...rest }) {
   return (
     <label className={styles.field}>
       {label && <span className={styles.label}>{label}</span>}
-      <span className={[styles.wrap, wrapClassName].filter(Boolean).join(' ')}>
+      <span className={[styles.wrap, size === 'sm' ? styles.sm : '', wrapClassName].filter(Boolean).join(' ')}>
         {icon && <i className={`${icon} ${styles.icon}`} aria-hidden="true" />}
         <select className={[styles.select, className].filter(Boolean).join(' ')} {...rest}>
           {options.map((o) => typeof o === 'string'

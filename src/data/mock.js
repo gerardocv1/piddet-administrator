@@ -211,7 +211,11 @@ const mockPermissions = {
 };
 
 // Empresa (tenant) activa y empresas disponibles para el usuario (SaaS multi-tenant).
-export const mockCompany = { id: 'pid-001', name: 'Grupo Sabor', plan: 'Pro', tiendas: 4 };
+export const mockCompany = {
+  id: 'pid-001', name: 'Grupo Sabor', plan: 'Pro', tiendas: 4,
+  address: 'Cra. 43A #1-50, Medellín', phone: '+57 300 123 4567',
+  email: 'hola@gruposabor.co', website: 'www.gruposabor.co',
+};
 export const mockCompanies = [
   { id: 'pid-001', name: 'Grupo Sabor', plan: 'Pro', tiendas: 4 },
   { id: 'pid-002', name: 'Cocinas del Norte', plan: 'Básico', tiendas: 2 },
@@ -624,6 +628,71 @@ function resolveItemsMock(path, query, { method = 'GET', body } = {}) {
   return undefined;
 }
 
+// ── Módulo de métricas (company-scoped): reporte de ventas por tipo ──────────────────────
+const MOCK_DAY_NAMES = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+
+function mockMoney(value) {
+  return '$' + Math.round(value).toLocaleString('es-CO');
+}
+
+// Genera el reporte de ventas por tipo con la misma forma que el backend.
+function buildSalesByTypeReport(days, endDateStr, force) {
+  const end = endDateStr ? new Date(endDateStr + 'T00:00:00') : new Date();
+  const factor = force ? 1.08 : 1; // el long-press (force) recalcula → valores algo distintos en demo
+
+  const daily = [];
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(end);
+    d.setDate(end.getDate() - i);
+    const weekend = d.getDay() === 0 || d.getDay() === 6;
+    const base = weekend ? 900000 : 600000;
+    const products = Math.round((base + Math.random() * 300000) * factor);
+    const services = Math.round((base * 0.35 + Math.random() * 150000) * factor);
+    const ordersCount = Math.round((weekend ? 45 : 30) + Math.random() * 20);
+    daily.push({
+      date: d.toISOString().slice(0, 10),
+      label: MOCK_DAY_NAMES[d.getDay()] + ' ' + String(d.getDate()).padStart(2, '0'),
+      products,
+      services,
+      total: products + services,
+      orders_count: ordersCount,
+    });
+  }
+
+  const products = daily.reduce((s, x) => s + x.products, 0);
+  const services = daily.reduce((s, x) => s + x.services, 0);
+  const ordersCount = daily.reduce((s, x) => s + x.orders_count, 0);
+  const total = products + services;
+  const avgTicket = ordersCount > 0 ? total / ordersCount : 0;
+
+  return {
+    period: {
+      start_date: daily[0]?.date ?? null,
+      end_date: daily[daily.length - 1]?.date ?? null,
+      days,
+    },
+    totals: {
+      products,
+      products_formatted: mockMoney(products),
+      services,
+      services_formatted: mockMoney(services),
+      total,
+      total_formatted: mockMoney(total),
+      orders_count: ordersCount,
+      avg_ticket: avgTicket,
+      avg_ticket_formatted: mockMoney(avgTicket),
+    },
+    daily,
+  };
+}
+
+function resolveMetricsMock(path, query) {
+  const m = path.match(/^\/companies\/[^/]+\/metrics\/sales-by-type$/);
+  if (!m) return undefined;
+  const days = Math.max(1, Math.min(30, parseInt(query.get('days'), 10) || 15));
+  return buildSalesByTypeReport(days, query.get('end_date'), query.get('force') === '1');
+}
+
 // Enrutador de mocks: mapea ruta → respuesta. Soporta query string (?...) y mutaciones.
 export function resolveMock(rawPath, opts = {}) {
   const [path, qs = ''] = rawPath.split('?');
@@ -642,6 +711,10 @@ export function resolveMock(rawPath, opts = {}) {
   // Módulo de productos (company-scoped: /companies/{company}/items|item-categories|taxes…)
   const item = resolveItemsMock(path, query, opts);
   if (item !== undefined) return item;
+
+  // Módulo de métricas (company-scoped: /companies/{company}/metrics/sales-by-type)
+  const metrics = resolveMetricsMock(path, query);
+  if (metrics !== undefined) return metrics;
 
   const map = {
     '/auth/login': mockAuth,

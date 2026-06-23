@@ -103,6 +103,35 @@
   --bp-mobile: 860px; /* referencia; los @media usan el valor literal */
 }
 
+/* Escala tipográfica responsive en dos escalones. Como los componentes consumen
+   estos tokens, reducir aquí compacta toda la UI a la vez (sin tocar cada módulo).
+
+   Escalón 1 — tablet / móvil en horizontal (coincide con el breakpoint de layout,
+   860px): se reducen sobre todo los pasos grandes (títulos), manteniendo el cuerpo
+   de texto a tamaño legible. */
+@media (max-width: 860px) {
+  :root {
+    --text-md: 0.9375rem;
+    --text-lg: 1.125rem;
+    --text-xl: 1.375rem;
+    --text-2xl: 1.625rem;
+  }
+}
+
+/* Escalón 2 — teléfono: se compacta también el cuerpo y se baja un punto más la
+   escala de títulos para aprovechar el espacio vertical. */
+@media (max-width: 480px) {
+  :root {
+    --text-xs: 0.69rem;
+    --text-sm: 0.75rem;
+    --text-base: 0.8125rem;
+    --text-md: 0.875rem;
+    --text-lg: 1.0625rem;
+    --text-xl: 1.25rem;
+    --text-2xl: 1.4375rem;
+  }
+}
+
 /* ============================================================
    Tema oscuro — se activa con <html data-theme="dark">.
    Reasigna la escala de neutros (invertida), superficies y

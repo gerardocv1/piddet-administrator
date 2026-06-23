@@ -24,6 +24,14 @@
   border-color: var(--color-primary);
   box-shadow: var(--ring-primary);
 }
+/* Variante compacta: más baja, con menos aire y texto algo menor. */
+.wrap.sm {
+  height: 36px;
+  gap: 0.5rem;
+  padding: 0 0.625rem;
+}
+.wrap.sm .select { font-size: var(--text-sm); }
+.wrap.sm .icon { font-size: 0.8rem; }
 
 .icon {
   color: var(--gray-400);

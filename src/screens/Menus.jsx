@@ -120,8 +120,8 @@ export function Menus() {
         subtitle={form?.id ? 'Actualiza los datos del menú' : 'Crea un menú para un momento o aplicación'}
         onClose={() => setForm(null)}
         footer={<>
-          <Button variant="secondary" size="sm" onClick={() => setForm(null)}>Cancelar</Button>
-          <Button variant="primary" size="sm" loading={saving} onClick={save}>Guardar</Button>
+          <Button variant="secondary" onClick={() => setForm(null)}>Cancelar</Button>
+          <Button variant="primary" loading={saving} onClick={save}>Guardar</Button>
         </>}>
         {form && (
           <div className={s.formCol}>
@@ -136,8 +136,8 @@ export function Menus() {
       {/* Eliminar menú */}
       <Modal open={!!del} size="sm" title="Eliminar menú" onClose={() => setDel(null)}
         footer={<>
-          <Button variant="secondary" size="sm" onClick={() => setDel(null)}>Cancelar</Button>
-          <Button variant="danger" size="sm" icon="fas fa-trash" loading={saving} onClick={remove}>Eliminar</Button>
+          <Button variant="secondary" onClick={() => setDel(null)}>Cancelar</Button>
+          <Button variant="danger" icon="fas fa-trash" loading={saving} onClick={remove}>Eliminar</Button>
         </>}>
         ¿Seguro que deseas eliminar <strong>{del?.name}</strong>? Esta acción no se puede deshacer.
       </Modal>

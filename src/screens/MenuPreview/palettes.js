@@ -15,6 +15,12 @@ export const ACCENT_PALETTES = [
   { key: 'forest', label: 'Verde bosque', accent: '#2f7d4f', strong: '#1f5a39', soft: '#e6f3ec', onSoft: '#6bae87' },
   { key: 'wine', label: 'Vino tinto', accent: '#9b2242', strong: '#6f182f', soft: '#f7e7eb', onSoft: '#c76d82' },
   { key: 'cocoa', label: 'Cacao', accent: '#8a5a2b', strong: '#67401d', soft: '#f4ebe0', onSoft: '#c2986a' },
+  { key: 'charcoal', label: 'Grafito', accent: '#2d2d2d', strong: '#111111', soft: '#ececec', onSoft: '#9a9a9a' },
+  { key: 'gold', label: 'Dorado', accent: '#c08a1e', strong: '#8a6312', soft: '#f8f0dd', onSoft: '#d8b766' },
+  { key: 'plum', label: 'Ciruela', accent: '#7a3b8f', strong: '#592a69', soft: '#f1e7f4', onSoft: '#b07fc0' },
+  { key: 'slate', label: 'Azul pizarra', accent: '#3f5a73', strong: '#2c4255', soft: '#e9eef3', onSoft: '#8aa1b5' },
+  { key: 'crimson', label: 'Rojo carmesí', accent: '#c0392b', strong: '#922a20', soft: '#fbe7e4', onSoft: '#dd8e85' },
+  { key: 'rose', label: 'Rosa frambuesa', accent: '#c2456b', strong: '#933350', soft: '#fbe8ee', onSoft: '#dd8aa3' },
 ];
 
 // Fondo de la página. Incluye crema cálida (por defecto), blanco, dos pasteles suaves y una
@@ -25,6 +31,11 @@ export const BACKGROUNDS = [
   { key: 'ivory', label: 'Marfil', value: '#fbf4e9' },
   { key: 'mint', label: 'Menta suave', value: '#f1f7f4' },
   { key: 'sky', label: 'Cielo suave', value: '#eef4f8' },
+  { key: 'sand', label: 'Arena', value: '#f7f1e6' },
+  { key: 'blush', label: 'Rubor suave', value: '#fbf0f1' },
+  { key: 'lavender', label: 'Lavanda', value: '#f3f0f9' },
+  { key: 'sage', label: 'Salvia', value: '#eef3ec' },
+  { key: 'pearl', label: 'Perla', value: '#f4f5f7' },
   { key: 'transparent', label: 'Transparente', value: 'transparent' },
 ];
 

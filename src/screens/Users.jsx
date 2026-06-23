@@ -46,8 +46,8 @@ export function Users() {
 
       <Modal open={open} title="Nuevo usuario" subtitle="Da acceso a una persona del equipo" onClose={() => setOpen(false)} size="lg"
         footer={<>
-          <Button variant="secondary" size="sm" onClick={() => setOpen(false)}>Cancelar</Button>
-          <Button variant="primary" size="sm" onClick={() => setOpen(false)}>Guardar</Button>
+          <Button variant="secondary" onClick={() => setOpen(false)}>Cancelar</Button>
+          <Button variant="primary" onClick={() => setOpen(false)}>Guardar</Button>
         </>}>
         <div className={s.formCol}>
           <Input label="Nombre completo" icon="fas fa-user" placeholder="Ej. Laura Gómez" />
@@ -60,8 +60,8 @@ export function Users() {
 
       <Modal open={!!del} size="sm" title="Eliminar usuario" onClose={() => setDel(null)}
         footer={<>
-          <Button variant="secondary" size="sm" onClick={() => setDel(null)}>Cancelar</Button>
-          <Button variant="danger" size="sm" icon="fas fa-trash" onClick={() => { remove(del.id); setDel(null); }}>Eliminar</Button>
+          <Button variant="secondary" onClick={() => setDel(null)}>Cancelar</Button>
+          <Button variant="danger" icon="fas fa-trash" onClick={() => { remove(del.id); setDel(null); }}>Eliminar</Button>
         </>}>
         ¿Seguro que deseas quitar el acceso de <strong>{del?.name}</strong>?
       </Modal>

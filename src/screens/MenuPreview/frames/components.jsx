@@ -65,7 +65,7 @@ export function HeroListFrame({ items }) {
     <div className={s.bannerFrame}>
       <div className={s.banner}>
         <ItemThumb srcs={thumbSrcs(first)} alt={first.name} className={s.bannerImg} />
-        <div className={s.bannerBody}><ItemBody it={first} emphasis /></div>
+        <div className={s.bannerBody}><ItemBody it={first} /></div>
       </div>
       {rest.length > 0 && (
         <div className={s.bannerList}>
@@ -86,7 +86,7 @@ export function HeroFrame({ items }) {
     <div className={s.hero}>
       <div className={s.heroMain}>
         <ItemThumb srcs={thumbSrcs(first)} alt={first.name} className={s.heroImg} />
-        <div className={s.heroBody}><ItemBody it={first} emphasis /></div>
+        <div className={s.heroBody}><ItemBody it={first} /></div>
       </div>
       <div className={s.heroList}>
         {rest.map((it) => (

@@ -41,9 +41,7 @@ export function Modal({ open = true, title, subtitle, children, footer, onClose,
         <div className={styles.body}>{children}</div>
         {footer && (
           <div className={styles.footer} data-sheet={asSheet}>
-            {asSheet
-              ? React.Children.map(footer, (c) => React.isValidElement(c) ? React.cloneElement(c, { style: { flex: 1, justifyContent: 'center', ...(c.props.style || {}) } }) : c)
-              : footer}
+            {footer}
           </div>
         )}
       </div>

@@ -197,15 +197,15 @@ export function ProductDetail() {
 
       <Modal open={!!delGroup} size="sm" title="Eliminar grupo" onClose={() => setDelGroup(null)}
         footer={<>
-          <Button variant="secondary" size="sm" onClick={() => setDelGroup(null)}>Cancelar</Button>
-          <Button variant="danger" size="sm" icon="fas fa-trash" loading={saving} onClick={removeGroup}>Eliminar</Button>
+          <Button variant="secondary" onClick={() => setDelGroup(null)}>Cancelar</Button>
+          <Button variant="danger" icon="fas fa-trash" loading={saving} onClick={removeGroup}>Eliminar</Button>
         </>}>
         ¿Eliminar el grupo <strong>{delGroup?.name}</strong> y todas sus opciones?
       </Modal>
       <Modal open={!!delOpt} size="sm" title="Eliminar opción" onClose={() => setDelOpt(null)}
         footer={<>
-          <Button variant="secondary" size="sm" onClick={() => setDelOpt(null)}>Cancelar</Button>
-          <Button variant="danger" size="sm" icon="fas fa-trash" loading={saving} onClick={removeOpt}>Eliminar</Button>
+          <Button variant="secondary" onClick={() => setDelOpt(null)}>Cancelar</Button>
+          <Button variant="danger" icon="fas fa-trash" loading={saving} onClick={removeOpt}>Eliminar</Button>
         </>}>
         ¿Eliminar la opción <strong>{delOpt?.name}</strong>?
       </Modal>
@@ -237,8 +237,8 @@ function ProductImageModal({ item, onClose, onSaved }) {
   return (
     <Modal open title="Foto del producto" subtitle={item.name} size="lg" onClose={onClose}
       footer={<>
-        <Button variant="secondary" size="sm" onClick={onClose}>Cancelar</Button>
-        <Button variant="primary" size="sm" loading={saving} disabled={!hasImage} onClick={save}>Guardar</Button>
+        <Button variant="secondary" onClick={onClose}>Cancelar</Button>
+        <Button variant="primary" loading={saving} disabled={!hasImage} onClick={save}>Guardar</Button>
       </>}>
       <div className={s.formCol}>
         <FileUpload ref={uploaderRef} folder="items" visibility="public" aspect={1}
@@ -294,8 +294,8 @@ function GroupModal({ itemId, group, onClose, onSaved }) {
     <Modal open title={editing ? 'Editar grupo' : 'Nuevo grupo de opciones'}
       subtitle="Define las reglas de selección que verá el cliente" onClose={onClose}
       footer={<>
-        <Button variant="secondary" size="sm" onClick={onClose}>Cancelar</Button>
-        <Button variant="primary" size="sm" loading={saving} onClick={submit}>Guardar</Button>
+        <Button variant="secondary" onClick={onClose}>Cancelar</Button>
+        <Button variant="primary" loading={saving} onClick={submit}>Guardar</Button>
       </>}>
       <div className={s.formCol}>
         <Input label="Nombre del grupo" icon="fas fa-list-check" placeholder="Ej. Adiciones"
@@ -344,8 +344,8 @@ function OptionModal({ itemId, groupId, option, onClose, onSaved }) {
   return (
     <Modal open title={editing ? 'Editar opción' : 'Nueva opción'} onClose={onClose}
       footer={<>
-        <Button variant="secondary" size="sm" onClick={onClose}>Cancelar</Button>
-        <Button variant="primary" size="sm" loading={saving} onClick={submit}>Guardar</Button>
+        <Button variant="secondary" onClick={onClose}>Cancelar</Button>
+        <Button variant="primary" loading={saving} onClick={submit}>Guardar</Button>
       </>}>
       <div className={s.formCol}>
         <Input label="Nombre de la opción" icon="fas fa-circle-dot" placeholder="Ej. Tocineta"

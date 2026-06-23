@@ -128,8 +128,8 @@ export function Products() {
 
       <Modal open={!!del} size="sm" title="Eliminar producto" onClose={() => setDel(null)}
         footer={<>
-          <Button variant="secondary" size="sm" onClick={() => setDel(null)}>Cancelar</Button>
-          <Button variant="danger" size="sm" icon="fas fa-trash" loading={saving} onClick={remove}>Eliminar</Button>
+          <Button variant="secondary" onClick={() => setDel(null)}>Cancelar</Button>
+          <Button variant="danger" icon="fas fa-trash" loading={saving} onClick={remove}>Eliminar</Button>
         </>}>
         ¿Seguro que deseas eliminar <strong>{del?.name}</strong>? Esta acción no se puede deshacer.
       </Modal>

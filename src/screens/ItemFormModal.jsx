@@ -85,8 +85,8 @@ export function ItemFormModal({ item, onClose, onSaved }) {
       subtitle={editing ? item.name : 'Crea un producto del catálogo de la compañía'}
       size="lg" onClose={onClose}
       footer={<>
-        <Button variant="secondary" size="sm" onClick={onClose}>Cancelar</Button>
-        <Button variant="primary" size="sm" loading={saving} disabled={!valid} onClick={submit}>Guardar</Button>
+        <Button variant="secondary" onClick={onClose}>Cancelar</Button>
+        <Button variant="primary" loading={saving} disabled={!valid} onClick={submit}>Guardar</Button>
       </>}>
       <div className={s.formCol}>
         <div className={s.formGrid}>

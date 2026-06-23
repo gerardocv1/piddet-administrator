@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import styles from './Sidebar.module.css';
-import { HOME_ITEM, MODULE_GROUPS, canAccess } from '../../lib/permissions/modules.js';
+import { HOME_ITEM, POS_ITEM, MODULE_GROUPS, canAccess } from '../../lib/permissions/modules.js';
 import { usePermissions } from '../../lib/permissions/usePermissions.js';
 
 const initials = (s = '') => s.split(' ').filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
@@ -123,6 +123,12 @@ export function Sidebar({ onLogout, open = false, onClose, company, companies = 
             ))}
           </React.Fragment>
         ))}
+        <div className={styles.section}>Enlaces</div>
+        <a href={POS_ITEM.href} target="_blank" rel="noopener noreferrer" onClick={onClose} className={styles.link}>
+          <i className={`${POS_ITEM.icon} ${styles.icon}`} />
+          <span className={styles.label}>{POS_ITEM.label}</span>
+          <i className={`fas fa-arrow-up-right-from-square ${styles.ext}`} />
+        </a>
       </div>
 
       <div className={styles.foot}>

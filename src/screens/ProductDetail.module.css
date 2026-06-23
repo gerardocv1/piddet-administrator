@@ -184,3 +184,14 @@
   text-align: center;
 }
 .empty i { font-size: 1.6rem; color: var(--gray-400); }
+
+/* Compactación en móvil: la cabecera del producto y las tarjetas reducen
+   relleno e imagen para no consumir tanto alto en pantallas pequeñas. */
+@media (max-width: 860px) {
+  .hero { gap: 14px; padding: 14px; }
+  .heroImage { width: 84px; height: 84px; }
+  .heroImage > i { font-size: 1.6rem; }
+  .cardHead { padding: 12px 14px; }
+  .cardBody { padding: 14px; }
+  .empty { padding: 1.8rem; }
+}

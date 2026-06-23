@@ -1,0 +1,61 @@
+/* Categorías de productos agrupadas por tipo de ítem. */
+
+.intro {
+  margin: 0;
+  max-width: 60ch;
+  color: var(--gray-500);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+
+.groups {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Cada tipo de ítem es una tarjeta-sección. */
+.group { overflow: hidden; }
+
+.groupHead {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--gray-100);
+}
+
+.groupTitle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+.groupTitle > i {
+  color: var(--color-primary);
+  font-size: 0.95rem;
+}
+.groupTitle h3 {
+  margin: 0;
+  font-size: var(--text-md);
+  font-weight: 700;
+  color: var(--gray-900);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.groupBody { padding: 12px 14px; }
+
+.groupEmpty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 22px 14px;
+  color: var(--gray-500);
+  font-size: var(--text-sm);
+}
+.groupEmpty i { color: var(--gray-400); }

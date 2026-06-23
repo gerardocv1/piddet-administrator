@@ -13,6 +13,27 @@
   --carta-accent-soft: var(--color-primary-050);
   --carta-accent-on-soft: var(--color-primary-300);
   --carta-bg: #fffdf8;
+  /* Escala tipográfica y separación entre categorías (inyectadas por MenuPreview); con respaldo
+     a los valores "M / Normal" por si no llega configuración. */
+  --carta-scale: 1;
+  --carta-cat-gap: 30px;
+  --carta-cat-gap-print: 9mm;
+  --carta-title-gap: 18px;
+  /* La carta es siempre un documento claro (su fondo es crema/blanco/pastel, fijo en palettes.js),
+     así que ancla su escala de color a los tonos claros y no hereda la inversión del modo oscuro:
+     si no, el nombre del producto (--gray-900) y los textos quedarían claros sobre fondo claro =
+     invisibles. Los derivados (--text-body/--text-muted) se recalculan al pisar los grises. */
+  --gray-900: #172b4d;
+  --gray-700: #525f7f;
+  --gray-500: #8898aa;
+  --gray-400: #adb5bd;
+  --gray-300: #ced4da;
+  --gray-200: #e9ecef;
+  --surface-card: #ffffff;
+  --border-color: #e9ecef;
+  --border-input: #cdd2dc;
+  --text-body: var(--gray-700);
+  --text-muted: var(--gray-500);
   background: var(--carta-bg);
   color: var(--text-body);
   border-radius: var(--radius-lg);
@@ -32,7 +53,7 @@
 .wordmark {
   font-family: var(--font-logo);
   font-weight: 800;
-  font-size: 2.4rem;
+  font-size: calc(2.4rem * var(--carta-scale, 1));
   line-height: 1.1;
   color: var(--carta-accent);
   letter-spacing: 0.01em;
@@ -40,13 +61,13 @@
 .menuName {
   font-family: var(--font-logo);
   font-weight: 700;
-  font-size: var(--text-xl);
+  font-size: calc(var(--text-xl) * var(--carta-scale, 1));
   color: var(--gray-900);
   margin-top: 6px;
 }
 .menuDesc {
   margin: 6px 0 0;
-  font-size: var(--text-base);
+  font-size: calc(var(--text-base) * var(--carta-scale, 1));
   font-style: italic;
   color: var(--text-muted);
 }
@@ -61,7 +82,7 @@
 
 /* ── Categoría ── */
 .category {
-  margin-top: 30px;
+  margin-top: var(--carta-cat-gap, 30px);
   break-inside: avoid;
 }
 /* Cabecera de categoría: título (con filetes) + selector de plantilla (solo pantalla). */
@@ -69,7 +90,7 @@
   display: flex;
   align-items: center;
   gap: 14px;
-  margin-bottom: 18px;
+  margin-bottom: var(--carta-title-gap, 18px);
 }
 .catTitle {
   flex: 1;
@@ -98,7 +119,7 @@
 .catTitle span {
   font-family: var(--font-logo);
   font-weight: 700;
-  font-size: var(--text-md);
+  font-size: calc(var(--text-md) * var(--carta-scale, 1));
   text-transform: uppercase;
   letter-spacing: 0.16em;
   color: var(--carta-accent-strong);
@@ -112,10 +133,42 @@
   padding-top: 16px;
   border-top: 1px solid var(--border-color);
   text-align: center;
-  font-size: var(--text-xs);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
   color: var(--text-muted);
+}
+/* Bloque de la empresa (opcional): nombre + datos de contacto. */
+.footerCompany {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.footerName {
+  font-family: var(--font-logo);
+  font-weight: 700;
+  font-size: calc(var(--text-sm) * var(--carta-scale, 1));
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--carta-accent-strong);
+}
+.footerContact {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px 18px;
+  font-size: calc(var(--text-xs) * var(--carta-scale, 1));
+  color: var(--text-muted);
+}
+.footerContact i {
+  margin-right: 4px;
+  color: var(--carta-accent);
+}
+/* Marca del producto (siempre visible): discreta, debajo de todo. */
+.footerBrand {
+  margin-top: 10px;
+  font-size: var(--text-xs);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gray-400);
 }
 
 /* ── Responsive (pantalla angosta) ── */
@@ -124,6 +177,9 @@
 }
 
 /* ── Impresión: márgenes de hoja controlados, color exacto, sin cortes feos ── */
+/* @page = franja exterior (gris en vista previa, borde blanco del papel al imprimir): solo
+   enmarca el recuadro crema, no da aire DENTRO de él. El aire interior se reparte así:
+   hoja 1 → padding de .page; hojas de continuación → padding-top de .category (ver abajo). */
 @page {
   size: A4;
   margin: 12mm;
@@ -131,20 +187,48 @@
 @media print {
   .page {
     width: 100%;
-    /* Margen lateral extra al imprimir para que los productos no queden pegados a los bordes. */
-    padding: 6mm 14mm;
+    /* Aire interior de la crema en hoja 1 (este padding NO se repite tras un salto: el de
+       las hojas 2/3… lo da el padding-top de .category). El padding inferior amplio reserva la
+       banda donde se ancla el pie fijo, para que el contenido de la última hoja no quede debajo. */
+    padding: 8mm 14mm 26mm;
     box-shadow: none;
     border-radius: 0;
-    /* Imprime el fondo elegido (los pasteles/crema) en lugar de blanco forzado. */
+    /* El fondo a sangre de cada hoja lo pinta `html` (ver MenuPreview); el propio se mantiene
+       por coherencia, sin forzar blanco. */
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
-  .category { break-inside: avoid; }
+  /* Pie anclado al borde inferior de CADA hoja. position:fixed es la única forma fiable de que
+     quede "al final de la hoja" en multipágina (independiente de los márgenes del diálogo);
+     como contrapartida, se repite al fondo de cada página. Lleva fondo propio para asentarse
+     limpio sobre la crema y no dejar ver contenido por debajo. */
+  .footer {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    margin: 0;
+    padding: 10px 14mm 6mm;
+    background: var(--carta-bg);
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .category {
+    break-inside: avoid;
+    /* El margin-top se descarta cuando la categoría cae al tope de una hoja nueva; el
+       padding-top SÍ se respeta tras el salto, así que es él quien da el aire superior
+       dentro de la crema en las hojas de continuación (y mantiene la separación entre
+       categorías a media hoja). */
+    margin-top: 0;
+    padding-top: var(--carta-cat-gap-print, 9mm);
+  }
   /* El selector de plantilla es solo para edición en pantalla; nunca se imprime. */
   .frameSelect { display: none; }
   .wordmark,
   .catTitle span,
-  .headerRule {
+  .headerRule,
+  .footerName,
+  .footerContact i {
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }

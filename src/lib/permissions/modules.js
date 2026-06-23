@@ -16,6 +16,10 @@ export const ALWAYS = '*';
 // Inicio (Dashboard): siempre visible, no requiere permiso. Se renderiza fuera de los grupos.
 export const HOME_ITEM = { to: '/', label: 'Inicio', icon: 'fas fa-house', end: true, perm: ALWAYS };
 
+// Punto de venta: app externa (no es una ruta del panel). Abre pos.piddet.com en otra pestaña.
+// Se renderiza fuera de los grupos, como enlace externo, siempre visible.
+export const POS_ITEM = { href: 'https://pos.piddet.com', label: 'Punto de venta', icon: 'fas fa-cash-register' };
+
 // Grupos del menú lateral, en orden de aparición.
 export const MODULE_GROUPS = [
   {

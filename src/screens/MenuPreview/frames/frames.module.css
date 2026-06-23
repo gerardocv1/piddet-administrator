@@ -29,12 +29,11 @@
   gap: 8px;
 }
 .itemName {
-  font-size: var(--text-md);
+  font-size: calc(var(--text-md) * var(--carta-scale, 1));
   font-weight: 700;
   color: var(--gray-900);
   line-height: 1.25;
 }
-.itemNameLg { font-size: var(--text-lg); }
 .leader {
   flex: 1;
   min-width: 12px;
@@ -42,16 +41,20 @@
   margin-bottom: 4px;
   border-bottom: 1px dotted var(--gray-300);
 }
+/* Sin la línea de puntos: el espaciador sigue presente (flex:1) para empujar el precio a la
+   derecha, pero sin el borde punteado. */
+.leaderHidden {
+  border-bottom: 0;
+}
 .itemPrice {
   font-weight: 800;
-  font-size: var(--text-md);
+  font-size: calc(var(--text-md) * var(--carta-scale, 1));
   color: var(--carta-accent);
   white-space: nowrap;
 }
-.itemPriceLg { font-size: var(--text-lg); }
 .itemDesc {
   margin: 4px 0 0;
-  font-size: var(--text-sm);
+  font-size: calc(var(--text-sm) * var(--carta-scale, 1));
   color: var(--text-muted);
   line-height: 1.4;
 }
@@ -78,12 +81,12 @@
 }
 .listRow {
   display: grid;
-  grid-template-columns: 132px 1fr;
+  grid-template-columns: 100px 1fr;
   gap: 18px;
   align-items: center;
   break-inside: avoid;
 }
-.listThumb { width: 132px; height: 132px; font-size: 2rem; }
+.listThumb { width: 100px; height: 100px; font-size: 2rem; }
 
 /* ── Frame: 2 columnas sin foto (texto + precio) ── */
 .grid2Text {

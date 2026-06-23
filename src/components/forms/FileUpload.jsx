@@ -30,6 +30,7 @@ export const FileUpload = React.forwardRef(function FileUpload(
 ) {
   const inputRef = React.useRef(null);
   const srcRef = React.useRef(null); // object URL local de la imagen elegida (para recortar/subir)
+  const mimeRef = React.useRef(''); // tipo MIME del archivo elegido (para conservar transparencia en PNG)
 
   const [src, setSrc] = React.useState(null); // imagen en edición (object URL); null = sin elegir
   const [crop, setCrop] = React.useState({ x: 0, y: 0 });
@@ -50,6 +51,7 @@ export const FileUpload = React.forwardRef(function FileUpload(
     if (srcRef.current) URL.revokeObjectURL(srcRef.current);
     const url = URL.createObjectURL(file);
     srcRef.current = url;
+    mimeRef.current = file.type;
     reset();
     setSrc(url);
     onChange && onChange(true);
@@ -69,8 +71,9 @@ export const FileUpload = React.forwardRef(function FileUpload(
     hasImage: () => !!src,
     async upload() {
       if (!src || !areaPixels) return null;
-      const blob = await getCroppedBlob(src, areaPixels, rotation);
-      const file = new File([blob], 'image.jpg', { type: 'image/jpeg' });
+      const blob = await getCroppedBlob(src, areaPixels, rotation, mimeRef.current);
+      const isPng = blob.type === 'image/png';
+      const file = new File([blob], isPng ? 'image.png' : 'image.jpg', { type: blob.type });
       return api.uploadFile(file, { folder, visibility });
     },
   }), [src, areaPixels, rotation, folder, visibility]);
