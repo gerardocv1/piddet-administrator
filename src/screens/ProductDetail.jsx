@@ -1,6 +1,6 @@
 import React from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { Button, IconButton, Badge, Input, Textarea, Switch, Modal, Spinner } from '../components';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { Button, IconButton, Badge, Input, MoneyInput, Textarea, Switch, Modal, Spinner } from '../components';
 import { SortableList, FileUpload } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
@@ -23,6 +23,7 @@ function rulesText(g) {
 export function ProductDetail() {
   const { itemId } = useParams();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const itemRes = useResource(React.useCallback(() => api.item(itemId), [itemId]), null, [itemId]);
   const groupsRes = useResource(React.useCallback(() => api.optionGroups(itemId), [itemId]), [], [itemId]);
@@ -44,6 +45,16 @@ export function ProductDetail() {
   }, [options]);
 
   const [editItem, setEditItem] = React.useState(false);
+
+  // Atajo desde el menú: si se llega con `?edit=1`, abre el modal de edición y limpia el parámetro
+  // (una sola vez) para que recargar la página no lo vuelva a destapar.
+  React.useEffect(() => {
+    if (searchParams.get('edit') == null) return;
+    setEditItem(true);
+    const next = new URLSearchParams(searchParams);
+    next.delete('edit');
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
   const [photo, setPhoto] = React.useState(false);
   const [groupForm, setGroupForm] = React.useState(null); // {} nuevo | grupo (editar)
   const [delGroup, setDelGroup] = React.useState(null);
@@ -350,8 +361,8 @@ function OptionModal({ itemId, groupId, option, onClose, onSaved }) {
       <div className={s.formCol}>
         <Input label="Nombre de la opción" icon="fas fa-circle-dot" placeholder="Ej. Tocineta"
           value={name} onChange={(e) => setName(e.target.value)} />
-        <Input label="Precio extra" icon="fas fa-dollar-sign" type="number" placeholder="0 (sin costo)"
-          value={value} onChange={(e) => setValue(e.target.value)} />
+        <MoneyInput label="Precio extra" icon="fas fa-dollar-sign" placeholder="0 (sin costo)"
+          value={value} onChange={setValue} />
         <Switch label="Opción activa" checked={status} onChange={(e) => setStatus(e.target.checked)} />
         {err && <div className={s.formError}><i className="fas fa-triangle-exclamation" /> {err}</div>}
       </div>

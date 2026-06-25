@@ -9,6 +9,7 @@ export { Spinner } from './core/Spinner.jsx';
 export { Dropdown } from './core/Dropdown.jsx';
 // forms
 export { Input } from './forms/Input.jsx';
+export { MoneyInput } from './forms/MoneyInput.jsx';
 export { Select } from './forms/Select.jsx';
 export { Checkbox } from './forms/Checkbox.jsx';
 export { Switch } from './forms/Switch.jsx';

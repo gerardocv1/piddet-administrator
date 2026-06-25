@@ -1,6 +1,6 @@
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Button, IconButton, Input, Select, Textarea, Modal, Spinner, SortableList, Autocomplete, Dropdown } from '../components';
+import { Button, IconButton, Input, MoneyInput, Select, Textarea, Modal, Spinner, SortableList, Autocomplete, Dropdown } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import s from './screens.module.css';
@@ -371,8 +371,8 @@ function AddProductModal({ menuId, categories, defaultCat, onClose, onAdded }) {
         <div className={s.formGrid}>
           <Select label="Categoría" value={catId} onChange={(e) => setCatId(e.target.value)}
             options={categories.map((c) => ({ value: String(c.id), label: c.name }))} />
-          <Input label="Precio (opcional)" icon="fas fa-dollar-sign" type="number"
-            placeholder="Usar precio del producto" value={price} onChange={(e) => setPrice(e.target.value)} />
+          <MoneyInput label="Precio (opcional)" icon="fas fa-dollar-sign"
+            placeholder="Usar precio del producto" value={price} onChange={setPrice} />
         </div>
         {err && <div className={t.formError}><i className="fas fa-triangle-exclamation" /> {err}</div>}
       </div>
@@ -382,10 +382,24 @@ function AddProductModal({ menuId, categories, defaultCat, onClose, onAdded }) {
 
 // ── Modal: editar categoría/precio/disponibilidad de un ítem ya asignado ──
 function EditItemModal({ menuId, item, categories, onClose, onSaved }) {
+  const navigate = useNavigate();
   const [catId, setCatId] = React.useState(String(item.menu_category_id));
   const [price, setPrice] = React.useState('');
   const [saving, setSaving] = React.useState(false);
   const [err, setErr] = React.useState(null);
+
+  // Atajo a la ficha del producto con el modal de edición abierto (edita el producto en sí,
+  // no su vínculo con este menú). `?edit=1` lo destapa ProductDetail al cargar.
+  const goToProduct = () => navigate(`/products/${item.item_id}?edit=1`);
+
+  const subtitle = (
+    <span className={t.subtitleLink}>
+      {item.name}
+      <button type="button" className={t.editProductBtn} onClick={goToProduct} title="Abrir la ficha del producto para editarlo">
+        <i className="fas fa-up-right-from-square" aria-hidden="true" /> Editar producto
+      </button>
+    </span>
+  );
 
   const submit = async () => {
     if (!catId) return;
@@ -403,7 +417,7 @@ function EditItemModal({ menuId, item, categories, onClose, onSaved }) {
   };
 
   return (
-    <Modal open title="Editar producto" subtitle={item.name} onClose={onClose}
+    <Modal open title="Editar producto" subtitle={subtitle} onClose={onClose}
       footer={<>
         <Button variant="secondary" onClick={onClose}>Cancelar</Button>
         <Button variant="primary" loading={saving} onClick={submit}>Guardar</Button>
@@ -411,9 +425,9 @@ function EditItemModal({ menuId, item, categories, onClose, onSaved }) {
       <div className={s.formCol}>
         <Select label="Categoría" value={catId} onChange={(e) => setCatId(e.target.value)}
           options={categories.map((c) => ({ value: String(c.id), label: c.name }))} />
-        <Input label="Precio (opcional)" icon="fas fa-dollar-sign" type="number"
+        <MoneyInput label="Precio (opcional)" icon="fas fa-dollar-sign"
           placeholder={`Actual: ${fmtPrice(item.price)} · vacío = precio del producto`}
-          value={price} onChange={(e) => setPrice(e.target.value)} />
+          value={price} onChange={setPrice} />
         {err && <div className={t.formError}><i className="fas fa-triangle-exclamation" /> {err}</div>}
       </div>
     </Modal>

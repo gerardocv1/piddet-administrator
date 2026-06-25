@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, Input, Select, Textarea, Modal, CategoryCascader } from '../components';
+import { Button, Input, MoneyInput, Select, Textarea, Modal, CategoryCascader } from '../components';
 import { api } from '../lib/api.js';
 import { useFunctionalities } from '../lib/permissions/useFunctionalities.js';
 import s from './screens.module.css';
@@ -106,8 +106,8 @@ export function ItemFormModal({ item, onClose, onSaved }) {
         <div className={s.formGrid}>
           <Input label="Código" icon="fas fa-barcode" placeholder="Opcional"
             value={form.code} onChange={(e) => set('code', e.target.value)} />
-          <Input label="Valor de venta" icon="fas fa-dollar-sign" type="number" placeholder="0"
-            value={form.value} onChange={(e) => set('value', e.target.value)} />
+          <MoneyInput label="Valor de venta" icon="fas fa-dollar-sign" placeholder="0"
+            value={form.value} onChange={(v) => set('value', v)} />
         </div>
         {taxesOn && (
           <Select label="Impuesto" value={form.tax_family_id} onChange={(e) => set('tax_family_id', e.target.value)}
