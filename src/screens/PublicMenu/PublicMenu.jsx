@@ -10,11 +10,12 @@ import {
 } from '../MenuPreview/options.js';
 import s from '../MenuPreview/MenuPreview.module.css';
 
-// Logo por defecto del backend (company.png): si la compañía no subió logo, preferimos el ícono de
-// piddet para la card al compartir, en vez del placeholder.
+// Imagen para la card al compartir: se prefiere el thumbnail (más liviano; WhatsApp/Facebook
+// descartan imágenes muy grandes). Si la compañía no subió logo (default company.png), se usa el
+// ícono de piddet en vez del placeholder.
 const DEFAULT_LOGO_RE = /\/company\.png(\?|$)/;
 const shareImage = (company) =>
-  [company?.standard_icon, company?.icon, company?.thumbnail_icon].find((u) => u && !DEFAULT_LOGO_RE.test(u)) ||
+  [company?.thumbnail_icon, company?.icon, company?.standard_icon].find((u) => u && !DEFAULT_LOGO_RE.test(u)) ||
   `${window.location.origin}/favicon/apple-touch-icon.png`;
 
 // Crea/actualiza un <meta> en el <head> y devuelve los que creó (para limpiarlos al desmontar).
@@ -88,7 +89,7 @@ export function PublicMenu({ companyUsername, menuUsername }) {
   const Layout = (LAYOUTS[layout] || LAYOUTS[DEFAULT_LAYOUT]).Component;
 
   const shareInfo = React.useMemo(() => {
-    const name = menu?.name ? `${menu.name}${company?.name ? ` · ${company.name}` : ''}` : (company?.name || 'Menú');
+    const name = menu?.name ? `${company?.name ? `${company.name} - ` : ''}${menu.name}` : (company?.name || 'Menú');
     const description = menu?.description || (company?.name ? `Conoce el menú de ${company.name}.` : 'Mira nuestro menú.');
     return { title: name, description, image: shareImage(company), url: typeof window !== 'undefined' ? window.location.href : '' };
   }, [menu, company]);
