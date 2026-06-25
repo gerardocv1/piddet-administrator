@@ -38,15 +38,15 @@ export const FileUpload = React.forwardRef(function FileUpload(
   const [rotation, setRotation] = React.useState(0);
   const [areaPixels, setAreaPixels] = React.useState(null);
   const [error, setError] = React.useState(null);
+  const [dragging, setDragging] = React.useState(false);
 
   React.useEffect(() => () => { if (srcRef.current) URL.revokeObjectURL(srcRef.current); }, []);
 
   const reset = () => { setCrop({ x: 0, y: 0 }); setZoom(1); setRotation(0); setAreaPixels(null); };
 
-  const onPick = (e) => {
-    const file = e.target.files?.[0];
-    e.target.value = ''; // permite volver a elegir el mismo archivo
+  const loadFile = (file) => {
     if (!file) return;
+    if (!file.type.startsWith('image/')) { setError('El archivo debe ser una imagen.'); return; }
     setError(null);
     if (srcRef.current) URL.revokeObjectURL(srcRef.current);
     const url = URL.createObjectURL(file);
@@ -56,6 +56,35 @@ export const FileUpload = React.forwardRef(function FileUpload(
     setSrc(url);
     onChange && onChange(true);
   };
+
+  const onPick = (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // permite volver a elegir el mismo archivo
+    loadFile(file);
+  };
+
+  const onDrop = (e) => {
+    e.preventDefault();
+    setDragging(false);
+    loadFile(e.dataTransfer.files?.[0]);
+  };
+  const onDragOver = (e) => { e.preventDefault(); if (!dragging) setDragging(true); };
+  const onDragLeave = (e) => {
+    if (e.currentTarget.contains(e.relatedTarget)) return;
+    setDragging(false);
+  };
+
+  // Pegar imagen desde el portapapeles (Ctrl/Cmd+V) mientras el componente está montado.
+  React.useEffect(() => {
+    const onPaste = (e) => {
+      const file = Array.from(e.clipboardData?.items || [])
+        .find((it) => it.type.startsWith('image/'))?.getAsFile();
+      if (file) loadFile(file);
+    };
+    window.addEventListener('paste', onPaste);
+    return () => window.removeEventListener('paste', onPaste);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const clear = () => {
     if (srcRef.current) { URL.revokeObjectURL(srcRef.current); srcRef.current = null; }
@@ -81,7 +110,18 @@ export const FileUpload = React.forwardRef(function FileUpload(
   const open = () => inputRef.current?.click();
 
   return (
-    <div className={styles.root}>
+    <div
+      className={`${styles.root}${dragging ? ` ${styles.dragging}` : ''}`}
+      onDrop={onDrop}
+      onDragOver={onDragOver}
+      onDragLeave={onDragLeave}
+    >
+      {dragging && (
+        <div className={styles.dropOverlay}>
+          <i className="fas fa-cloud-arrow-up" aria-hidden="true" />
+          <span>Suelta la imagen aquí</span>
+        </div>
+      )}
       {src ? (
         <>
           <div className={styles.stage}>
@@ -126,7 +166,7 @@ export const FileUpload = React.forwardRef(function FileUpload(
           ) : (
             <span className={styles.placeholder}>
               <i className="fas fa-cloud-arrow-up" aria-hidden="true" />
-              <span>Haz clic para elegir una imagen</span>
+              <span>Haz clic, arrastra una imagen o pega desde el portapapeles</span>
             </span>
           )}
           <span className={styles.overlayHint}><i className="fas fa-camera" /> Elegir imagen</span>

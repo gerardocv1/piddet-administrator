@@ -5,8 +5,11 @@
 .thumb,
 .thumbFallback {
   border-radius: var(--radius-lg);
-  object-fit: cover;
   flex-shrink: 0;
+}
+.thumb {
+  object-fit: contain;
+  background: var(--carta-accent-soft);
 }
 .thumbFallback {
   display: flex;
@@ -160,6 +163,7 @@
   .heroRow,
   .thumb,
   .thumbFallback { break-inside: avoid; }
+  .thumb,
   .thumbFallback,
   .itemPrice {
     -webkit-print-color-adjust: exact;
