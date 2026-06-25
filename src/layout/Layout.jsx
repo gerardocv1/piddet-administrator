@@ -31,6 +31,7 @@ const META = {
   '/stores': { title: 'Tiendas', crumb: 'Operación' },
   '/users': { title: 'Usuarios', crumb: 'Cuentas' },
   '/roles': { title: 'Roles', crumb: 'Cuentas' },
+  '/company': { title: 'Empresa', crumb: 'Cuenta' },
 };
 
 /** Chrome de la app autenticada: menú lateral + barra superior + contenido (Outlet). */
@@ -42,21 +43,27 @@ export function Layout({ theme, onToggleTheme, onLogout }) {
   // Usuario y empresa vienen de la sesión guardada en el login (no hay endpoint /me en backend).
   const [user] = React.useState(() => displayUser(authLib.getUser()));
   const [company, setCompany] = React.useState(() => authLib.getCompany());
-  // El selector de empresas aún no tiene endpoint en backend: no se lista hasta implementar
-  // el módulo (reactivar con `api.companies()`). Mientras tanto solo se muestra la activa.
-  const [companies] = React.useState([]);
+  const [companies, setCompanies] = React.useState([]);
+
+  // Empresas del usuario (para el selector); el widget solo se despliega si hay más de una.
+  React.useEffect(() => { api.companies().then(setCompanies).catch(() => setCompanies([])); }, []);
+
+  // El perfil de la empresa (nombre/logo) puede cambiar fuera del Layout: refleja la activa persistida.
+  React.useEffect(() => authLib.onCompanyChange(() => setCompany(authLib.getCompany())), []);
 
   // Cierra el cajón al cambiar de ruta en móvil.
   React.useEffect(() => { setNavOpen(false); }, [location.pathname]);
 
   const switchCompany = async (c) => {
-    setCompany(c);
-    try { await api.switchCompany(c.id); } catch { /* el cambio de tenant aún es stub en backend */ }
+    try { await api.switchCompany(c.id); } catch { /* el backend persiste company_default_id; si falla, seguimos en local */ }
+    authLib.setCompany(c); // persiste la empresa activa y notifica al widget
     // Permisos y funcionalidades son por compañía: forzar recarga para la nueva antes de ir al inicio.
     await authLib.loadPermissions(c.username ?? c.id, { force: true });
     await authLib.loadFunctionalities(c.username ?? c.id, { force: true });
     navigate('/');
   };
+
+  const openCompanyProfile = () => navigate('/company');
 
   // La administración de un menú (/menus/:id) no tiene entrada exacta: usa un título genérico
   // (la propia pantalla muestra el nombre del menú en su cabecera).
@@ -69,7 +76,8 @@ export function Layout({ theme, onToggleTheme, onLogout }) {
     <div className={styles.shell}>
       {isMobile && navOpen && <div className={styles.overlay} onClick={() => setNavOpen(false)} />}
       <Sidebar onLogout={onLogout} open={navOpen} onClose={() => setNavOpen(false)}
-        company={company} companies={companies} onSwitchCompany={switchCompany} />
+        company={company} companies={companies} onSwitchCompany={switchCompany}
+        onOpenProfile={openCompanyProfile} />
       <div className={styles.contentCol}>
         <Topbar title={meta.title} crumb={meta.crumb} user={user} onLogout={onLogout} onMenu={() => setNavOpen(true)} theme={theme} onToggleTheme={onToggleTheme} />
         <main className={styles.main}><Outlet /></main>

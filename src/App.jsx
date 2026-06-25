@@ -13,6 +13,7 @@ import { MenuDetail } from './screens/MenuDetail.jsx';
 import { MenuPreview } from './screens/MenuPreview/MenuPreview.jsx';
 import { Stores } from './screens/Stores.jsx';
 import { Users } from './screens/Users.jsx';
+import { CompanyProfile } from './screens/CompanyProfile.jsx';
 import { Placeholder } from './screens/Placeholder.jsx';
 import { NoModules } from './screens/NoModules.jsx';
 import { auth as authLib } from './lib/auth/index.js';
@@ -72,6 +73,7 @@ export default function App() {
             <Route path="tables" element={<RequirePermission path="/tables"><Tables /></RequirePermission>} />
             <Route path="stores" element={<RequirePermission path="/stores"><Stores /></RequirePermission>} />
             <Route path="users" element={<RequirePermission path="/users"><Users /></RequirePermission>} />
+            <Route path="company" element={<CompanyProfile />} />
             <Route path="roles" element={<RequirePermission path="/roles"><Placeholder name="Roles" /></RequirePermission>} />
             <Route path="*" element={<Placeholder name="No encontrado" />} />
           </Route>

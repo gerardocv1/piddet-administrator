@@ -39,10 +39,12 @@ function NavGroup({ item, onClose }) {
 
 /** Menú lateral oscuro fijo, con selector de EMPRESA (tenant SaaS), secciones
  * y resaltado naranja del activo. En móvil funciona como cajón deslizante. */
-export function Sidebar({ onLogout, open = false, onClose, company, companies = [], onSwitchCompany }) {
+export function Sidebar({ onLogout, open = false, onClose, company, companies = [], onSwitchCompany, onOpenProfile }) {
   const [picker, setPicker] = React.useState(false);
   const multi = companies.length > 1;
   const { permissions } = usePermissions();
+
+  const openProfile = () => { onClose && onClose(); onOpenProfile && onOpenProfile(); };
 
   // Solo módulos con permiso; grupos sin módulos visibles se omiten (incluida su cabecera).
   // En items desplegables se filtran las rutas hijas y se descarta el padre si queda vacío.
@@ -62,18 +64,28 @@ export function Sidebar({ onLogout, open = false, onClose, company, companies = 
         <button onClick={onClose} aria-label="Cerrar menú" className={styles.closeBtn}><i className="fas fa-times" /></button>
       </div>
 
-      {/* ── Selector de empresa (tenant activo) ── */}
+      {/* ── Empresa activa: el tile abre el perfil; el chevron despliega el selector (solo multi) ── */}
       {company && (
         <div className={styles.company}>
-          <button onClick={() => setPicker((p) => !p)} aria-label="Cambiar empresa"
-            className={[styles.companyBtn, multi ? styles.multi : styles.single, picker ? styles.open : ''].filter(Boolean).join(' ')}>
-            <span className={styles.tile}>{initials(company.name)}</span>
-            <span className={styles.companyInfo}>
-              <span className={styles.companyName}>{company.name}</span>
-              <span className={styles.companyMeta}>{company.plan ? `Plan ${company.plan}` : 'Empresa'}{company.tiendas != null ? ` · ${company.tiendas} tiendas` : ''}</span>
-            </span>
-            {multi && <i className={`fas fa-chevron-down ${styles.chev} ${picker ? styles.open : ''}`} />}
-          </button>
+          <div className={styles.companyRow}>
+            <button onClick={openProfile} aria-label="Ver perfil de la empresa" className={styles.companyBtn}>
+              <span className={styles.tile}>
+                {company.icon
+                  ? <img className={styles.tileImg} src={company.icon} alt="" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                  : initials(company.name)}
+              </span>
+              <span className={styles.companyInfo}>
+                <span className={styles.companyName}>{company.name}</span>
+                <span className={styles.companyMeta}>{company.plan ? `Plan ${company.plan}` : 'Empresa'}{company.tiendas != null ? ` · ${company.tiendas} tiendas` : ''}</span>
+              </span>
+            </button>
+            {multi && (
+              <button onClick={() => setPicker((p) => !p)} aria-label="Cambiar empresa"
+                className={[styles.companyToggle, picker ? styles.open : ''].filter(Boolean).join(' ')}>
+                <i className={`fas fa-chevron-down ${styles.chev} ${picker ? styles.open : ''}`} />
+              </button>
+            )}
+          </div>
 
           {picker && multi && (
             <>
@@ -88,7 +100,7 @@ export function Sidebar({ onLogout, open = false, onClose, company, companies = 
                       <span className={styles.pickerTile}>{initials(c.name)}</span>
                       <span className={styles.companyInfo}>
                         <span className={styles.pickerName}>{c.name}</span>
-                        <span className={styles.pickerMeta}>{c.tiendas} tiendas</span>
+                        <span className={styles.pickerMeta}>{c.tiendas != null ? `${c.tiendas} tiendas` : 'Empresa'}</span>
                       </span>
                       {cur && <i className={`fas fa-check ${styles.pickerCheck}`} />}
                     </button>

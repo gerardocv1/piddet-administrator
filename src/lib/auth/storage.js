@@ -71,6 +71,13 @@ export function savePermissions(permissions, expiresAt) {
   store.setItem(KEYS.permsExp, expiresAt != null ? String(expiresAt) : '');
 }
 
+/** Actualiza solo la empresa activa en el store actual (tras cambiar de empresa o editar su perfil). */
+export function updateCompany(company) {
+  const store = activeStore();
+  if (!store) return;
+  store.setItem(KEYS.company, JSON.stringify(company ?? null));
+}
+
 /** Actualiza solo los tokens (tras un refresh), manteniendo el store y user/company actuales. */
 export function updateTokens({ token, refreshToken, expiresAt }) {
   const store = activeStore();

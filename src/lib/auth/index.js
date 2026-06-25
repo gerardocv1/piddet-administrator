@@ -164,6 +164,16 @@ export const auth = {
     return tokenManager.getSession().company;
   },
 
+  /** Reescribe la empresa activa de la sesión (tras cambiar de empresa o editar su perfil). */
+  setCompany(company) {
+    tokenManager.setCompany(company);
+  },
+
+  /** Suscribe un listener a cambios de empresa activa. Devuelve función para desuscribir. */
+  onCompanyChange(listener) {
+    return tokenManager.subscribeCompany(listener);
+  },
+
   /** Suscribe un listener al cierre de sesión forzado. Devuelve función para desuscribir. */
   onSessionExpired(listener) {
     return tokenManager.subscribe(listener);

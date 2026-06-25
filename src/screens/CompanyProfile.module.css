@@ -1,0 +1,86 @@
+/* Perfil de empresa: tarjeta de identidad (logo + nombre + plan + resumen) y datos. */
+
+.page {
+  width: 100%;
+  max-width: 960px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* ── Tarjeta de identidad ── */
+.identity { position: relative; }
+.cornerEdit { position: absolute; top: 14px; right: 14px; }
+
+.identityMain {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 22px;
+}
+.logo {
+  width: 72px;
+  height: 72px;
+  flex: 0 0 auto;
+  border-radius: var(--radius-lg);
+  background: var(--color-primary-100);
+  color: var(--color-primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 1.8rem;
+  overflow: hidden;
+}
+.logo img { width: 100%; height: 100%; object-fit: cover; }
+
+.identityInfo { flex: 1; min-width: 0; }
+.nameRow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.name { margin: 0; font-size: var(--text-xl); font-weight: 800; color: var(--gray-900); }
+.legal { margin: 4px 0 0; color: var(--gray-500); font-size: var(--text-base); }
+
+/* ── Barra de resumen ── */
+.resumen {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border-top: 1px solid var(--border-color);
+}
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 16px 22px;
+}
+.stat + .stat { border-left: 1px solid var(--border-color); }
+.statValue { font-size: var(--text-xl); font-weight: 800; color: var(--gray-900); line-height: 1.1; }
+.statLabel { font-size: var(--text-sm); color: var(--gray-500); }
+
+@media (max-width: 600px) {
+  .resumen { grid-template-columns: repeat(2, 1fr); }
+  .stat:nth-child(n+3) { border-top: 1px solid var(--border-color); }
+  .stat:nth-child(odd) { border-left: none; }
+}
+
+/* ── Datos de la empresa ── */
+.facts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  margin: 0;
+  column-gap: 32px;
+}
+@media (max-width: 600px) {
+  .facts { grid-template-columns: 1fr; }
+}
+.fact {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 0;
+  min-width: 0;
+  border-bottom: 1px solid var(--border-color);
+}
+.factLabel { font-size: var(--text-sm); color: var(--gray-500); }
+.factValue { margin: 0; color: var(--gray-800); font-size: var(--text-base); word-break: break-word; }
+.factLink a { color: var(--color-primary); }
+.empty { color: var(--gray-400); }

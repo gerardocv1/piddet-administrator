@@ -9,7 +9,7 @@
 //     - expirado / por expirar   → refresh() transparente
 //     - refresh inválido         → limpia sesión + emite 'session-expired' + lanza
 
-import { saveSession, updateTokens, readSession, savePermissions, clearSession as clearStorage } from './storage.js';
+import { saveSession, updateTokens, updateCompany, readSession, savePermissions, clearSession as clearStorage } from './storage.js';
 
 const SKEW_SECONDS = 60; // margen para refrescar antes de la expiración real
 const REFRESH_PATH = '/auth/refresh-tokens';
@@ -21,6 +21,7 @@ class TokenManager {
     this._refreshPromise = null; // dedupe de refrescos concurrentes
     this._listeners = new Set(); // suscriptores a 'session-expired'
     this._permListeners = new Set(); // suscriptores a cambios de permisos
+    this._companyListeners = new Set(); // suscriptores a cambios de empresa activa
   }
 
   /** Inyecta el HttpClient (cableado en http/client.js). */
@@ -113,6 +114,28 @@ class TokenManager {
   /** Datos guardados de la sesión actual. */
   getSession() {
     return readSession();
+  }
+
+  /** Reescribe la empresa activa persistida y notifica a los suscriptores. */
+  setCompany(company) {
+    updateCompany(company);
+    this.notifyCompanyChanged();
+  }
+
+  /** Suscribe un listener a cambios de empresa activa. Devuelve función para desuscribir. */
+  subscribeCompany(listener) {
+    this._companyListeners.add(listener);
+    return () => this._companyListeners.delete(listener);
+  }
+
+  notifyCompanyChanged() {
+    for (const listener of this._companyListeners) {
+      try {
+        listener();
+      } catch {
+        /* un listener no debe romper a los demás */
+      }
+    }
   }
 
   // ─── Permisos (de la compañía activa) ───────────────────────────────────────

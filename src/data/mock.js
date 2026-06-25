@@ -216,14 +216,16 @@ export const mockMenuItems = [
 // el panel muestra Productos (y sus categorías), Menús y Usuarios; el resto queda oculto.
 const mockPermissions = {
   roles: ['Administrador'],
-  permissions: ['user-administrator', 'api-module-menus', 'api-module-products'],
+  permissions: ['user-administrator', 'api-module-menus', 'api-module-products', 'api-module-company'],
 };
 
 // Empresa (tenant) activa y empresas disponibles para el usuario (SaaS multi-tenant).
 export const mockCompany = {
-  id: 'pid-001', name: 'Grupo Sabor', plan: 'Pro', tiendas: 4,
-  address: 'Cra. 43A #1-50, Medellín', phone: '+57 300 123 4567',
+  id: 'pid-001', name: 'Grupo Sabor', legal_name: 'Grupo Sabor S.A.S', plan: 'Pro', tiendas: 4,
+  identification: 'NIT 900.123.456-7',
+  address: 'Cra. 43A #1-50', city: 'Medellín, Colombia', phone: '+57 300 123 4567',
   email: 'hola@gruposabor.co', website: 'www.gruposabor.co',
+  stores_count: 4, menus_count: 5, items_count: 86, users_count: 12,
 };
 export const mockCompanies = [
   { id: 'pid-001', name: 'Grupo Sabor', plan: 'Pro', tiendas: 4 },
@@ -815,6 +817,21 @@ export function resolveMock(rawPath, opts = {}) {
   // Permisos del usuario en la compañía activa: /companies/{company}/me/permissions
   if (/^\/companies\/[^/]+\/me\/permissions$/.test(path)) return mockPermissions;
 
+  // Empresas del usuario (selector del sidebar).
+  if (path === '/auth/me/companies') return mockCompanies;
+  // Cambio de empresa activa: devuelve la elegida.
+  if (path === '/auth/me/company') {
+    const picked = mockCompanies.find((c) => String(c.id) === String(opts.body?.company_id));
+    return picked || mockCompany;
+  }
+  // Perfil de la empresa activa: GET devuelve el detalle; PUT fusiona el body y lo devuelve.
+  const profileMatch = path.match(/^\/companies\/([^/]+)$/);
+  if (profileMatch) {
+    const picked = mockCompanies.find((c) => String(c.id) === String(profileMatch[1]));
+    const profile = { ...mockCompany, ...(picked ? { id: picked.id, name: picked.name } : {}) };
+    return opts.method === 'PUT' ? { ...profile, ...(opts.body || {}) } : profile;
+  }
+
   // Módulo de menús (company-scoped: /companies/{company}/menus, con categorías e ítems anidados…)
   const menu = resolveMenuMock(path, query, opts);
   if (menu !== undefined) return menu;
@@ -842,8 +859,6 @@ export function resolveMock(rawPath, opts = {}) {
     '/mesas': mockTables,
     '/notificaciones': mockNotifications,
     '/me': mockUser,
-    '/company': mockCompany,
-    '/companies': mockCompanies,
   };
   return map[path] ?? null;
 }

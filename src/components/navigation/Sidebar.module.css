@@ -31,13 +31,15 @@
   font-size: 1.1rem;
 }
 
-/* ── Selector de empresa ── */
+/* ── Empresa activa (perfil + selector) ── */
 .company { position: relative; padding: 0 0.75rem 0.5rem; }
+.companyRow { display: flex; align-items: stretch; gap: 4px; }
 .companyBtn {
   display: flex;
   align-items: center;
   gap: 10px;
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   padding: 0.6rem 0.7rem;
   border-radius: var(--radius-lg);
   border: 1px solid var(--on-dark-border);
@@ -46,9 +48,19 @@
   font-family: var(--font-sans);
   text-align: left;
 }
-.companyBtn.multi { cursor: pointer; }
-.companyBtn.single { cursor: default; }
-.companyBtn.open { background: var(--on-dark-surface-hover); }
+.companyBtn:hover { background: var(--on-dark-surface-hover); }
+.companyToggle {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.7rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--on-dark-border);
+  background: var(--on-dark-surface);
+  cursor: pointer;
+}
+.companyToggle:hover, .companyToggle.open { background: var(--on-dark-surface-hover); }
 .tile {
   width: 34px;
   height: 34px;
@@ -61,7 +73,9 @@
   justify-content: center;
   font-weight: 800;
   font-size: 0.8rem;
+  overflow: hidden;
 }
+.tileImg { width: 100%; height: 100%; object-fit: cover; }
 .companyInfo { flex: 1; min-width: 0; }
 .companyName {
   display: block;
@@ -105,15 +119,16 @@
   width: 100%;
   padding: 0.55rem 0.6rem;
   border-radius: var(--radius);
-  border: none;
+  border: 1px solid transparent;
   background: transparent;
   cursor: pointer;
   font-family: var(--font-sans);
   text-align: left;
 }
 .pickerItem:hover { background: var(--on-dark-surface-hover); }
-.pickerItem.current { background: var(--color-primary-100); }
-.pickerItem.current:hover { background: var(--color-primary-100); }
+/* Ítem activo: verde petróleo un poco más oscuro que el dropdown, con texto blanco y check naranja. */
+.pickerItem.current { background: var(--brand-dark); border: 1px solid var(--on-dark-border); }
+.pickerItem.current:hover { background: var(--brand-dark); }
 .pickerTile {
   width: 28px;
   height: 28px;
