@@ -61,14 +61,17 @@
   font-size: var(--text-xs);
 }
 
-/* Lienzo de edición (react-easy-crop necesita un contenedor con position:relative y altura) */
+/* Lienzo de edición (react-easy-crop necesita un contenedor con position:relative y altura).
+   Fondo en damero claro: indica la transparencia y el margen al reducir el zoom (zoom < 1). */
 .stage {
   position: relative;
   width: 100%;
   height: 280px;
   border-radius: var(--radius-lg);
   overflow: hidden;
-  background: var(--gray-900);
+  background-color: var(--surface-card);
+  background-image: repeating-conic-gradient(var(--border-color) 0% 25%, transparent 0% 50%);
+  background-size: 18px 18px;
 }
 
 /* Controles de edición */

@@ -35,31 +35,37 @@ function rotatedSize(width, height, rotation) {
  */
 export async function getCroppedBlob(imageSrc, pixelCrop, rotation = 0, mimeType = '') {
   const image = await createImage(imageSrc);
-  const canvas = document.createElement('canvas');
-  const ctx = canvas.getContext('2d');
-
   const isPng = mimeType === 'image/png';
 
   const { width: bw, height: bh } = rotatedSize(image.width, image.height, rotation);
 
-  // Dibuja la imagen rotada centrada en un lienzo del tamaño del bounding box.
-  // El lienzo arranca transparente; en PNG mantiene así las esquinas que la rotación deja vacías.
-  canvas.width = bw;
-  canvas.height = bh;
-  ctx.translate(bw / 2, bh / 2);
-  ctx.rotate(toRad(rotation));
-  ctx.translate(-image.width / 2, -image.height / 2);
-  ctx.drawImage(image, 0, 0);
+  // Lienzo intermedio: imagen rotada y centrada en su bounding box. Arranca transparente.
+  const stage = document.createElement('canvas');
+  stage.width = bw;
+  stage.height = bh;
+  const sctx = stage.getContext('2d');
+  sctx.translate(bw / 2, bh / 2);
+  sctx.rotate(toRad(rotation));
+  sctx.translate(-image.width / 2, -image.height / 2);
+  sctx.drawImage(image, 0, 0);
 
-  // Extrae el recorte y lo vuelca en un lienzo del tamaño exacto del recorte.
-  // getImageData/putImageData preservan el canal alfa, así que la transparencia llega intacta.
-  const data = ctx.getImageData(pixelCrop.x, pixelCrop.y, pixelCrop.width, pixelCrop.height);
-  canvas.width = pixelCrop.width;
-  canvas.height = pixelCrop.height;
-  ctx.putImageData(data, 0, 0);
+  // Lienzo final: tamaño exacto del recorte. Con zoom < 1 el recorte puede exceder la imagen
+  // (queda margen): en JPEG se rellena de blanco; en PNG se deja transparente. drawImage solo
+  // pinta la intersección con la imagen, así que el relleno se conserva donde no hay imagen.
+  const w = Math.round(pixelCrop.width);
+  const h = Math.round(pixelCrop.height);
+  const out = document.createElement('canvas');
+  out.width = w;
+  out.height = h;
+  const octx = out.getContext('2d');
+  if (!isPng) {
+    octx.fillStyle = '#ffffff';
+    octx.fillRect(0, 0, w, h);
+  }
+  octx.drawImage(stage, pixelCrop.x, pixelCrop.y, w, h, 0, 0, w, h);
 
   // PNG conserva la transparencia; el resto se exporta como JPEG (más liviano).
   return isPng
-    ? new Promise((resolve) => canvas.toBlob((blob) => resolve(blob), 'image/png'))
-    : new Promise((resolve) => canvas.toBlob((blob) => resolve(blob), 'image/jpeg', 0.92));
+    ? new Promise((resolve) => out.toBlob((blob) => resolve(blob), 'image/png'))
+    : new Promise((resolve) => out.toBlob((blob) => resolve(blob), 'image/jpeg', 0.92));
 }

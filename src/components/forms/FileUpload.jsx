@@ -25,7 +25,7 @@ import styles from './FileUpload.module.css';
  *  - hint: texto de ayuda
  */
 export const FileUpload = React.forwardRef(function FileUpload(
-  { folder = 'general', visibility = 'private', value = null, aspect = 1, cropShape = 'rect', onChange, hint },
+  { folder = 'general', visibility = 'private', value = null, aspect = 1, cropShape = 'rect', minZoom = 0.3, onChange, hint },
   ref,
 ) {
   const inputRef = React.useRef(null);
@@ -132,6 +132,8 @@ export const FileUpload = React.forwardRef(function FileUpload(
               rotation={rotation}
               aspect={aspect}
               cropShape={cropShape}
+              minZoom={minZoom}
+              restrictPosition={false}
               onCropChange={setCrop}
               onZoomChange={setZoom}
               onRotationChange={setRotation}
@@ -147,7 +149,7 @@ export const FileUpload = React.forwardRef(function FileUpload(
             </button>
             <label className={styles.zoom}>
               <i className="fas fa-magnifying-glass" aria-hidden="true" />
-              <input type="range" min={1} max={3} step={0.01} value={zoom}
+              <input type="range" min={minZoom} max={3} step={0.01} value={zoom}
                 onChange={(e) => setZoom(Number(e.target.value))} aria-label="Zoom" />
             </label>
             <div className={styles.spacer} />
