@@ -58,7 +58,7 @@ export function CompanyProfile() {
             title="Editar empresa" onClick={edit} />
         )}
         <div className={t.identityMain}>
-          <span className={t.logo}>
+          <span className={[t.logo, company.icon ? t.logoImg : ''].filter(Boolean).join(' ')}>
             {company.icon
               ? <img src={company.icon} alt={company.name} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
               : initial(company.name)}

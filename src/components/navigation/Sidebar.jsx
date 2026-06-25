@@ -69,7 +69,7 @@ export function Sidebar({ onLogout, open = false, onClose, company, companies = 
         <div className={styles.company}>
           <div className={styles.companyRow}>
             <button onClick={openProfile} aria-label="Ver perfil de la empresa" className={styles.companyBtn}>
-              <span className={styles.tile}>
+              <span className={[styles.tile, company.icon ? styles.tileImage : ''].filter(Boolean).join(' ')}>
                 {company.icon
                   ? <img className={styles.tileImg} src={company.icon} alt="" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                   : initials(company.name)}

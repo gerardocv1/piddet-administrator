@@ -33,7 +33,9 @@
   font-size: 1.8rem;
   overflow: hidden;
 }
-.logo img { width: 100%; height: 100%; object-fit: cover; }
+.logo img { width: 100%; height: 100%; object-fit: contain; }
+/* Con logo: fondo blanquito con un toque de gris (los logos suelen tener transparencia). */
+.logo.logoImg { background: var(--gray-100); color: inherit; border: 1px solid var(--border-color); }
 
 .identityInfo { flex: 1; min-width: 0; }
 .nameRow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }

@@ -75,7 +75,9 @@
   font-size: 0.8rem;
   overflow: hidden;
 }
-.tileImg { width: 100%; height: 100%; object-fit: cover; }
+/* Con logo: fondo blanquito con un toque de gris para que el logo (a menudo transparente) resalte. */
+.tile.tileImage { background: var(--gray-100); }
+.tileImg { width: 100%; height: 100%; object-fit: contain; }
 .companyInfo { flex: 1; min-width: 0; }
 .companyName {
   display: block;
