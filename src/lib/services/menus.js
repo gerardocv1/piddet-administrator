@@ -29,6 +29,10 @@ export const menusService = {
   menu: (id) => http.get(`${base()}/menus/${id}`),
   // Carta del menú: menú + productos (con descripción e imagen) agrupados por categoría.
   menuContent: (id) => http.get(`${base()}/menus/${id}/full`),
+  // Carta pública (sin sesión): se resuelve por username de compañía + de menú. Devuelve también
+  // los datos de marca de la compañía (no hay `auth` desde el que leerlos). NO usa base().
+  publicMenuContent: (companyUsername, menuUsername) =>
+    http.get(`/public/${companyUsername}/m/${menuUsername}`),
   // Guarda la configuración de presentación de la carta (diseño, color, fondo) en el menú.
   saveMenuConfig: (id, config) => http.put(`${base()}/menus/${id}/config`, { config }),
   // Guarda la configuración de presentación de una categoría (p. ej. su plantilla/frame).

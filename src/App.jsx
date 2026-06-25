@@ -11,6 +11,7 @@ import { Tables } from './screens/Tables.jsx';
 import { Menus } from './screens/Menus.jsx';
 import { MenuDetail } from './screens/MenuDetail.jsx';
 import { MenuPreview } from './screens/MenuPreview/MenuPreview.jsx';
+import { PublicMenu } from './screens/PublicMenu/PublicMenu.jsx';
 import { Stores } from './screens/Stores.jsx';
 import { Users } from './screens/Users.jsx';
 import { CompanyProfile } from './screens/CompanyProfile.jsx';
@@ -21,6 +22,11 @@ import { RequireAuth } from './lib/auth/RequireAuth.jsx';
 import { RequirePermission } from './lib/permissions/RequirePermission.jsx';
 import { usePermissions } from './lib/permissions/usePermissions.js';
 import { canAccess, firstAccessible } from './lib/permissions/modules.js';
+import { ADMIN_BASE } from './lib/adminBase.js';
+
+// Patrón de la URL pública de una carta: /{username-compañía}/m/{username-menú}. Se sirve fuera
+// del panel admin (sin sesión ni permisos), por eso se detecta antes de montar el router.
+const PUBLIC_MENU_RE = /^\/([^/]+)\/m\/([^/]+)\/?$/;
 
 // Landing de la raíz: muestra el Inicio si está habilitado; si no, redirige al primer módulo
 // accesible; si no hay ninguno, muestra el estado "sin módulos".
@@ -32,6 +38,32 @@ function Home() {
 }
 
 export default function App() {
+  // 1) Mundo público (raíz limpia): la carta compartible se renderiza sin router ni sesión.
+  //    El primer segmento `admin` se excluye para no colisionar con el panel.
+  const path = window.location.pathname;
+  const publicMatch = path.match(PUBLIC_MENU_RE);
+  if (publicMatch && publicMatch[1] !== ADMIN_BASE.slice(1)) {
+    return (
+      <PublicMenu
+        companyUsername={decodeURIComponent(publicMatch[1])}
+        menuUsername={decodeURIComponent(publicMatch[2])}
+      />
+    );
+  }
+
+  // 2) Todo lo administrativo vive bajo /admin: si entran fuera de ese prefijo (p. ej. la raíz),
+  //    se redirige conservando la ruta para que el router (con basename) la resuelva.
+  const isAdminPath = path === ADMIN_BASE || path.startsWith(ADMIN_BASE + '/');
+  if (!isAdminPath) {
+    const rest = path === '/' ? '/' : path;
+    window.location.replace(ADMIN_BASE + rest + window.location.search + window.location.hash);
+    return null;
+  }
+
+  return <AdminApp />;
+}
+
+function AdminApp() {
   const [auth, setAuth] = React.useState(() => authLib.isAuthenticated());
   const [theme, setTheme] = React.useState(() => localStorage.getItem('piddet_theme') || 'light');
 
@@ -51,7 +83,7 @@ export default function App() {
   const logout = () => { authLib.logout(); setAuth(false); };
 
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={ADMIN_BASE}>
       <Routes>
         {/* Única vista pública */}
         <Route path="/login"

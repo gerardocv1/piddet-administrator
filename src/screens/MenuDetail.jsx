@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Button, IconButton, Input, MoneyInput, Select, Textarea, Modal, Spinner, SortableList, Autocomplete, Dropdown } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
+import { ADMIN_BASE } from '../lib/adminBase.js';
 import s from './screens.module.css';
 import t from './MenuDetail.module.css';
 
@@ -176,7 +177,7 @@ export function MenuDetail() {
         </div>
         <div className={s.spacer} />
         <Button variant="outline-primary" size="sm" icon="fas fa-eye"
-          onClick={() => window.open(`/menus/${menuId}/preview`, '_blank')}>Ver carta</Button>
+          onClick={() => window.open(`${ADMIN_BASE}/menus/${menuId}/preview`, '_blank')}>Ver carta</Button>
       </div>
 
       {!catsRes.loading && cats.length === 0 ? (

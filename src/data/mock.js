@@ -2,6 +2,8 @@
 // para que el panel funcione sin backend. Replican la forma que debería
 // devolver la API real de Piddet.
 
+import { slugifyUsername } from '../lib/slug.js';
+
 export const mockStats = [
   { label: 'Pedidos hoy', value: '128', delta: '+3.48%', up: true },
   { label: 'Ventas', value: '$1.24M', delta: '+12%', up: true },
@@ -127,10 +129,10 @@ export const mockUser = { name: 'Gerardo Cruz', role: 'Administrador' };
 // Replican la forma del backend: los menús son de la compañía activa y cada categoría pertenece a
 // un menú concreto (`menu_id`); su `position` define el orden de sus productos dentro de ese menú.
 export const mockMenus = [
-  { id: 1, name: 'Carta principal', description: 'Disponible todo el día', file: null, position: 0, status: 1 },
-  { id: 2, name: 'Desayunos', description: 'Hasta las 11 a. m.', file: null, position: 1, status: 0 },
-  { id: 3, name: 'Bebidas', description: 'Carta de bebidas y cócteles', file: null, position: 2, status: 1 },
-  { id: 4, name: 'Menú Secundary', description: 'Carta de fin de semana', file: null, position: 3, status: 1 },
+  { id: 1, name: 'Carta principal', username: 'carta_principal', description: 'Disponible todo el día', file: null, position: 0, status: 1 },
+  { id: 2, name: 'Desayunos', username: 'desayunos', description: 'Hasta las 11 a. m.', file: null, position: 1, status: 0 },
+  { id: 3, name: 'Bebidas', username: 'bebidas', description: 'Carta de bebidas y cócteles', file: null, position: 2, status: 1 },
+  { id: 4, name: 'Menú Secundary', username: 'menu_secundary', description: 'Carta de fin de semana', file: null, position: 3, status: 1 },
 ];
 
 // Categorías de menú: cada una pertenece a UN menú (`menu_id`). Su `position` define el orden con
@@ -221,7 +223,7 @@ const mockPermissions = {
 
 // Empresa (tenant) activa y empresas disponibles para el usuario (SaaS multi-tenant).
 export const mockCompany = {
-  id: 'pid-001', name: 'Grupo Sabor', legal_name: 'Grupo Sabor S.A.S', plan: 'Pro', tiendas: 4,
+  id: 'pid-001', name: 'Grupo Sabor', username: 'grupo_sabor', legal_name: 'Grupo Sabor S.A.S', plan: 'Pro', tiendas: 4,
   identification: 'NIT 900.123.456-7',
   address: 'Cra. 43A #1-50', city: 'Medellín, Colombia', phone: '+57 300 123 4567',
   email: 'hola@gruposabor.co', website: 'www.gruposabor.co',
@@ -313,6 +315,38 @@ function decorateMenuItem(mi) {
 
 // Resuelve las rutas company-scoped del módulo de menús. Devuelve `undefined` si no aplica
 // (para que el enrutador siga buscando) y simula GET/POST/PUT/DELETE sobre datos en memoria.
+// Arma la carta de un menú (menú + productos agrupados por categoría no vacía), forma que comparten
+// el endpoint autenticado `/menus/{id}/full` y el público `/public/{company}/m/{username}`.
+function buildMenuFull(menu) {
+  const items = mockMenuItems
+    .filter((i) => i.menu_id === menu.id && i.status === 1)
+    .map(decorateMenuItem);
+  const cats = mockMenuCategories.filter((c) => c.menu_id === menu.id).sort((a, b) => a.position - b.position);
+  const categories = cats
+    .map((c) => ({
+      id: c.id,
+      name: c.name,
+      position: c.position,
+      config: c.config || null,
+      items: items.filter((i) => i.menu_category_id === c.id).sort((a, b) => a.position - b.position),
+    }))
+    .filter((g) => g.items.length > 0);
+  return { menu, categories };
+}
+
+// Resolver de la carta pública: /public/{company}/m/{menuUsername}. Devuelve también los datos de
+// marca de la compañía (el visitante no tiene sesión). En demo solo existe una compañía activa.
+function resolvePublicMenuMock(path) {
+  const m = path.match(/^\/public\/([^/]+)\/m\/([^/]+)$/);
+  if (!m) return undefined;
+  const menu = mockMenus.find((x) => x.username === m[2] && x.status === 1);
+  if (!menu) return null;
+  return {
+    ...buildMenuFull(menu),
+    company: { name: mockCompany.name, username: mockCompany.username, icon: mockCompany.icon ?? null },
+  };
+}
+
 function resolveMenuMock(path, query, { method = 'GET', body } = {}) {
   const scoped = path.match(/^\/companies\/[^/]+\/(.+)$/);
   if (!scoped) return undefined;
@@ -357,25 +391,8 @@ function resolveMenuMock(path, query, { method = 'GET', body } = {}) {
   // ── Carta del menú: menú + productos (con descripción e imagen) agrupados por categoría ──
   m = sub.match(/^menus\/(\d+)\/full$/);
   if (m) {
-    const menuId = Number(m[1]);
-    const menu = mockMenus.find((x) => x.id === menuId);
-    if (!menu) return null;
-    const items = mockMenuItems
-      .filter((i) => i.menu_id === menuId && i.status === 1)
-      .map(decorateMenuItem);
-    const cats = mockMenuCategories.filter((c) => c.menu_id === menuId).sort((a, b) => a.position - b.position);
-    const categories = cats
-      .map((c) => ({
-        id: c.id,
-        name: c.name,
-        position: c.position,
-        config: c.config || null,
-        items: items
-          .filter((i) => i.menu_category_id === c.id)
-          .sort((a, b) => a.position - b.position),
-      }))
-      .filter((g) => g.items.length > 0);
-    return { menu, categories };
+    const menu = mockMenus.find((x) => x.id === Number(m[1]));
+    return menu ? buildMenuFull(menu) : null;
   }
 
   // ── Configuración de presentación de una categoría (p. ej. su plantilla/frame) ──
@@ -434,7 +451,8 @@ function resolveMenuMock(path, query, { method = 'GET', body } = {}) {
   // ── Menús ──
   if (sub === 'menus') {
     if (method === 'POST') {
-      const row = { id: nextId(mockMenus), name: body.name, description: body.description || '', file: null, position: body.position ?? mockMenus.length, status: 1 };
+      const username = slugifyUsername(body.username || body.name);
+      const row = { id: nextId(mockMenus), name: body.name, username, description: body.description || '', file: null, position: body.position ?? mockMenus.length, status: 1 };
       mockMenus.push(row);
       return row;
     }
@@ -831,6 +849,10 @@ export function resolveMock(rawPath, opts = {}) {
     const profile = { ...mockCompany, ...(picked ? { id: picked.id, name: picked.name } : {}) };
     return opts.method === 'PUT' ? { ...profile, ...(opts.body || {}) } : profile;
   }
+
+  // Carta pública (sin sesión): /public/{company}/m/{menuUsername}
+  const publicMenu = resolvePublicMenuMock(path);
+  if (publicMenu !== undefined) return publicMenu;
 
   // Módulo de menús (company-scoped: /companies/{company}/menus, con categorías e ítems anidados…)
   const menu = resolveMenuMock(path, query, opts);

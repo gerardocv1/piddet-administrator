@@ -2,7 +2,10 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, IconButton, Input, Textarea, Modal, Spinner, Pagination, Dropdown } from '../components';
 import { api } from '../lib/api.js';
+import { auth } from '../lib/auth/index.js';
 import { useResource } from '../lib/useResource.js';
+import { slugifyUsername } from '../lib/slug.js';
+import { ADMIN_BASE } from '../lib/adminBase.js';
 import s from './screens.module.css';
 import t from './Menus.module.css';
 
@@ -25,20 +28,43 @@ export function Menus() {
   const menus = data.items || [];
   const pg = data.pagination;
 
-  const [form, setForm] = React.useState(null); // { id?, name, description }
+  const [form, setForm] = React.useState(null); // { id?, name, username, description }
+  const [usernameTouched, setUsernameTouched] = React.useState(false);
   const [del, setDel] = React.useState(null);
   const [saving, setSaving] = React.useState(false);
 
-  const openNew = () => setForm({ name: '', description: '' });
-  const openEdit = (m) => setForm({ id: m.id, name: m.name, description: m.description || '' });
+  // Identificador de la compañía activa para construir la URL pública de la carta.
+  const companyUsername = React.useMemo(() => {
+    const c = auth.getCompany();
+    return c?.username ?? c?.id;
+  }, []);
+  const publicUrl = (username) => `${window.location.origin}/${companyUsername}/m/${username}`;
+
+  const openNew = () => { setUsernameTouched(false); setForm({ name: '', username: '', description: '' }); };
+  const openEdit = (m) => { setUsernameTouched(true); setForm({ id: m.id, name: m.name, username: m.username || '', description: m.description || '' }); };
+
+  // Al teclear el nombre, autogenera el username mientras el usuario no lo haya editado a mano.
+  const onNameChange = (e) => {
+    const name = e.target.value;
+    setForm((f) => ({ ...f, name, username: usernameTouched ? f.username : slugifyUsername(name) }));
+  };
+  const onUsernameChange = (e) => {
+    setUsernameTouched(true);
+    setForm((f) => ({ ...f, username: slugifyUsername(e.target.value) }));
+  };
+
+  const copyPublicUrl = (m) => {
+    navigator.clipboard?.writeText(publicUrl(m.username)).catch(() => {});
+  };
 
   const save = async () => {
     const name = form.name.trim();
     if (!name) return;
+    const username = form.username.trim() || slugifyUsername(name);
     setSaving(true);
     try {
-      if (form.id) await api.updateMenu(form.id, { name, description: form.description });
-      else await api.createMenu({ name, description: form.description });
+      if (form.id) await api.updateMenu(form.id, { name, username, description: form.description });
+      else await api.createMenu({ name, username, description: form.description });
       setForm(null);
       reload();
     } finally { setSaving(false); }
@@ -100,7 +126,9 @@ export function Menus() {
                   trigger={<IconButton icon="fas fa-ellipsis-vertical" variant="light" size="sm" title="Acciones" />}
                   items={[
                     { label: 'Administrar', icon: 'fas fa-sliders', onClick: () => navigate(`/menus/${m.id}`) },
-                    { label: 'Generar menú (carta)', icon: 'fas fa-eye', onClick: () => window.open(`/menus/${m.id}/preview`, '_blank') },
+                    { label: 'Generar menú (carta)', icon: 'fas fa-eye', onClick: () => window.open(`${ADMIN_BASE}/menus/${m.id}/preview`, '_blank') },
+                    { label: 'Ver carta pública', icon: 'fas fa-share-nodes', onClick: () => window.open(publicUrl(m.username), '_blank') },
+                    { label: 'Copiar enlace público', icon: 'fas fa-link', onClick: () => copyPublicUrl(m) },
                     { label: 'Editar', icon: 'fas fa-pen', onClick: () => openEdit(m) },
                     { label: 'Eliminar', icon: 'fas fa-trash', variant: 'danger', onClick: () => setDel(m) },
                   ]}
@@ -126,7 +154,14 @@ export function Menus() {
         {form && (
           <div className={s.formCol}>
             <Input label="Nombre del menú" icon="fas fa-book-open" placeholder="Ej. Carta principal"
-              value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+              value={form.name} onChange={onNameChange} />
+            <Input label="Identificador (URL)" icon="fas fa-link" placeholder="Ej. carta_principal"
+              value={form.username} onChange={onUsernameChange}
+              hint={form.username ? `Carta pública: ${publicUrl(form.username)}` : 'Se usará en la URL pública del menú; se genera del nombre.'} />
+            {form.username && (
+              <Button variant="secondary" size="sm" icon="fas fa-copy"
+                onClick={() => copyPublicUrl(form)}>Copiar enlace público</Button>
+            )}
             <Textarea label="Descripción" placeholder="Opcional"
               value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
           </div>
