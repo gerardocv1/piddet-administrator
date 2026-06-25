@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, IconButton, Badge, Switch, Modal, Spinner, Pagination, Dropdown } from '../components';
+import { Button, IconButton, Badge, Switch, Modal, Spinner, Pagination, Dropdown, FilterBar } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { ItemFormModal } from './ItemFormModal.jsx';
@@ -25,6 +25,9 @@ export function Products() {
   const [page, setPage] = React.useState(1);
   const [q, setQ] = React.useState('');
   const [search, setSearch] = React.useState('');
+  const [filters, setFilters] = React.useState({ type: undefined, category: undefined });
+  const typeId = filters.type;
+  const categoryId = filters.category;
 
   // Búsqueda con debounce: vuelve a la primera página al cambiar el término.
   React.useEffect(() => {
@@ -32,10 +35,41 @@ export function Products() {
     return () => clearTimeout(id);
   }, [q]);
 
-  const fetcher = React.useCallback(() => api.items({ page, search }), [page, search]);
-  const { data, loading, error, setData, reload } = useResource(fetcher, EMPTY, [page, search]);
+  // Opciones de los filtros: solo tipos y categorías que la compañía USA (tienen productos),
+  // derivados del ordering y cacheados por compañía (30 min) en el servicio.
+  const [types, setTypes] = React.useState([]);
+  const [cats, setCats] = React.useState([]);
+  React.useEffect(() => {
+    api.productFilters()
+      .then(({ types, categories }) => { setTypes(types); setCats(categories); })
+      .catch(() => {});
+  }, []);
+
+  // Al elegir un tipo, las categorías se acotan a ese tipo; sin tipo, se ofrecen todas.
+  const catOptions = (typeId ? cats.filter((c) => String(c.item_type_id) === String(typeId)) : cats)
+    .map((c) => ({ value: String(c.id), label: c.name }));
+  const filterDefs = [
+    { key: 'type', label: 'Tipo', icon: 'fas fa-layer-group', type: 'select',
+      options: types.map((tp) => ({ value: String(tp.id), label: tp.name })) },
+    { key: 'category', label: 'Categoría', icon: 'fas fa-tags', type: 'select', options: catOptions },
+  ];
+
+  // Cambiar el tipo invalida la categoría si ya no pertenece a ese tipo (las categorías son por tipo).
+  const onFilters = (next) => {
+    const cleaned = { ...next };
+    if (cleaned.type !== filters.type && cleaned.type) {
+      const match = cats.some((c) => String(c.id) === String(cleaned.category) && String(c.item_type_id) === String(cleaned.type));
+      if (!match) cleaned.category = undefined;
+    }
+    setFilters(cleaned);
+    setPage(1);
+  };
+
+  const fetcher = React.useCallback(() => api.items({ page, search, typeId, categoryId }), [page, search, typeId, categoryId]);
+  const { data, loading, error, setData, reload } = useResource(fetcher, EMPTY, [page, search, typeId, categoryId]);
   const items = data.items || [];
   const pg = data.pagination;
+  const filtered = !!(search || typeId || categoryId);
 
   const [form, setForm] = React.useState(null); // null | {} (nuevo) | item (editar)
   const [del, setDel] = React.useState(null);
@@ -57,14 +91,17 @@ export function Products() {
 
   return (
     <div className={s.page}>
-      <div className={s.toolbar}>
-        <div className={t.search}>
-          <i className="fas fa-search" />
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar producto" />
-        </div>
-        <div className={s.spacer} />
-        <Button variant="primary" size="sm" icon="fas fa-plus" onClick={() => setForm({})}>Nuevo producto</Button>
-      </div>
+      <FilterBar
+        searchable
+        searchValue={q}
+        onSearchChange={setQ}
+        searchPlaceholder="Buscar producto"
+        filters={filterDefs}
+        values={filters}
+        onChange={onFilters}
+        inlineThreshold={0}
+        actions={<Button variant="primary" size="sm" icon="fas fa-plus" onClick={() => setForm({})}>Nuevo producto</Button>}
+      />
 
       {loading ? (
         <Spinner center label="Cargando productos…" />
@@ -73,7 +110,7 @@ export function Products() {
       ) : items.length === 0 ? (
         <div className={t.empty}>
           <i className="fas fa-burger" />
-          {search ? 'No hay productos que coincidan con la búsqueda.' : 'Aún no has creado productos.'}
+          {filtered ? 'No hay productos que coincidan con los filtros.' : 'Aún no has creado productos.'}
         </div>
       ) : (
         <div className={t.tableCard}>

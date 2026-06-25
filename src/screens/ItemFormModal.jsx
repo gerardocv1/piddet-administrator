@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, Input, Select, Textarea, Modal } from '../components';
+import { Button, Input, Select, Textarea, Modal, CategoryCascader } from '../components';
 import { api } from '../lib/api.js';
 import { useFunctionalities } from '../lib/permissions/useFunctionalities.js';
 import s from './screens.module.css';
@@ -14,7 +14,7 @@ export function ItemFormModal({ item, onClose, onSaved }) {
 
   const [types, setTypes] = React.useState([]);
   const [taxes, setTaxes] = React.useState([]);
-  const [cats, setCats] = React.useState([]);
+  const [tree, setTree] = React.useState([]);
   const [loadingCats, setLoadingCats] = React.useState(false);
   const [form, setForm] = React.useState(() => ({
     item_type_id: item?.item_type_id ? String(item.item_type_id) : '',
@@ -37,15 +37,15 @@ export function ItemFormModal({ item, onClose, onSaved }) {
     api.taxes().then((d) => setTaxes(Array.isArray(d) ? d : [])).catch(() => {});
   }, [taxesOn]);
 
-  // Categorías del tipo seleccionado (se recargan al cambiar el tipo).
+  // Árbol de categorías del tipo seleccionado (se recarga al cambiar el tipo).
   const typeId = form.item_type_id;
   React.useEffect(() => {
-    if (!typeId) { setCats([]); return; }
+    if (!typeId) { setTree([]); return; }
     let alive = true;
     setLoadingCats(true);
-    api.allItemCategories({ typeId })
-      .then((d) => { if (alive) setCats(d.items || []); })
-      .catch(() => { if (alive) setCats([]); })
+    api.itemCategoriesTree({ typeId })
+      .then((d) => { if (alive) setTree(Array.isArray(d) ? d : []); })
+      .catch(() => { if (alive) setTree([]); })
       .finally(() => { if (alive) setLoadingCats(false); });
     return () => { alive = false; };
   }, [typeId]);
@@ -89,13 +89,18 @@ export function ItemFormModal({ item, onClose, onSaved }) {
         <Button variant="primary" loading={saving} disabled={!valid} onClick={submit}>Guardar</Button>
       </>}>
       <div className={s.formCol}>
-        <div className={s.formGrid}>
-          <Select label="Tipo" value={form.item_type_id} onChange={(e) => onChangeType(e.target.value)}
-            options={[{ value: '', label: 'Selecciona un tipo' }, ...types.map((t) => ({ value: String(t.id), label: t.name }))]} />
-          <Select label="Categoría" value={form.item_category_id} onChange={(e) => set('item_category_id', e.target.value)}
-            disabled={!form.item_type_id || loadingCats}
-            options={[{ value: '', label: !form.item_type_id ? 'Elige un tipo primero' : (loadingCats ? 'Cargando…' : 'Selecciona una categoría') }, ...cats.map((c) => ({ value: String(c.id), label: c.name }))]} />
-        </div>
+        <Select label="Tipo" value={form.item_type_id} onChange={(e) => onChangeType(e.target.value)}
+          options={[{ value: '', label: 'Selecciona un tipo' }, ...types.map((t) => ({ value: String(t.id), label: t.name }))]} />
+        {!form.item_type_id ? (
+          <Select label="Categoría" disabled options={[{ value: '', label: 'Elige un tipo primero' }]} />
+        ) : (
+          <CategoryCascader
+            tree={tree}
+            value={form.item_category_id}
+            loading={loadingCats}
+            onChange={(id) => set('item_category_id', id)}
+          />
+        )}
         <Input label="Nombre del producto" icon="fas fa-burger" placeholder="Ej. Hamburguesa Doble"
           value={form.name} onChange={(e) => set('name', e.target.value)} />
         <div className={s.formGrid}>

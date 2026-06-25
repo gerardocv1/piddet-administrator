@@ -104,12 +104,21 @@ export const mockStoresDetail = [
   { id: 4, name: 'Sushi Express', open: true, dir: 'Cra. 70 #1-15', tel: '300 222 3344', pedidos: 6 },
 ];
 
+// Roles asignables demo (sin super-admin), con etiqueta amigable.
+export const mockCompanyRoles = [
+  { name: 'admin', label: 'Administrador', description: 'Acceso total a la compañía' },
+  { name: 'cashier', label: 'Cajero', description: 'Gestión de pagos y caja' },
+  { name: 'waiter', label: 'Mesero', description: 'Toma de pedidos en sala' },
+  { name: 'cook', label: 'Cocinero', description: 'Operación de cocina' },
+];
+
+// Usuarios vinculados a la compañía activa (forma del backend: datos básicos + roles).
 export const mockUsers = [
-  { id: 1, name: 'Gerardo Cruz', tel: '300 123 4567', rol: 'Administrador', activo: true },
-  { id: 2, name: 'María López', tel: '311 222 3344', rol: 'Cajero', activo: true },
-  { id: 3, name: 'Carlos Mejía', tel: '320 555 6677', rol: 'Mesero', activo: true },
-  { id: 4, name: 'Ana Ruiz', tel: '315 888 9900', rol: 'Cocina', activo: false },
-  { id: 5, name: 'Jorge Díaz', tel: '301 444 1122', rol: 'Mesero', activo: true },
+  { id: 1, name: 'Gerardo Cruz', first_name: 'Gerardo', last_name: 'Cruz', phone_code: '57', phone_number: '3001234567', email: 'gerardo@piddet.com', status: true, roles: [{ name: 'admin', label: 'Administrador' }] },
+  { id: 2, name: 'María López', first_name: 'María', last_name: 'López', phone_code: '57', phone_number: '3112223344', email: 'maria@piddet.com', status: true, roles: [{ name: 'cashier', label: 'Cajero' }] },
+  { id: 3, name: 'Carlos Mejía', first_name: 'Carlos', last_name: 'Mejía', phone_code: '57', phone_number: '3205556677', email: null, status: true, roles: [{ name: 'waiter', label: 'Mesero' }] },
+  { id: 4, name: 'Ana Ruiz', first_name: 'Ana', last_name: 'Ruiz', phone_code: '57', phone_number: '3158889900', email: null, status: false, roles: [{ name: 'cook', label: 'Cocinero' }] },
+  { id: 5, name: 'Jorge Díaz', first_name: 'Jorge', last_name: 'Díaz', phone_code: '57', phone_number: '3014441122', email: null, status: true, roles: [{ name: 'waiter', label: 'Mesero' }] },
 ];
 
 export const mockUser = { name: 'Gerardo Cruz', role: 'Administrador' };
@@ -207,7 +216,7 @@ export const mockMenuItems = [
 // el panel muestra Productos (y sus categorías), Menús y Usuarios; el resto queda oculto.
 const mockPermissions = {
   roles: ['Administrador'],
-  permissions: ['api-company-users', 'api-module-menus', 'api-module-products'],
+  permissions: ['user-administrator', 'api-module-menus', 'api-module-products'],
 };
 
 // Empresa (tenant) activa y empresas disponibles para el usuario (SaaS multi-tenant).
@@ -514,6 +523,23 @@ function resolveItemsMock(path, query, { method = 'GET', body } = {}) {
     return { name: `demo-${Date.now()}.${ext}`, original_name: orig, visibility: vis, ext, size: (f && f.size) || 0, url: null, thumbnail_url: null };
   }
 
+  // Categorías que la compañía USA (tiene productos), en su orden — para ordenar y para los filtros.
+  if (sub === 'item-categories/ordering') {
+    const usedIds = new Set(mockItems.map((it) => it.item_category_id));
+    return mockItemCategories
+      .filter((c) => usedIds.has(c.id))
+      .map((c) => ({
+        id: c.id,
+        name: c.name,
+        description: c.description || '',
+        file: null,
+        item_type_id: c.item_type_id,
+        type_name: mockItemTypes.find((t) => t.id === c.item_type_id)?.name ?? '',
+        position: c.position,
+      }))
+      .sort((a, b) => a.position - b.position);
+  }
+
   // ── Categorías de producto (por tipo) ──
   if (sub === 'item-categories') {
     if (method === 'POST') {
@@ -622,6 +648,10 @@ function resolveItemsMock(path, query, { method = 'GET', body } = {}) {
     let rows = mockItems.filter((it) => it.item_status_id !== 3).sort((a, b) => a.position - b.position);
     const s = (query.get('_search') || '').toLowerCase();
     if (s) rows = rows.filter((r) => r.name.toLowerCase().includes(s) || (r.code || '').toLowerCase().includes(s));
+    const typeId = query.get('item_type_id');
+    if (typeId) rows = rows.filter((r) => r.item_type_id === Number(typeId));
+    const categoryId = query.get('item_category_id');
+    if (categoryId) rows = rows.filter((r) => r.item_category_id === Number(categoryId));
     return mockPaginate(rows.map(decorateItem), query);
   }
 
@@ -694,6 +724,87 @@ function resolveMetricsMock(path, query) {
 }
 
 // Enrutador de mocks: mapea ruta → respuesta. Soporta query string (?...) y mutaciones.
+// Resuelve las rutas company-scoped del módulo de usuarios. Devuelve `undefined` si no aplica
+// y simula GET/POST/PUT/DELETE sobre `mockUsers` en memoria.
+function resolveUsersMock(path, query, { method = 'GET', body } = {}) {
+  const m = path.match(/^\/companies\/[^/]+\/users(\/.*)?$/);
+  if (!m) return undefined;
+  const sub = m[1] || '';
+
+  const toRoles = (names = []) => names
+    .map((n) => mockCompanyRoles.find((r) => r.name === n))
+    .filter(Boolean)
+    .map((r) => ({ name: r.name, label: r.label }));
+
+  if (sub === '/assignable-roles') return mockCompanyRoles;
+
+  if (sub === '/search') {
+    const phone = query.get('phone') || '';
+    const user = mockUsers.find((u) => u.phone_number === phone);
+    // En demo: si el teléfono ya está en la compañía, se considera vinculado; si no, no existe
+    // (para poder probar el alta de un usuario nuevo).
+    if (!user) return { exists: false, linked: false, user: null };
+    return {
+      exists: true,
+      linked: true,
+      user: {
+        id: user.id, name: user.name, first_name: user.first_name, last_name: user.last_name,
+        email: user.email, phone_code: user.phone_code, phone_number: user.phone_number,
+      },
+    };
+  }
+
+  if (sub === '') {
+    if (method === 'POST') {
+      const u = {
+        id: nextId(mockUsers),
+        first_name: body?.first_name || 'Usuario',
+        last_name: body?.last_name || '',
+        phone_code: body?.phone_code || '57',
+        phone_number: body?.phone_number || '',
+        email: body?.email ?? null,
+        status: true,
+        roles: toRoles(body?.roles),
+      };
+      u.name = `${u.first_name} ${u.last_name}`.trim();
+      mockUsers.push(u);
+      return u;
+    }
+    return mockPaginate(mockUsers, query);
+  }
+
+  const idMatch = sub.match(/^\/(\d+)(\/password)?$/);
+  if (idMatch) {
+    const id = Number(idMatch[1]);
+    const idx = mockUsers.findIndex((u) => u.id === id);
+
+    if (idMatch[2] === '/password') {
+      return { status: 'success', message: 'Contraseña actualizada (demo)' };
+    }
+    if (method === 'PUT') {
+      if (idx >= 0) {
+        const u = mockUsers[idx];
+        if (body?.first_name != null) u.first_name = body.first_name;
+        if (body?.last_name != null) u.last_name = body.last_name;
+        if (body?.email !== undefined) u.email = body.email;
+        if (body?.phone_code != null) u.phone_code = body.phone_code;
+        if (body?.phone_number != null) u.phone_number = body.phone_number;
+        if (Array.isArray(body?.roles)) u.roles = toRoles(body.roles);
+        u.name = `${u.first_name} ${u.last_name}`.trim();
+        return u;
+      }
+      return { status: 'success', message: 'ok' };
+    }
+    if (method === 'DELETE') {
+      if (idx >= 0) mockUsers.splice(idx, 1);
+      return { status: 'success', message: 'Usuario desvinculado (demo)' };
+    }
+    return idx >= 0 ? mockUsers[idx] : null;
+  }
+
+  return undefined;
+}
+
 export function resolveMock(rawPath, opts = {}) {
   const [path, qs = ''] = rawPath.split('?');
   const query = new URLSearchParams(qs);
@@ -715,6 +826,10 @@ export function resolveMock(rawPath, opts = {}) {
   // Módulo de métricas (company-scoped: /companies/{company}/metrics/sales-by-type)
   const metrics = resolveMetricsMock(path, query);
   if (metrics !== undefined) return metrics;
+
+  // Módulo de usuarios de la compañía (company-scoped: /companies/{company}/users…)
+  const users = resolveUsersMock(path, query, opts);
+  if (users !== undefined) return users;
 
   const map = {
     '/auth/login': mockAuth,

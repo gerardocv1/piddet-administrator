@@ -8,6 +8,11 @@
   line-height: 1.5;
 }
 
+.introWide {
+  composes: intro;
+  max-width: none;
+}
+
 .groups {
   display: flex;
   flex-direction: column;
@@ -59,3 +64,83 @@
   font-size: var(--text-sm);
 }
 .groupEmpty i { color: var(--gray-400); }
+
+/* ---- Árbol jerárquico de categorías ---- */
+
+.tree {
+  padding: 8px 10px 12px;
+}
+
+.node { min-width: 0; }
+
+.nodeRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 8px;
+}
+.nodeRow:hover { background: var(--gray-100); }
+
+/* Botón de desplegar/colapsar (chevron). */
+.toggle {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--gray-500);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+.toggle:hover { background: var(--gray-200); color: var(--gray-900); }
+.toggle i { font-size: 0.72rem; }
+
+/* Reserva el mismo ancho que el chevron para alinear las hojas. */
+.toggleSpacer {
+  flex: none;
+  display: inline-block;
+  width: 24px;
+}
+
+.nodeName {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+.nodeLabel {
+  font-weight: 600;
+  font-size: var(--text-sm);
+  color: var(--gray-900);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.nodeDesc {
+  min-width: 0;
+  color: var(--gray-500);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.nodeActions {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Hijos: indentación con línea guía vertical para ver la jerarquía. */
+.children {
+  margin-left: 19px;
+  padding-left: 11px;
+  border-left: 1px solid var(--border-color);
+}

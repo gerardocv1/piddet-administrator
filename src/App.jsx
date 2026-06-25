@@ -6,6 +6,7 @@ import { Dashboard } from './screens/Dashboard.jsx';
 import { Products } from './screens/Products.jsx';
 import { ProductDetail } from './screens/ProductDetail.jsx';
 import { ProductCategories } from './screens/ProductCategories.jsx';
+import { AdminProductCategories } from './screens/AdminProductCategories.jsx';
 import { Tables } from './screens/Tables.jsx';
 import { Menus } from './screens/Menus.jsx';
 import { MenuDetail } from './screens/MenuDetail.jsx';
@@ -65,6 +66,7 @@ export default function App() {
             <Route path="products" element={<RequirePermission path="/products"><Products /></RequirePermission>} />
             <Route path="products/:itemId" element={<RequirePermission path="/products"><ProductDetail /></RequirePermission>} />
             <Route path="product-categories" element={<RequirePermission path="/product-categories"><ProductCategories /></RequirePermission>} />
+            <Route path="admin/product-categories" element={<RequirePermission path="/admin/product-categories"><AdminProductCategories /></RequirePermission>} />
             <Route path="menus" element={<RequirePermission path="/menus"><Menus /></RequirePermission>} />
             <Route path="menus/:menuId" element={<RequirePermission path="/menus"><MenuDetail /></RequirePermission>} />
             <Route path="tables" element={<RequirePermission path="/tables"><Tables /></RequirePermission>} />

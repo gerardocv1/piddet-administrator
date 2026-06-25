@@ -50,8 +50,16 @@ export const MODULE_GROUPS = [
   {
     section: 'Cuentas',
     items: [
-      { to: '/users', label: 'Usuarios', icon: 'fas fa-user', perm: 'api-company-users' },
+      { to: '/users', label: 'Usuarios', icon: 'fas fa-user', perm: 'user-administrator' },
       { to: '/roles', label: 'Roles', icon: 'fas fa-user-shield' }, // sin permiso aún → oculto
+    ],
+  },
+  {
+    // Administración de PLATAFORMA: solo para administradores con el permiso item-category-master.
+    // El catálogo global de categorías es común a todas las compañías (taxonomía "elite").
+    section: 'Plataforma',
+    items: [
+      { to: '/admin/product-categories', label: 'Categorías globales', icon: 'fas fa-tags', perm: 'item-category-master' },
     ],
   },
 ];

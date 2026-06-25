@@ -1,0 +1,6 @@
+/* Selección de categoría en cascada: un Select por nivel, apilados. */
+.cascader {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}

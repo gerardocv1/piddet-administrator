@@ -100,7 +100,7 @@ mostrar/ocultar módulos.
   lo no autorizado se oculta del menú y su ruta se bloquea (redirige a Inicio).
 - **Excepción:** Inicio (Dashboard) es siempre visible y es la landing por defecto.
 - **Permisos actuales:** `api-module-products` (Productos), `api-module-menus` (Menús; sus
-  categorías se administran dentro del detalle de cada menú), `api-company-users` (Usuarios).
+  categorías se administran dentro del detalle de cada menú), `user-administrator` (Usuarios).
 
 Detalle técnico y cómo añadir un módulo gateado en `specs/guides/permissions.md`. La ruta
 `roles` (gestión de roles desde el panel) sigue siendo un placeholder.

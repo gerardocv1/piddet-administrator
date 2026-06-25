@@ -20,9 +20,9 @@ const qs = (params = {}) => {
 };
 
 export const itemsService = {
-  // Listado paginado de productos. { page, search }
-  items: ({ page = 1, search = '', row = 12 } = {}) =>
-    http.get(`${base()}/items${qs({ page, _search: search, _row: row })}`, { paginated: true }),
+  // Listado paginado de productos. { page, search, typeId, categoryId }
+  items: ({ page = 1, search = '', typeId, categoryId, row = 12 } = {}) =>
+    http.get(`${base()}/items${qs({ page, _search: search, item_type_id: typeId, item_category_id: categoryId, _row: row })}`, { paginated: true }),
   item: (id) => http.get(`${base()}/items/${id}`),
   createItem: (data) => http.post(`${base()}/items`, data),
   updateItem: (id, data) => http.put(`${base()}/items/${id}`, data),
