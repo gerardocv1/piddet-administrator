@@ -43,6 +43,19 @@ export function Grid2TextFrame({ items }) {
   );
 }
 
+// 2 columnas sin foto ni descripción: solo nombre + precio, máxima compacidad.
+export function Grid2TextCompactFrame({ items }) {
+  return (
+    <div className={s.grid2Text}>
+      {items.map((it) => (
+        <div key={it.id} className={s.g3Item}>
+          <ItemBody it={it} hideDesc />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // 3 columnas sin foto: compacto, ideal para listas largas como bebidas.
 export function Grid3Frame({ items }) {
   return (

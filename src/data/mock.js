@@ -106,6 +106,56 @@ export const mockStoresDetail = [
   { id: 4, name: 'Sushi Express', open: true, dir: 'Cra. 70 #1-15', tel: '300 222 3344', pedidos: 6 },
 ];
 
+// Catálogos de tiendas (espejo de piddet_stores). days: 0=Domingo … 6=Sábado, 7=Festivos.
+export const mockStoreStatuses = [
+  { id: 1, name: 'Activo' },
+  { id: 2, name: 'Inactiva' },
+  { id: 3, name: 'Cierre Temporal' },
+];
+export const mockStoreTypes = [
+  { id: 1, name: 'Restaurantes' },
+  { id: 2, name: 'Farmacias' },
+  { id: 3, name: 'Supermercados' },
+];
+export const mockStoreDays = [
+  { id: 0, name: 'Domingo' },
+  { id: 1, name: 'Lunes' },
+  { id: 2, name: 'Martes' },
+  { id: 3, name: 'Miércoles' },
+  { id: 4, name: 'Jueves' },
+  { id: 5, name: 'Viernes' },
+  { id: 6, name: 'Sábado' },
+  { id: 7, name: 'Festivos' },
+];
+
+// Tiendas company-scoped (CRUD real). `schedules`: rangos por día (day_id + start_time/end_time).
+const dayRange = (start, end, days) =>
+  days.map((day_id) => ({ day_id, start_time: start, end_time: end }));
+
+export const mockStoresList = [
+  {
+    id: 1, store_type_id: 1, store_status_id: 1, name: 'La Cevichería', address: 'Cra. 43 #12-30, Medellín',
+    phone_code: '57', phone_number: '3201112233', latitude: 6.208, longitude: -75.567,
+    schedules: dayRange('11:00', '22:00', [1, 2, 3, 4, 5, 6, 0]),
+  },
+  {
+    id: 2, store_type_id: 1, store_status_id: 1, name: 'Pizza Nostra', address: 'Cl. 10 #5-40, Medellín',
+    phone_code: '57', phone_number: '3014445566', latitude: 6.211, longitude: -75.571,
+    schedules: [
+      ...dayRange('12:00', '15:00', [1, 2, 3, 4, 5]),
+      ...dayRange('18:00', '23:00', [1, 2, 3, 4, 5]),
+      ...dayRange('12:00', '23:00', [6]),
+    ],
+  },
+  {
+    id: 3, store_type_id: 3, store_status_id: 2, name: 'Burguer Lab', address: 'Av. Las Vegas #80-21, Envigado',
+    phone_code: '57', phone_number: '3157778899', latitude: 6.171, longitude: -75.591,
+    schedules: [],
+  },
+];
+
+const storeStatusObj = (id) => mockStoreStatuses.find((x) => x.id === id) || null;
+
 // Roles asignables demo (sin super-admin), con etiqueta amigable.
 export const mockCompanyRoles = [
   { name: 'admin', label: 'Administrador', description: 'Acceso total a la compañía' },
@@ -218,7 +268,7 @@ export const mockMenuItems = [
 // el panel muestra Productos (y sus categorías), Menús y Usuarios; el resto queda oculto.
 const mockPermissions = {
   roles: ['Administrador'],
-  permissions: ['user-administrator', 'api-module-menus', 'api-module-products', 'api-module-company'],
+  permissions: ['user-administrator', 'api-module-menus', 'api-module-products', 'api-module-company', 'api-module-stores'],
 };
 
 // Empresa (tenant) activa y empresas disponibles para el usuario (SaaS multi-tenant).
@@ -345,6 +395,28 @@ function resolvePublicMenuMock(path) {
     ...buildMenuFull(menu),
     company: { name: mockCompany.name, username: mockCompany.username, icon: mockCompany.icon ?? null },
   };
+}
+
+// Resolver de la portada pública de la compañía: /public/{company}. Devuelve el perfil de la
+// empresa (datos de marca + contacto) y sus menús públicos (activos, ordenados por posición). En
+// demo solo existe una compañía activa.
+function resolvePublicCompanyMock(path) {
+  const m = path.match(/^\/public\/([^/]+)$/);
+  if (!m) return undefined;
+  const menus = mockMenus
+    .filter((x) => x.status === 1)
+    .sort((a, b) => a.position - b.position)
+    .map((x) => ({ id: x.id, name: x.name, username: x.username, description: x.description, file: x.file, position: x.position, status: x.status }));
+  // Tiendas públicas: todas menos las inactivas (store_status_id 2). Incluye horarios y ubicación.
+  const stores = mockStoresList
+    .filter((st) => st.store_status_id !== 2)
+    .map((st) => ({
+      id: st.id, store_status_id: st.store_status_id, status: storeStatusObj(st.store_status_id),
+      name: st.name, address: st.address, phone_code: st.phone_code, phone_number: st.phone_number,
+      latitude: st.latitude, longitude: st.longitude,
+      schedules: (st.schedules || []).map((r) => ({ day_id: r.day_id, start_time: r.start_time, end_time: r.end_time })),
+    }));
+  return { company: { ...mockCompany }, menus, stores };
 }
 
 function resolveMenuMock(path, query, { method = 'GET', body } = {}) {
@@ -746,6 +818,80 @@ function resolveMetricsMock(path, query) {
 // Enrutador de mocks: mapea ruta → respuesta. Soporta query string (?...) y mutaciones.
 // Resuelve las rutas company-scoped del módulo de usuarios. Devuelve `undefined` si no aplica
 // y simula GET/POST/PUT/DELETE sobre `mockUsers` en memoria.
+function resolveStoresMock(path, query, { method = 'GET', body } = {}) {
+  const m = path.match(/^\/companies\/[^/]+\/stores(\/.*)?$/);
+  if (!m) return undefined;
+  const sub = m[1] || '';
+
+  const normSchedules = (rows = []) => rows.map((r) => ({
+    day_id: Number(r.day_id),
+    start_time: r.start_time,
+    end_time: r.end_time,
+  }));
+  const withStatus = (st) => ({ ...st, status: storeStatusObj(st.store_status_id) });
+
+  if (sub === '/catalogs') {
+    return { statuses: mockStoreStatuses, types: mockStoreTypes, days: mockStoreDays };
+  }
+
+  if (sub === '') {
+    if (method === 'POST') {
+      const store = {
+        id: nextId(mockStoresList),
+        store_type_id: body?.store_type_id ?? null,
+        store_status_id: body?.store_status_id ?? 1,
+        name: body?.name || 'Tienda',
+        address: body?.address ?? null,
+        phone_code: body?.phone_code ?? '57',
+        phone_number: body?.phone_number ?? '',
+        latitude: body?.latitude ?? null,
+        longitude: body?.longitude ?? null,
+        schedules: normSchedules(body?.schedules),
+      };
+      mockStoresList.push(store);
+      return withStatus(store);
+    }
+    // El listado paginado no necesita los horarios; se omiten para un payload liviano.
+    const rows = [...mockStoresList]
+      .map(({ schedules, ...rest }) => withStatus(rest));
+    return mockPaginate(rows, query);
+  }
+
+  const idMatch = sub.match(/^\/(\d+)(\/status)?$/);
+  if (idMatch) {
+    const id = Number(idMatch[1]);
+    const idx = mockStoresList.findIndex((st) => st.id === id);
+
+    if (idMatch[2] === '/status') {
+      if (idx >= 0) mockStoresList[idx].store_status_id = Number(body?.store_status_id) || 1;
+      return { status: 'success', message: 'Estado actualizado (demo)' };
+    }
+    if (method === 'PUT') {
+      if (idx >= 0) {
+        const st = mockStoresList[idx];
+        if (body?.name != null) st.name = body.name;
+        if (body?.address !== undefined) st.address = body.address;
+        if (body?.phone_code !== undefined) st.phone_code = body.phone_code;
+        if (body?.phone_number !== undefined) st.phone_number = body.phone_number;
+        if (body?.store_type_id !== undefined) st.store_type_id = body.store_type_id;
+        if (body?.store_status_id !== undefined) st.store_status_id = body.store_status_id;
+        if (body?.latitude !== undefined) st.latitude = body.latitude;
+        if (body?.longitude !== undefined) st.longitude = body.longitude;
+        if (Array.isArray(body?.schedules)) st.schedules = normSchedules(body.schedules);
+        return withStatus(st);
+      }
+      return { status: 'success', message: 'ok' };
+    }
+    if (method === 'DELETE') {
+      if (idx >= 0) mockStoresList.splice(idx, 1);
+      return { status: 'success', message: 'Tienda eliminada (demo)' };
+    }
+    return idx >= 0 ? withStatus(mockStoresList[idx]) : null;
+  }
+
+  return undefined;
+}
+
 function resolveUsersMock(path, query, { method = 'GET', body } = {}) {
   const m = path.match(/^\/companies\/[^/]+\/users(\/.*)?$/);
   if (!m) return undefined;
@@ -850,6 +996,10 @@ export function resolveMock(rawPath, opts = {}) {
     return opts.method === 'PUT' ? { ...profile, ...(opts.body || {}) } : profile;
   }
 
+  // Portada pública de la compañía (sin sesión): /public/{company}
+  const publicCompany = resolvePublicCompanyMock(path);
+  if (publicCompany !== undefined) return publicCompany;
+
   // Carta pública (sin sesión): /public/{company}/m/{menuUsername}
   const publicMenu = resolvePublicMenuMock(path);
   if (publicMenu !== undefined) return publicMenu;
@@ -869,6 +1019,10 @@ export function resolveMock(rawPath, opts = {}) {
   // Módulo de usuarios de la compañía (company-scoped: /companies/{company}/users…)
   const users = resolveUsersMock(path, query, opts);
   if (users !== undefined) return users;
+
+  // Módulo de tiendas (company-scoped: /companies/{company}/stores…)
+  const stores = resolveStoresMock(path, query, opts);
+  if (stores !== undefined) return stores;
 
   const map = {
     '/auth/login': mockAuth,

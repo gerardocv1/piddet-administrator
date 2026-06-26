@@ -44,7 +44,7 @@ export const MODULE_GROUPS = [
     section: 'Operación',
     items: [
       { to: '/tables', label: 'Mesas', icon: 'fas fa-chair', badge: 4 }, // sin permiso aún → oculto
-      { to: '/stores', label: 'Tiendas', icon: 'fas fa-store' }, // sin permiso aún → oculto
+      { to: '/stores', label: 'Tiendas', icon: 'fas fa-store', perm: 'api-module-stores' },
     ],
   },
   {

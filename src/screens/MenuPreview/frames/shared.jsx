@@ -28,7 +28,7 @@ export function ItemThumb({ srcs, alt, className = '' }) {
 // Bloque de texto del producto: nombre + filete + precio, y descripción debajo.
 // Tamaño de letra uniforme en todos los frames: lo que distingue al producto destacado
 // es su foto/diseño (más grande), no el tamaño del texto.
-export function ItemBody({ it }) {
+export function ItemBody({ it, hideDesc = false }) {
   const show = useDisplay();
   return (
     <div className={s.body}>
@@ -37,7 +37,7 @@ export function ItemBody({ it }) {
         <span className={`${s.leader} ${show.leaders ? '' : s.leaderHidden}`} aria-hidden="true" />
         <span className={s.itemPrice}>{fmtPrice(it.price)}</span>
       </div>
-      {show.itemDesc && it.description && <p className={s.itemDesc}>{it.description}</p>}
+      {!hideDesc && show.itemDesc && it.description && <p className={s.itemDesc}>{it.description}</p>}
     </div>
   );
 }

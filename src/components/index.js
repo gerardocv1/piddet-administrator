@@ -26,6 +26,7 @@ export { Pagination } from './data/Pagination.jsx';
 export { SortableList } from './data/SortableList.jsx';
 // feedback
 export { Modal } from './feedback/Modal.jsx';
+export { MapPickerModal } from './feedback/MapPickerModal.jsx';
 export { SessionsModal } from './feedback/SessionsModal.jsx';
 export { ChangePasswordModal } from './feedback/ChangePasswordModal.jsx';
 export { Notifications } from './feedback/Notifications.jsx';

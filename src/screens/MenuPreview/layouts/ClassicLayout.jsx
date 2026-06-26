@@ -15,7 +15,7 @@ const pickLogo = (company) =>
 const companyContact = (c) => {
   const d = c?.detail || c?.company_detail || {};
   const pick = (k) => c?.[k] || d?.[k] || null;
-  return { address: pick('address'), phone: pick('phone'), email: pick('email'), website: pick('website') };
+  return { address: pick('address'), phone: pick('phone'), email: pick('email') };
 };
 
 // Diseño "Clásico": carta centrada apta para A4, encabezado con la compañía y secciones por
@@ -70,12 +70,11 @@ export function ClassicLayout({ menu, company, groups, theme, show = DEFAULT_SHO
         {show.footer && (
           <div className={s.footerCompany}>
             {company?.name && <span className={s.footerName}>{company.name}</span>}
-            {(contact.address || contact.phone || contact.email || contact.website) && (
+            {(contact.address || contact.phone || contact.email) && (
               <div className={s.footerContact}>
                 {contact.address && <span><i className="fas fa-location-dot" aria-hidden="true" /> {contact.address}</span>}
                 {contact.phone && <span><i className="fas fa-phone" aria-hidden="true" /> {contact.phone}</span>}
                 {contact.email && <span><i className="fas fa-envelope" aria-hidden="true" /> {contact.email}</span>}
-                {contact.website && <span><i className="fas fa-globe" aria-hidden="true" /> {contact.website}</span>}
               </div>
             )}
           </div>

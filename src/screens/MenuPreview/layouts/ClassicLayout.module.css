@@ -164,8 +164,8 @@
 }
 /* Marca del producto (siempre visible): discreta, debajo de todo. */
 .footerBrand {
-  margin-top: 10px;
-  font-size: var(--text-xs);
+  margin-top: 6px;
+  font-size: calc(var(--text-xs) * 0.85);
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--gray-400);

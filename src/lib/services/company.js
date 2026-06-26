@@ -21,4 +21,7 @@ export const companyService = {
   companyProfile: () => http.get(base()),
   // Actualiza datos de la empresa activa y/o su logo (campo `icon`: name de archivo ya subido).
   updateCompanyProfile: (data) => http.put(base(), data),
+  // Portada pública (sin sesión): se resuelve por username de compañía. Devuelve el perfil de la
+  // empresa (datos de marca + contacto) y sus menús públicos (activos). NO usa base().
+  publicCompany: (companyUsername) => http.get(`/public/${companyUsername}`),
 };

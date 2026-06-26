@@ -12,7 +12,9 @@ import { Menus } from './screens/Menus.jsx';
 import { MenuDetail } from './screens/MenuDetail.jsx';
 import { MenuPreview } from './screens/MenuPreview/MenuPreview.jsx';
 import { PublicMenu } from './screens/PublicMenu/PublicMenu.jsx';
+import { PublicCompany } from './screens/PublicCompany/PublicCompany.jsx';
 import { Stores } from './screens/Stores.jsx';
+import { StoreDetail } from './screens/StoreDetail.jsx';
 import { Users } from './screens/Users.jsx';
 import { CompanyProfile } from './screens/CompanyProfile.jsx';
 import { Placeholder } from './screens/Placeholder.jsx';
@@ -27,6 +29,10 @@ import { ADMIN_BASE } from './lib/adminBase.js';
 // Patrón de la URL pública de una carta: /{username-compañía}/m/{username-menú}. Se sirve fuera
 // del panel admin (sin sesión ni permisos), por eso se detecta antes de montar el router.
 const PUBLIC_MENU_RE = /^\/([^/]+)\/m\/([^/]+)\/?$/;
+
+// Patrón de la portada pública de una compañía: /{username-compañía} (un solo segmento). El panel
+// vive bajo /admin, así que cualquier raíz limpia de un segmento (salvo `admin`) es una empresa.
+const PUBLIC_COMPANY_RE = /^\/([^/]+)\/?$/;
 
 // Landing de la raíz: muestra el Inicio si está habilitado; si no, redirige al primer módulo
 // accesible; si no hay ninguno, muestra el estado "sin módulos".
@@ -49,6 +55,12 @@ export default function App() {
         menuUsername={decodeURIComponent(publicMatch[2])}
       />
     );
+  }
+
+  // 1b) Portada pública de la compañía: raíz limpia de un solo segmento (salvo `admin`).
+  const companyMatch = path.match(PUBLIC_COMPANY_RE);
+  if (companyMatch && companyMatch[1] !== ADMIN_BASE.slice(1)) {
+    return <PublicCompany companyUsername={decodeURIComponent(companyMatch[1])} />;
   }
 
   // 2) Todo lo administrativo vive bajo /admin: si entran fuera de ese prefijo (p. ej. la raíz),
@@ -104,6 +116,8 @@ function AdminApp() {
             <Route path="menus/:menuId" element={<RequirePermission path="/menus"><MenuDetail /></RequirePermission>} />
             <Route path="tables" element={<RequirePermission path="/tables"><Tables /></RequirePermission>} />
             <Route path="stores" element={<RequirePermission path="/stores"><Stores /></RequirePermission>} />
+            <Route path="stores/new" element={<RequirePermission path="/stores"><StoreDetail /></RequirePermission>} />
+            <Route path="stores/:storeId" element={<RequirePermission path="/stores"><StoreDetail /></RequirePermission>} />
             <Route path="users" element={<RequirePermission path="/users"><Users /></RequirePermission>} />
             <Route path="company" element={<CompanyProfile />} />
             <Route path="roles" element={<RequirePermission path="/roles"><Placeholder name="Roles" /></RequirePermission>} />

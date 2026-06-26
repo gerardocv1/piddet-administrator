@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, Spinner } from '../../components';
+import { Spinner } from '../../components';
 import { api } from '../../lib/api.js';
 import { useResource } from '../../lib/useResource.js';
 import { LAYOUTS, DEFAULT_LAYOUT } from '../MenuPreview/layouts/index.js';
@@ -9,30 +9,8 @@ import {
   TEXT_SCALES, CATEGORY_SPACINGS, DEFAULT_SCALE, DEFAULT_SPACING, normalizeShow, buildLayoutVars,
 } from '../MenuPreview/options.js';
 import s from '../MenuPreview/MenuPreview.module.css';
-
-// Imagen para la card al compartir: se prefiere el thumbnail (más liviano; WhatsApp/Facebook
-// descartan imágenes muy grandes). Si la compañía no subió logo (default company.png), se usa el
-// ícono de piddet en vez del placeholder.
-const DEFAULT_LOGO_RE = /\/company\.png(\?|$)/;
-const shareImage = (company) =>
-  [company?.thumbnail_icon, company?.icon, company?.standard_icon].find((u) => u && !DEFAULT_LOGO_RE.test(u)) ||
-  `${window.location.origin}/favicon/apple-touch-icon.png`;
-
-// Crea/actualiza un <meta> en el <head> y devuelve los que creó (para limpiarlos al desmontar).
-function applyMetaTags(tags) {
-  const created = [];
-  tags.forEach(([attr, key, content]) => {
-    let el = document.head.querySelector(`meta[${attr}="${key}"]`);
-    if (!el) {
-      el = document.createElement('meta');
-      el.setAttribute(attr, key);
-      document.head.appendChild(el);
-      created.push(el);
-    }
-    el.setAttribute('content', content);
-  });
-  return created;
-}
+import { shareImage, applyMetaTags, buildShareMeta, shareOrCopy } from '../public/shareMeta.js';
+import { PublicBottomBar } from '../public/PublicBottomBar.jsx';
 
 // Vista pública de la carta (sin sesión): se accede por la URL /{compañía}/m/{menú} y se renderiza
 // con el diseño ya guardado en el menú. Reusa los mismos diseños/paletas/opciones que el preview
@@ -94,54 +72,27 @@ export function PublicMenu({ companyUsername, menuUsername }) {
     return { title: name, description, image: shareImage(company), url: typeof window !== 'undefined' ? window.location.href : '' };
   }, [menu, company]);
 
-  // Meta tags base (título de pestaña + Open Graph/Twitter para apps que sí renderizan el enlace).
-  // Nota: WhatsApp/Facebook NO ejecutan JS, así que la card definitiva necesita estos tags servidos
-  // desde el servidor en esta URL (ver pendiente de despliegue).
+  // Título de pestaña + Open Graph/Twitter para apps que sí renderizan el enlace por JS.
   React.useEffect(() => {
     if (!data) return undefined;
     const prevTitle = document.title;
     document.title = shareInfo.title;
-    const created = applyMetaTags([
-      ['name', 'description', shareInfo.description],
-      ['property', 'og:type', 'website'],
-      ['property', 'og:site_name', 'piddet'],
-      ['property', 'og:title', shareInfo.title],
-      ['property', 'og:description', shareInfo.description],
-      ['property', 'og:image', shareInfo.image],
-      ['property', 'og:url', shareInfo.url],
-      ['name', 'twitter:card', 'summary'],
-      ['name', 'twitter:title', shareInfo.title],
-      ['name', 'twitter:description', shareInfo.description],
-      ['name', 'twitter:image', shareInfo.image],
-    ]);
+    const created = applyMetaTags(buildShareMeta(shareInfo));
     return () => { document.title = prevTitle; created.forEach((el) => el.remove()); };
   }, [data, shareInfo]);
 
   const [shareMsg, setShareMsg] = React.useState('');
   const share = React.useCallback(async () => {
-    const { title, description, url } = shareInfo;
-    if (navigator.share) {
-      try { await navigator.share({ title, text: description, url }); } catch { /* cancelado por el usuario */ }
-      return;
-    }
     try {
-      await navigator.clipboard.writeText(url);
-      setShareMsg('Enlace copiado');
-      setTimeout(() => setShareMsg(''), 2000);
+      if (await shareOrCopy(shareInfo)) {
+        setShareMsg('Enlace copiado');
+        setTimeout(() => setShareMsg(''), 2000);
+      }
     } catch { /* sin portapapeles */ }
   }, [shareInfo]);
 
   return (
-    <div className={s.screen}>
-      {/* Barra mínima — se oculta al imprimir; sin selectores de diseño (solo lectura). */}
-      <div className={s.toolbar}>
-        <div className={s.toolbarRight}>
-          <Button variant="primary" size="sm" icon="fas fa-share-nodes" onClick={share}>
-            {shareMsg || 'Compartir'}
-          </Button>
-        </div>
-      </div>
-
+    <div className={`${s.screen} ${s.publicScreen}`}>
       <div className={s.canvas}>
         {res.loading ? (
           <Spinner center label="Cargando carta…" />
@@ -156,6 +107,13 @@ export function PublicMenu({ companyUsername, menuUsername }) {
             framesByCat={framesByCat} />
         )}
       </div>
+
+      {/* Barra inferior tipo app: vuelve a la portada de la compañía y comparte la carta. La misma
+          que usa la portada, para una línea gráfica común. Se oculta al imprimir. */}
+      <PublicBottomBar items={[
+        { key: 'back', icon: 'fas fa-arrow-left', label: 'Volver', href: `/${encodeURIComponent(companyUsername)}` },
+        { key: 'share', icon: 'fas fa-share-nodes', label: shareMsg || 'Compartir', primary: true, onClick: share },
+      ]} />
     </div>
   );
 }

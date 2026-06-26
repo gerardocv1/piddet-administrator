@@ -94,8 +94,16 @@
 }
 .state i { color: var(--color-primary); }
 
+/* Vista pública (menú compartible): la carta se pinta igual, pero la barra de acciones vive en una
+   tab bar inferior fija (ver PublicBottomBar). Reservamos su alto para que el pie de la carta no
+   quede tapado. El panel de administración (sin .publicScreen) conserva su barra superior. */
+.publicScreen .canvas {
+  padding-bottom: calc(96px + env(safe-area-inset-bottom));
+}
+
 @media (max-width: 720px) {
   .canvas { padding: 18px 12px 40px; }
+  .publicScreen .canvas { padding-bottom: calc(88px + env(safe-area-inset-bottom)); }
 }
 
 /* ── Impresión: sin chrome, sin fondo gris ── */

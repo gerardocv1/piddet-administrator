@@ -153,6 +153,12 @@
   .grid3,
   .hero,
   .banner { grid-template-columns: 1fr; }
+  /* En 1 columna el gap del grid deja de separar columnas (horizontal) y pasa a separar la foto
+     destacada de la lista (vertical): lo igualamos al ritmo vertical de la lista para no dejar un
+     hueco mayor que el espacio entre ítems. */
+  .hero,
+  .banner,
+  .bannerFrame { gap: 16px; }
 }
 
 @media print {
