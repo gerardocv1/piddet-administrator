@@ -17,12 +17,14 @@ export function StatStrip({ stats = [], loading = false }) {
       {stats.map((s) => (
         <div key={s.label} className={styles.item}>
           <div className={styles.label}>{s.label}</div>
-          <div className={styles.value}>{s.value}</div>
-          {s.delta && (
-            <div className={[styles.delta, s.up ? styles.up : ''].filter(Boolean).join(' ')}>
-              <i className={s.up ? 'fas fa-arrow-trend-up' : 'fas fa-arrow-trend-down'} />{s.delta}
-            </div>
-          )}
+          <div className={styles.valueRow}>
+            <span className={styles.value}>{s.value}</span>
+            {s.delta && (
+              <span className={[styles.delta, s.up ? styles.up : styles.down].join(' ')}>
+                <i className={s.up ? 'fas fa-arrow-trend-up' : 'fas fa-arrow-trend-down'} />{s.delta}
+              </span>
+            )}
+          </div>
         </div>
       ))}
     </div>

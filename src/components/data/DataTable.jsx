@@ -8,8 +8,9 @@ import styles from './DataTable.module.css';
  * de carga, error y vacío para que todas las pantallas se vean igual.
  *
  * columns: [{ key, header, width?, align?: 'left'|'right'|'center', render?: (row) => node }]
+ * onRowClick?: (row) => void — hace la fila clickeable (cursor + Enter con teclado).
  */
-export function DataTable({ columns = [], rows = [], rowKey = 'id', empty = 'Sin registros', loading = false, error = null }) {
+export function DataTable({ columns = [], rows = [], rowKey = 'id', empty = 'Sin registros', loading = false, error = null, onRowClick }) {
   const colSpan = columns.length;
   return (
     <div className={styles.scroll}>
@@ -32,7 +33,11 @@ export function DataTable({ columns = [], rows = [], rowKey = 'id', empty = 'Sin
             <tr><td colSpan={colSpan} className={`${styles.td} ${styles.empty}`}>{empty}</td></tr>
           )}
           {!loading && !error && rows.map((r, i) => (
-            <tr key={r[rowKey] ?? i} className={styles.row}>
+            <tr key={r[rowKey] ?? i}
+              className={[styles.row, onRowClick ? styles.clickable : ''].filter(Boolean).join(' ')}
+              tabIndex={onRowClick ? 0 : undefined}
+              onClick={onRowClick ? () => onRowClick(r) : undefined}
+              onKeyDown={onRowClick ? (e) => { if (e.key === 'Enter') onRowClick(r); } : undefined}>
               {columns.map((c) => (
                 <td key={c.key} className={styles.td} style={{ textAlign: c.align || 'left' }}>
                   {c.render ? c.render(r) : r[c.key]}

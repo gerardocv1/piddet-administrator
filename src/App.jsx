@@ -13,6 +13,8 @@ import { MenuDetail } from './screens/MenuDetail.jsx';
 import { MenuPreview } from './screens/MenuPreview/MenuPreview.jsx';
 import { PublicMenu } from './screens/PublicMenu/PublicMenu.jsx';
 import { PublicCompany } from './screens/PublicCompany/PublicCompany.jsx';
+import { Invoices } from './screens/Invoices.jsx';
+import { InvoiceDetail } from './screens/InvoiceDetail.jsx';
 import { Stores } from './screens/Stores.jsx';
 import { StoreDetail } from './screens/StoreDetail.jsx';
 import { Users } from './screens/Users.jsx';
@@ -114,6 +116,8 @@ function AdminApp() {
             <Route path="admin/product-categories" element={<RequirePermission path="/admin/product-categories"><AdminProductCategories /></RequirePermission>} />
             <Route path="menus" element={<RequirePermission path="/menus"><Menus /></RequirePermission>} />
             <Route path="menus/:menuId" element={<RequirePermission path="/menus"><MenuDetail /></RequirePermission>} />
+            <Route path="invoices" element={<RequirePermission path="/invoices"><Invoices /></RequirePermission>} />
+            <Route path="invoices/:orderId" element={<RequirePermission path="/invoices"><InvoiceDetail /></RequirePermission>} />
             <Route path="tables" element={<RequirePermission path="/tables"><Tables /></RequirePermission>} />
             <Route path="stores" element={<RequirePermission path="/stores"><Stores /></RequirePermission>} />
             <Route path="stores/new" element={<RequirePermission path="/stores"><StoreDetail /></RequirePermission>} />

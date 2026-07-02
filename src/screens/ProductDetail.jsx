@@ -92,9 +92,9 @@ export function ProductDetail() {
 
   return (
     <div className={s.page}>
-      <button type="button" className={t.backLink} onClick={() => navigate('/products')}>
-        <i className="fas fa-arrow-left" aria-hidden="true" /> Volver a productos
-      </button>
+      <div className={t.header}>
+        <IconButton icon="fas fa-arrow-left" variant="light" title="Volver a productos" onClick={() => navigate('/products')} />
+      </div>
 
       {/* Tarjeta del producto (hero): imagen + datos + editar. La foto se cambia desde la imagen. */}
       {item ? (

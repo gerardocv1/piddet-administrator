@@ -268,7 +268,7 @@ export const mockMenuItems = [
 // el panel muestra Productos (y sus categorías), Menús y Usuarios; el resto queda oculto.
 const mockPermissions = {
   roles: ['Administrador'],
-  permissions: ['user-administrator', 'api-module-menus', 'api-module-products', 'api-module-company', 'api-module-stores'],
+  permissions: ['user-administrator', 'api-module-menus', 'api-module-products', 'api-module-company', 'api-module-stores', 'api-module-orders'],
 };
 
 // Empresa (tenant) activa y empresas disponibles para el usuario (SaaS multi-tenant).
@@ -757,11 +757,8 @@ function mockMoney(value) {
   return '$' + Math.round(value).toLocaleString('es-CO');
 }
 
-// Genera el reporte de ventas por tipo con la misma forma que el backend.
-function buildSalesByTypeReport(days, endDateStr, force) {
-  const end = endDateStr ? new Date(endDateStr + 'T00:00:00') : new Date();
-  const factor = force ? 1.08 : 1; // el long-press (force) recalcula → valores algo distintos en demo
-
+// Ventas por tipo (productos/servicios) por día para un período que termina en `end`.
+function mockDailyByType(days, end, factor) {
   const daily = [];
   for (let i = days - 1; i >= 0; i--) {
     const d = new Date(end);
@@ -780,12 +777,38 @@ function buildSalesByTypeReport(days, endDateStr, force) {
       orders_count: ordersCount,
     });
   }
+  return daily;
+}
 
+function mockSumByType(daily) {
   const products = daily.reduce((s, x) => s + x.products, 0);
   const services = daily.reduce((s, x) => s + x.services, 0);
   const ordersCount = daily.reduce((s, x) => s + x.orders_count, 0);
   const total = products + services;
-  const avgTicket = ordersCount > 0 ? total / ordersCount : 0;
+  return { products, services, ordersCount, total, avgTicket: ordersCount > 0 ? total / ordersCount : 0 };
+}
+
+function mockDelta(current, previous) {
+  const difference = current - previous;
+  return {
+    difference,
+    difference_formatted: mockMoney(Math.abs(difference)),
+    percent: previous > 0 ? Math.round((difference / previous) * 1000) / 10 : null,
+    is_increase: difference >= 0,
+  };
+}
+
+// Genera el reporte de ventas por tipo con la misma forma que el backend.
+function buildSalesByTypeReport(days, endDateStr, force) {
+  const end = endDateStr ? new Date(endDateStr + 'T00:00:00') : new Date();
+  const factor = force ? 1.08 : 1; // el long-press (force) recalcula → valores algo distintos en demo
+
+  const daily = mockDailyByType(days, end, factor);
+  const cur = mockSumByType(daily);
+
+  const prevEnd = new Date(end);
+  prevEnd.setDate(end.getDate() - days);
+  const prev = mockSumByType(mockDailyByType(days, prevEnd, factor * 0.85));
 
   return {
     period: {
@@ -794,25 +817,99 @@ function buildSalesByTypeReport(days, endDateStr, force) {
       days,
     },
     totals: {
-      products,
-      products_formatted: mockMoney(products),
-      services,
-      services_formatted: mockMoney(services),
-      total,
-      total_formatted: mockMoney(total),
-      orders_count: ordersCount,
-      avg_ticket: avgTicket,
-      avg_ticket_formatted: mockMoney(avgTicket),
+      products: cur.products,
+      products_formatted: mockMoney(cur.products),
+      services: cur.services,
+      services_formatted: mockMoney(cur.services),
+      total: cur.total,
+      total_formatted: mockMoney(cur.total),
+      orders_count: cur.ordersCount,
+      avg_ticket: cur.avgTicket,
+      avg_ticket_formatted: mockMoney(cur.avgTicket),
+    },
+    deltas: {
+      total: mockDelta(cur.total, prev.total),
+      products: mockDelta(cur.products, prev.products),
+      services: mockDelta(cur.services, prev.services),
+      avg_ticket: mockDelta(cur.avgTicket, prev.avgTicket),
     },
     daily,
   };
 }
 
+// Suma de ventas total por día para un período que termina en `end`, con la misma
+// heurística (fin de semana vende más) que el reporte por tipo, para que ambos cuadren.
+function mockDailySales(days, end, factor) {
+  const daily = [];
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(end);
+    d.setDate(end.getDate() - i);
+    const weekend = d.getDay() === 0 || d.getDay() === 6;
+    const base = weekend ? 900000 : 600000;
+    const total = Math.round((base * 1.35 + Math.random() * 450000) * factor);
+    daily.push({
+      date: d.toISOString().slice(0, 10),
+      label: MOCK_DAY_NAMES[d.getDay()] + ' ' + String(d.getDate()).padStart(2, '0'),
+      total,
+    });
+  }
+  return daily;
+}
+
+// Comparación período actual vs. anterior con la misma forma que el backend.
+function buildSalesComparison(days, endDateStr, force) {
+  const end = endDateStr ? new Date(endDateStr + 'T00:00:00') : new Date();
+  const factor = force ? 1.08 : 1;
+
+  const prevEnd = new Date(end);
+  prevEnd.setDate(end.getDate() - days); // el período anterior termina justo antes del actual
+
+  const current = mockDailySales(days, end, factor);
+  const previous = mockDailySales(days, prevEnd, factor * 0.85);
+
+  const currentTotal = current.reduce((s, x) => s + x.total, 0);
+  const previousTotal = previous.reduce((s, x) => s + x.total, 0);
+  const difference = currentTotal - previousTotal;
+  const percentChange = previousTotal > 0 ? Math.round((difference / previousTotal) * 10000) / 100 : 0;
+
+  return {
+    dates: current.map((x) => x.date),
+    labels: current.map((x) => x.label),
+    current_period: {
+      label: 'Período actual',
+      data: current.map((x) => x.total),
+      total: currentTotal,
+      total_formatted: mockMoney(currentTotal),
+      start_date: current[0]?.date ?? null,
+      end_date: current[current.length - 1]?.date ?? null,
+    },
+    previous_period: {
+      label: 'Período anterior',
+      data: previous.map((x) => x.total),
+      total: previousTotal,
+      total_formatted: mockMoney(previousTotal),
+      start_date: previous[0]?.date ?? null,
+      end_date: previous[previous.length - 1]?.date ?? null,
+    },
+    comparison: {
+      difference,
+      difference_formatted: mockMoney(Math.abs(difference)),
+      percent_change: percentChange,
+      is_increase: currentTotal >= previousTotal,
+    },
+  };
+}
+
 function resolveMetricsMock(path, query) {
-  const m = path.match(/^\/companies\/[^/]+\/metrics\/sales-by-type$/);
-  if (!m) return undefined;
-  const days = Math.max(1, Math.min(30, parseInt(query.get('days'), 10) || 15));
-  return buildSalesByTypeReport(days, query.get('end_date'), query.get('force') === '1');
+  if (path.match(/^\/companies\/[^/]+\/metrics\/sales-by-type$/)) {
+    const days = Math.max(1, Math.min(30, parseInt(query.get('days'), 10) || 15));
+    return buildSalesByTypeReport(days, query.get('end_date'), query.get('force') === '1');
+  }
+  if (path.match(/^\/companies\/[^/]+\/metrics\/sales-comparison$/)) {
+    const days = Math.max(1, Math.min(28, parseInt(query.get('days'), 10) || 7));
+    return buildSalesComparison(days, query.get('end_date'), query.get('force') === '1');
+  }
+  return undefined;
 }
 
 // Enrutador de mocks: mapea ruta → respuesta. Soporta query string (?...) y mutaciones.
@@ -971,6 +1068,233 @@ function resolveUsersMock(path, query, { method = 'GET', body } = {}) {
   return undefined;
 }
 
+// ── Módulo de facturas/órdenes (company-scoped): listado por fecha + detalle ───────────
+// CONTRATO BACKEND: GET /companies/{company}/orders?date=YYYY-MM-DD (paginado) y
+// GET /companies/{company}/orders/{uuid}. El dinero se formatea como el backend
+// (printMoney → "$ 19,000") y el detalle replica getOrderDetail(): order, customer,
+// creator, items (con options), taxes agrupados, status y payments.
+
+const orderMoney = (v) => '$ ' + Math.round(Number(v || 0)).toLocaleString('en-US');
+
+const isoDay = (offsetDays = 0) => {
+  const d = new Date(Date.now() - offsetDays * 864e5);
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+};
+
+const ORDER_STATUS_NAMES = {
+  CREATED: 'Creada',
+  ACCEPTED_IN_STORE: 'Aceptada por la tienda',
+  CANCELLED: 'Cancelada',
+};
+
+// Fábrica de una orden demo con su detalle completo (totales coherentes entre sí).
+function buildMockInvoice({ seq, dayOffset, time, status, statusPayment, originCode, serviceType, tableId, customer, creator, items, taxName = 'IVA', taxPct = 0, discount = 0, paymentMethod = 'cash' }) {
+  const date = isoDay(dayOffset);
+  const id = `demo-${date}-${String(seq).padStart(4, '0')}`;
+  const orderNumber = `AY${String(seq).padStart(4, '0')}`;
+
+  const detailItems = items.map((it, i) => {
+    const options = (it.options || []).map((op, j) => ({
+      id: `${id}-op-${i}-${j}`,
+      order_id: id,
+      order_item_id: `${id}-it-${i}`,
+      item_id: 100 + i,
+      name: op.name,
+      value: op.value,
+      quantity: op.quantity ?? it.quantity,
+      total: op.value * (op.quantity ?? it.quantity),
+      value_formatted: orderMoney(op.value),
+      total_formatted: orderMoney(op.value * (op.quantity ?? it.quantity)),
+    }));
+    const optionsTotal = options.reduce((s, op) => s + op.total, 0);
+    const subtotal = it.value * it.quantity + optionsTotal;
+    const tax = subtotal * taxPct;
+    return {
+      id: `${id}-it-${i}`,
+      order_id: id,
+      item_id: 100 + i,
+      name: it.name,
+      reference: it.reference || `REF-${100 + i}`,
+      quantity: it.quantity,
+      value: it.value,
+      subtotal,
+      tax,
+      discount: 0,
+      total: subtotal + tax,
+      subtotal_formatted: orderMoney(subtotal),
+      tax_formatted: orderMoney(tax),
+      discount_formatted: orderMoney(0),
+      total_formatted: orderMoney(subtotal + tax),
+      unit_price: it.value,
+      unit_price_formatted: orderMoney(it.value),
+      total_item: it.value * it.quantity,
+      total_item_formatted: orderMoney(it.value * it.quantity),
+      options,
+    };
+  });
+
+  const subtotal = detailItems.reduce((s, it) => s + it.subtotal, 0);
+  const tax = detailItems.reduce((s, it) => s + it.tax, 0);
+  const total = subtotal + tax - discount;
+  const createdAt = `${date}T${time}:00`;
+  const createdDate = `${date} ${time}:00`;
+  const customerName = customer ? `${customer.first_name} ${customer.last_name}`.trim() : null;
+
+  const order = {
+    id,
+    company_id: 1,
+    order_number: orderNumber,
+    service_type: serviceType,
+    status,
+    status_payment: statusPayment,
+    status_logistic: 'IN_STORE',
+    origin_code: originCode,
+    table_id: tableId ?? null,
+    subtotal,
+    tax,
+    discount,
+    total,
+    created_at: createdAt,
+    date,
+    subtotal_formatted: orderMoney(subtotal),
+    tax_formatted: orderMoney(tax),
+    discount_formatted: orderMoney(discount),
+    total_formatted: orderMoney(total),
+    created_date: createdDate,
+  };
+
+  return {
+    // Fila del listado (misma forma que el select paginado del backend).
+    id,
+    order_number: orderNumber,
+    service_type: serviceType,
+    status,
+    status_payment: statusPayment,
+    subtotal,
+    tax,
+    discount,
+    total,
+    created_at: createdAt,
+    origin_code: originCode,
+    total_formatted: orderMoney(total),
+    created_date: createdDate,
+    customer_name: customerName,
+    date,
+    detail: {
+      order,
+      customer: customer
+        ? { order_id: id, order_user_type_id: 'OWNER', ...customer, customer_name: customerName }
+        : null,
+      creator: creator
+        ? { order_id: id, order_user_type_id: 'CREATOR', ...creator, creator_name: `${creator.first_name} ${creator.last_name}`.trim() }
+        : null,
+      items: detailItems,
+      taxes: tax > 0
+        ? [{ tax_id: 1, name: taxName, percentage: (taxPct * 100).toFixed(2), value: tax, value_formatted: orderMoney(tax) }]
+        : [],
+      status: { type: 'GENERAL', name: ORDER_STATUS_NAMES[status] || status },
+      payments: statusPayment === 'PAID'
+        ? [{ order_id: id, payment_method_id: 1, payment_method_name: paymentMethod, value: total, value_formatted: orderMoney(total) }]
+        : [],
+    },
+  };
+}
+
+const demoCustomers = [
+  { user_id: 11, first_name: 'Juan', last_name: 'Pérez', email: 'juan.perez@mail.com', phone_code: '57', phone_number: '3001112233' },
+  { user_id: 12, first_name: 'Ana', last_name: 'Gómez', email: 'ana.gomez@mail.com', phone_code: '57', phone_number: '3014445566' },
+  { user_id: 13, first_name: 'Carlos', last_name: 'Ruiz', email: '', phone_code: '57', phone_number: '3157778899' },
+];
+const demoCreators = [
+  { user_id: 1, first_name: 'María', last_name: 'Restrepo', email: 'maria@gruposabor.co', phone_code: '57', phone_number: '3009990001' },
+  { user_id: 2, first_name: 'Pedro', last_name: 'Salazar', email: 'pedro@gruposabor.co', phone_code: '57', phone_number: '3009990002' },
+];
+
+const mockInvoiceOrders = [
+  buildMockInvoice({
+    seq: 12, dayOffset: 0, time: '13:45', status: 'ACCEPTED_IN_STORE', statusPayment: 'PAID',
+    originCode: 'POS', serviceType: 'DINE_IN', tableId: 4,
+    customer: demoCustomers[0], creator: demoCreators[0], taxPct: 0.19,
+    items: [
+      { name: 'Hamburguesa clásica', quantity: 2, value: 15000, options: [{ name: 'Queso extra', value: 2000 }] },
+      { name: 'Limonada natural', quantity: 1, value: 8000 },
+    ],
+  }),
+  buildMockInvoice({
+    seq: 11, dayOffset: 0, time: '13:20', status: 'CREATED', statusPayment: 'WITHOUT_PAYMENT',
+    originCode: 'WAITER', serviceType: 'DINE_IN', tableId: 2,
+    customer: null, creator: demoCreators[1], taxPct: 0.19,
+    items: [
+      { name: 'Bandeja paisa', quantity: 1, value: 32000 },
+      { name: 'Jugo de mango', quantity: 2, value: 7000 },
+    ],
+  }),
+  buildMockInvoice({
+    seq: 10, dayOffset: 0, time: '12:58', status: 'CANCELLED', statusPayment: 'WITHOUT_PAYMENT',
+    originCode: 'POS', serviceType: 'TAKE_OUT',
+    customer: demoCustomers[1], creator: demoCreators[0],
+    items: [{ name: 'Pizza mediana pepperoni', quantity: 1, value: 28000 }],
+  }),
+  buildMockInvoice({
+    seq: 9, dayOffset: 0, time: '12:30', status: 'ACCEPTED_IN_STORE', statusPayment: 'PAID',
+    originCode: 'POS', serviceType: 'TAKE_OUT',
+    customer: demoCustomers[2], creator: demoCreators[1], taxPct: 0.19, paymentMethod: 'nequi',
+    items: [
+      { name: 'Wrap de pollo', quantity: 2, value: 14000, options: [{ name: 'Salsa picante', value: 0 }, { name: 'Papas medianas', value: 5000 }] },
+    ],
+  }),
+  buildMockInvoice({
+    seq: 8, dayOffset: 0, time: '11:05', status: 'ACCEPTED_IN_STORE', statusPayment: 'PAID',
+    originCode: 'WAITER', serviceType: 'DINE_IN', tableId: 7,
+    customer: demoCustomers[1], creator: demoCreators[0],
+    items: [
+      { name: 'Desayuno americano', quantity: 3, value: 12000 },
+      { name: 'Café americano', quantity: 3, value: 4000 },
+    ],
+  }),
+  buildMockInvoice({
+    seq: 7, dayOffset: 1, time: '19:40', status: 'ACCEPTED_IN_STORE', statusPayment: 'PAID',
+    originCode: 'POS', serviceType: 'DINE_IN', tableId: 1,
+    customer: demoCustomers[0], creator: demoCreators[1], taxPct: 0.19,
+    items: [{ name: 'Parrillada mixta', quantity: 1, value: 58000, options: [{ name: 'Chimichurri', value: 1500 }] }],
+  }),
+  buildMockInvoice({
+    seq: 6, dayOffset: 1, time: '13:10', status: 'ACCEPTED_IN_STORE', statusPayment: 'PAID',
+    originCode: 'POS', serviceType: 'TAKE_OUT',
+    customer: demoCustomers[2], creator: demoCreators[0],
+    items: [{ name: 'Ensalada césar', quantity: 2, value: 16000 }],
+  }),
+  buildMockInvoice({
+    seq: 5, dayOffset: 2, time: '20:15', status: 'CREATED', statusPayment: 'WITHOUT_PAYMENT',
+    originCode: 'WAITER', serviceType: 'DINE_IN', tableId: 3,
+    customer: null, creator: demoCreators[1], taxPct: 0.19,
+    items: [{ name: 'Picada familiar', quantity: 1, value: 45000 }],
+  }),
+];
+
+function resolveOrdersMock(path, query) {
+  const m = path.match(/^\/companies\/[^/]+\/orders(\/.*)?$/);
+  if (!m) return undefined;
+  const sub = m[1] || '';
+
+  if (sub === '') {
+    const date = query.get('date') || isoDay(0);
+    const rows = mockInvoiceOrders
+      .filter((o) => o.date === date)
+      .map(({ detail, date: _d, ...row }) => row);
+    return mockPaginate(rows, query);
+  }
+
+  const idMatch = sub.match(/^\/([^/]+)$/);
+  if (idMatch) {
+    const found = mockInvoiceOrders.find((o) => o.id === idMatch[1]);
+    return found ? found.detail : null;
+  }
+
+  return undefined;
+}
+
 export function resolveMock(rawPath, opts = {}) {
   const [path, qs = ''] = rawPath.split('?');
   const query = new URLSearchParams(qs);
@@ -1015,6 +1339,10 @@ export function resolveMock(rawPath, opts = {}) {
   // Módulo de métricas (company-scoped: /companies/{company}/metrics/sales-by-type)
   const metrics = resolveMetricsMock(path, query);
   if (metrics !== undefined) return metrics;
+
+  // Módulo de facturas/órdenes (company-scoped: /companies/{company}/orders…)
+  const orders = resolveOrdersMock(path, query);
+  if (orders !== undefined) return orders;
 
   // Módulo de usuarios de la compañía (company-scoped: /companies/{company}/users…)
   const users = resolveUsersMock(path, query, opts);

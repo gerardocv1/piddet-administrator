@@ -1,0 +1,16 @@
+.wrap {
+  position: relative;
+  height: 320px;
+  width: 100%;
+}
+
+.empty {
+  padding: 3rem 1rem;
+  text-align: center;
+  color: var(--gray-500);
+  font-size: var(--text-base);
+}
+
+@media (max-width: 860px) {
+  .wrap { height: 260px; }
+}

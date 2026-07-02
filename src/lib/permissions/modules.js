@@ -43,6 +43,8 @@ export const MODULE_GROUPS = [
   {
     section: 'Operación',
     items: [
+      // Facturas: órdenes del día consultables por fecha; el detalle (/invoices/:orderId) reusa este permiso.
+      { to: '/invoices', label: 'Facturas', icon: 'fas fa-file-invoice', perm: 'api-module-orders' },
       { to: '/tables', label: 'Mesas', icon: 'fas fa-chair', badge: 4 }, // sin permiso aún → oculto
       { to: '/roles', label: 'Roles', icon: 'fas fa-user-shield' }, // sin permiso aún → oculto
     ],

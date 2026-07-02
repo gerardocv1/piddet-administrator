@@ -46,7 +46,10 @@ conectar: `cp .env.example .env`, define `VITE_API_URL` y reinicia. Detalle en `
   Categorías y las opciones/toppings de cada producto), `api-module-menus` (Menús, con sus
   categorías), `user-administrator` (Usuarios: administración de los usuarios vinculados a la
   compañía — vincular/desvincular, editar datos básicos, asignar roles y fijar contraseña
-  temporal). Las **categorías de menú** pertenecen a un menú concreto
+  temporal), `api-module-orders` (Facturas: órdenes de la compañía consultables por fecha en
+  `/invoices` — un solo día, hoy por defecto — con detalle completo de solo lectura en
+  `/invoices/:orderId`: ítems con opciones, impuestos, pagos, cliente y creador; el detalle
+  reusa el permiso del listado). Las **categorías de menú** pertenecen a un menú concreto
   (`menu_id`) y se administran dentro del detalle del menú (`/menus/:menuId`), que reusa el permiso
   de `/menus`; su `position` define el orden con el que se agrupan los productos dentro de ese menú.
   Las **categorías de producto**

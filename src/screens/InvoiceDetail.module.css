@@ -1,0 +1,185 @@
+.header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.headText { min-width: 0; }
+
+.title {
+  margin: 0;
+  font-size: var(--text-xl);
+  color: var(--gray-900);
+}
+
+.headBadges {
+  display: inline-flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.metaLine {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin: 0;
+  color: var(--gray-600);
+  font-size: var(--text-sm);
+}
+
+.metaLine i {
+  color: var(--gray-400);
+  margin-right: 5px;
+}
+
+.mainGrid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 14px;
+  align-items: start;
+}
+
+.sideGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  align-items: start;
+}
+
+@media (max-width: 860px) {
+  .mainGrid,
+  .sideGrid { grid-template-columns: 1fr; }
+}
+
+/* Ítems */
+.items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.item {
+  padding: 10px 0;
+  border-top: 1px solid var(--gray-100);
+}
+.item:first-child { border-top: none; padding-top: 0; }
+
+.itemRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.itemName { color: var(--gray-800); }
+
+.itemRef {
+  margin-left: 8px;
+  color: var(--gray-400);
+  font-size: var(--text-xs);
+}
+
+.itemPrice {
+  font-weight: 600;
+  color: var(--gray-800);
+  white-space: nowrap;
+}
+
+.itemUnit {
+  color: var(--gray-500);
+  font-size: var(--text-xs);
+}
+
+.options {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0 0 0 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.options li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--gray-600);
+  font-size: var(--text-sm);
+}
+
+/* Resumen */
+.summary {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.summary > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.summary dt { color: var(--gray-600); }
+.summary dd { margin: 0; font-weight: 600; color: var(--gray-800); }
+
+.summaryTotal {
+  border-top: 1px solid var(--border-color);
+  padding-top: 8px;
+}
+
+.summaryTotal dt,
+.summaryTotal dd {
+  font-weight: 700;
+  color: var(--text-heading);
+}
+
+/* Líneas simples (impuestos, pagos) */
+.lines {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lines li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--gray-700);
+}
+
+.lines li span:last-child {
+  font-weight: 600;
+  color: var(--gray-800);
+}
+
+/* Personas (cliente / creador) */
+.person {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.personName {
+  font-weight: 700;
+  color: var(--gray-800);
+}
+
+.personMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  color: var(--gray-600);
+  font-size: var(--text-sm);
+}
+
+.personMeta i {
+  color: var(--gray-400);
+  margin-right: 5px;
+}

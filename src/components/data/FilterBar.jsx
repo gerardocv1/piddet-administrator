@@ -8,9 +8,12 @@ import styles from './FilterBar.module.css';
  * móvil = botón "Filtros" → modal/bottom-sheet que ACUMULA selecciones en
  * borrador y se aplican todas de una vez. Chips de aplicados removibles.
  *
- * filters: [{ key, label, icon?, type: 'select'|'multi'|'toggle', options?: [{value,label}] }]
+ * filters: [{ key, label, icon?, type: 'select'|'multi'|'toggle'|'date', options?: [{value,label}], max?, min? }]
  * values:  objeto controlado { key: string | string[] | boolean }
  * onChange(nextValues): se llama al APLICAR (no en cada cambio del borrador).
+ *
+ * El tipo 'date' se muestra siempre inline como un control con calendario nativo
+ * (clic en todo el botón abre el picker); no entra al modal ni genera chips.
  */
 export function FilterBar({
   filters = [],
@@ -25,13 +28,15 @@ export function FilterBar({
   actions,
 }) {
   const isMobile = useIsMobile();
-  const useModal = isMobile || filters.length > inlineThreshold;
+  const dateFilters = filters.filter((f) => f.type === 'date');
+  const panelFilters = filters.filter((f) => f.type !== 'date');
+  const useModal = isMobile || panelFilters.length > inlineThreshold;
 
   const [openKey, setOpenKey] = React.useState(null);   // popover inline abierto
   const [modalOpen, setModalOpen] = React.useState(false);
   const [draft, setDraft] = React.useState(values);
 
-  const active = countActive(filters, values);
+  const active = countActive(panelFilters, values);
 
   const commit = (next) => { onChange && onChange(next); };
   const setOne = (key, val) => commit({ ...values, [key]: val });
@@ -46,12 +51,12 @@ export function FilterBar({
     else setOne(key, Array.isArray(values[key]) ? [] : undefined);
   };
   const clearAll = () => {
-    const cleared = {};
-    filters.forEach((f) => { cleared[f.key] = f.type === 'multi' ? [] : f.type === 'toggle' ? false : undefined; });
+    const cleared = { ...values };
+    panelFilters.forEach((f) => { cleared[f.key] = f.type === 'multi' ? [] : f.type === 'toggle' ? false : undefined; });
     commit(cleared);
   };
 
-  const chips = buildChips(filters, values);
+  const chips = buildChips(panelFilters, values);
 
   return (
     <div className={styles.root}>
@@ -64,13 +69,17 @@ export function FilterBar({
           </div>
         )}
 
-        {!useModal && filters.map((f) => (
+        {dateFilters.map((f) => (
+          <DateFilter key={f.key} filter={f} value={values[f.key]} onChange={(v) => setOne(f.key, v)} />
+        ))}
+
+        {!useModal && panelFilters.map((f) => (
           <InlineDropdown key={f.key} filter={f} value={values[f.key]} open={openKey === f.key}
             onToggle={() => setOpenKey(openKey === f.key ? null : f.key)}
             onClose={() => setOpenKey(null)} onApply={(v) => { setOne(f.key, v); setOpenKey(null); }} />
         ))}
 
-        {useModal && (
+        {useModal && panelFilters.length > 0 && (
           <button onClick={openModal} aria-label="Abrir filtros" className={[styles.filterBtn, active ? styles.active : ''].filter(Boolean).join(' ')}>
             <i className="fas fa-sliders" />
             Filtros
@@ -100,7 +109,7 @@ export function FilterBar({
 
       {/* Modal / bottom-sheet con borrador */}
       {modalOpen && (
-        <FilterSheet isMobile={isMobile} filters={filters} draft={draft} setDraft={setDraft}
+        <FilterSheet isMobile={isMobile} filters={panelFilters} draft={draft} setDraft={setDraft}
           onClose={() => setModalOpen(false)} onApply={applyModal} onClear={clearDraft}
           activeCount={countActive(filters, draft)} resultCount={resultCount} />
       )}
@@ -161,6 +170,33 @@ function InlineDropdown({ filter, value, open, onToggle, onClose, onApply }) {
       )}
     </div>
   );
+}
+
+/* ---------- Filtro de fecha (siempre inline; abre el calendario nativo) ---------- */
+function DateFilter({ filter, value, onChange }) {
+  const ref = React.useRef(null);
+  const openPicker = () => {
+    const el = ref.current;
+    if (!el) return;
+    try { el.showPicker(); } catch { el.focus(); } // fallback si el navegador no soporta showPicker
+  };
+  return (
+    <button type="button" onClick={openPicker} className={[styles.chipBtn, styles.dateBtn].join(' ')}>
+      {filter.icon && <i className={`${filter.icon} ${styles.ico}`} />}
+      {value ? formatDate(value) : filter.label}
+      <i className={`fas fa-chevron-down ${styles.caret}`} />
+      <input ref={ref} type="date" className={styles.dateNative} tabIndex={-1} aria-label={filter.label}
+        value={value || ''} max={filter.max} min={filter.min}
+        onChange={(e) => { if (e.target.value) onChange(e.target.value); }} />
+    </button>
+  );
+}
+
+const DATE_FMT = new Intl.DateTimeFormat('es-CO', { day: '2-digit', month: 'short', year: 'numeric' });
+function formatDate(iso) {
+  const [y, m, d] = String(iso).split('-').map(Number);
+  if (!y || !m || !d) return iso;
+  return DATE_FMT.format(new Date(y, m - 1, d));
 }
 
 /* ---------- Modal / bottom-sheet (muchos filtros o móvil) ---------- */

@@ -23,4 +23,9 @@ export const metricsService = {
   // days: 1..30 (default 15), endDate: 'yyyy-mm-dd', force: ignora cache del backend.
   salesByType: ({ days = 15, endDate, force = false } = {}) =>
     http.get(`${base()}/metrics/sales-by-type${qs({ days, end_date: endDate, force: force ? 1 : '' })}`),
+
+  // Comparación de ventas: período actual vs. el período anterior de igual longitud
+  // (alineado por día de la semana si days es múltiplo de 7). days: 1..28 (default 7).
+  salesComparison: ({ days = 7, endDate, force = false } = {}) =>
+    http.get(`${base()}/metrics/sales-comparison${qs({ days, end_date: endDate, force: force ? 1 : '' })}`),
 };

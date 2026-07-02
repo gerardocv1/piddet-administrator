@@ -28,6 +28,9 @@
 .row { border-top: 1px solid var(--gray-100); }
 .row:first-child { border-top: none; }
 
+.clickable { cursor: pointer; }
+.clickable:hover { background: var(--gray-100); }
+
 .empty {
   text-align: center;
   color: var(--gray-400);

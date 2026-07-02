@@ -16,7 +16,10 @@ cuando se fuerza). Concretamente:
 - **Login:** se consultan siempre (`force`) y se guardan con vencimiento `ahora + 30 min`.
 - **Arranque/recarga con sesión:** se consultan **solo si están vencidos**; si siguen vigentes,
   se usan los del storage sin llamar al backend.
-- **Cambio de compañía:** se fuerzan (el caché era de la compañía anterior).
+- **Cambio de compañía:** se fuerzan (el caché era de la compañía anterior). Si la consulta
+  forzada falla, los permisos quedan **vacíos**: nunca se conservan los de otra compañía
+  (whitelist estricta). Solo en renovaciones de TTL dentro de la misma compañía un error
+  transitorio conserva lo guardado.
 - **Logout:** se borran del storage (junto con el resto de la sesión).
 
 El TTL es la constante `PERMISSIONS_TTL_SECONDS` en `src/lib/auth/tokenManager.js`.
@@ -40,6 +43,7 @@ GET /companies/{company}/me/permissions      (requiere sesión)
 | `api-module-products` | Productos |
 | `api-module-menus` | Categorías y Toppings |
 | `api-company-users` | Usuarios |
+| `api-module-orders` | Facturas (órdenes por fecha y su detalle: `/invoices` y `/invoices/:orderId`) |
 
 ## Política: whitelist estricta
 
@@ -116,5 +120,6 @@ Fuera de React, usa la fachada: `auth.can('...')` / `auth.canAny([...])`.
   a recargas y solo se vuelven a pedir cuando el caché expira (TTL ~30 min) o se fuerza.
 - Al **cambiar de compañía**, `Layout` llama a `auth.loadPermissions(nuevaCompañía)` antes de
   volver al inicio, porque los permisos cambian con la compañía.
-- **Modo demo:** el mock responde `api-company-users`, `api-module-menus`, `api-module-products`
-  (ver `src/data/mock.js`), de modo que se ven Productos, Categorías, Toppings y Usuarios.
+- **Modo demo:** el mock responde `user-administrator`, `api-module-menus`, `api-module-products`,
+  `api-module-company`, `api-module-stores` y `api-module-orders` (ver `mockPermissions` en
+  `src/data/mock.js`), de modo que se ven todos los módulos gateados, incluido Facturas.

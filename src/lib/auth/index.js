@@ -58,7 +58,7 @@ export const auth = {
    * el caché está vencido (TTL ~30 min) o si `force` es true. Se persisten localmente.
    * @param {string|number} [companyRef] id/username de compañía; por defecto, la de la sesión.
    * @param {{ force?: boolean }} [opts] force=true ignora el caché (login / cambio de compañía).
-   * @returns {Promise<string[]>} lista de permisos (conserva lo previo si la consulta falla).
+   * @returns {Promise<string[]>} lista de permisos.
    */
   async loadPermissions(companyRef, { force = false } = {}) {
     // Caché vigente y sin forzar: no se consulta el servicio.
@@ -76,7 +76,13 @@ export const auth = {
       tokenManager.setPermissions(perms);
       return perms;
     } catch {
-      // Error transitorio: conserva los permisos ya guardados, no bloquea la sesión.
+      if (force) {
+        // Cambió el contexto (login/cambio de compañía): los permisos guardados son de otra
+        // compañía y no deben sobrevivir; whitelist estricta → mejor vacío que ajeno.
+        tokenManager.setPermissions([]);
+        return [];
+      }
+      // Error transitorio renovando el caché de la misma compañía: conserva lo guardado.
       return tokenManager.getPermissions();
     }
   },
@@ -106,7 +112,7 @@ export const auth = {
 
   /**
    * Carga las funcionalidades de la compañía activa. Sin `force` solo consulta si aún no hay
-   * ninguna en memoria (se recargan en login / cambio de compañía). Conserva las previas si falla.
+   * ninguna en memoria (se recargan en login / cambio de compañía).
    * @param {string|number} [companyRef] id/username; por defecto, la de la sesión.
    * @param {{ force?: boolean }} [opts]
    * @returns {Promise<Array>} funcionalidades [{ id, name, description, is_active }].
@@ -122,6 +128,12 @@ export const auth = {
       _notifyFunctionalities();
       return _functionalities;
     } catch {
+      if (force) {
+        // Cambió el contexto: las funcionalidades en memoria son de otra compañía.
+        _functionalities = [];
+        _notifyFunctionalities();
+        return [];
+      }
       return _functionalities; // error transitorio: conserva lo que haya
     }
   },

@@ -128,6 +128,21 @@
 .chipBtn .caret { font-size: 0.6rem; opacity: 0.7; }
 .chipBtn .ico { font-size: 0.8rem; }
 
+/* Filtro de fecha: el input nativo cubre el botón (opacity 0) para anclar el
+   calendario; el clic lo maneja el botón vía showPicker(). */
+.dateBtn { position: relative; }
+.dateNative {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: none;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .popover { position: relative; }
 .scrim { position: fixed; inset: 0; z-index: 40; }
 .menu {

@@ -55,11 +55,17 @@ export function Layout({ theme, onToggleTheme, onLogout }) {
   React.useEffect(() => { setNavOpen(false); }, [location.pathname]);
 
   const switchCompany = async (c) => {
-    try { await api.switchCompany(c.id); } catch { /* el backend persiste company_default_id; si falla, seguimos en local */ }
-    authLib.setCompany(c); // persiste la empresa activa y notifica al widget
+    // El backend persiste company_default_id y devuelve la compañía completa (perfil + detalle);
+    // el ítem `c` del selector es una versión reducida (id, username, code, name, icon).
+    let next = c;
+    try {
+      const switched = await api.switchCompany(c.id);
+      if (switched && switched.id) next = switched;
+    } catch { /* si falla, seguimos en local con los datos del selector */ }
+    authLib.setCompany(next); // persiste la empresa activa y notifica al widget
     // Permisos y funcionalidades son por compañía: forzar recarga para la nueva antes de ir al inicio.
-    await authLib.loadPermissions(c.username ?? c.id, { force: true });
-    await authLib.loadFunctionalities(c.username ?? c.id, { force: true });
+    await authLib.loadPermissions(next.username ?? next.id, { force: true });
+    await authLib.loadFunctionalities(next.username ?? next.id, { force: true });
     navigate('/');
   };
 
