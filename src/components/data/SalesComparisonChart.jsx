@@ -28,13 +28,32 @@ const abbr = (v) => {
   return '$' + n;
 };
 
+// Convierte un color CSS (#rgb, #rrggbb o rgb()/rgba()) a rgba con la opacidad dada,
+// para que el relleno del período actual sea translúcido y no tape la línea anterior.
+function toRgba(color, alpha) {
+  const c = String(color).trim();
+  if (c[0] === '#') {
+    let hex = c.slice(1);
+    if (hex.length === 3) hex = hex.split('').map((x) => x + x).join('');
+    const n = parseInt(hex, 16);
+    return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
+  }
+  const m = c.match(/rgba?\(([^)]+)\)/);
+  if (m) {
+    const [r, g, b] = m[1].split(',').map((x) => parseFloat(x));
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  }
+  return c;
+}
+
 // Los colores del gráfico salen de los tokens CSS (respeta tema claro/oscuro).
 function readColors() {
   const cs = typeof window !== 'undefined' ? getComputedStyle(document.documentElement) : null;
   const v = (name, fb) => (cs && cs.getPropertyValue(name).trim()) || fb;
+  const primary = v('--color-primary', '#4f7cff');
   return {
-    primary: v('--color-primary', '#4f7cff'),
-    area: v('--color-primary-050', 'rgba(79, 124, 255, 0.12)'),
+    primary,
+    area: toRgba(primary, 0.15), // relleno translúcido: deja ver el período anterior
     muted: v('--gray-400', '#9ca3af'),
     surface: v('--surface-card', '#ffffff'),
     grid: v('--border-color', '#eceff3'),
