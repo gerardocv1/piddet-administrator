@@ -17,6 +17,8 @@ import s from './Autocomplete.module.css';
  *  - getOptionValue(item) → string|num  clave estable de cada opción (def. item.value ?? item.id).
  *  - renderOption(item) → node          (opcional) contenido personalizado de la fila.
  *  - minChars = 3, debounce = 300       umbral de disparo y espera entre teclas (ms).
+ *  - creatable + onCreate(text)         (opcional) muestra una fila "Crear «texto»" cuando lo
+ *                                       escrito no coincide exactamente con ninguna opción.
  *  - label, icon, hint, error, placeholder, disabled, autoFocus, clearable
  *  - loadingText, noResultsText, minCharsText
  */
@@ -29,6 +31,8 @@ export function Autocomplete({
   renderOption,
   minChars = 3,
   debounce = 300,
+  creatable = false,
+  onCreate,
   label,
   icon = 'fas fa-magnifying-glass',
   hint,
@@ -124,6 +128,17 @@ export function Autocomplete({
   const belowMin = q.length < minChars;
   const minMsg = minCharsText || `Escribe al menos ${minChars} caracteres para buscar.`;
 
+  // Fila "Crear «texto»": solo si lo escrito no coincide exactamente con ninguna opción.
+  const exactMatch = options.some((o) => getOptionLabel(o).trim().toLowerCase() === q.toLowerCase());
+  const showCreate = creatable && !!onCreate && !belowMin && !loading && !fetchError && q.length > 0 && !exactMatch;
+
+  const create = () => {
+    onCreate(q);
+    setOptions([]);
+    setOpen(false);
+    setHi(-1);
+  };
+
   return (
     <div className={s.field} ref={rootRef}>
       {label && <span className={s.label}>{label}</span>}
@@ -160,7 +175,7 @@ export function Autocomplete({
             <div className={s.state}><Spinner size="sm" label={loadingText} /></div>
           ) : fetchError ? (
             <div className={[s.state, s.error].join(' ')}><i className="fas fa-triangle-exclamation" /> No se pudo buscar.</div>
-          ) : options.length === 0 ? (
+          ) : options.length === 0 && !showCreate ? (
             <div className={s.state}>{noResultsText}</div>
           ) : (
             <div className={s.list}>
@@ -178,6 +193,17 @@ export function Autocomplete({
                   {renderOption ? renderOption(opt) : <span className={s.optLabel}>{getOptionLabel(opt)}</span>}
                 </button>
               ))}
+              {showCreate && (
+                <button
+                  type="button"
+                  className={[s.option, s.createOption].join(' ')}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={create}
+                >
+                  <i className="fas fa-plus" aria-hidden="true" />
+                  <span className={s.optLabel}>Crear «{q}»</span>
+                </button>
+              )}
             </div>
           )}
         </div>

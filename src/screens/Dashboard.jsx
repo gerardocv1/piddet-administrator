@@ -1,6 +1,8 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { StatStrip, SalesComparisonChart, Card, Input, Select, IconButton, Spinner } from '../components';
 import { useResource } from '../lib/useResource.js';
+import { usePermissions } from '../lib/permissions/usePermissions.js';
 import { api } from '../lib/api.js';
 import s from './Dashboard.module.css';
 
@@ -18,6 +20,9 @@ const todayStr = () => {
 const kpiDelta = (d) => (d && d.percent != null ? { delta: `${Math.abs(d.percent)}%`, up: d.is_increase } : {});
 
 export function Dashboard() {
+  const navigate = useNavigate();
+  const { canAny } = usePermissions();
+
   // ── Comparación de ventas (período actual vs. anterior) + KPIs ──
   const [endDate, setEndDate] = React.useState(todayStr);
   const [weeks, setWeeks] = React.useState(1);
@@ -87,6 +92,19 @@ export function Dashboard() {
 
   return (
     <div className={s.page}>
+      {/* Acción rápida: registrar gasto desde el celular (asistente paso a paso).
+          Visible también para el empleado con acceso solo a sus gastos. */}
+      {canAny(['api-module-expenses', 'api-module-expenses-own']) && (
+        <button type="button" className={s.quickExpense} onClick={() => navigate('/expenses/quick')}>
+          <span className={s.quickIcon}><i className="fas fa-receipt" /></span>
+          <span className={s.quickText}>
+            <strong>Registrar gasto</strong>
+            <span>Paso a paso, con foto de la factura</span>
+          </span>
+          <i className={`fas fa-chevron-right ${s.quickChevron}`} />
+        </button>
+      )}
+
       <Card>
         <Card.Header title="Ventas" />
         <Card.Body className={s.cardBody}>

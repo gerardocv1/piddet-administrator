@@ -27,6 +27,41 @@ function rotatedSize(width, height, rotation) {
 }
 
 /**
+ * Rota la imagen completa (sin recorte) y devuelve el Blob resultante. Para fotos que llegan
+ * de lado desde el teléfono: gira en múltiplos de 90° y hornea la rotación en los píxeles.
+ * Con `maxDimension` además reescala (si el lado mayor la supera) para comprimir fotos de
+ * cámara antes de subirlas: menos datos móviles y sin chocar con los límites de PHP.
+ *
+ * @param {string} imageSrc  object URL de la imagen local
+ * @param {number} rotation  grados
+ * @param {string} [mimeType]  tipo MIME de la imagen original; 'image/png' conserva la transparencia
+ * @param {number|null} [maxDimension]  lado mayor máximo en px (null = sin reescalar)
+ * @returns {Promise<Blob>}
+ */
+export async function getRotatedBlob(imageSrc, rotation, mimeType = '', maxDimension = null) {
+  const image = await createImage(imageSrc);
+  const isPng = mimeType === 'image/png';
+
+  const scale = maxDimension ? Math.min(1, maxDimension / Math.max(image.width, image.height)) : 1;
+  const w = Math.round(image.width * scale);
+  const h = Math.round(image.height * scale);
+
+  const { width: bw, height: bh } = rotatedSize(w, h, rotation);
+  const out = document.createElement('canvas');
+  out.width = Math.round(bw);
+  out.height = Math.round(bh);
+  const ctx = out.getContext('2d');
+  ctx.translate(out.width / 2, out.height / 2);
+  ctx.rotate(toRad(rotation));
+  ctx.translate(-w / 2, -h / 2);
+  ctx.drawImage(image, 0, 0, w, h);
+
+  return isPng
+    ? new Promise((resolve) => out.toBlob((blob) => resolve(blob), 'image/png'))
+    : new Promise((resolve) => out.toBlob((blob) => resolve(blob), 'image/jpeg', 0.85));
+}
+
+/**
  * @param {string} imageSrc  object URL de la imagen local
  * @param {{x:number,y:number,width:number,height:number}} pixelCrop  área de recorte (croppedAreaPixels)
  * @param {number} rotation  grados

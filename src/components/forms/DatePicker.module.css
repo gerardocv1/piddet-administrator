@@ -1,0 +1,79 @@
+.field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.label { font-size: var(--text-sm); font-weight: 600; color: var(--gray-700); }
+
+/* Disparador compacto (formulario): imita un input */
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 40px;
+  padding: 0 0.9rem;
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius);
+  background: var(--surface-card);
+  color: var(--gray-800);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.trigger.empty { color: var(--gray-600); }
+.trigger:hover { border-color: var(--calendar-accent); }
+.triggerIcon { font-size: 0.8rem; color: var(--gray-500); }
+.triggerText { flex: 1; text-align: left; }
+.triggerCaret { font-size: 0.6rem; opacity: 0.7; }
+
+/* Disparador tipo chip (filtros) */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 42px;
+  padding: 0 0.9rem;
+  border: 1px solid color-mix(in srgb, var(--calendar-accent) 35%, var(--border-color));
+  border-radius: var(--radius);
+  background: var(--surface-card);
+  color: var(--gray-700);
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.chip.active {
+  border-color: var(--calendar-accent);
+  background: var(--calendar-accent-soft);
+  color: var(--calendar-accent);
+}
+.chipIcon { font-size: 0.8rem; }
+.chipCaret { font-size: 0.6rem; opacity: 0.7; }
+
+/* Panel fixed: se escapa del overflow de la Card contenedora */
+.scrim { position: fixed; inset: 0; z-index: 60; }
+.panel {
+  position: fixed;
+  z-index: 61;
+  background: var(--surface-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: 8px;
+}
+.panel :global(.rdp-root) {
+  --rdp-accent-color: var(--calendar-accent);
+  --rdp-accent-background-color: var(--calendar-accent-soft);
+  --rdp-range_middle-background-color: var(--calendar-accent-soft);
+  --rdp-range_middle-foreground-color: var(--gray-700);
+  --rdp-day-width: 30px;
+  --rdp-day-height: 30px;
+  --rdp-day_button-width: 30px;
+  --rdp-day_button-height: 30px;
+  --rdp-nav-height: 30px;
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  color: var(--gray-700);
+  margin: 0;
+}
+.panel :global(.rdp-selected) { font-size: inherit; font-weight: 600; }

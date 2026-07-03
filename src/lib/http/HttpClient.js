@@ -110,6 +110,10 @@ export class HttpClient {
       const msg = (payload && payload.message) || res.statusText || `Error ${res.status}`;
       const err = new Error(msg);
       err.status = res.status;
+      // Detalle del error del backend (p. ej. validación campo a campo y el recurso
+      // actualizado que algunas operaciones devuelven junto al fallo, como el retry).
+      if (payload && payload.errors) err.errors = payload.errors;
+      if (payload && payload.data) err.data = payload.data;
       throw err;
     }
 

@@ -16,7 +16,7 @@ const base = () => {
 };
 
 export const filesService = {
-  // Sube un archivo a S3. folder ∈ {general, items, menus, categories, documents}; visibility ∈ {public, private}.
+  // Sube un archivo a S3. folder ∈ {general, items, menus, categories, documents, expenses}; visibility ∈ {public, private}.
   uploadFile: (file, { folder = 'general', visibility = 'private' } = {}) => {
     const fd = new FormData();
     fd.append('file', file);

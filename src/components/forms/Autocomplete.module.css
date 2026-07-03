@@ -97,6 +97,11 @@
 .option.active { background: var(--color-primary-050); }
 .optLabel { font-weight: 600; color: var(--gray-800); }
 
+/* Fila "Crear «texto»" (modo creatable) */
+.createOption { color: var(--color-primary); }
+.createOption .optLabel { color: var(--color-primary); }
+.createOption:hover { background: var(--color-primary-050); }
+
 /* Estados (umbral, cargando, error, vacío) */
 .state {
   display: flex;

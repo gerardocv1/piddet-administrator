@@ -158,6 +158,40 @@
   overflow: hidden;
 }
 .menuList { max-height: 260px; overflow-y: auto; padding: 6px; }
+
+/* Botón del rango de fechas: borde y estado activo en el acento del calendario (petróleo) */
+.rangeBtn { border-color: color-mix(in srgb, var(--calendar-accent) 35%, var(--border-color)); }
+.rangeBtn.active {
+  border-color: var(--calendar-accent);
+  background: var(--calendar-accent-soft);
+  color: var(--calendar-accent);
+}
+
+/* Popover de calendario(s): rango y fecha única comparten estilos */
+.rangeMenu,
+.singleDateMenu { min-width: 0; padding: 10px 10px 0; }
+.rangeMenu :global(.rdp-root),
+.singleDateMenu :global(.rdp-root) {
+  --rdp-accent-color: var(--calendar-accent);
+  --rdp-accent-background-color: var(--calendar-accent-soft);
+  --rdp-range_middle-background-color: var(--calendar-accent-soft);
+  --rdp-range_middle-foreground-color: var(--gray-700);
+  --rdp-day-width: 30px;
+  --rdp-day-height: 30px;
+  --rdp-day_button-width: 30px;
+  --rdp-day_button-height: 30px;
+  --rdp-nav-height: 30px;
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  color: var(--gray-700);
+  margin: 0 auto 10px;
+}
+.rangeMenu :global(.rdp-selected),
+.singleDateMenu :global(.rdp-selected) { font-size: inherit; font-weight: 600; }
+.rangeMenu .menuFooter,
+.singleDateMenu .menuFooter { margin: 0 -10px; }
+.rangeMenu .solidBtn,
+.singleDateMenu .solidBtn { background: var(--calendar-accent); }
 .menuFooter { display: flex; gap: 8px; padding: 8px; border-top: 1px solid var(--border-color); }
 .ghostBtn {
   flex: 1;
@@ -183,6 +217,7 @@
   font-family: var(--font-sans);
   font-size: var(--text-sm);
 }
+.solidBtn:disabled { opacity: 0.5; cursor: default; }
 
 /* OptionRow */
 .optionRow {
@@ -273,6 +308,38 @@
 }
 .groupTitle i { color: var(--gray-400); font-size: 0.8rem; }
 .pillWrap { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* Selector nativo para filtros 'select' con muchas opciones (dentro del modal) */
+.selectWrap { position: relative; display: block; }
+.select {
+  width: 100%;
+  min-height: 42px;
+  padding: 0 2.2rem 0 0.9rem;
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius);
+  background: var(--surface-card);
+  color: var(--gray-700);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  appearance: none;
+  cursor: pointer;
+}
+.select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: var(--ring-primary);
+}
+.selectChevron {
+  position: absolute;
+  right: 0.9rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--gray-400);
+  font-size: 0.72rem;
+  pointer-events: none;
+}
+
 .pill {
   display: inline-flex;
   align-items: center;

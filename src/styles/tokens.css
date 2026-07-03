@@ -23,6 +23,11 @@
   --brand-dark: #0b2630;
   --brand-dark-2: #123845;
 
+  /* ---- Calendario (selector de rango): petróleo de la marca suavizado (pastel), no el
+     naranja primario. El acento pinta selección/borde/botón; el soft, el tramo del rango. */
+  --calendar-accent: #47707d;
+  --calendar-accent-soft: rgba(18, 56, 69, 0.10);
+
   /* ---- Neutros (slate) ---- */
   --gray-900: #172b4d;
   --gray-800: #32325d;
@@ -178,6 +183,10 @@
   /* Panel de marca: petróleo apenas elevado sobre --bg-body. */
   --brand-dark: #0e2c35;
   --brand-dark-2: #15404c;
+
+  /* El petróleo se pierde sobre la tarjeta oscura: el calendario usa un teal suavizado. */
+  --calendar-accent: #2f8f8d;
+  --calendar-accent-soft: rgba(14, 165, 163, 0.14);
 
   /* Scrim neutro y algo más opaco sobre una UI ya oscura */
   --overlay-bg: rgba(0, 0, 0, 0.62);

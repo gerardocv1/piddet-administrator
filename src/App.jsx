@@ -15,9 +15,17 @@ import { PublicMenu } from './screens/PublicMenu/PublicMenu.jsx';
 import { PublicCompany } from './screens/PublicCompany/PublicCompany.jsx';
 import { Invoices } from './screens/Invoices.jsx';
 import { InvoiceDetail } from './screens/InvoiceDetail.jsx';
+import { Expenses } from './screens/Expenses.jsx';
+import { ExpenseForm } from './screens/ExpenseForm.jsx';
+import { ExpenseWizard } from './screens/ExpenseWizard/ExpenseWizard.jsx';
+import { ExpenseDetail } from './screens/ExpenseDetail.jsx';
+import { ExpensesSummary } from './screens/ExpensesSummary.jsx';
+import { ExpenseCategories } from './screens/ExpenseCategories.jsx';
 import { Stores } from './screens/Stores.jsx';
 import { StoreDetail } from './screens/StoreDetail.jsx';
 import { Users } from './screens/Users.jsx';
+import { SyncFailures } from './screens/SyncFailures.jsx';
+import { SyncFailureDetail } from './screens/SyncFailureDetail.jsx';
 import { CompanyProfile } from './screens/CompanyProfile.jsx';
 import { Placeholder } from './screens/Placeholder.jsx';
 import { NoModules } from './screens/NoModules.jsx';
@@ -118,11 +126,19 @@ function AdminApp() {
             <Route path="menus/:menuId" element={<RequirePermission path="/menus"><MenuDetail /></RequirePermission>} />
             <Route path="invoices" element={<RequirePermission path="/invoices"><Invoices /></RequirePermission>} />
             <Route path="invoices/:orderId" element={<RequirePermission path="/invoices"><InvoiceDetail /></RequirePermission>} />
+            <Route path="expenses" element={<RequirePermission path="/expenses"><Expenses /></RequirePermission>} />
+            <Route path="expenses/new" element={<RequirePermission path="/expenses"><ExpenseForm /></RequirePermission>} />
+            <Route path="expenses/quick" element={<RequirePermission path="/expenses"><ExpenseWizard /></RequirePermission>} />
+            <Route path="expenses/summary" element={<RequirePermission path="/expenses/summary"><ExpensesSummary /></RequirePermission>} />
+            <Route path="expenses/:expenseId" element={<RequirePermission path="/expenses"><ExpenseDetail /></RequirePermission>} />
+            <Route path="expense-categories" element={<RequirePermission path="/expense-categories"><ExpenseCategories /></RequirePermission>} />
             <Route path="tables" element={<RequirePermission path="/tables"><Tables /></RequirePermission>} />
             <Route path="stores" element={<RequirePermission path="/stores"><Stores /></RequirePermission>} />
             <Route path="stores/new" element={<RequirePermission path="/stores"><StoreDetail /></RequirePermission>} />
             <Route path="stores/:storeId" element={<RequirePermission path="/stores"><StoreDetail /></RequirePermission>} />
             <Route path="users" element={<RequirePermission path="/users"><Users /></RequirePermission>} />
+            <Route path="sync-failures" element={<RequirePermission path="/sync-failures"><SyncFailures /></RequirePermission>} />
+            <Route path="sync-failures/:reportId" element={<RequirePermission path="/sync-failures"><SyncFailureDetail /></RequirePermission>} />
             <Route path="company" element={<CompanyProfile />} />
             <Route path="roles" element={<RequirePermission path="/roles"><Placeholder name="Roles" /></RequirePermission>} />
             <Route path="*" element={<Placeholder name="No encontrado" />} />

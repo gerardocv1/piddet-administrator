@@ -23,16 +23,10 @@ export const ORIGINS = {
   WAITER: 'Mesero',
 };
 
-export const PAYMENT_METHODS = {
-  cash: 'Efectivo',
-  nequi: 'Nequi',
-};
-
 export const orderStatusOf = (key) => ORDER_STATUS[key] || { label: key || '—', variant: 'neutral' };
 export const paymentStatusOf = (key) => PAYMENT_STATUS[key] || { label: key || '—', variant: 'neutral' };
 export const serviceTypeLabel = (key) => SERVICE_TYPES[key] || key || '—';
 export const originLabel = (key) => ORIGINS[key] || key || '—';
-export const paymentMethodLabel = (key) => PAYMENT_METHODS[key] || key || '—';
 
 /** Fecha local de hoy en formato YYYY-MM-DD (para el selector de día). */
 export const todayIso = () => {

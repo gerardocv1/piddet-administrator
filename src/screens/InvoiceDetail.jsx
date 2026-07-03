@@ -3,7 +3,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Card, Badge, IconButton, Spinner } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
-import { orderStatusOf, paymentStatusOf, serviceTypeLabel, originLabel, paymentMethodLabel } from '../lib/orderLabels.js';
+import { orderStatusOf, paymentStatusOf, serviceTypeLabel, originLabel } from '../lib/orderLabels.js';
 import s from './screens.module.css';
 import t from './InvoiceDetail.module.css';
 
@@ -150,7 +150,7 @@ export function InvoiceDetail() {
               <ul className={t.lines}>
                 {payments.map((p, i) => (
                   <li key={p.id ?? i}>
-                    <span>{paymentMethodLabel(p.payment_method_name)}</span>
+                    <span>{p.payment_method_name || '—'}</span>
                     <span>{p.value_formatted}</span>
                   </li>
                 ))}

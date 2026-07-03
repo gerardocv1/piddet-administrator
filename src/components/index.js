@@ -17,6 +17,8 @@ export { Textarea } from './forms/Textarea.jsx';
 export { Autocomplete } from './forms/Autocomplete.jsx';
 export { CategoryCascader } from './forms/CategoryCascader.jsx';
 export { FileUpload } from './forms/FileUpload.jsx';
+export { MultiImageUpload } from './forms/MultiImageUpload.jsx';
+export { DatePicker } from './forms/DatePicker.jsx';
 // data
 export { DataTable } from './data/DataTable.jsx';
 export { FilterBar } from './data/FilterBar.jsx';

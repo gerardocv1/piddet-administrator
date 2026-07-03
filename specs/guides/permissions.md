@@ -44,6 +44,10 @@ GET /companies/{company}/me/permissions      (requiere sesión)
 | `api-module-menus` | Categorías y Toppings |
 | `api-company-users` | Usuarios |
 | `api-module-orders` | Facturas (órdenes por fecha y su detalle: `/invoices` y `/invoices/:orderId`) |
+| `order-sync-failure-admin` | Fallos de órdenes (soporte): reportes de fallo de sincronización del POS en `/sync-failures` y su detalle `/sync-failures/:reportId` (editar el JSON de la orden, reintentar la creación y administrar el estado pendiente/resuelto/no recuperable) |
+| `api-module-expenses` | Gastos (admin): listado por rango (`/expenses`), creación (`/expenses/new`, asistente `/expenses/quick`), detalle (`/expenses/:expenseId`), resumen por categoría (`/expenses/summary`) y categorías propias (`/expense-categories`) |
+| `api-module-expenses-own` | Gastos (empleado): registra gastos y ve listado/detalle SOLO de los suyos (el backend filtra por `created_by`); sin Resumen ni Categorías. En `modules.js` la ruta `/expenses` declara ambos permisos como alternativas (`perm: [a, b]`) |
+| `expense-annul` | Anular un gasto desde su detalle (irreversible; solo gatea el botón, la ruta reusa el permiso del módulo) |
 
 ## Política: whitelist estricta
 
@@ -121,5 +125,6 @@ Fuera de React, usa la fachada: `auth.can('...')` / `auth.canAny([...])`.
 - Al **cambiar de compañía**, `Layout` llama a `auth.loadPermissions(nuevaCompañía)` antes de
   volver al inicio, porque los permisos cambian con la compañía.
 - **Modo demo:** el mock responde `user-administrator`, `api-module-menus`, `api-module-products`,
-  `api-module-company`, `api-module-stores` y `api-module-orders` (ver `mockPermissions` en
+  `api-module-company`, `api-module-stores`, `api-module-orders` y `order-sync-failure-admin`
+  (ver `mockPermissions` en
   `src/data/mock.js`), de modo que se ven todos los módulos gateados, incluido Facturas.

@@ -5,6 +5,7 @@
 //
 // POLÍTICA: whitelist estricta. Un módulo SOLO se muestra si el usuario tiene su permiso.
 //   - `perm: '<permiso>'`  → visible si el usuario tiene ese permiso.
+//   - `perm: ['a', 'b']`   → visible con CUALQUIERA de los permisos (OR).
 //   - `perm: ALWAYS`       → siempre visible (sin requerir permiso).
 //   - sin `perm`           → OCULTO por defecto (hasta asignarle un permiso aquí).
 //
@@ -45,6 +46,19 @@ export const MODULE_GROUPS = [
     items: [
       // Facturas: órdenes del día consultables por fecha; el detalle (/invoices/:orderId) reusa este permiso.
       { to: '/invoices', label: 'Facturas', icon: 'fas fa-file-invoice', perm: 'api-module-orders' },
+      // Gastos: registro (encabezado + líneas + fotos), resumen por categoría y categorías propias.
+      // El detalle (/expenses/:expenseId) y la creación (/expenses/new, /expenses/quick) reusan el
+      // permiso del listado; anular requiere además `expense-annul` (solo oculta el botón).
+      // `api-module-expenses-own` es el acceso de empleado: registra y ve SOLO sus gastos (el
+      // backend aplica el filtro); no ve Resumen ni Categorías.
+      {
+        label: 'Gastos', icon: 'fas fa-receipt',
+        children: [
+          { to: '/expenses', label: 'Listado', icon: 'fas fa-list', perm: ['api-module-expenses', 'api-module-expenses-own'] },
+          { to: '/expenses/summary', label: 'Resumen', icon: 'fas fa-chart-pie', perm: 'api-module-expenses' },
+          { to: '/expense-categories', label: 'Categorías', icon: 'fas fa-tags', perm: 'api-module-expenses' },
+        ],
+      },
       { to: '/tables', label: 'Mesas', icon: 'fas fa-chair', badge: 4 }, // sin permiso aún → oculto
       { to: '/roles', label: 'Roles', icon: 'fas fa-user-shield' }, // sin permiso aún → oculto
     ],
@@ -61,6 +75,8 @@ export const MODULE_GROUPS = [
           { to: '/stores', label: 'Tiendas', icon: 'fas fa-store', perm: 'api-module-stores' },
           { to: '/users', label: 'Usuarios', icon: 'fas fa-user', perm: 'user-administrator' },
           { to: '/admin/product-categories', label: 'Categorías globales', icon: 'fas fa-tags', perm: 'item-category-master' },
+          // Soporte: fallos del POS al sincronizar órdenes; el detalle (/sync-failures/:reportId) reusa este permiso.
+          { to: '/sync-failures', label: 'Fallos de órdenes', icon: 'fas fa-triangle-exclamation', perm: 'order-sync-failure-admin' },
         ],
       },
     ],
@@ -80,7 +96,8 @@ export function canAccess(path, permissions = []) {
   const required = ROUTE_PERMISSION[path];
   if (required === ALWAYS) return true;
   if (!required) return false; // ruta sin permiso declarado → oculta (whitelist estricta)
-  return permissions.includes(required);
+  // `perm` puede ser un string o una lista de alternativas (basta tener una).
+  return [].concat(required).some((p) => permissions.includes(p));
 }
 
 /** Primer módulo accesible (en orden de menú) para usar como landing; null si ninguno. */

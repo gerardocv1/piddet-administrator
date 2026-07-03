@@ -1,4 +1,7 @@
 import React from 'react';
+import { DayPicker } from 'react-day-picker';
+import { es } from 'react-day-picker/locale';
+import 'react-day-picker/style.css';
 import { useIsMobile } from '../../lib/useIsMobile.js';
 import styles from './FilterBar.module.css';
 
@@ -8,13 +11,23 @@ import styles from './FilterBar.module.css';
  * móvil = botón "Filtros" → modal/bottom-sheet que ACUMULA selecciones en
  * borrador y se aplican todas de una vez. Chips de aplicados removibles.
  *
- * filters: [{ key, label, icon?, type: 'select'|'multi'|'toggle'|'date', options?: [{value,label}], max?, min? }]
+ * filters: [{ key, label, icon?, type: 'select'|'multi'|'toggle'|'date', options?: [{value,label}], placeholder?, max?, min? }]
  * values:  objeto controlado { key: string | string[] | boolean }
  * onChange(nextValues): se llama al APLICAR (no en cada cambio del borrador).
  *
  * El tipo 'date' se muestra siempre inline como un control con calendario nativo
  * (clic en todo el botón abre el picker); no entra al modal ni genera chips.
+ *
+ * El tipo 'daterange' es un ÚNICO control inline para un rango de fechas (calendario de
+ * react-day-picker en un popover): `{ key, type: 'daterange', label, icon?, fromKey, toKey, max?, min? }`.
+ * Lee/escribe DOS claves de `values` (fromKey/toKey); al aplicar, onChange recibe ambas.
+ *
+ * En el modal, un filtro 'select' con muchas opciones (más de SELECTOR_OPTIONS_THRESHOLD)
+ * se pinta como selector nativo en vez de píldoras (`placeholder` = etiqueta del vacío).
  */
+
+// Desde cuántas opciones un 'select' del modal deja de ser píldoras y pasa a selector nativo.
+const SELECTOR_OPTIONS_THRESHOLD = 10;
 export function FilterBar({
   filters = [],
   values = {},
@@ -28,8 +41,8 @@ export function FilterBar({
   actions,
 }) {
   const isMobile = useIsMobile();
-  const dateFilters = filters.filter((f) => f.type === 'date');
-  const panelFilters = filters.filter((f) => f.type !== 'date');
+  const dateFilters = filters.filter((f) => f.type === 'date' || f.type === 'daterange');
+  const panelFilters = filters.filter((f) => f.type !== 'date' && f.type !== 'daterange');
   const useModal = isMobile || panelFilters.length > inlineThreshold;
 
   const [openKey, setOpenKey] = React.useState(null);   // popover inline abierto
@@ -69,9 +82,12 @@ export function FilterBar({
           </div>
         )}
 
-        {dateFilters.map((f) => (
+        {dateFilters.map((f) => (f.type === 'daterange' ? (
+          <DateRangeFilter key={f.key} filter={f} from={values[f.fromKey]} to={values[f.toKey]}
+            onChange={(from, to) => commit({ ...values, [f.fromKey]: from, [f.toKey]: to })} />
+        ) : (
           <DateFilter key={f.key} filter={f} value={values[f.key]} onChange={(v) => setOne(f.key, v)} />
-        ))}
+        )))}
 
         {!useModal && panelFilters.map((f) => (
           <InlineDropdown key={f.key} filter={f} value={values[f.key]} open={openKey === f.key}
@@ -199,6 +215,73 @@ function formatDate(iso) {
   return DATE_FMT.format(new Date(y, m - 1, d));
 }
 
+/* ---------- Filtro de rango de fechas (un solo control; calendario en popover) ---------- */
+const parseIsoDate = (iso) => {
+  if (!iso) return undefined;
+  const [y, m, d] = String(iso).split('-').map(Number);
+  return y && m && d ? new Date(y, m - 1, d) : undefined;
+};
+const toIsoDate = (date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+
+function DateRangeFilter({ filter, from, to, onChange }) {
+  const [open, setOpen] = React.useState(false);
+  const [range, setRange] = React.useState(undefined); // borrador { from: Date, to?: Date }
+
+  // Al abrir, el borrador parte del rango aplicado.
+  React.useEffect(() => {
+    if (open) setRange(from ? { from: parseIsoDate(from), to: parseIsoDate(to) } : undefined);
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const apply = () => {
+    if (!range?.from) return;
+    // Un solo día también es un rango válido (from = to).
+    onChange(toIsoDate(range.from), toIsoDate(range.to ?? range.from));
+    setOpen(false);
+  };
+
+  const label = from && to
+    ? (from === to ? formatDate(from) : `${formatDate(from)} – ${formatDate(to)}`)
+    : filter.label;
+
+  const disabledDays = filter.max || filter.min
+    ? {
+      ...(filter.max ? { after: parseIsoDate(filter.max) } : {}),
+      ...(filter.min ? { before: parseIsoDate(filter.min) } : {}),
+    }
+    : undefined;
+
+  return (
+    <div className={styles.popover}>
+      <button type="button" onClick={() => setOpen((o) => !o)}
+        className={[styles.chipBtn, styles.rangeBtn, from && to ? styles.active : ''].filter(Boolean).join(' ')}>
+        {filter.icon && <i className={`${filter.icon} ${styles.ico}`} />}
+        {label}
+        <i className={`fas fa-chevron-down ${styles.caret}`} />
+      </button>
+      {open && (
+        <>
+          <div onClick={() => setOpen(false)} className={styles.scrim} />
+          <div className={[styles.menu, styles.rangeMenu].join(' ')}>
+            <DayPicker
+              mode="range"
+              locale={es}
+              selected={range}
+              onSelect={setRange}
+              defaultMonth={range?.from}
+              disabled={disabledDays}
+            />
+            <div className={styles.menuFooter}>
+              <button onClick={() => setRange(undefined)} className={styles.ghostBtn}>Limpiar</button>
+              <button onClick={apply} disabled={!range?.from} className={styles.solidBtn}>Aplicar</button>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 /* ---------- Modal / bottom-sheet (muchos filtros o móvil) ---------- */
 function FilterSheet({ isMobile, filters, draft, setDraft, onClose, onApply, onClear, activeCount, resultCount }) {
   const setVal = (key, val) => setDraft({ ...draft, [key]: val });
@@ -221,6 +304,19 @@ function FilterSheet({ isMobile, filters, draft, setDraft, onClose, onApply, onC
               </div>
               {f.type === 'toggle' ? (
                 <OptionRow label={f.onLabel || 'Activado'} selected={!!draft[f.key]} multi onClick={() => setVal(f.key, !draft[f.key])} />
+              ) : f.type === 'select' && f.options.length > SELECTOR_OPTIONS_THRESHOLD ? (
+                <div className={styles.selectWrap}>
+                  <select
+                    className={styles.select}
+                    value={draft[f.key] ?? ''}
+                    onChange={(e) => setVal(f.key, e.target.value || undefined)}
+                    aria-label={f.label}
+                  >
+                    <option value="">{f.placeholder || 'Todos'}</option>
+                    {f.options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                  </select>
+                  <i className={`fas fa-chevron-down ${styles.selectChevron}`} aria-hidden="true" />
+                </div>
               ) : (
                 <div className={styles.pillWrap}>
                   {f.options.map((o) => {
@@ -281,8 +377,9 @@ function buildChips(filters, values) {
   const chips = [];
   filters.forEach((f) => {
     const v = values[f.key];
-    if (f.type === 'multi' && Array.isArray(v)) v.forEach((val) => chips.push({ key: f.key, value: val, label: labelOf(f, val), groupLabel: f.label }));
-    else if (f.type === 'select' && v != null && v !== '') chips.push({ key: f.key, value: v, label: labelOf(f, v), groupLabel: f.label });
+    // trim(): las opciones de un selector pueden venir indentadas (árbol); el chip muestra el nombre limpio.
+    if (f.type === 'multi' && Array.isArray(v)) v.forEach((val) => chips.push({ key: f.key, value: val, label: String(labelOf(f, val)).trim(), groupLabel: f.label }));
+    else if (f.type === 'select' && v != null && v !== '') chips.push({ key: f.key, value: v, label: String(labelOf(f, v)).trim(), groupLabel: f.label });
     else if (f.type === 'toggle' && v) chips.push({ key: f.key, value: true, label: f.onLabel || f.label, groupLabel: null });
   });
   return chips;

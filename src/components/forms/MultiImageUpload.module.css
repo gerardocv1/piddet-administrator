@@ -1,0 +1,88 @@
+.root { display: flex; flex-direction: column; gap: 8px; }
+
+/* Mismas medidas que la grilla de fotos del detalle del gasto: las miniaturas y la ficha
+   de "Añadir foto" deben verse de un solo tamaño aunque vivan en grillas apiladas. */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 10px;
+}
+@media (max-width: 860px) {
+  .grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+}
+
+.thumb {
+  position: relative;
+  aspect-ratio: 3 / 4;
+  border-radius: var(--radius);
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  background: var(--gray-100);
+}
+.thumb img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.2s; }
+/* Preview de la rotación: a 90°/270° se escala 4/3 para que la foto girada siga cubriendo
+   el marco 3:4 (la rotación real se hornea en los píxeles al subir). */
+.thumb img[data-rotation='90'] { transform: rotate(90deg) scale(1.34); }
+.thumb img[data-rotation='180'] { transform: rotate(180deg); }
+.thumb img[data-rotation='270'] { transform: rotate(270deg) scale(1.34); }
+
+.remove {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--gray-900) 60%, transparent);
+  color: #fff;
+  cursor: pointer;
+  font-size: 0.7rem;
+}
+.remove:hover { background: var(--color-danger); }
+
+.rotate {
+  position: absolute;
+  bottom: 6px;
+  left: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--gray-900) 60%, transparent);
+  color: #fff;
+  cursor: pointer;
+  font-size: 0.75rem;
+}
+.rotate:hover { background: var(--calendar-accent); }
+
+.add {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  aspect-ratio: 3 / 4;
+  border: 1.5px dashed var(--border-input);
+  border-radius: var(--radius);
+  background: var(--surface-card);
+  color: var(--gray-500);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+.add i { font-size: 1.2rem; color: var(--gray-400); }
+.add:hover { border-color: var(--color-primary-300); background: var(--color-primary-050); color: var(--color-primary); }
+.add:hover i { color: var(--color-primary); }
+
+.input { display: none; }
+
+.hint { font-size: var(--text-xs); color: var(--gray-500); }
+.hint.errorText { color: var(--color-danger); }

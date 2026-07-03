@@ -1,0 +1,130 @@
+/* Detalle de un fallo de sincronización: cabecera, diagnóstico, editor JSON y acciones. */
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.headText {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.title {
+  margin: 0;
+  font-size: var(--text-xl);
+  color: var(--gray-800);
+}
+
+.errorMessage {
+  margin: 0 0 12px;
+  color: var(--color-danger);
+  font-weight: 600;
+}
+
+.errorMessage i { margin-right: 6px; }
+
+.meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px 16px;
+  margin: 0;
+}
+
+.meta div { display: flex; flex-direction: column; gap: 2px; }
+.meta dt { color: var(--gray-500); font-size: var(--text-sm); }
+.meta dd { margin: 0; color: var(--gray-800); font-weight: 600; overflow-wrap: anywhere; }
+
+.lastRetry {
+  margin: 12px 0 0;
+  color: var(--color-warning-fg);
+  font-size: var(--text-sm);
+}
+
+.recovered {
+  margin: 12px 0 0;
+  color: var(--color-success-fg);
+}
+
+.resolution {
+  margin: 12px 0 0;
+  color: var(--gray-600);
+  font-size: var(--text-sm);
+}
+
+.context { margin-top: 12px; }
+.context summary { cursor: pointer; color: var(--gray-500); font-size: var(--text-sm); }
+.context pre {
+  margin: 8px 0 0;
+  padding: 10px;
+  background: var(--gray-100);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  overflow: auto;
+  max-height: 200px;
+}
+
+.jsonArea {
+  width: 100%;
+  margin-top: 8px;
+  padding: 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--gray-800);
+  background: var(--gray-100);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-sm);
+  resize: vertical;
+  min-height: 240px;
+}
+
+.jsonArea:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.jsonArea:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.jsonError,
+.noticeError {
+  margin: 10px 0 0;
+  color: var(--color-danger);
+  font-size: var(--text-sm);
+}
+
+.noticeOk {
+  margin: 10px 0 0;
+  color: var(--color-success-fg);
+  font-size: var(--text-sm);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.errorList {
+  margin: 10px 0 0;
+  padding-left: 18px;
+  color: var(--gray-700);
+  font-size: var(--text-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.errorList code {
+  background: var(--gray-100);
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+}

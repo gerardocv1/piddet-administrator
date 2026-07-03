@@ -268,7 +268,7 @@ export const mockMenuItems = [
 // el panel muestra Productos (y sus categorías), Menús y Usuarios; el resto queda oculto.
 const mockPermissions = {
   roles: ['Administrador'],
-  permissions: ['user-administrator', 'api-module-menus', 'api-module-products', 'api-module-company', 'api-module-stores', 'api-module-orders'],
+  permissions: ['user-administrator', 'api-module-menus', 'api-module-products', 'api-module-company', 'api-module-stores', 'api-module-orders', 'order-sync-failure-admin', 'api-module-expenses', 'expense-annul'],
 };
 
 // Empresa (tenant) activa y empresas disponibles para el usuario (SaaS multi-tenant).
@@ -1089,7 +1089,7 @@ const ORDER_STATUS_NAMES = {
 };
 
 // Fábrica de una orden demo con su detalle completo (totales coherentes entre sí).
-function buildMockInvoice({ seq, dayOffset, time, status, statusPayment, originCode, serviceType, tableId, customer, creator, items, taxName = 'IVA', taxPct = 0, discount = 0, paymentMethod = 'cash' }) {
+function buildMockInvoice({ seq, dayOffset, time, status, statusPayment, originCode, serviceType, tableId, customer, creator, items, taxName = 'IVA', taxPct = 0, discount = 0, paymentMethod = 'Efectivo' }) {
   const date = isoDay(dayOffset);
   const id = `demo-${date}-${String(seq).padStart(4, '0')}`;
   const orderNumber = `AY${String(seq).padStart(4, '0')}`;
@@ -1239,7 +1239,7 @@ const mockInvoiceOrders = [
   buildMockInvoice({
     seq: 9, dayOffset: 0, time: '12:30', status: 'ACCEPTED_IN_STORE', statusPayment: 'PAID',
     originCode: 'POS', serviceType: 'TAKE_OUT',
-    customer: demoCustomers[2], creator: demoCreators[1], taxPct: 0.19, paymentMethod: 'nequi',
+    customer: demoCustomers[2], creator: demoCreators[1], taxPct: 0.19, paymentMethod: 'Nequi',
     items: [
       { name: 'Wrap de pollo', quantity: 2, value: 14000, options: [{ name: 'Salsa picante', value: 0 }, { name: 'Papas medianas', value: 5000 }] },
     ],
@@ -1295,6 +1295,601 @@ function resolveOrdersMock(path, query) {
   return undefined;
 }
 
+// ─── Fallos de sincronización de órdenes (soporte) ─────────────────────────
+// CONTRATO BACKEND: /companies/{company}/orders/sync-failure-reports (listado paginado sin
+// order_payload/context, detalle completo, PUT payload, PATCH status, POST retry). El retry
+// simula la validación del backend: payload sin company_id / JSON corrupto → error 422 con
+// `errors` campo a campo; payload corregido → orden creada y reporte resuelto.
+
+const syncFailureError = (message, status, errors) => {
+  const err = new Error(message);
+  err.status = status;
+  if (errors) err.errors = errors;
+  throw err;
+};
+
+const buildSyncFailurePayload = ({ companyId, uuid, orderNumber, itemName, value, quantity }) => {
+  const subtotal = value * quantity;
+  const tax = Math.round(subtotal * 0.19);
+  const total = subtotal + tax;
+  return JSON.stringify({
+    origin: 'POS',
+    company_id: companyId,
+    table_id: null,
+    user: { id: 0, name: 'Cliente mostrador' },
+    creator: { id: 1, first_name: 'María', last_name: 'Restrepo', email: 'maria@gruposabor.co', phone_code: '57', phone_number: '3009990001' },
+    order: {
+      uuid,
+      status: 'CREATE',
+      service_type: 'TAKE_OUT',
+      order_number: orderNumber,
+      date: { date: `${isoDay(0)} 13:40:00`, timezone: 'America/Bogota' },
+    },
+    items: [{
+      id: 101,
+      preorder_item_id: `${uuid}-it-0`,
+      quantity,
+      subtotal,
+      tax,
+      discount: 0,
+      total,
+      options: [],
+      value,
+      name: itemName,
+    }],
+    payment: { status: 'PAID', subtotal, tax, discount: 0, total, methods: [{ method: 'cash', value: total }] },
+  }, null, 2);
+};
+
+const mockSyncFailureReports = [
+  {
+    id: 'sfr-0001',
+    order_uuid: 'f7a2c1d0-demo-0001',
+    company_id: null, // huérfano: la falla reportada es justamente el company_id ausente
+    company_username: 'grupo_sabor',
+    order_number: 'AY0031',
+    attempts: 3,
+    error_message: 'company_id ausente en el payload: el POS perdió el contexto de la compañía al reintentar desde localStorage.',
+    paid_sync_status: 'PAID',
+    reported_origin: 'POS',
+    order_payload: buildSyncFailurePayload({ companyId: null, uuid: 'f7a2c1d0-demo-0001', orderNumber: 'AY0031', itemName: 'Hamburguesa clásica', value: 15000, quantity: 2 }),
+    context: JSON.stringify({ localStorage_key: 'pos_pending_orders', retries: 3, last_http_status: 422 }, null, 2),
+    reported_by: 1,
+    reported_username: 'maria.pos',
+    user_agent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) piddet-pos/2.4.1',
+    ip: '190.85.10.21',
+    support_status: 'pending',
+    resolution_notes: null,
+    resolved_by: null,
+    resolved_username: null,
+    resolved_at: null,
+    recovered_order_uuid: null,
+    last_retry_error: '[validation] Validation error',
+    last_retry_at: `${isoDay(0)}T14:10:00`,
+    created_at: `${isoDay(0)}T13:47:00`,
+    updated_at: `${isoDay(0)}T14:10:00`,
+  },
+  {
+    id: 'sfr-0002',
+    order_uuid: 'b3e9d4a2-demo-0002',
+    company_id: 1,
+    company_username: 'grupo_sabor',
+    order_number: 'AY0029',
+    attempts: 1,
+    error_message: 'Timeout al sincronizar con el servidor (la red del local se cayó durante el cierre).',
+    paid_sync_status: 'PAID',
+    reported_origin: 'POS',
+    order_payload: buildSyncFailurePayload({ companyId: 1, uuid: 'b3e9d4a2-demo-0002', orderNumber: 'AY0029', itemName: 'Wrap de pollo', value: 14000, quantity: 1 }),
+    context: JSON.stringify({ localStorage_key: 'pos_pending_orders', retries: 1, last_http_status: null }, null, 2),
+    reported_by: 2,
+    reported_username: 'pedro.pos',
+    user_agent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) piddet-pos/2.4.1',
+    ip: '190.85.10.21',
+    support_status: 'pending',
+    resolution_notes: null,
+    resolved_by: null,
+    resolved_username: null,
+    resolved_at: null,
+    recovered_order_uuid: null,
+    last_retry_error: null,
+    last_retry_at: null,
+    created_at: `${isoDay(0)}T11:02:00`,
+    updated_at: `${isoDay(0)}T11:02:00`,
+  },
+  {
+    id: 'sfr-0003',
+    order_uuid: 'c8d1e5f3-demo-0003',
+    company_id: 1,
+    company_username: 'grupo_sabor',
+    order_number: null,
+    attempts: 5,
+    error_message: 'Payload corrupto: el navegador truncó el registro de localStorage.',
+    paid_sync_status: 'WITHOUT_PAYMENT',
+    reported_origin: 'POS',
+    order_payload: '{"origin":"POS","company_id":1,"items":[{"id":101,"qua', // JSON truncado a propósito
+    context: null,
+    reported_by: 1,
+    reported_username: 'maria.pos',
+    user_agent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) piddet-pos/2.3.0',
+    ip: '181.49.22.7',
+    support_status: 'unrecoverable',
+    resolution_notes: 'Payload truncado, imposible reconstruir la orden. Se re-digitó a mano en el POS.',
+    resolved_by: 1,
+    resolved_username: 'admin.soporte',
+    resolved_at: `${isoDay(1)}T09:15:00`,
+    recovered_order_uuid: null,
+    last_retry_error: '[validation] Invalid JSON payload: Syntax error',
+    last_retry_at: `${isoDay(1)}T09:10:00`,
+    created_at: `${isoDay(2)}T20:31:00`,
+    updated_at: `${isoDay(1)}T09:15:00`,
+  },
+  {
+    id: 'sfr-0004',
+    order_uuid: 'a1f6b2c4-demo-0004',
+    company_id: 1,
+    company_username: 'grupo_sabor',
+    order_number: 'AY0018',
+    attempts: 2,
+    error_message: 'origin not found: el POS envió un código de origen desactualizado.',
+    paid_sync_status: 'PAID',
+    reported_origin: 'POS',
+    order_payload: buildSyncFailurePayload({ companyId: 1, uuid: 'a1f6b2c4-demo-0004', orderNumber: 'AY0018', itemName: 'Ensalada césar', value: 16000, quantity: 2 }),
+    context: null,
+    reported_by: 2,
+    reported_username: 'pedro.pos',
+    user_agent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) piddet-pos/2.4.1',
+    ip: '190.85.10.21',
+    support_status: 'resolved',
+    resolution_notes: 'Se corrigió el código de origen en el payload y la orden se creó al reintentar.',
+    resolved_by: 1,
+    resolved_username: 'admin.soporte',
+    resolved_at: `${isoDay(1)}T16:42:00`,
+    recovered_order_uuid: 'demo-recovered-a1f6b2c4',
+    last_retry_error: null,
+    last_retry_at: `${isoDay(1)}T16:42:00`,
+    created_at: `${isoDay(1)}T15:58:00`,
+    updated_at: `${isoDay(1)}T16:42:00`,
+  },
+];
+
+// Reglas mínimas del backend que el retry demo valida sobre el payload editado.
+function validateSyncFailurePayload(payload) {
+  const errors = {};
+  if (payload.company_id == null) errors.company_id = ['El campo company_id es obligatorio.'];
+  if (!payload.origin) errors.origin = ['El campo origin es obligatorio.'];
+  if (!Array.isArray(payload.items) || payload.items.length === 0) errors.items = ['La orden debe tener al menos un ítem.'];
+  if (!payload.payment?.status) errors['payment.status'] = ['El campo payment.status es obligatorio.'];
+  if (!payload.creator) errors.creator = ['El payload no trae creator; en el retry no hay fallback al usuario autenticado.'];
+  return errors;
+}
+
+function resolveSyncFailuresMock(path, query, { method = 'GET', body } = {}) {
+  const m = path.match(/^\/companies\/[^/]+\/orders\/sync-failure-reports(\/.*)?$/);
+  if (!m) return undefined;
+  const sub = m[1] || '';
+  const nowStamp = () => new Date().toISOString().slice(0, 19);
+
+  if (sub === '') {
+    const status = query.get('support_status');
+    const rows = mockSyncFailureReports
+      .filter((r) => !status || r.support_status === status)
+      .map(({ order_payload, context, ...row }) => row);
+    return mockPaginate(rows, query);
+  }
+
+  const idMatch = sub.match(/^\/([^/]+)(\/payload|\/status|\/retry)?$/);
+  if (!idMatch) return undefined;
+  const report = mockSyncFailureReports.find((r) => r.id === idMatch[1]);
+  if (!report) return null;
+  const action = idMatch[2] || '';
+
+  if (action === '' && method === 'GET') return { ...report };
+
+  if (action === '/payload' && method === 'PUT') {
+    if (report.support_status === 'resolved') syncFailureError('Report already resolved', 409);
+    try { JSON.parse(body?.order_payload); } catch (e) { syncFailureError(`Invalid JSON payload: ${e.message}`, 422); }
+    report.order_payload = body.order_payload;
+    report.updated_at = nowStamp();
+    return { ...report };
+  }
+
+  if (action === '/status' && method === 'PATCH') {
+    if (report.support_status === 'resolved') {
+      syncFailureError(`Invalid transition from resolved to ${body?.support_status}`, 422);
+    }
+    report.support_status = body?.support_status;
+    report.resolution_notes = body?.resolution_notes ?? null;
+    if (body?.support_status === 'pending') {
+      report.resolved_by = null;
+      report.resolved_username = null;
+      report.resolved_at = null;
+    } else {
+      report.resolved_by = 1;
+      report.resolved_username = 'admin.demo';
+      report.resolved_at = nowStamp();
+    }
+    report.updated_at = nowStamp();
+    return { ...report };
+  }
+
+  if (action === '/retry' && method === 'POST') {
+    if (report.support_status === 'resolved') syncFailureError('Report already resolved', 409);
+    report.attempts += 1;
+    report.last_retry_at = nowStamp();
+    report.updated_at = nowStamp();
+
+    let payload = null;
+    try {
+      payload = JSON.parse(report.order_payload);
+    } catch (e) {
+      report.last_retry_error = `[validation] Invalid JSON payload: ${e.message}`;
+      syncFailureError(`Invalid JSON payload: ${e.message}`, 422);
+    }
+    const errors = validateSyncFailurePayload(payload);
+    if (Object.keys(errors).length) {
+      report.last_retry_error = '[validation] Validation error';
+      syncFailureError('Validation error', 422, errors);
+    }
+
+    report.support_status = 'resolved';
+    report.last_retry_error = null;
+    report.recovered_order_uuid = `demo-recovered-${report.id}`;
+    report.resolved_by = 1;
+    report.resolved_username = 'admin.demo';
+    report.resolved_at = nowStamp();
+    return {
+      report: { ...report },
+      order: { id: report.recovered_order_uuid, order_number: report.order_number },
+    };
+  }
+
+  return undefined;
+}
+
+// ── Módulo de gastos ────────────────────────────────────────────────────────
+// Catálogo de categorías en árbol, espejo del seeder global del backend
+// (GlobalExpenseCategoryCatalogSeeder): 12 raíces con subcategorías, company_id null.
+const EXPENSE_CATALOG = [
+  ['Insumos y alimentos', ['Carnes y aves', 'Pescados y mariscos', 'Frutas y verduras', 'Granos y abarrotes', 'Lácteos y huevos', 'Panadería y repostería', 'Café e infusiones', 'Bebidas no alcohólicas', 'Bebidas alcohólicas', 'Mercado general']],
+  ['Personal', ['Nómina y salarios', 'Seguridad social y prestaciones', 'Horas extra y bonificaciones', 'Uniformes y dotación', 'Capacitación', 'Alimentación de empleados']],
+  ['Servicios públicos', ['Energía', 'Agua', 'Gas', 'Internet y telefonía', 'Televisión y streaming']],
+  ['Arriendo e infraestructura', ['Arriendo del local', 'Administración', 'Bodegaje']],
+  ['Mantenimiento y reparaciones', ['Equipos de cocina', 'Refrigeración', 'Locativas', 'Jardinería y zonas verdes', 'Piscina']],
+  ['Aseo y desechables', ['Productos de aseo', 'Desechables y empaques', 'Control de plagas', 'Lavandería y mantelería']],
+  ['Transporte y combustibles', ['Combustible', 'Domicilios y mensajería', 'Fletes y acarreos', 'Peajes y parqueaderos']],
+  ['Equipos y menaje', ['Menaje y vajilla', 'Utensilios de cocina', 'Muebles y decoración', 'Tecnología y POS']],
+  ['Marketing y ventas', ['Publicidad y pauta', 'Comisiones de plataformas', 'Eventos y promociones', 'Impresos y menús']],
+  ['Administrativos y legales', ['Contabilidad y asesorías', 'Licencias y permisos', 'Seguros', 'Papelería', 'Software y suscripciones']],
+  ['Impuestos y financieros', ['Impuestos y tasas', 'Comisiones bancarias y datáfono', 'Intereses y créditos']],
+  ['Otros gastos', []],
+];
+
+export const mockExpenseCategories = (() => {
+  const rows = [];
+  let id = 0;
+  EXPENSE_CATALOG.forEach(([name, children], i) => {
+    const rootId = ++id;
+    rows.push({ id: rootId, company_id: null, parent_id: null, depth: 0, path: String(rootId), name, description: null, position: i + 1, status: 1 });
+    children.forEach((childName, j) => {
+      const childId = ++id;
+      rows.push({ id: childId, company_id: null, parent_id: rootId, depth: 1, path: `${rootId}/${childId}`, name: childName, description: null, position: j + 1, status: 1 });
+    });
+  });
+  // Categoría propia de la compañía demo, colgada de una raíz global (company_id ≠ null).
+  const own = ++id;
+  const root = rows.find((r) => r.name === 'Insumos y alimentos');
+  rows.push({ id: own, company_id: 'pid-001', parent_id: root.id, depth: 1, path: `${root.id}/${own}`, name: 'Insumos de finca', description: null, position: 99, status: 1 });
+  return rows;
+})();
+
+export const mockExpenseSuppliers = [
+  { id: 1, name: 'Distribuidora El Trébol' },
+  { id: 2, name: 'Carnes La Dorada' },
+  { id: 3, name: 'Surtifruver del Campo' },
+];
+
+// Catálogo de entidades de pago (espejo de piddet_orders.payment_method_entities): el nivel
+// granular al que órdenes/POS registran cada pago + las dos exclusivas de gastos.
+export const mockPaymentMethods = [
+  { id: 'bancolombia', name: 'Ahorro a la mano Bancolombia' },
+  { id: 'credit', name: 'Crédito (por pagar)' },
+  { id: 'datafono', name: 'Datafono' },
+  { id: 'daviplata', name: 'Daviplata' },
+  { id: 'cash', name: 'Efectivo' },
+  { id: 'nequi', name: 'Nequi' },
+  { id: 'other', name: 'Otro' },
+];
+
+const paymentMethodName = (id) => mockPaymentMethods.find((p) => p.id === id)?.name ?? null;
+
+const expenseCatByName = (name) => mockExpenseCategories.find((c) => c.name === name);
+const expenseDayIso = (offset = 0) => new Date(Date.now() - offset * 864e5).toISOString().slice(0, 10);
+
+export const mockExpenses = [
+  {
+    id: 1,
+    expense_date: expenseDayIso(1),
+    payment_method: 'cash',
+    notes: 'Compra semanal de mercado',
+    status: 1,
+    supplier_id: 1,
+    created_by: 1,
+    created_by_name: 'Gerardo Cruz',
+    created_at: new Date(Date.now() - 864e5).toISOString(),
+    annulled_by_name: null,
+    annulled_at: null,
+    items: [
+      { id: 1, expense_category_id: expenseCatByName('Carnes y aves').id, description: 'Res 10 kg', value: '120000.00', position: 1 },
+      { id: 2, expense_category_id: expenseCatByName('Productos de aseo').id, description: 'Cloro 30 kg', value: '80000.00', position: 2 },
+      { id: 3, expense_category_id: expenseCatByName('Granos y abarrotes').id, description: 'Arroz bulto 50 kg', value: '95000.00', position: 3 },
+    ],
+    files: [{ name: 'demo-factura-1.jpg', url: 'https://picsum.photos/seed/factura1/900/1200', thumbnail_url: 'https://picsum.photos/seed/factura1/300/400' }],
+  },
+  {
+    id: 2,
+    expense_date: expenseDayIso(3),
+    payment_method: 'nequi',
+    notes: null,
+    status: 1,
+    supplier_id: 3,
+    created_by: 1,
+    created_by_name: 'Gerardo Cruz',
+    created_at: new Date(Date.now() - 3 * 864e5).toISOString(),
+    annulled_by_name: null,
+    annulled_at: null,
+    items: [
+      { id: 4, expense_category_id: expenseCatByName('Frutas y verduras').id, description: 'Fruta y verdura de la semana', value: '210000.00', position: 1 },
+    ],
+    files: [],
+  },
+  {
+    id: 3,
+    expense_date: expenseDayIso(6),
+    payment_method: 'datafono',
+    notes: 'Se anuló: quedó doble',
+    status: 0,
+    supplier_id: 2,
+    created_by: 1,
+    created_by_name: 'Gerardo Cruz',
+    created_at: new Date(Date.now() - 6 * 864e5).toISOString(),
+    annulled_by_name: 'Gerardo Cruz',
+    annulled_at: new Date(Date.now() - 5 * 864e5).toISOString(),
+    items: [
+      { id: 5, expense_category_id: expenseCatByName('Carnes y aves').id, description: 'Pollo 20 kg', value: '160000.00', position: 1 },
+    ],
+    files: [],
+  },
+];
+
+// Total del gasto = suma de líneas (como lo calcula el backend).
+const expenseTotal = (e) => e.items.reduce((sum, it) => sum + Number(it.value), 0);
+
+// Árbol anidado (raíces con children[]) a partir de la lista plana, como /expense-categories/tree.
+function buildExpenseCategoryTree() {
+  const byId = new Map();
+  mockExpenseCategories.filter((c) => c.status === 1).forEach((c) => byId.set(c.id, { ...c, children: [] }));
+  const roots = [];
+  byId.forEach((node) => {
+    if (node.parent_id != null && byId.has(node.parent_id)) byId.get(node.parent_id).children.push(node);
+    else roots.push(node);
+  });
+  return roots;
+}
+
+// Fila del listado (shape del backend: proveedor y conteo de líneas ya resueltos).
+function decorateExpenseRow(e) {
+  return {
+    id: e.id,
+    expense_date: e.expense_date,
+    payment_method: e.payment_method,
+    payment_method_name: paymentMethodName(e.payment_method),
+    notes: e.notes,
+    total: expenseTotal(e).toFixed(2),
+    status: e.status,
+    created_by_name: e.created_by_name,
+    supplier_name: mockExpenseSuppliers.find((s) => s.id === e.supplier_id)?.name ?? null,
+    items_count: e.items.length,
+  };
+}
+
+// Detalle completo (líneas con categoría, fotos, proveedor), como GET /expenses/{id}.
+function decorateExpenseDetail(e) {
+  const supplier = mockExpenseSuppliers.find((s) => s.id === e.supplier_id);
+  return {
+    id: e.id,
+    expense_date: e.expense_date,
+    payment_method: e.payment_method,
+    payment_method_name: paymentMethodName(e.payment_method),
+    notes: e.notes,
+    total: expenseTotal(e).toFixed(2),
+    status: e.status,
+    supplier: supplier ? { id: supplier.id, name: supplier.name } : null,
+    created_by: e.created_by ?? 1,
+    created_by_name: e.created_by_name,
+    created_at: e.created_at,
+    annulled_by_name: e.annulled_by_name,
+    annulled_at: e.annulled_at,
+    items: e.items.map((it) => {
+      const cat = mockExpenseCategories.find((c) => c.id === it.expense_category_id);
+      return {
+        id: it.id,
+        description: it.description,
+        value: it.value,
+        position: it.position,
+        category: cat ? { id: cat.id, name: cat.name, path: cat.path } : null,
+      };
+    }),
+    files: e.files,
+  };
+}
+
+function resolveExpensesMock(path, query, { method = 'GET', body } = {}) {
+  const scoped = path.match(/^\/companies\/[^/]+\/(.+)$/);
+  if (!scoped) return undefined;
+  const sub = scoped[1];
+  let m;
+
+  if (sub === 'payment-methods') return mockPaymentMethods;
+
+  if (sub === 'expense-categories/tree') return buildExpenseCategoryTree();
+
+  if (sub === 'expense-categories' && method === 'POST') {
+    const parent = body.parent_id ? mockExpenseCategories.find((c) => c.id === Number(body.parent_id)) : null;
+    const id = nextId(mockExpenseCategories);
+    const row = {
+      id,
+      company_id: 'pid-001',
+      parent_id: parent ? parent.id : null,
+      depth: parent ? parent.depth + 1 : 0,
+      path: parent ? `${parent.path}/${id}` : String(id),
+      name: body.name,
+      description: body.description || null,
+      position: 99,
+      status: 1,
+    };
+    mockExpenseCategories.push(row);
+    return row;
+  }
+
+  if (sub === 'expense-suppliers') {
+    const q = (query.get('q') || '').toLowerCase();
+    return mockExpenseSuppliers.filter((s) => !q || s.name.toLowerCase().includes(q)).slice(0, 10);
+  }
+
+  if (sub === 'expenses/summary') {
+    const from = query.get('date_from') || expenseDayIso(30);
+    const to = query.get('date_to') || expenseDayIso(0);
+    const byCat = new Map();
+    mockExpenses
+      .filter((e) => e.status === 1 && e.expense_date >= from && e.expense_date <= to)
+      .forEach((e) => e.items.forEach((it) => {
+        byCat.set(it.expense_category_id, (byCat.get(it.expense_category_id) || 0) + Number(it.value));
+      }));
+    const byRoot = new Map();
+    let total = 0;
+    byCat.forEach((sum, catId) => {
+      const cat = mockExpenseCategories.find((c) => c.id === catId);
+      const rootId = Number(cat.path.split('/')[0]);
+      if (!byRoot.has(rootId)) byRoot.set(rootId, []);
+      byRoot.get(rootId).push({ id: cat.id, name: cat.name, depth: cat.depth, total: sum });
+      total += sum;
+    });
+    const roots = [...byRoot.entries()].map(([rootId, rows]) => ({
+      id: rootId,
+      name: mockExpenseCategories.find((c) => c.id === rootId)?.name ?? '',
+      total: rows.reduce((s, r) => s + r.total, 0).toFixed(2),
+      children: rows
+        .filter((r) => r.id !== rootId)
+        .sort((a, b) => b.total - a.total)
+        .map((r) => ({ ...r, total: r.total.toFixed(2) })),
+    })).sort((a, b) => Number(b.total) - Number(a.total));
+    return { date_from: from, date_to: to, total: total.toFixed(2), roots };
+  }
+
+  if (sub === 'expenses') {
+    if (method === 'POST') {
+      let supplierId = body.supplier_id ? Number(body.supplier_id) : null;
+      if (!supplierId && body.supplier_name) {
+        const name = body.supplier_name.trim();
+        const found = mockExpenseSuppliers.find((s) => s.name.toLowerCase() === name.toLowerCase());
+        supplierId = found ? found.id : nextId(mockExpenseSuppliers);
+        if (!found) mockExpenseSuppliers.push({ id: supplierId, name });
+      }
+      const id = nextId(mockExpenses);
+      let itemId = mockExpenses.flatMap((e) => e.items).reduce((mx, it) => Math.max(mx, it.id), 0);
+      const row = {
+        id,
+        expense_date: body.expense_date,
+        payment_method: body.payment_method,
+        notes: body.notes || null,
+        status: 1,
+        supplier_id: supplierId,
+        created_by: 1,
+        created_by_name: mockUser.name,
+        created_at: new Date().toISOString(),
+        annulled_by_name: null,
+        annulled_at: null,
+        items: (body.items || []).map((it, i) => ({
+          id: ++itemId,
+          expense_category_id: Number(it.expense_category_id),
+          description: it.description,
+          value: Number(it.value).toFixed(2),
+          position: i + 1,
+        })),
+        // En demo no hay S3: se guarda el name de referencia con url null.
+        files: (body.files || []).map((name) => ({ name, url: null, thumbnail_url: null })),
+      };
+      mockExpenses.unshift(row);
+      return decorateExpenseDetail(row);
+    }
+    let rows = mockExpenses.filter((e) => {
+      const from = query.get('date_from');
+      const to = query.get('date_to');
+      if (from && e.expense_date < from) return false;
+      if (to && e.expense_date > to) return false;
+      const payment = query.get('payment_method');
+      if (payment && e.payment_method !== payment) return false;
+      const status = query.get('status');
+      if (status !== null && status !== '' && String(e.status) !== status) return false;
+      const catId = query.get('category_id');
+      if (catId) {
+        const cat = mockExpenseCategories.find((c) => c.id === Number(catId));
+        if (!cat) return false;
+        const inSubtree = (it) => {
+          const c = mockExpenseCategories.find((x) => x.id === it.expense_category_id);
+          return c && (c.path === cat.path || c.path.startsWith(cat.path + '/'));
+        };
+        if (!e.items.some(inSubtree)) return false;
+      }
+      return true;
+    });
+    rows = rows
+      .sort((a, b) => (a.expense_date === b.expense_date ? b.id - a.id : (a.expense_date < b.expense_date ? 1 : -1)))
+      .map(decorateExpenseRow);
+    return mockPaginate(rows, query);
+  }
+
+  m = sub.match(/^expenses\/(\d+)\/annul$/);
+  if (m && method === 'PATCH') {
+    const e = mockExpenses.find((x) => x.id === Number(m[1]));
+    if (!e || e.status !== 1) return null;
+    e.status = 0;
+    e.annulled_by_name = mockUser.name;
+    e.annulled_at = new Date().toISOString();
+    return decorateExpenseDetail(e);
+  }
+
+  // Fotos del gasto (solo activos): POST adjunta names ya "subidos"; DELETE quita por ?name=.
+  m = sub.match(/^expenses\/(\d+)\/files$/);
+  if (m) {
+    const e = mockExpenses.find((x) => x.id === Number(m[1]));
+    if (!e || e.status !== 1) return null;
+    if (method === 'POST') {
+      const names = (body?.files || []).slice(0, Math.max(0, 10 - e.files.length));
+      // En demo no hay S3: se usa una imagen de muestra como url firmada.
+      names.forEach((name) => e.files.push({
+        name,
+        url: `https://picsum.photos/seed/${encodeURIComponent(name)}/600/800`,
+        thumbnail_url: `https://picsum.photos/seed/${encodeURIComponent(name)}/150/200`,
+      }));
+      return decorateExpenseDetail(e);
+    }
+    if (method === 'DELETE') {
+      const name = query.get('name');
+      e.files = e.files.filter((f) => f.name !== name);
+      return decorateExpenseDetail(e);
+    }
+  }
+
+  m = sub.match(/^expenses\/(\d+)$/);
+  if (m) {
+    const e = mockExpenses.find((x) => x.id === Number(m[1]));
+    return e ? decorateExpenseDetail(e) : null;
+  }
+
+  return undefined;
+}
+
 export function resolveMock(rawPath, opts = {}) {
   const [path, qs = ''] = rawPath.split('?');
   const query = new URLSearchParams(qs);
@@ -1340,9 +1935,18 @@ export function resolveMock(rawPath, opts = {}) {
   const metrics = resolveMetricsMock(path, query);
   if (metrics !== undefined) return metrics;
 
+  // Módulo de fallos de sincronización (company-scoped: /companies/{company}/orders/sync-failure-reports…).
+  // Debe resolverse ANTES que orders: su ruta cuelga de /orders y el matcher de órdenes la capturaría.
+  const syncFailures = resolveSyncFailuresMock(path, query, opts);
+  if (syncFailures !== undefined) return syncFailures;
+
   // Módulo de facturas/órdenes (company-scoped: /companies/{company}/orders…)
   const orders = resolveOrdersMock(path, query);
   if (orders !== undefined) return orders;
+
+  // Módulo de gastos (company-scoped: /companies/{company}/expenses|expense-categories|expense-suppliers…)
+  const expenses = resolveExpensesMock(path, query, opts);
+  if (expenses !== undefined) return expenses;
 
   // Módulo de usuarios de la compañía (company-scoped: /companies/{company}/users…)
   const users = resolveUsersMock(path, query, opts);
