@@ -900,6 +900,112 @@ function buildSalesComparison(days, endDateStr, force) {
   };
 }
 
+// Gastos diarios sintéticos: montos menores que las ventas y sin sesgo de fin de semana.
+function mockDailyExpenses(days, end, factor) {
+  const daily = [];
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(end);
+    d.setDate(end.getDate() - i);
+    const count = 1 + Math.round(Math.random() * 3);
+    const total = Math.round((120000 + Math.random() * 260000) * factor);
+    daily.push({
+      date: d.toISOString().slice(0, 10),
+      label: MOCK_DAY_NAMES[d.getDay()] + ' ' + String(d.getDate()).padStart(2, '0'),
+      total,
+      expenses_count: count,
+      max_expense: Math.round(total * (0.4 + Math.random() * 0.5)),
+    });
+  }
+  return daily;
+}
+
+function mockSumExpenses(daily) {
+  const total = daily.reduce((s, x) => s + x.total, 0);
+  const count = daily.reduce((s, x) => s + x.expenses_count, 0);
+  const max = daily.reduce((s, x) => Math.max(s, x.max_expense), 0);
+  return { total, count, avg: count > 0 ? total / count : 0, max };
+}
+
+// Reporte de gastos con la misma forma que el backend (totals + deltas + daily).
+function buildExpensesReport(days, endDateStr, force) {
+  const end = endDateStr ? new Date(endDateStr + 'T00:00:00') : new Date();
+  const factor = force ? 1.08 : 1;
+
+  const daily = mockDailyExpenses(days, end, factor);
+  const cur = mockSumExpenses(daily);
+
+  const prevEnd = new Date(end);
+  prevEnd.setDate(end.getDate() - days);
+  const prev = mockSumExpenses(mockDailyExpenses(days, prevEnd, factor * 0.9));
+
+  return {
+    period: {
+      start_date: daily[0]?.date ?? null,
+      end_date: daily[daily.length - 1]?.date ?? null,
+      days,
+    },
+    totals: {
+      total: cur.total,
+      total_formatted: mockMoney(cur.total),
+      count: cur.count,
+      avg: cur.avg,
+      avg_formatted: mockMoney(cur.avg),
+      max: cur.max,
+      max_formatted: mockMoney(cur.max),
+    },
+    deltas: {
+      total: mockDelta(cur.total, prev.total),
+      count: mockDelta(cur.count, prev.count),
+      avg: mockDelta(cur.avg, prev.avg),
+      max: mockDelta(cur.max, prev.max),
+    },
+    daily,
+  };
+}
+
+// Comparación de gastos período actual vs. anterior con la misma forma que el backend.
+function buildExpensesComparison(days, endDateStr, force) {
+  const end = endDateStr ? new Date(endDateStr + 'T00:00:00') : new Date();
+  const factor = force ? 1.08 : 1;
+
+  const prevEnd = new Date(end);
+  prevEnd.setDate(end.getDate() - days);
+
+  const current = mockDailyExpenses(days, end, factor);
+  const previous = mockDailyExpenses(days, prevEnd, factor * 0.9);
+
+  const currentTotal = current.reduce((s, x) => s + x.total, 0);
+  const previousTotal = previous.reduce((s, x) => s + x.total, 0);
+  const difference = currentTotal - previousTotal;
+
+  return {
+    dates: current.map((x) => x.date),
+    labels: current.map((x) => x.label),
+    current_period: {
+      label: 'Período actual',
+      data: current.map((x) => x.total),
+      total: currentTotal,
+      total_formatted: mockMoney(currentTotal),
+      start_date: current[0]?.date ?? null,
+      end_date: current[current.length - 1]?.date ?? null,
+    },
+    previous_period: {
+      label: 'Período anterior',
+      data: previous.map((x) => x.total),
+      total: previousTotal,
+      total_formatted: mockMoney(previousTotal),
+      start_date: previous[0]?.date ?? null,
+      end_date: previous[previous.length - 1]?.date ?? null,
+    },
+    comparison: {
+      difference,
+      difference_formatted: mockMoney(Math.abs(difference)),
+      percent_change: previousTotal > 0 ? Math.round((difference / previousTotal) * 10000) / 100 : 0,
+      is_increase: difference >= 0,
+    },
+  };
+}
+
 function resolveMetricsMock(path, query) {
   if (path.match(/^\/companies\/[^/]+\/metrics\/sales-by-type$/)) {
     const days = Math.max(1, Math.min(30, parseInt(query.get('days'), 10) || 15));
@@ -908,6 +1014,14 @@ function resolveMetricsMock(path, query) {
   if (path.match(/^\/companies\/[^/]+\/metrics\/sales-comparison$/)) {
     const days = Math.max(1, Math.min(28, parseInt(query.get('days'), 10) || 7));
     return buildSalesComparison(days, query.get('end_date'), query.get('force') === '1');
+  }
+  if (path.match(/^\/companies\/[^/]+\/metrics\/expenses-report$/)) {
+    const days = Math.max(1, Math.min(30, parseInt(query.get('days'), 10) || 15));
+    return buildExpensesReport(days, query.get('end_date'), query.get('force') === '1');
+  }
+  if (path.match(/^\/companies\/[^/]+\/metrics\/expenses-comparison$/)) {
+    const days = Math.max(1, Math.min(28, parseInt(query.get('days'), 10) || 7));
+    return buildExpensesComparison(days, query.get('end_date'), query.get('force') === '1');
   }
   return undefined;
 }

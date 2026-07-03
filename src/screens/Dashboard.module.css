@@ -117,3 +117,19 @@
 @media (min-width: 861px) {
   .quickExpense { width: auto; align-self: flex-start; }
 }
+
+/* Estado vacío: el usuario no tiene permiso para ver ningún dash */
+.emptyDash {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 3rem 1.5rem;
+  border: 1px dashed var(--border-color);
+  border-radius: var(--radius-lg);
+  background: var(--surface-card);
+  text-align: center;
+}
+.emptyDash i { font-size: 1.6rem; color: var(--gray-400); }
+.emptyDash p { margin: 0; color: var(--gray-900); font-size: var(--text-base); }
+.emptyDash span { color: var(--gray-500); font-size: var(--text-sm); }

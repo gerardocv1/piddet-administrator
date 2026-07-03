@@ -49,7 +49,8 @@ conectar: `cp .env.example .env`, define `VITE_API_URL` y reinicia. Detalle en `
   temporal), `api-module-orders` (Facturas: órdenes de la compañía consultables por fecha en
   `/invoices` — un solo día, hoy por defecto — con detalle completo de solo lectura en
   `/invoices/:orderId`: ítems con opciones, impuestos, pagos, cliente y creador; el detalle
-  reusa el permiso del listado), `order-sync-failure-admin` (Fallos de órdenes: reportes de
+  reusa el permiso del listado; también gatea el dash de Ventas del Dashboard),
+  `order-sync-failure-admin` (Fallos de órdenes: reportes de
   fallo de sincronización del POS en `/sync-failures` — listado por estado de soporte
   pendiente/resuelto/no recuperable — con detalle en `/sync-failures/:reportId` que reusa el
   permiso: edición del JSON de la orden, reintento de creación y cambio de estado; el estado
@@ -61,10 +62,12 @@ conectar: `cp .env.example .env`, define `VITE_API_URL` y reinicia. Detalle en `
   `/expenses/:expenseId`, resumen por categoría raíz en `/expenses/summary` y categorías en
   `/expense-categories` — árbol global sembrado por la plataforma + categorías propias por
   compañía; todo reusa este permiso; las FOTOS del gasto sí se editan desde el detalle mientras
-  esté activo: agregar y quitar, borrando también de S3), `api-module-expenses-own` (Gastos para
+  esté activo: agregar y quitar, borrando también de S3; también gatea el dash de Gastos del
+  Dashboard), `api-module-expenses-own` (Gastos para
   empleados: registra gastos y ve listado/detalle SOLO de los suyos — el backend filtra por
   `created_by`; sin Resumen ni Categorías; en `modules.js` la ruta `/expenses` declara ambos
-  permisos como alternativas `perm: [a, b]`) y `expense-annul` (anular un gasto desde su detalle —
+  permisos como alternativas `perm: [a, b]`; ve el dash de Gastos del Dashboard calculado solo
+  sobre sus gastos — el backend aplica el mismo filtro en `/metrics/expenses-*`) y `expense-annul` (anular un gasto desde su detalle —
   irreversible, las líneas no se editan; solo gatea el botón). Las **categorías de menú** pertenecen a un menú concreto
   (`menu_id`) y se administran dentro del detalle del menú (`/menus/:menuId`), que reusa el permiso
   de `/menus`; su `position` define el orden con el que se agrupan los productos dentro de ese menú.

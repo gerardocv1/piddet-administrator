@@ -62,13 +62,19 @@ function readColors() {
 }
 
 /** Gráfico de líneas comparando el período actual (línea sólida + área) contra el
- *  anterior (línea punteada), alineados por día. `data`: payload de salesComparison. */
-export function SalesComparisonChart({ data, loading = false }) {
+ *  anterior (línea punteada), alineados por día. `data`: payload de salesComparison o
+ *  expensesComparison (misma forma). */
+export function SalesComparisonChart({
+  data,
+  loading = false,
+  loadingLabel = 'Cargando ventas…',
+  emptyLabel = 'No hay ventas en el período seleccionado.',
+}) {
   if (loading) {
-    return <div className={styles.wrap}><Spinner center label="Cargando ventas…" /></div>;
+    return <div className={styles.wrap}><Spinner center label={loadingLabel} /></div>;
   }
   if (!data || !(data.dates || []).length) {
-    return <div className={styles.empty}>No hay ventas en el período seleccionado.</div>;
+    return <div className={styles.empty}>{emptyLabel}</div>;
   }
 
   const c = readColors();

@@ -28,4 +28,13 @@ export const metricsService = {
   // (alineado por día de la semana si days es múltiplo de 7). days: 1..28 (default 7).
   salesComparison: ({ days = 7, endDate, force = false } = {}) =>
     http.get(`${base()}/metrics/sales-comparison${qs({ days, end_date: endDate, force: force ? 1 : '' })}`),
+
+  // Reporte de gastos por día con KPIs (total, registros, promedio, mayor gasto) y deltas.
+  // Con solo api-module-expenses-own el backend limita todo a los gastos del usuario.
+  expensesReport: ({ days = 15, endDate, force = false } = {}) =>
+    http.get(`${base()}/metrics/expenses-report${qs({ days, end_date: endDate, force: force ? 1 : '' })}`),
+
+  // Comparación de gastos: período actual vs. el anterior de igual longitud (mismo scoping).
+  expensesComparison: ({ days = 7, endDate, force = false } = {}) =>
+    http.get(`${base()}/metrics/expenses-comparison${qs({ days, end_date: endDate, force: force ? 1 : '' })}`),
 };
