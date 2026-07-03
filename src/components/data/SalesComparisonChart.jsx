@@ -47,10 +47,11 @@ function toRgba(color, alpha) {
 }
 
 // Los colores del gráfico salen de los tokens CSS (respeta tema claro/oscuro).
-function readColors() {
+// `accentVar` permite diferenciar series (p. ej. gastos en el color de peligro).
+function readColors(accentVar = '--color-primary') {
   const cs = typeof window !== 'undefined' ? getComputedStyle(document.documentElement) : null;
   const v = (name, fb) => (cs && cs.getPropertyValue(name).trim()) || fb;
-  const primary = v('--color-primary', '#4f7cff');
+  const primary = v(accentVar, '#4f7cff');
   return {
     primary,
     area: toRgba(primary, 0.15), // relleno translúcido: deja ver el período anterior
@@ -69,6 +70,7 @@ export function SalesComparisonChart({
   loading = false,
   loadingLabel = 'Cargando ventas…',
   emptyLabel = 'No hay ventas en el período seleccionado.',
+  accentVar = '--color-primary',
 }) {
   if (loading) {
     return <div className={styles.wrap}><Spinner center label={loadingLabel} /></div>;
@@ -77,7 +79,7 @@ export function SalesComparisonChart({
     return <div className={styles.empty}>{emptyLabel}</div>;
   }
 
-  const c = readColors();
+  const c = readColors(accentVar);
   const point = {
     pointRadius: 3,
     pointHoverRadius: 5,

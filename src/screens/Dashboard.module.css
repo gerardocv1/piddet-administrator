@@ -17,12 +17,11 @@
   text-align: center;
 }
 
-/* ── Barra de controles (mobile-first: una fila compacta, inputs flexibles) ── */
+/* ── Barra de controles compartida por todos los reportes (mobile-first) ── */
 .toolbar {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  margin-bottom: 1.1rem;
 }
 .toolbar .ctrl {
   flex: 1 1 0;
