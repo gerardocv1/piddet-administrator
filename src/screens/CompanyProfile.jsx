@@ -4,6 +4,7 @@ import { api } from '../lib/api.js';
 import { auth as authLib } from '../lib/auth/index.js';
 import { useResource } from '../lib/useResource.js';
 import { usePermissions } from '../lib/permissions/usePermissions.js';
+import { AiTokensCard } from './CompanyAiTokens.jsx';
 import s from './screens.module.css';
 import t from './CompanyProfile.module.css';
 
@@ -108,6 +109,8 @@ export function CompanyProfile() {
           </dl>
         </Card.Body>
       </Card>
+
+      {editable && <AiTokensCard />}
 
       {editing && <CompanyEditModal company={company} onClose={() => setEditing(false)} onSaved={onSaved} />}
     </div>

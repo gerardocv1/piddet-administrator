@@ -285,6 +285,12 @@ export const mockCompanies = [
   { id: 'pid-003', name: 'Antojitos S.A.', plan: 'Pro', tiendas: 7 },
 ];
 
+// Tokens de agentes de IA de la compañía (el listado nunca incluye el token completo).
+const mockAgentTokens = [
+  { id: 1, company_id: 'pid-001', name: 'Agente de reservas', token_prefix: 'agt_9fK2dL1m', status: 1, expires_at: '2027-06-01T00:00:00', last_used_at: '2026-07-12T15:20:00', created_at: '2026-06-01T10:00:00' },
+  { id: 2, company_id: 'pid-001', name: 'Integración piloto', token_prefix: 'agt_Zx81mQ4p', status: 0, expires_at: '2026-12-31T00:00:00', last_used_at: '2026-04-02T11:05:00', created_at: '2026-03-15T09:00:00' },
+];
+
 // Respuesta demo de login: imita el envoltorio del backend ya desempaquetado (solo `data`).
 // expiration_at muy lejano para que el tokenManager nunca intente refrescar en modo demo.
 const mockAuth = {
@@ -2004,6 +2010,41 @@ function resolveExpensesMock(path, query, { method = 'GET', body } = {}) {
   return undefined;
 }
 
+// Tokens de agentes de IA (company-scoped: /companies/{company}/ai-agent-tokens[/{id}]).
+// POST imita al backend: devuelve el token plano una única vez junto al registro creado.
+function resolveAiTokensMock(path, { method = 'GET', body } = {}) {
+  const m = path.match(/^\/companies\/[^/]+\/ai-agent-tokens(?:\/(\d+))?$/);
+  if (!m) return undefined;
+  const tokenId = m[1] ? Number(m[1]) : null;
+
+  if (method === 'DELETE' && tokenId) {
+    const tk = mockAgentTokens.find((t) => t.id === tokenId);
+    if (!tk) return null;
+    tk.status = 0;
+    return { revoked: true };
+  }
+
+  if (method === 'POST') {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    const plain = `agt_${Array.from({ length: 64 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')}`;
+    const days = Number(body?.expires_in_days) || 365;
+    const row = {
+      id: nextId(mockAgentTokens),
+      company_id: 'pid-001',
+      name: body?.name || 'Token',
+      token_prefix: plain.slice(0, 12),
+      status: 1,
+      expires_at: new Date(Date.now() + days * 86400000).toISOString().slice(0, 19),
+      last_used_at: null,
+      created_at: new Date().toISOString().slice(0, 19),
+    };
+    mockAgentTokens.unshift(row);
+    return { token: plain, agent_token: row };
+  }
+
+  return [...mockAgentTokens];
+}
+
 export function resolveMock(rawPath, opts = {}) {
   const [path, qs = ''] = rawPath.split('?');
   const query = new URLSearchParams(qs);
@@ -2069,6 +2110,10 @@ export function resolveMock(rawPath, opts = {}) {
   // Módulo de tiendas (company-scoped: /companies/{company}/stores…)
   const stores = resolveStoresMock(path, query, opts);
   if (stores !== undefined) return stores;
+
+  // Tokens de agentes de IA (company-scoped: /companies/{company}/ai-agent-tokens…)
+  const aiTokens = resolveAiTokensMock(path, opts);
+  if (aiTokens !== undefined) return aiTokens;
 
   const map = {
     '/auth/login': mockAuth,

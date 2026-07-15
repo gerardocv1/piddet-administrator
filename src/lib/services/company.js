@@ -24,4 +24,11 @@ export const companyService = {
   // Portada pública (sin sesión): se resuelve por username de compañía. Devuelve el perfil de la
   // empresa (datos de marca + contacto) y sus menús públicos (activos). NO usa base().
   publicCompany: (companyUsername) => http.get(`/public/${companyUsername}`),
+  // Tokens de agentes de IA de la empresa activa (listado sin hash, solo prefijo).
+  aiTokens: () => http.get(`${base()}/ai-agent-tokens`),
+  // Genera un token nuevo: { name, expires_in_days? }. El token plano viene UNA sola vez
+  // en la respuesta ({ token, agent_token }); después solo queda el prefijo.
+  createAiToken: (data) => http.post(`${base()}/ai-agent-tokens`, data),
+  // Revoca un token (irreversible; el agente pierde acceso de inmediato).
+  revokeAiToken: (tokenId) => http.del(`${base()}/ai-agent-tokens/${tokenId}`),
 };

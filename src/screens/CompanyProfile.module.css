@@ -86,3 +86,29 @@
 .factValue { margin: 0; color: var(--gray-800); font-size: var(--text-base); word-break: break-word; }
 .factLink a { color: var(--color-primary); }
 .empty { color: var(--gray-400); }
+
+/* ── Tokens de IA ── */
+.tokenHint { margin: 0 0 14px; color: var(--gray-500); font-size: var(--text-sm); }
+.tokenPrefix {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: var(--text-sm);
+  color: var(--gray-700);
+}
+.tokenReveal {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  background: var(--gray-100);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+}
+.tokenValue {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: var(--text-sm);
+  color: var(--gray-800);
+  word-break: break-all;
+}
+.tokenActions { display: flex; gap: 8px; }
+.tokenWarn { margin: 0; color: var(--color-warning-fg); font-size: var(--text-sm); }
+.tokenWarn i { margin-right: 6px; }
