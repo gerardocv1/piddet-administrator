@@ -268,7 +268,7 @@ export const mockMenuItems = [
 // el panel muestra Productos (y sus categorías), Menús y Usuarios; el resto queda oculto.
 const mockPermissions = {
   roles: ['Administrador'],
-  permissions: ['user-administrator', 'api-module-menus', 'api-module-products', 'api-module-company', 'api-module-stores', 'api-module-orders', 'order-sync-failure-admin', 'api-module-expenses', 'expense-annul'],
+  permissions: ['user-administrator', 'api-module-menus', 'api-module-products', 'api-module-company', 'api-module-stores', 'api-module-orders', 'order-sync-failure-admin', 'api-module-expenses', 'expense-annul', 'api-module-reservations', 'api-module-rentable-units', 'reservation-checkout', 'reservation-cancel', 'reservation-payment-annul'],
 };
 
 // Empresa (tenant) activa y empresas disponibles para el usuario (SaaS multi-tenant).
@@ -2045,6 +2045,372 @@ function resolveAiTokensMock(path, { method = 'GET', body } = {}) {
   return [...mockAgentTokens];
 }
 
+// ── Módulo de reservas de hospedaje (demo) ──────────────────────────────────
+const mockRentableUnitTypes = [
+  { id: 1, company_id: null, name: 'Cabaña', icon: 'fas fa-house-chimney' },
+  { id: 2, company_id: null, name: 'Habitación', icon: 'fas fa-bed' },
+  { id: 3, company_id: null, name: 'Glamping', icon: 'fas fa-tent' },
+  { id: 4, company_id: null, name: 'Apartamento', icon: 'fas fa-building' },
+  { id: 5, company_id: null, name: 'Casa', icon: 'fas fa-house' },
+  { id: 6, company_id: null, name: 'Lugar de eventos', icon: 'fas fa-champagne-glasses' },
+];
+
+const mockRentableUnits = [
+  {
+    id: 1, rentable_unit_type_id: 1, type_name: 'Cabaña', name: 'Cabaña El Roble',
+    description: 'Cabaña de montaña con vista al valle.', capacity: 4, base_price_per_night: '320000.00',
+    position: 1, status: 1,
+    files: [], files_count: 0,
+    spaces: [
+      { id: 1, name: 'Habitación principal', description: 'Cama queen, A/C, baño privado', position: 1, files: [] },
+      { id: 2, name: 'Sala de estar', description: 'Sofá cama, chimenea', position: 2, files: [] },
+    ],
+  },
+  {
+    id: 2, rentable_unit_type_id: 2, type_name: 'Habitación', name: 'Habitación Colibrí',
+    description: 'Habitación doble estándar.', capacity: 2, base_price_per_night: '180000.00',
+    position: 2, status: 1,
+    files: [], files_count: 0, spaces: [],
+  },
+];
+
+const mockReservationServiceTypes = [
+  { id: 1, name: 'Cena romántica', description: 'Cena para dos con decoración', price: '120000.00', status: 1 },
+  { id: 2, name: 'Decoración de aniversario', description: 'Globos, pétalos y velas', price: '80000.00', status: 1 },
+];
+
+const mockGuests = [
+  { user_id: 501, first_name: 'Laura', last_name: 'Martínez', name: 'Laura Martínez', email: 'laura@example.com', phone_code: '57', phone_number: '3001112233', id_type_id: 1, id_number: '43567890' },
+];
+
+const mockReservations = [];
+
+// Vista de listado (sin espacios ni fotos completas, con conteo).
+const unitRow = (u) => ({
+  id: u.id, rentable_unit_type_id: u.rentable_unit_type_id, name: u.name, type_name: u.type_name,
+  capacity: u.capacity, base_price_per_night: u.base_price_per_night, position: u.position, status: u.status,
+  files_count: (u.files || []).length,
+});
+
+function resolveReservationsMock(path, query, { method = 'GET', body } = {}) {
+  const scoped = path.match(/^\/companies\/[^/]+\/(.+)$/);
+  if (!scoped) return undefined;
+  const sub = scoped[1];
+
+  if (sub === 'rentable-unit-types') return mockRentableUnitTypes;
+
+  // Disponibilidad de unidades para un rango: /rentable-units/availability
+  if (sub === 'rentable-units/availability') {
+    const checkIn = query.get('check_in');
+    const checkOut = query.get('check_out');
+    const busy = new Set(mockReservations
+      .filter((r) => [1, 2, 3].includes(r.status) && r.check_in_date < checkOut && r.check_out_date > checkIn)
+      .map((r) => r.rentable_unit_id));
+    return mockRentableUnits.filter((u) => u.status === 1).map((u) => ({
+      id: u.id, name: u.name, rentable_unit_type_id: u.rentable_unit_type_id, type_name: u.type_name,
+      capacity: u.capacity, base_price_per_night: u.base_price_per_night, available: !busy.has(u.id),
+    }));
+  }
+
+  // Catálogo de servicios adicionales: /reservation-service-types[/{id}[/status]]
+  const stMatch = sub.match(/^reservation-service-types(?:\/(\d+)(\/status)?)?$/);
+  if (stMatch) {
+    const id = stMatch[1] ? Number(stMatch[1]) : null;
+    if (!id) {
+      if (method === 'POST') {
+        const newId = nextId(mockReservationServiceTypes);
+        const row = { id: newId, name: body.name, description: body.description || null, price: Number(body.price).toFixed(2), status: 1 };
+        mockReservationServiceTypes.push(row);
+        return row;
+      }
+      const onlyActive = query.get('only_active');
+      return onlyActive ? mockReservationServiceTypes.filter((s) => s.status === 1) : mockReservationServiceTypes;
+    }
+    const st = mockReservationServiceTypes.find((s) => s.id === id);
+    if (!st) return null;
+    if (stMatch[2] === '/status') { st.status = Number(body.status); return st; }
+    if (method === 'PUT') { Object.assign(st, { name: body.name, description: body.description || null, price: Number(body.price).toFixed(2) }); return st; }
+    return st;
+  }
+
+  // Huéspedes: /guests[?q=] y /guests/{userId}
+  if (sub === 'guests') {
+    const q = (query.get('q') || '').toLowerCase();
+    return mockGuests.filter((g) => !q || g.name.toLowerCase().includes(q) || (g.id_number || '').includes(q) || (g.phone_number || '').includes(q));
+  }
+  let gm = sub.match(/^guests\/(\d+)$/);
+  if (gm) {
+    const g = mockGuests.find((x) => x.user_id === Number(gm[1]));
+    return g ? { ...g, birthdate: null, id_document_url: null } : null;
+  }
+
+  // Reservas
+  const reservationResult = resolveReservationsCore(sub, query, { method, body });
+  if (reservationResult !== undefined) return reservationResult;
+
+  // Fotos de una unidad/espacio: /rentable-units/{id}/files
+  let m = sub.match(/^rentable-units\/(\d+)\/files$/);
+  if (m) {
+    const unit = mockRentableUnits.find((u) => u.id === Number(m[1]));
+    if (!unit) return null;
+    if (method === 'POST') {
+      const spaceId = body?.space_id ?? null;
+      (body?.files || []).forEach((name, i) => {
+        unit.files.push({ name, rentable_unit_space_id: spaceId, url: null, thumbnail_url: null, position: unit.files.length + i + 1 });
+      });
+      syncUnitSpaceFiles(unit);
+      return unit;
+    }
+    if (method === 'DELETE') {
+      const name = query.get('name');
+      unit.files = unit.files.filter((f) => f.name !== name);
+      syncUnitSpaceFiles(unit);
+      return unit;
+    }
+  }
+
+  // Espacios: /rentable-units/{id}/spaces[/{spaceId}]
+  m = sub.match(/^rentable-units\/(\d+)\/spaces(?:\/(\d+))?$/);
+  if (m) {
+    const unit = mockRentableUnits.find((u) => u.id === Number(m[1]));
+    if (!unit) return null;
+    const spaceId = m[2] ? Number(m[2]) : null;
+    if (method === 'POST') {
+      const id = (unit.spaces.reduce((mx, sp) => Math.max(mx, sp.id), 0) || 0) + 1;
+      unit.spaces.push({ id, name: body.name, description: body.description || null, position: unit.spaces.length + 1, files: [] });
+      return unit;
+    }
+    if (method === 'PUT' && spaceId) {
+      const sp = unit.spaces.find((x) => x.id === spaceId);
+      if (sp) { sp.name = body.name; sp.description = body.description || null; }
+      return unit;
+    }
+    if (method === 'DELETE' && spaceId) {
+      unit.files = unit.files.filter((f) => f.rentable_unit_space_id !== spaceId);
+      unit.spaces = unit.spaces.filter((x) => x.id !== spaceId);
+      syncUnitSpaceFiles(unit);
+      return unit;
+    }
+  }
+
+  // Unidad concreta: /rentable-units/{id} (+ /status)
+  m = sub.match(/^rentable-units\/(\d+)(\/status)?$/);
+  if (m) {
+    const unit = mockRentableUnits.find((u) => u.id === Number(m[1]));
+    if (!unit) return null;
+    if (m[2] === '/status' && method === 'PATCH') {
+      unit.status = Number(body.status);
+      return unitDetail(unit);
+    }
+    if (method === 'PUT') {
+      Object.assign(unit, {
+        rentable_unit_type_id: body.rentable_unit_type_id ?? unit.rentable_unit_type_id,
+        name: body.name ?? unit.name,
+        description: body.description ?? unit.description,
+        capacity: body.capacity ?? unit.capacity,
+        base_price_per_night: body.base_price_per_night ?? unit.base_price_per_night,
+      });
+      unit.type_name = mockRentableUnitTypes.find((ty) => ty.id === Number(unit.rentable_unit_type_id))?.name || unit.type_name;
+      return unitDetail(unit);
+    }
+    return unitDetail(unit); // GET detalle
+  }
+
+  // Listado / creación: /rentable-units
+  if (sub === 'rentable-units') {
+    if (method === 'POST') {
+      const id = (mockRentableUnits.reduce((mx, u) => Math.max(mx, u.id), 0) || 0) + 1;
+      const type = mockRentableUnitTypes.find((ty) => ty.id === Number(body.rentable_unit_type_id));
+      const unit = {
+        id, rentable_unit_type_id: Number(body.rentable_unit_type_id), type_name: type?.name || '',
+        name: body.name, description: body.description || null, capacity: Number(body.capacity) || 1,
+        base_price_per_night: Number(body.base_price_per_night).toFixed(2), position: id, status: 1,
+        files: (body.files || []).map((name, i) => ({ name, rentable_unit_space_id: null, url: null, thumbnail_url: null, position: i + 1 })),
+        spaces: (body.spaces || []).map((sp, i) => ({ id: i + 1, name: sp.name, description: sp.description || null, position: i + 1, files: [] })),
+      };
+      mockRentableUnits.push(unit);
+      return unitDetail(unit);
+    }
+    let rows = mockRentableUnits.map(unitRow);
+    const typeId = query.get('rentable_unit_type_id');
+    if (typeId) rows = rows.filter((u) => String(u.rentable_unit_type_id) === typeId);
+    const status = query.get('status');
+    if (status !== null && status !== '') rows = rows.filter((u) => String(u.status) === status);
+    const search = (query.get('_search') || '').toLowerCase();
+    if (search) rows = rows.filter((u) => u.name.toLowerCase().includes(search));
+    return mockPaginate(rows, query);
+  }
+
+  return undefined;
+}
+
+// En demo no hay S3: las fotos por espacio se reparten desde unit.files según rentable_unit_space_id.
+function syncUnitSpaceFiles(unit) {
+  unit.spaces.forEach((sp) => {
+    sp.files = unit.files.filter((f) => f.rentable_unit_space_id === sp.id);
+  });
+}
+
+function unitDetail(unit) {
+  syncUnitSpaceFiles(unit);
+  return {
+    ...unit,
+    files: unit.files.filter((f) => f.rentable_unit_space_id == null),
+  };
+}
+
+// Núcleo del mock de reservas (todas las subrutas /reservations…). Devuelve undefined si no matchea.
+function resolveReservationsCore(sub, query, { method, body }) {
+  const detail = (r) => {
+    const paid = r.payments.filter((p) => p.status === 1).reduce((s, p) => s + Number(p.value), 0);
+    const total = Number(r.total);
+    return {
+      ...r,
+      summary: {
+        lodging_subtotal: r.lodging_subtotal, services_total: r.services_total, total: r.total,
+        paid: paid.toFixed(2), balance: (total - paid).toFixed(2),
+      },
+    };
+  };
+  const recalc = (r) => {
+    const servicesTotal = r.services.reduce((s, sv) => s + Number(sv.total), 0);
+    r.services_total = servicesTotal.toFixed(2);
+    r.total = (Number(r.lodging_subtotal) + servicesTotal).toFixed(2);
+  };
+  const find = (id) => mockReservations.find((r) => r.id === id);
+
+  // Listado / creación
+  if (sub === 'reservations') {
+    if (method === 'POST') {
+      const unit = mockRentableUnits.find((u) => u.id === Number(body.rentable_unit_id));
+      const nights = Math.round((new Date(body.check_out_date) - new Date(body.check_in_date)) / 86400000);
+      const pricePerNight = Number(body.price_per_night || unit?.base_price_per_night || 0);
+      const lodging = pricePerNight * nights;
+      const services = (body.services || []).map((sv, i) => {
+        const st = mockReservationServiceTypes.find((s) => s.id === Number(sv.reservation_service_type_id));
+        const qty = Number(sv.quantity) || 1;
+        return { id: i + 1, reservation_service_type_id: st.id, name: st.name, quantity: qty, unit_price: st.price, total: (Number(st.price) * qty).toFixed(2) };
+      });
+      const servicesTotal = services.reduce((s, sv) => s + Number(sv.total), 0);
+      const hasPayment = body.payment && body.payment.value;
+      const id = 'rsv-' + Math.random().toString(36).slice(2, 10);
+      const code = Array.from({ length: 10 }, () => 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random() * 32)]).join('');
+      const holderName = `${body.holder.first_name} ${body.holder.last_name}`;
+      const guests = [{ id: 1, user_id: 501, is_holder: true, first_name: body.holder.first_name, last_name: body.holder.last_name, name: holderName, document_number: body.holder.id_number || null }];
+      (body.companions || []).forEach((c, i) => guests.push({ id: i + 2, user_id: 600 + i, is_holder: false, first_name: c.first_name, last_name: c.last_name, name: `${c.first_name} ${c.last_name}`, document_number: c.id_number || null }));
+      const row = {
+        id, code, rentable_unit_id: unit.id, rentable_unit_name: unit.name,
+        holder_user_id: 501, holder_user_name: holderName, holder_document_number: body.holder.id_number || null,
+        check_in_date: body.check_in_date, check_out_date: body.check_out_date, expected_arrival_time: null,
+        nights, price_per_night: pricePerNight.toFixed(2), lodging_subtotal: lodging.toFixed(2),
+        services_total: servicesTotal.toFixed(2), total: (lodging + servicesTotal).toFixed(2),
+        status: hasPayment ? 2 : 1, precheckin_completed_at: null, checkin_at: null, checkout_at: null,
+        checkout_order_id: null, notes: body.notes || null, created_by_name: mockUser.name,
+        cancelled_by_name: null, cancelled_at: null, cancellation_reason: null,
+        guests, services,
+        payments: hasPayment ? [{ id: 1, payment_method: body.payment.payment_method, payment_method_name: body.payment.payment_method, value: Number(body.payment.value).toFixed(2), payment_date: expenseDayIso(0), notes: null, status: 1, created_by_name: mockUser.name, annulled_by_name: null, annulled_at: null }] : [],
+      };
+      mockReservations.unshift(row);
+      return detail(row);
+    }
+    let rows = mockReservations.map((r) => ({
+      id: r.id, code: r.code, rentable_unit_name: r.rentable_unit_name, holder_user_name: r.holder_user_name,
+      check_in_date: r.check_in_date, check_out_date: r.check_out_date, nights: r.nights, total: r.total, status: r.status,
+      precheckin_completed_at: r.precheckin_completed_at,
+    }));
+    const status = query.get('status');
+    if (status !== null && status !== '') rows = rows.filter((r) => String(r.status) === status);
+    const unitId = query.get('rentable_unit_id');
+    if (unitId) rows = rows.filter((r) => String(r.rentable_unit_id) === unitId);
+    return mockPaginate(rows, query);
+  }
+
+  const m = sub.match(/^reservations\/([^/]+)(?:\/(.+))?$/);
+  if (!m) return undefined;
+  const r = find(m[1]);
+  if (!r) return null;
+  const action = m[2];
+
+  if (!action) return detail(r); // GET detalle
+  if (action === 'confirm') { if (r.status === 1) r.status = 2; return detail(r); }
+  if (action === 'check-in') { if (r.status === 2) { r.status = 3; r.checkin_at = new Date().toISOString(); } return detail(r); }
+  if (action === 'cancel') { r.status = 0; r.cancelled_by_name = mockUser.name; r.cancellation_reason = body.reason || null; return detail(r); }
+  if (action === 'dates') {
+    const nights = Math.round((new Date(body.check_out_date) - new Date(body.check_in_date)) / 86400000);
+    r.check_in_date = body.check_in_date; r.check_out_date = body.check_out_date; r.nights = nights;
+    r.lodging_subtotal = (Number(r.price_per_night) * nights).toFixed(2); recalc(r); return detail(r);
+  }
+  if (action === 'orders') return r.checkout_order_id ? [{ id: r.checkout_order_id, order_number: null, status: 'ACCEPTED_IN_STORE', status_payment: 'PAID', service_type: 'LODGING', is_lodging: true, total: r.total, date: new Date().toISOString() }] : [];
+  if (action === 'checkout' && method === 'POST') {
+    if (r.status !== 3) return null;
+    if (body.payment && body.payment.value) {
+      r.payments.push({ id: nextId(r.payments), payment_method: body.payment.payment_method, payment_method_name: body.payment.payment_method, value: Number(body.payment.value).toFixed(2), payment_date: expenseDayIso(0), notes: null, status: 1, created_by_name: mockUser.name, annulled_by_name: null, annulled_at: null });
+    }
+    r.status = 4; r.checkout_at = new Date().toISOString(); r.checkout_order_id = 'ord-' + Math.random().toString(36).slice(2, 10);
+    return detail(r);
+  }
+  if (action === 'guests') {
+    r.holder_user_name = `${body.holder.first_name} ${body.holder.last_name}`;
+    r.guests = [{ id: 1, user_id: 501, is_holder: true, first_name: body.holder.first_name, last_name: body.holder.last_name, name: r.holder_user_name, document_number: body.holder.id_number || null },
+      ...(body.companions || []).map((c, i) => ({ id: i + 2, user_id: 600 + i, is_holder: false, first_name: c.first_name, last_name: c.last_name, name: `${c.first_name} ${c.last_name}`, document_number: c.id_number || null }))];
+    return detail(r);
+  }
+  if (action === 'services' && method === 'POST') {
+    const st = mockReservationServiceTypes.find((s) => s.id === Number(body.reservation_service_type_id));
+    const qty = Number(body.quantity) || 1;
+    r.services.push({ id: nextId(r.services), reservation_service_type_id: st.id, name: st.name, quantity: qty, unit_price: st.price, total: (Number(st.price) * qty).toFixed(2) });
+    recalc(r); return detail(r);
+  }
+  let sm = action.match(/^services\/(\d+)$/);
+  if (sm && method === 'DELETE') { r.services = r.services.filter((sv) => sv.id !== Number(sm[1])); recalc(r); return detail(r); }
+  if (action === 'payments' && method === 'POST') {
+    r.payments.push({ id: nextId(r.payments), payment_method: body.payment_method, payment_method_name: body.payment_method, value: Number(body.value).toFixed(2), payment_date: body.payment_date || expenseDayIso(0), notes: body.notes || null, status: 1, created_by_name: mockUser.name, annulled_by_name: null, annulled_at: null });
+    if (r.status === 1) r.status = 2;
+    return detail(r);
+  }
+  let pm = action.match(/^payments\/(\d+)\/annul$/);
+  if (pm) { const p = r.payments.find((x) => x.id === Number(pm[1])); if (p) { p.status = 0; p.annulled_by_name = mockUser.name; } return detail(r); }
+
+  return undefined;
+}
+
+// Pre-check-in público (demo): resuelve /public/checkin/{code}… contra mockReservations.
+function resolveCheckinMock(path, query, { method = 'GET', body } = {}) {
+  const m = path.match(/^\/public\/checkin\/([^/]+)(?:\/(.+))?$/);
+  if (!m) return undefined;
+  const code = m[1];
+  const action = m[2];
+  const r = mockReservations.find((x) => x.code === code && [1, 2, 3].includes(x.status));
+
+  const summary = (res) => {
+    const paid = res.payments.filter((p) => p.status === 1).reduce((s, p) => s + Number(p.value), 0);
+    const maskDoc = (d) => (!d ? null : (String(d).length <= 4 ? '****' : '****' + String(d).slice(-4)));
+    return {
+      code: res.code, company_name: mockCompany.name, unit_name: res.rentable_unit_name, unit_photo: null,
+      check_in_date: res.check_in_date, check_out_date: res.check_out_date, nights: res.nights,
+      total: res.total, paid: paid.toFixed(2), balance: (Number(res.total) - paid).toFixed(2),
+      expected_arrival_time: res.expected_arrival_time, precheckin_completed: !!res.precheckin_completed_at,
+      holder: { name: res.holder_user_name, document_masked: maskDoc(res.holder_document_number) },
+      companions: res.guests.filter((g) => !g.is_holder).map((g) => ({ name: g.name })),
+    };
+  };
+
+  if (!action) return r ? summary(r) : null;
+  if (action === 'guests/lookup') return { exists: false };
+  if (!r) return null;
+  if (action === 'files' && method === 'POST') return { name: 'doc-' + Math.random().toString(36).slice(2, 8) };
+  if (action === 'guests' && method === 'POST') {
+    r.expected_arrival_time = body.expected_arrival_time || null;
+    r.precheckin_completed_at = new Date().toISOString();
+    r.holder_user_name = `${body.holder.first_name} ${body.holder.last_name}`;
+    r.holder_document_number = body.holder.id_number || r.holder_document_number;
+    r.guests = [{ id: 1, user_id: 501, is_holder: true, first_name: body.holder.first_name, last_name: body.holder.last_name, name: r.holder_user_name, document_number: body.holder.id_number || null },
+      ...(body.companions || []).map((c, i) => ({ id: i + 2, user_id: 600 + i, is_holder: false, first_name: c.first_name, last_name: c.last_name, name: `${c.first_name} ${c.last_name}`, document_number: c.id_number || null }))];
+    return summary(r);
+  }
+  return null;
+}
+
 export function resolveMock(rawPath, opts = {}) {
   const [path, qs = ''] = rawPath.split('?');
   const query = new URLSearchParams(qs);
@@ -2069,6 +2435,10 @@ export function resolveMock(rawPath, opts = {}) {
     const profile = { ...mockCompany, ...(picked ? { id: picked.id, name: picked.name } : {}) };
     return opts.method === 'PUT' ? { ...profile, ...(opts.body || {}) } : profile;
   }
+
+  // Pre-check-in público (sin sesión): /public/checkin/{code}…
+  const checkin = resolveCheckinMock(path, query, opts);
+  if (checkin !== undefined) return checkin;
 
   // Portada pública de la compañía (sin sesión): /public/{company}
   const publicCompany = resolvePublicCompanyMock(path);
@@ -2102,6 +2472,25 @@ export function resolveMock(rawPath, opts = {}) {
   // Módulo de gastos (company-scoped: /companies/{company}/expenses|expense-categories|expense-suppliers…)
   const expenses = resolveExpensesMock(path, query, opts);
   if (expenses !== undefined) return expenses;
+
+  // Métrica de hospedaje (demo): /companies/{company}/metrics/reservations-report
+  if (/\/metrics\/reservations-report$/.test(path)) {
+    const active = mockReservations.filter((r) => r.status !== 0);
+    const nights = active.reduce((sum, r) => sum + (r.nights || 0), 0);
+    const revenue = mockReservations.flatMap((r) => r.payments || []).filter((p) => p.status === 1).reduce((sum, p) => sum + Number(p.value), 0);
+    const unitsActive = mockRentableUnits.filter((u) => u.status === 1).length;
+    const days = Math.max(1, Number(query.get('days')) || 15);
+    const occupancy = unitsActive > 0 ? Math.round((nights / (unitsActive * days)) * 10000) / 100 : 0;
+    return {
+      period: { days },
+      totals: { reservations: active.length, nights_sold: nights, units_active: unitsActive, occupancy_rate: occupancy, revenue: Math.round(revenue * 100) / 100 },
+      deltas: { reservations: 0, nights_sold: 0, occupancy_rate: 0, revenue: 0 },
+    };
+  }
+
+  // Módulo de reservas de hospedaje (company-scoped: /companies/{company}/rentable-units|rentable-unit-types…)
+  const reservations = resolveReservationsMock(path, query, opts);
+  if (reservations !== undefined) return reservations;
 
   // Módulo de usuarios de la compañía (company-scoped: /companies/{company}/users…)
   const users = resolveUsersMock(path, query, opts);

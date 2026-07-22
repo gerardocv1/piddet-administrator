@@ -13,9 +13,16 @@ import { MenuDetail } from './screens/MenuDetail.jsx';
 import { MenuPreview } from './screens/MenuPreview/MenuPreview.jsx';
 import { PublicMenu } from './screens/PublicMenu/PublicMenu.jsx';
 import { PublicCompany } from './screens/PublicCompany/PublicCompany.jsx';
+import { CheckinWizard } from './screens/public/Checkin/CheckinWizard.jsx';
 import { Invoices } from './screens/Invoices.jsx';
 import { InvoiceDetail } from './screens/InvoiceDetail.jsx';
 import { Expenses } from './screens/Expenses.jsx';
+import { RentableUnits } from './screens/RentableUnits.jsx';
+import { RentableUnitDetail } from './screens/RentableUnitDetail.jsx';
+import { Reservations } from './screens/Reservations.jsx';
+import { ReservationDetail } from './screens/ReservationDetail.jsx';
+import { ReservationWizard } from './screens/ReservationWizard/ReservationWizard.jsx';
+import { ReservationServiceTypes } from './screens/ReservationServiceTypes.jsx';
 import { ExpenseForm } from './screens/ExpenseForm.jsx';
 import { ExpenseWizard } from './screens/ExpenseWizard/ExpenseWizard.jsx';
 import { ExpenseDetail } from './screens/ExpenseDetail.jsx';
@@ -39,6 +46,9 @@ import { ADMIN_BASE } from './lib/adminBase.js';
 // Patrón de la URL pública de una carta: /{username-compañía}/m/{username-menú}. Se sirve fuera
 // del panel admin (sin sesión ni permisos), por eso se detecta antes de montar el router.
 const PUBLIC_MENU_RE = /^\/([^/]+)\/m\/([^/]+)\/?$/;
+
+// Pre-check-in del huésped: /checkin/{código} (dos segmentos). Se sirve fuera del panel, sin sesión.
+const PUBLIC_CHECKIN_RE = /^\/checkin\/([^/]+)\/?$/;
 
 // Patrón de la portada pública de una compañía: /{username-compañía} (un solo segmento). El panel
 // vive bajo /admin, así que cualquier raíz limpia de un segmento (salvo `admin`) es una empresa.
@@ -65,6 +75,12 @@ export default function App() {
         menuUsername={decodeURIComponent(publicMatch[2])}
       />
     );
+  }
+
+  // 1a-bis) Pre-check-in del huésped: /checkin/{código} (dos segmentos, sin sesión).
+  const checkinMatch = path.match(PUBLIC_CHECKIN_RE);
+  if (checkinMatch) {
+    return <CheckinWizard code={decodeURIComponent(checkinMatch[1])} />;
   }
 
   // 1b) Portada pública de la compañía: raíz limpia de un solo segmento (salvo `admin`).
@@ -132,6 +148,13 @@ function AdminApp() {
             <Route path="expenses/summary" element={<RequirePermission path="/expenses/summary"><ExpensesSummary /></RequirePermission>} />
             <Route path="expenses/:expenseId" element={<RequirePermission path="/expenses"><ExpenseDetail /></RequirePermission>} />
             <Route path="expense-categories" element={<RequirePermission path="/expense-categories"><ExpenseCategories /></RequirePermission>} />
+            <Route path="rentable-units" element={<RequirePermission path="/rentable-units"><RentableUnits /></RequirePermission>} />
+            <Route path="rentable-units/new" element={<RequirePermission path="/rentable-units"><RentableUnitDetail /></RequirePermission>} />
+            <Route path="rentable-units/:unitId" element={<RequirePermission path="/rentable-units"><RentableUnitDetail /></RequirePermission>} />
+            <Route path="reservation-services" element={<RequirePermission path="/reservation-services"><ReservationServiceTypes /></RequirePermission>} />
+            <Route path="reservations" element={<RequirePermission path="/reservations"><Reservations /></RequirePermission>} />
+            <Route path="reservations/new" element={<RequirePermission path="/reservations"><ReservationWizard /></RequirePermission>} />
+            <Route path="reservations/:reservationId" element={<RequirePermission path="/reservations"><ReservationDetail /></RequirePermission>} />
             <Route path="tables" element={<RequirePermission path="/tables"><Tables /></RequirePermission>} />
             <Route path="stores" element={<RequirePermission path="/stores"><Stores /></RequirePermission>} />
             <Route path="stores/new" element={<RequirePermission path="/stores"><StoreDetail /></RequirePermission>} />
