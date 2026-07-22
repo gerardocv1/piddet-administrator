@@ -27,6 +27,7 @@ import { taxesService } from './services/taxes.js';
 import { filesService } from './services/files.js';
 import { ordersService } from './services/orders.js';
 import { expensesService } from './services/expenses.js';
+import { reservationsService } from './services/reservations.js';
 import { orderSyncFailuresService } from './services/orderSyncFailures.js';
 import { storesService } from './services/stores.js';
 import { usersService } from './services/users.js';
@@ -53,6 +54,7 @@ export const api = {
   ...filesService,
   ...ordersService,
   ...expensesService,
+  ...reservationsService,
   ...orderSyncFailuresService,
   ...storesService,
   ...usersService,

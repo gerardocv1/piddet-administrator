@@ -37,4 +37,8 @@ export const metricsService = {
   // Comparación de gastos: período actual vs. el anterior de igual longitud (mismo scoping).
   expensesComparison: ({ days = 7, endDate, force = false } = {}) =>
     http.get(`${base()}/metrics/expenses-comparison${qs({ days, end_date: endDate, force: force ? 1 : '' })}`),
+
+  // Reporte de hospedaje: reservas, noches vendidas, ocupación e ingresos del período con deltas.
+  reservationsReport: ({ days = 15, endDate, force = false } = {}) =>
+    http.get(`${base()}/metrics/reservations-report${qs({ days, end_date: endDate, force: force ? 1 : '' })}`),
 };

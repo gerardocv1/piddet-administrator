@@ -59,6 +59,16 @@ export const MODULE_GROUPS = [
           { to: '/expense-categories', label: 'Categorías', icon: 'fas fa-tags', perm: 'api-module-expenses' },
         ],
       },
+      // Hospedaje: reservas de cabañas/habitaciones/lugares. `api-module-reservations` opera las
+      // reservas; `api-module-rentable-units` configura unidades y servicios adicionales.
+      {
+        label: 'Hospedaje', icon: 'fas fa-bed',
+        children: [
+          { to: '/reservations', label: 'Reservas', icon: 'fas fa-calendar-check', perm: 'api-module-reservations' },
+          { to: '/rentable-units', label: 'Unidades', icon: 'fas fa-house-chimney', perm: 'api-module-rentable-units' },
+          { to: '/reservation-services', label: 'Servicios', icon: 'fas fa-champagne-glasses', perm: 'api-module-rentable-units' },
+        ],
+      },
       { to: '/tables', label: 'Mesas', icon: 'fas fa-chair', badge: 4 }, // sin permiso aún → oculto
       { to: '/roles', label: 'Roles', icon: 'fas fa-user-shield' }, // sin permiso aún → oculto
     ],

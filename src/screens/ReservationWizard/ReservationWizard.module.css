@@ -1,0 +1,133 @@
+.header { display: flex; align-items: center; gap: 12px; }
+.title { margin: 0; font-size: var(--text-xl); color: var(--gray-900); }
+.subTitle { margin: 0; font-size: var(--text-base); color: var(--gray-800); }
+
+.stepper {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.stepDot {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--radius-full, 999px);
+  background: var(--gray-100);
+  color: var(--gray-500);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.stepDot span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--gray-300);
+  color: #fff;
+  font-size: var(--text-xs);
+}
+.stepActive { background: var(--color-primary-100, var(--gray-100)); color: var(--color-primary); }
+.stepActive span { background: var(--color-primary); }
+.stepDone { color: var(--color-success-fg, var(--gray-700)); }
+.stepDone span { background: var(--color-success, var(--gray-500)); }
+
+.actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  position: sticky;
+  bottom: 0;
+  padding: 12px 0;
+  background: var(--surface, var(--gray-50));
+}
+
+/* ---- Paso 1: unidades ---- */
+.unitGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+.unitCard {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  background: var(--surface, #fff);
+  cursor: pointer;
+  text-align: left;
+}
+.unitCard:hover:not(:disabled) { border-color: var(--color-primary); }
+.unitSelected { border-color: var(--color-primary); box-shadow: 0 0 0 2px var(--color-primary-100, transparent); }
+.unitBusy { opacity: 0.55; cursor: not-allowed; }
+.unitName { font-weight: 700; color: var(--gray-900); }
+.unitPrice { margin-top: 4px; font-weight: 600; color: var(--gray-800); }
+
+/* ---- Paso 2: huéspedes ---- */
+.guestSearch { display: flex; gap: 10px; align-items: flex-end; }
+.guestSearch > :first-child { flex: 1; }
+.guestResults { display: flex; flex-direction: column; gap: 6px; }
+.guestResult {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  background: var(--surface-2, var(--gray-50));
+  cursor: pointer;
+  text-align: left;
+}
+.guestResult:hover { border-color: var(--color-primary); }
+.guestName { font-weight: 600; color: var(--gray-800); }
+
+.companionsHead { display: flex; justify-content: space-between; align-items: center; }
+.companionRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr auto;
+  gap: 10px;
+  align-items: end;
+}
+@media (max-width: 720px) {
+  .companionRow { grid-template-columns: 1fr 1fr; }
+}
+
+/* ---- Paso 3: servicios ---- */
+.serviceRow { display: flex; align-items: center; gap: 12px; }
+.servicePick { display: flex; align-items: center; gap: 10px; flex: 1; cursor: pointer; }
+.serviceName { font-weight: 600; color: var(--gray-800); }
+.servicePrice { margin-left: auto; color: var(--gray-600); }
+.qtyInput { width: 90px; }
+
+/* ---- Paso 5: resumen ---- */
+.summary { display: flex; flex-direction: column; gap: 8px; }
+.summaryRow { display: flex; justify-content: space-between; align-items: baseline; }
+.summaryStrong { font-size: var(--text-lg); font-weight: 700; color: var(--gray-900); }
+.summaryDivider { height: 1px; background: var(--border-color); margin: 6px 0; }
+
+/* ---- Éxito ---- */
+.success {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+  padding: 32px 16px;
+}
+.successIcon { font-size: 3rem; color: var(--color-success, var(--gray-500)); }
+.codeBox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 16px 24px;
+  border: 1px dashed var(--border-color);
+  border-radius: var(--radius);
+}
+.code { font-size: var(--text-2xl); font-weight: 800; letter-spacing: 2px; color: var(--gray-900); }
+.codeLink { color: var(--gray-500); font-size: var(--text-sm); word-break: break-all; }
+.successActions { display: flex; gap: 12px; }

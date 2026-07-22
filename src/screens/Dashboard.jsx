@@ -38,6 +38,15 @@ const buildExpensesKpis = ({ totals, deltas } = {}) => (totals ? [
   { label: 'Mayor gasto', value: totals.max_formatted, ...kpiDelta(deltas?.max) },
 ] : []);
 
+// KPIs de hospedaje. Los deltas del reporte de reservas son diferencias absolutas (no {percent}),
+// así que aquí solo se muestran los totales.
+const buildReservationsKpis = ({ totals } = {}) => (totals ? [
+  { label: 'Ingresos hospedaje', value: money(totals.revenue) },
+  { label: 'Reservas', value: String(totals.reservations) },
+  { label: 'Noches vendidas', value: String(totals.nights_sold) },
+  { label: 'Ocupación', value: `${totals.occupancy_rate}%` },
+] : []);
+
 /** Tarjeta presentacional de un dash: KPIs + gráfico comparativo. Los filtros y la carga
  *  de datos viven en el Dashboard (un solo control para todos los reportes). */
 function ReportCard({ title, kpis, kpisLoading, cmp, cmpLoading, cmpError, chartLoadingLabel, chartEmptyLabel, chartAccentVar }) {
@@ -83,6 +92,7 @@ export function Dashboard() {
   // api-module-expenses-own el backend limita las métricas a los gastos del usuario.
   const canSales = can('api-module-orders');
   const canExpenses = canAny(['api-module-expenses', 'api-module-expenses-own']);
+  const canReservations = can('api-module-reservations');
 
   // ── Filtros compartidos: una sola fecha fin + rango + refresh para todos los reportes ──
   const [endDate, setEndDate] = React.useState(todayStr);
@@ -104,8 +114,9 @@ export function Dashboard() {
   const salesCmpRes = useMetric(canSales, api.salesComparison);
   const expKpisRes = useMetric(canExpenses, api.expensesReport);
   const expCmpRes = useMetric(canExpenses, api.expensesComparison);
+  const resKpisRes = useMetric(canReservations, api.reservationsReport);
 
-  const anyLoading = salesKpisRes.loading || salesCmpRes.loading || expKpisRes.loading || expCmpRes.loading;
+  const anyLoading = salesKpisRes.loading || salesCmpRes.loading || expKpisRes.loading || expCmpRes.loading || resKpisRes.loading;
 
   // Botón refresh: click corto → con cache; mantener ~2s → fuerza recálculo (force).
   // Re-sincroniza la fecha a "hoy" para no arrastrar un endDate congelado desde el montaje.
@@ -175,7 +186,7 @@ export function Dashboard() {
         </button>
       )}
 
-      {(canSales || canExpenses) && (
+      {(canSales || canExpenses || canReservations) && (
         <div className={s.toolbar}>
           <Input type="date" value={endDate} max={todayStr()} onChange={(e) => setEndDate(e.target.value)} wrapClassName={s.ctrl} />
           <Select value={String(weeks)} options={PERIOD_OPTIONS} onChange={(e) => setWeeks(Number(e.target.value))} wrapClassName={s.ctrl} />
@@ -226,6 +237,18 @@ export function Dashboard() {
           chartEmptyLabel="No hay gastos en el período seleccionado."
           chartAccentVar="--color-danger"
         />
+      )}
+
+      {canReservations && (
+        <Card>
+          <Card.Header title="Hospedaje" />
+          <Card.Body className={s.cardBody}>
+            <StatStrip
+              stats={buildReservationsKpis(resKpisRes.data ?? {})}
+              loading={resKpisRes.loading && !resKpisRes.data}
+            />
+          </Card.Body>
+        </Card>
       )}
 
       {!canSales && !canExpenses && (
