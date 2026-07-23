@@ -1,10 +1,10 @@
 import React from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Card, Badge, Button, IconButton, Spinner, Modal, Input, Select, MoneyInput } from '../components';
+import { Card, Badge, Button, IconButton, Avatar, Spinner, Modal, Input, Select, MoneyInput } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { usePermissions } from '../lib/permissions/usePermissions.js';
-import { reservationMoney, reservationStatusMeta, arrivalSlotLabel, RESERVATION_STATUS } from '../lib/reservationLabels.js';
+import { reservationMoney, reservationStatusMeta, arrivalSlotLabel, idTypeLabel, RESERVATION_STATUS } from '../lib/reservationLabels.js';
 import s from './screens.module.css';
 import t from './ReservationDetail.module.css';
 
@@ -30,9 +30,13 @@ export function ReservationDetail() {
   const [serviceSel, setServiceSel] = React.useState({ id: '', quantity: 1 });
   const [checkoutOpen, setCheckoutOpen] = React.useState(false);
   const [checkoutPay, setCheckoutPay] = React.useState({ payment_method: '', value: '' });
+  const [guestOpen, setGuestOpen] = React.useState(null);
+  const [guestDetail, setGuestDetail] = React.useState(null);
+  const [guestLoading, setGuestLoading] = React.useState(false);
+  const [linkCopied, setLinkCopied] = React.useState(false);
 
   const { data: paymentMethods } = useResource(api.paymentMethods, [], []);
-  const { data: serviceTypes } = useResource(React.useCallback(() => api.reservationServiceTypes({ onlyActive: true }), []), [], []);
+  const { data: serviceItems } = useResource(React.useCallback(() => api.serviceItems(), []), [], []);
   const ordersFetcher = React.useCallback(() => api.reservationOrders(reservationId), [reservationId]);
   const { data: linkedOrders, reload: reloadOrders } = useResource(ordersFetcher, [], [reservationId]);
 
@@ -78,7 +82,7 @@ export function ReservationDetail() {
 
   const addService = async () => {
     if (!serviceSel.id) return;
-    const ok = await run(() => api.addReservationService(reservationId, { reservation_service_type_id: Number(serviceSel.id), quantity: serviceSel.quantity }), 'No se pudo agregar el servicio.');
+    const ok = await run(() => api.addReservationService(reservationId, { item_id: Number(serviceSel.id), quantity: serviceSel.quantity }), 'No se pudo agregar el servicio.');
     if (ok) { setServiceOpen(false); setServiceSel({ id: '', quantity: 1 }); }
   };
   const removeService = (lineId) => run(() => api.removeReservationService(reservationId, lineId), 'No se pudo quitar el servicio.');
@@ -95,6 +99,28 @@ export function ReservationDetail() {
   };
 
   const consumptions = (linkedOrders || []).filter((o) => !o.is_lodging);
+
+  const openGuest = async (g) => {
+    setGuestOpen(g);
+    setGuestDetail(null);
+    if (!g.user_id) return;
+    setGuestLoading(true);
+    try {
+      setGuestDetail(await api.guest(g.user_id));
+    } catch {
+      // El modal muestra los datos básicos de la reserva si el perfil no carga.
+    } finally {
+      setGuestLoading(false);
+    }
+  };
+
+  const copyCheckinLink = async () => {
+    try {
+      await navigator.clipboard.writeText(checkinLink);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2000);
+    } catch { /* sin permiso de portapapeles: el enlace sigue visible para copiarlo a mano */ }
+  };
 
   return (
     <div className={s.page}>
@@ -133,9 +159,22 @@ export function ReservationDetail() {
           <Card>
             <Card.Header title="Estadía" />
             <Card.Body>
+              <div className={t.stayStrip}>
+                <div className={t.stayDate}>
+                  <span className={t.stayLabel}>Check-in</span>
+                  <strong>{data.check_in_date}</strong>
+                </div>
+                <div className={t.stayNights}>
+                  <span className={t.stayNightsNum}>{data.nights}</span>
+                  <span className={t.stayLabel}>{Number(data.nights) === 1 ? 'noche' : 'noches'}</span>
+                </div>
+                <div className={`${t.stayDate} ${t.stayDateEnd}`}>
+                  <span className={t.stayLabel}>Check-out</span>
+                  <strong>{data.check_out_date}</strong>
+                </div>
+              </div>
               <dl className={t.meta}>
                 <div><dt><i className="fas fa-house-chimney" /> Unidad</dt><dd>{data.rentable_unit_name}</dd></div>
-                <div><dt><i className="fas fa-calendar" /> Fechas</dt><dd>{data.check_in_date} → {data.check_out_date} ({data.nights}n)</dd></div>
                 <div><dt><i className="fas fa-moon" /> Tarifa / noche</dt><dd>{reservationMoney(data.price_per_night)}</dd></div>
                 <div><dt><i className="fas fa-clock" /> Llegada estimada</dt><dd>{arrivalSlotLabel(data.expected_arrival_time)}</dd></div>
                 <div><dt><i className="fas fa-user" /> Registró</dt><dd>{data.created_by_name || '—'}</dd></div>
@@ -150,12 +189,16 @@ export function ReservationDetail() {
             <Card.Body>
               <ul className={t.guests}>
                 {data.guests.map((g) => (
-                  <li key={g.id} className={t.guest}>
-                    <div>
-                      <span className={t.guestName}>{g.name}</span>
+                  <li key={g.id}>
+                    <button type="button" className={t.guest} title="Ver información del huésped" onClick={() => openGuest(g)}>
+                      <Avatar name={g.name} size="sm" />
+                      <div className={t.guestText}>
+                        <span className={t.guestName}>{g.name}</span>
+                        <span className={s.muted}>{g.document_number || 'Documento pendiente'}</span>
+                      </div>
                       {g.is_holder && <Badge variant="info" dot>Titular</Badge>}
-                    </div>
-                    <span className={s.muted}>{g.document_number || 'Documento pendiente'}</span>
+                      <i className={`fas fa-chevron-right ${t.guestChevron}`} />
+                    </button>
                   </li>
                 ))}
               </ul>
@@ -259,17 +302,25 @@ export function ReservationDetail() {
 
           {/* Pre-check-in */}
           <Card>
-            <Card.Header title="Pre-check-in" />
+            <Card.Header title="Pre-check-in" action={
+              data.precheckin_completed_at
+                ? <Badge variant="success" dot>Completado</Badge>
+                : <Badge variant="warning" dot>Pendiente</Badge>
+            } />
             <Card.Body>
-              <p className={s.muted}>
-                {data.precheckin_completed_at
-                  ? 'El huésped completó su pre-check-in.'
-                  : 'Comparte este enlace para que el huésped complete sus datos.'}
-              </p>
               <div className={t.linkBox}>
-                <span className={t.code}>{data.code}</span>
+                <div className={t.linkRow}>
+                  <span className={t.code}>{data.code}</span>
+                  <IconButton icon={linkCopied ? 'fas fa-check' : 'fas fa-copy'} variant="light"
+                    title={linkCopied ? 'Enlace copiado' : 'Copiar enlace'} onClick={copyCheckinLink} />
+                </div>
                 <a className={t.link} href={checkinLink} target="_blank" rel="noreferrer">{checkinLink}</a>
               </div>
+              <p className={t.linkHint}>
+                {data.precheckin_completed_at
+                  ? `El huésped completó sus datos el ${String(data.precheckin_completed_at).slice(0, 10)}.`
+                  : 'Comparte el enlace para que el huésped complete sus datos.'}
+              </p>
             </Card.Body>
           </Card>
         </div>
@@ -334,11 +385,62 @@ export function ReservationDetail() {
         <div className={s.formCol}>
           <Select label="Servicio" icon="fas fa-champagne-glasses" value={serviceSel.id}
             onChange={(e) => setServiceSel((x) => ({ ...x, id: e.target.value }))}
-            options={[{ value: '', label: 'Selecciona…' }, ...(serviceTypes || []).map((st) => ({ value: String(st.id), label: `${st.name} · ${reservationMoney(st.price)}` }))]} />
+            options={[{ value: '', label: 'Selecciona…' }, ...(serviceItems || []).map((st) => ({ value: String(st.id), label: `${st.name} · ${reservationMoney(st.price)}` }))]} />
           <Input label="Cantidad" type="number" min="1" value={serviceSel.quantity}
             onChange={(e) => setServiceSel((x) => ({ ...x, quantity: Math.max(1, Number(e.target.value) || 1) }))} />
         </div>
       </Modal>
+
+      <Modal open={!!guestOpen} title="Información del huésped" onClose={() => setGuestOpen(null)}>
+        {guestOpen && <GuestProfile guest={guestOpen} detail={guestDetail} loading={guestLoading} />}
+      </Modal>
+    </div>
+  );
+}
+
+function GuestProfile({ guest, detail, loading }) {
+  const name = detail?.name || guest.name;
+  const phone = detail?.phone_number
+    ? `${detail.phone_code ? `+${detail.phone_code} ` : ''}${detail.phone_number}`
+    : null;
+  const documentNumber = detail?.id_number || guest.document_number;
+
+  return (
+    <div className={t.guestProfile}>
+      <div className={t.guestProfileHead}>
+        <Avatar name={name} size="lg" />
+        <div>
+          <span className={t.guestProfileName}>{name}</span>
+          {guest.is_holder && <Badge variant="info" dot>Titular</Badge>}
+        </div>
+      </div>
+
+      {loading ? <Spinner center label="Cargando perfil…" /> : (
+        <>
+          <dl className={t.meta}>
+            <div>
+              <dt><i className="fas fa-id-card" /> {detail?.id_type_id ? idTypeLabel(detail.id_type_id) : 'Documento'}</dt>
+              <dd>{documentNumber || 'Pendiente'}</dd>
+            </div>
+            <div><dt><i className="fas fa-phone" /> Celular</dt><dd>{phone || '—'}</dd></div>
+            <div><dt><i className="fas fa-envelope" /> Correo</dt><dd>{detail?.email || '—'}</dd></div>
+            <div><dt><i className="fas fa-cake-candles" /> Nacimiento</dt><dd>{detail?.birthdate || '—'}</dd></div>
+            <div><dt><i className="fas fa-plane-departure" /> Ciudad de origen</dt><dd>{detail?.origin_city || '—'}</dd></div>
+            <div><dt><i className="fas fa-plane-arrival" /> Ciudad de destino</dt><dd>{detail?.destination_city || '—'}</dd></div>
+          </dl>
+
+          {detail?.id_document_url ? (
+            <div className={t.guestDocument}>
+              <span className={t.stayLabel}>Fotografía del documento</span>
+              <a href={detail.id_document_url} target="_blank" rel="noreferrer" title="Ver en tamaño completo">
+                <img src={detail.id_document_url} alt={`Documento de ${name}`} />
+              </a>
+            </div>
+          ) : (
+            <p className={s.faint}><i className="fas fa-id-card" /> Sin fotografía del documento (se captura en el pre-check-in).</p>
+          )}
+        </>
+      )}
     </div>
   );
 }

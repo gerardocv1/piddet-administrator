@@ -10,7 +10,7 @@ import s from './screens.module.css';
 import t from './RentableUnitDetail.module.css';
 
 const emptyForm = {
-  name: '', rentable_unit_type_id: '', capacity: 1, base_price_per_night: '', description: '',
+  name: '', rentable_unit_type_id: '', capacity: 1, base_price_per_night: '', item_id: '', description: '',
 };
 
 // Detalle de una unidad reservable: crear (/rentable-units/new) o administrar (/rentable-units/:id).
@@ -33,6 +33,12 @@ export function RentableUnitDetail() {
     () => (types || []).map((ty) => ({ value: String(ty.id), label: ty.name })),
     [types],
   );
+  // Item tipo servicio del catálogo con el que se factura el hospedaje en el checkout.
+  const { data: serviceItems } = useResource(React.useCallback(() => api.serviceItems(), []), [], []);
+  const itemOptions = React.useMemo(
+    () => (serviceItems || []).map((it) => ({ value: String(it.id), label: `${it.name} · ${reservationMoney(it.price)}` })),
+    [serviceItems],
+  );
 
   const [form, setForm] = React.useState(emptyForm);
   const [saving, setSaving] = React.useState(false);
@@ -50,6 +56,7 @@ export function RentableUnitDetail() {
       rentable_unit_type_id: String(data.rentable_unit_type_id || ''),
       capacity: data.capacity ?? 1,
       base_price_per_night: data.base_price_per_night ?? '',
+      item_id: String(data.item_id || ''),
       description: data.description || '',
     });
   }, [data, isEdit]);
@@ -60,8 +67,8 @@ export function RentableUnitDetail() {
   const create = async () => {
     if (saving) return;
     setFormError('');
-    if (!form.name.trim() || !form.rentable_unit_type_id || form.base_price_per_night === '') {
-      setFormError('Completa nombre, tipo y tarifa por noche.');
+    if (!form.name.trim() || !form.rentable_unit_type_id || form.base_price_per_night === '' || !form.item_id) {
+      setFormError('Completa nombre, tipo, tarifa por noche e item de facturación.');
       return;
     }
     setSaving(true);
@@ -72,6 +79,7 @@ export function RentableUnitDetail() {
         rentable_unit_type_id: Number(form.rentable_unit_type_id),
         capacity: Number(form.capacity) || 1,
         base_price_per_night: form.base_price_per_night,
+        item_id: Number(form.item_id),
         description: form.description.trim() || null,
         files,
         spaces: newSpaces
@@ -91,8 +99,8 @@ export function RentableUnitDetail() {
   const save = async () => {
     if (saving) return;
     setFormError('');
-    if (!form.name.trim() || !form.rentable_unit_type_id || form.base_price_per_night === '') {
-      setFormError('Completa nombre, tipo y tarifa por noche.');
+    if (!form.name.trim() || !form.rentable_unit_type_id || form.base_price_per_night === '' || !form.item_id) {
+      setFormError('Completa nombre, tipo, tarifa por noche e item de facturación.');
       return;
     }
     setSaving(true);
@@ -102,6 +110,7 @@ export function RentableUnitDetail() {
         rentable_unit_type_id: Number(form.rentable_unit_type_id),
         capacity: Number(form.capacity) || 1,
         base_price_per_night: form.base_price_per_night,
+        item_id: Number(form.item_id),
         description: form.description.trim() || null,
       }));
     } catch (e) {
@@ -165,6 +174,10 @@ export function RentableUnitDetail() {
               </div>
               <MoneyInput label="Tarifa por noche" icon="fas fa-dollar-sign" placeholder="0"
                 value={form.base_price_per_night} onChange={(v) => set('base_price_per_night', v)} />
+              <Select label="Item de facturación" icon="fas fa-receipt"
+                value={form.item_id} onChange={(e) => set('item_id', e.target.value)}
+                options={[{ value: '', label: itemOptions.length ? 'Selecciona…' : 'No hay items de servicio activos' }, ...itemOptions]} />
+              <p className={s.faint}>El hospedaje se factura en el checkout con este item de servicio del catálogo de productos.</p>
               <Textarea label="Descripción" placeholder="Descripción comercial de la unidad (opcional)"
                 value={form.description} onChange={(e) => set('description', e.target.value)} />
               {formError && <div className={s.formError}><i className="fas fa-triangle-exclamation" /> {formError}</div>}

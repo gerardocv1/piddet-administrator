@@ -22,7 +22,6 @@ import { RentableUnitDetail } from './screens/RentableUnitDetail.jsx';
 import { Reservations } from './screens/Reservations.jsx';
 import { ReservationDetail } from './screens/ReservationDetail.jsx';
 import { ReservationWizard } from './screens/ReservationWizard/ReservationWizard.jsx';
-import { ReservationServiceTypes } from './screens/ReservationServiceTypes.jsx';
 import { ExpenseForm } from './screens/ExpenseForm.jsx';
 import { ExpenseWizard } from './screens/ExpenseWizard/ExpenseWizard.jsx';
 import { ExpenseDetail } from './screens/ExpenseDetail.jsx';
@@ -151,7 +150,6 @@ function AdminApp() {
             <Route path="rentable-units" element={<RequirePermission path="/rentable-units"><RentableUnits /></RequirePermission>} />
             <Route path="rentable-units/new" element={<RequirePermission path="/rentable-units"><RentableUnitDetail /></RequirePermission>} />
             <Route path="rentable-units/:unitId" element={<RequirePermission path="/rentable-units"><RentableUnitDetail /></RequirePermission>} />
-            <Route path="reservation-services" element={<RequirePermission path="/reservation-services"><ReservationServiceTypes /></RequirePermission>} />
             <Route path="reservations" element={<RequirePermission path="/reservations"><Reservations /></RequirePermission>} />
             <Route path="reservations/new" element={<RequirePermission path="/reservations"><ReservationWizard /></RequirePermission>} />
             <Route path="reservations/:reservationId" element={<RequirePermission path="/reservations"><ReservationDetail /></RequirePermission>} />
