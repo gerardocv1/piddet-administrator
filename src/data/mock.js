@@ -2055,10 +2055,22 @@ const mockRentableUnitTypes = [
   { id: 6, company_id: null, name: 'Lugar de eventos', icon: 'fas fa-champagne-glasses' },
 ];
 
+// Items tipo SERVICE del catálogo de productos: facturan el hospedaje de las unidades y los
+// servicios adicionales de las reservas.
+const mockServiceItems = [
+  { id: 901, name: 'Hospedaje cabaña', description: 'Noche de hospedaje en cabaña', price: '320000.00' },
+  { id: 902, name: 'Hospedaje habitación', description: 'Noche de hospedaje en habitación', price: '180000.00' },
+  { id: 903, name: 'Cena romántica', description: 'Cena para dos con decoración', price: '120000.00' },
+  { id: 904, name: 'Decoración de aniversario', description: 'Globos, pétalos y velas', price: '80000.00' },
+];
+
+const serviceItemName = (id) => mockServiceItems.find((it) => it.id === Number(id))?.name || null;
+
 const mockRentableUnits = [
   {
     id: 1, rentable_unit_type_id: 1, type_name: 'Cabaña', name: 'Cabaña El Roble',
     description: 'Cabaña de montaña con vista al valle.', capacity: 4, base_price_per_night: '320000.00',
+    item_id: 901, item_name: 'Hospedaje cabaña',
     position: 1, status: 1,
     files: [], files_count: 0,
     spaces: [
@@ -2069,14 +2081,10 @@ const mockRentableUnits = [
   {
     id: 2, rentable_unit_type_id: 2, type_name: 'Habitación', name: 'Habitación Colibrí',
     description: 'Habitación doble estándar.', capacity: 2, base_price_per_night: '180000.00',
+    item_id: 902, item_name: 'Hospedaje habitación',
     position: 2, status: 1,
     files: [], files_count: 0, spaces: [],
   },
-];
-
-const mockReservationServiceTypes = [
-  { id: 1, name: 'Cena romántica', description: 'Cena para dos con decoración', price: '120000.00', status: 1 },
-  { id: 2, name: 'Decoración de aniversario', description: 'Globos, pétalos y velas', price: '80000.00', status: 1 },
 ];
 
 const mockGuests = [
@@ -2112,26 +2120,8 @@ function resolveReservationsMock(path, query, { method = 'GET', body } = {}) {
     }));
   }
 
-  // Catálogo de servicios adicionales: /reservation-service-types[/{id}[/status]]
-  const stMatch = sub.match(/^reservation-service-types(?:\/(\d+)(\/status)?)?$/);
-  if (stMatch) {
-    const id = stMatch[1] ? Number(stMatch[1]) : null;
-    if (!id) {
-      if (method === 'POST') {
-        const newId = nextId(mockReservationServiceTypes);
-        const row = { id: newId, name: body.name, description: body.description || null, price: Number(body.price).toFixed(2), status: 1 };
-        mockReservationServiceTypes.push(row);
-        return row;
-      }
-      const onlyActive = query.get('only_active');
-      return onlyActive ? mockReservationServiceTypes.filter((s) => s.status === 1) : mockReservationServiceTypes;
-    }
-    const st = mockReservationServiceTypes.find((s) => s.id === id);
-    if (!st) return null;
-    if (stMatch[2] === '/status') { st.status = Number(body.status); return st; }
-    if (method === 'PUT') { Object.assign(st, { name: body.name, description: body.description || null, price: Number(body.price).toFixed(2) }); return st; }
-    return st;
-  }
+  // Items de servicio del catálogo de productos: /service-items
+  if (sub === 'service-items') return [...mockServiceItems];
 
   // Huéspedes: /guests[?q=] y /guests/{userId}
   if (sub === 'guests') {
@@ -2140,8 +2130,21 @@ function resolveReservationsMock(path, query, { method = 'GET', body } = {}) {
   }
   let gm = sub.match(/^guests\/(\d+)$/);
   if (gm) {
-    const g = mockGuests.find((x) => x.user_id === Number(gm[1]));
-    return g ? { ...g, birthdate: null, id_document_url: null } : null;
+    const userId = Number(gm[1]);
+    const g = mockGuests.find((x) => x.user_id === userId);
+    if (g) return { ...g, birthdate: null, origin_city: null, destination_city: null, id_document_url: null };
+    // Acompañantes creados al vuelo en reservas demo: perfil mínimo a partir de la reserva.
+    for (const r of mockReservations) {
+      const rg = (r.guests || []).find((x) => x.user_id === userId);
+      if (rg) {
+        return {
+          user_id: userId, first_name: rg.first_name, last_name: rg.last_name, name: rg.name,
+          email: null, phone_code: null, phone_number: null, id_type_id: 1, id_number: rg.document_number,
+          birthdate: null, origin_city: null, destination_city: null, id_document_url: null,
+        };
+      }
+    }
+    return null;
   }
 
   // Reservas
@@ -2209,8 +2212,10 @@ function resolveReservationsMock(path, query, { method = 'GET', body } = {}) {
         description: body.description ?? unit.description,
         capacity: body.capacity ?? unit.capacity,
         base_price_per_night: body.base_price_per_night ?? unit.base_price_per_night,
+        item_id: body.item_id ?? unit.item_id,
       });
       unit.type_name = mockRentableUnitTypes.find((ty) => ty.id === Number(unit.rentable_unit_type_id))?.name || unit.type_name;
+      unit.item_name = serviceItemName(unit.item_id);
       return unitDetail(unit);
     }
     return unitDetail(unit); // GET detalle
@@ -2224,7 +2229,9 @@ function resolveReservationsMock(path, query, { method = 'GET', body } = {}) {
       const unit = {
         id, rentable_unit_type_id: Number(body.rentable_unit_type_id), type_name: type?.name || '',
         name: body.name, description: body.description || null, capacity: Number(body.capacity) || 1,
-        base_price_per_night: Number(body.base_price_per_night).toFixed(2), position: id, status: 1,
+        base_price_per_night: Number(body.base_price_per_night).toFixed(2),
+        item_id: Number(body.item_id) || null, item_name: serviceItemName(body.item_id),
+        position: id, status: 1,
         files: (body.files || []).map((name, i) => ({ name, rentable_unit_space_id: null, url: null, thumbnail_url: null, position: i + 1 })),
         spaces: (body.spaces || []).map((sp, i) => ({ id: i + 1, name: sp.name, description: sp.description || null, position: i + 1, files: [] })),
       };
@@ -2291,9 +2298,9 @@ function resolveReservationsCore(sub, query, { method, body }) {
       const pricePerNight = Number(body.price_per_night || unit?.base_price_per_night || 0);
       const lodging = pricePerNight * nights;
       const services = (body.services || []).map((sv, i) => {
-        const st = mockReservationServiceTypes.find((s) => s.id === Number(sv.reservation_service_type_id));
+        const st = mockServiceItems.find((s) => s.id === Number(sv.item_id));
         const qty = Number(sv.quantity) || 1;
-        return { id: i + 1, reservation_service_type_id: st.id, name: st.name, quantity: qty, unit_price: st.price, total: (Number(st.price) * qty).toFixed(2) };
+        return { id: i + 1, item_id: st.id, name: st.name, quantity: qty, unit_price: st.price, total: (Number(st.price) * qty).toFixed(2) };
       });
       const servicesTotal = services.reduce((s, sv) => s + Number(sv.total), 0);
       const hasPayment = body.payment && body.payment.value;
@@ -2360,9 +2367,9 @@ function resolveReservationsCore(sub, query, { method, body }) {
     return detail(r);
   }
   if (action === 'services' && method === 'POST') {
-    const st = mockReservationServiceTypes.find((s) => s.id === Number(body.reservation_service_type_id));
+    const st = mockServiceItems.find((s) => s.id === Number(body.item_id));
     const qty = Number(body.quantity) || 1;
-    r.services.push({ id: nextId(r.services), reservation_service_type_id: st.id, name: st.name, quantity: qty, unit_price: st.price, total: (Number(st.price) * qty).toFixed(2) });
+    r.services.push({ id: nextId(r.services), item_id: st.id, name: st.name, quantity: qty, unit_price: st.price, total: (Number(st.price) * qty).toFixed(2) });
     recalc(r); return detail(r);
   }
   let sm = action.match(/^services\/(\d+)$/);

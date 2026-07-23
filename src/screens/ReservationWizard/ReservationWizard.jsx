@@ -6,7 +6,7 @@ import {
 import { api } from '../../lib/api.js';
 import { useResource } from '../../lib/useResource.js';
 import { todayIso } from '../../lib/orderLabels.js';
-import { reservationMoney } from '../../lib/reservationLabels.js';
+import { reservationMoney, ID_TYPES } from '../../lib/reservationLabels.js';
 import s from '../screens.module.css';
 import t from './ReservationWizard.module.css';
 
@@ -35,8 +35,8 @@ export function ReservationWizard() {
   const [guestResults, setGuestResults] = React.useState(null);
 
   // Paso 3: servicios
-  const { data: serviceTypes } = useResource(React.useCallback(() => api.reservationServiceTypes({ onlyActive: true }), []), [], []);
-  const [services, setServices] = React.useState([]); // [{ reservation_service_type_id, name, price, quantity }]
+  const { data: serviceItems } = useResource(React.useCallback(() => api.serviceItems(), []), [], []);
+  const [services, setServices] = React.useState([]); // [{ item_id, name, price, quantity }]
 
   // Paso 4: adelanto
   const { data: paymentMethods } = useResource(api.paymentMethods, [], []);
@@ -89,13 +89,13 @@ export function ReservationWizard() {
 
   const toggleService = (st) => {
     setServices((list) => {
-      const found = list.find((x) => x.reservation_service_type_id === st.id);
-      if (found) return list.filter((x) => x.reservation_service_type_id !== st.id);
-      return [...list, { reservation_service_type_id: st.id, name: st.name, price: st.price, quantity: 1 }];
+      const found = list.find((x) => x.item_id === st.id);
+      if (found) return list.filter((x) => x.item_id !== st.id);
+      return [...list, { item_id: st.id, name: st.name, price: st.price, quantity: 1 }];
     });
   };
   const setServiceQty = (id, qty) =>
-    setServices((list) => list.map((x) => (x.reservation_service_type_id === id ? { ...x, quantity: Math.max(1, Number(qty) || 1) } : x)));
+    setServices((list) => list.map((x) => (x.item_id === id ? { ...x, quantity: Math.max(1, Number(qty) || 1) } : x)));
 
   const addCompanion = () => setCompanions((c) => [...c, { key: Date.now(), first_name: '', last_name: '', phone_code: '57', phone_number: '', id_number: '' }]);
   const setCompanionField = (key, k, v) => setCompanions((c) => c.map((x) => (x.key === key ? { ...x, [k]: v } : x)));
@@ -135,7 +135,7 @@ export function ReservationWizard() {
             phone_code: c.phone_code, phone_number: c.phone_number.trim(),
             id_number: c.id_number.trim() || null,
           })),
-        services: services.map((sv) => ({ reservation_service_type_id: sv.reservation_service_type_id, quantity: sv.quantity })),
+        services: services.map((sv) => ({ item_id: sv.item_id, quantity: sv.quantity })),
       };
       if (payment.payment_method && payment.value) {
         payload.payment = { payment_method: payment.payment_method, value: payment.value };
@@ -249,7 +249,7 @@ export function ReservationWizard() {
               <div className={s.formGrid}>
                 <Select label="Tipo de documento" icon="fas fa-id-card" value={holder.id_type_id}
                   onChange={(e) => setHolderField('id_type_id', e.target.value)}
-                  options={[{ value: '1', label: 'Cédula' }, { value: '3', label: 'Cédula de extranjería' }, { value: '4', label: 'Pasaporte' }]} />
+                  options={ID_TYPES} />
                 <Input label="Número de documento" icon="fas fa-hashtag" value={holder.id_number} onChange={(e) => setHolderField('id_number', e.target.value)} />
               </div>
 
@@ -271,11 +271,11 @@ export function ReservationWizard() {
 
           {step === 2 && (
             <div className={s.formCol}>
-              {(serviceTypes || []).length === 0 ? (
-                <p className={s.faint}>No hay servicios adicionales configurados. Puedes continuar sin ellos.</p>
+              {(serviceItems || []).length === 0 ? (
+                <p className={s.faint}>No hay items de servicio activos en el catálogo de productos. Puedes continuar sin servicios.</p>
               ) : (
-                serviceTypes.map((st) => {
-                  const picked = services.find((x) => x.reservation_service_type_id === st.id);
+                serviceItems.map((st) => {
+                  const picked = services.find((x) => x.item_id === st.id);
                   return (
                     <div key={st.id} className={t.serviceRow}>
                       <label className={t.servicePick}>

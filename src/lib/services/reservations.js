@@ -1,11 +1,12 @@
 // Servicio: reservas de hospedaje de la compañía activa (cabañas, habitaciones, lugares).
 //
 // Company-scoped: las rutas cuelgan de /companies/{company}. El módulo tiene dos permisos:
-// `api-module-rentable-units` (configurar unidades, tipos y servicios) y `api-module-reservations`
+// `api-module-rentable-units` (configurar unidades y tipos) y `api-module-reservations`
 // (operar reservas). Una unidad reservable es un encabezado (tipo, capacidad, tarifa por noche,
-// fotos públicas en S3) con espacios internos (habitación, sala, minibar…), cada uno con sus
-// fotos. Los huéspedes son usuarios reales de la plataforma (creados como "pasivos"); el
-// pre-check-in público vive en rutas /public/checkin/{code} (sin sesión).
+// item de facturación, fotos públicas en S3) con espacios internos (habitación, sala, minibar…),
+// cada uno con sus fotos. Los servicios adicionales de una reserva son items tipo SERVICE del
+// catálogo de productos. Los huéspedes son usuarios reales de la plataforma (creados como
+// "pasivos"); el pre-check-in público vive en rutas /public/checkin/{code} (sin sesión).
 
 import { http } from '../http/client.js';
 import { auth } from '../auth/index.js';
@@ -64,12 +65,10 @@ export const reservationsService = {
   unitAvailability: ({ checkIn, checkOut }) =>
     list(http.get(`${base()}/rentable-units/availability${qs({ check_in: checkIn, check_out: checkOut })}`)),
 
-  // ── Catálogo de servicios adicionales ───────────────────────────────────
-  reservationServiceTypes: ({ onlyActive = false } = {}) =>
-    list(http.get(`${base()}/reservation-service-types${qs({ only_active: onlyActive || '' })}`)),
-  createReservationServiceType: (data) => http.post(`${base()}/reservation-service-types`, data),
-  updateReservationServiceType: (id, data) => http.put(`${base()}/reservation-service-types/${id}`, data),
-  setReservationServiceTypeStatus: (id, status) => http.patch(`${base()}/reservation-service-types/${id}/status`, { status }),
+  // ── Items de servicio del catálogo de productos ─────────────────────────
+  // Items tipo SERVICE activos: [{ id, name, description, price }]. Alimentan el selector del
+  // item de facturación de la unidad y los servicios adicionales de la reserva.
+  serviceItems: () => list(http.get(`${base()}/service-items`)),
 
   // ── Huéspedes (usuarios de la compañía como clientes) ───────────────────
   guestsSearch: (q) => list(http.get(`${base()}/guests${qs({ q })}`)),

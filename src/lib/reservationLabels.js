@@ -25,6 +25,16 @@ export const reservationStatusMeta = (status) => {
   }
 };
 
+// Tipos de documento de identidad soportados (ids del catálogo del backend).
+export const ID_TYPES = [
+  { value: '1', label: 'Cédula' },
+  { value: '3', label: 'Cédula de extranjería' },
+  { value: '4', label: 'Pasaporte' },
+];
+
+export const idTypeLabel = (idTypeId) =>
+  ID_TYPES.find((it) => it.value === String(idTypeId))?.label || 'Documento';
+
 // Franjas de hora aproximada de llegada del pre-check-in (valor guardado → etiqueta legible).
 export const ARRIVAL_SLOTS = [
   { value: '12-15', label: '12:00 – 3:00 p. m.' },
