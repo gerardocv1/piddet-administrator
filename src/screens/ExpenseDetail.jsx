@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Card, Badge, Button, Spinner, Modal, MultiImageUpload, PageHeader } from '../components';
+import { Card, Badge, Button, Spinner, ConfirmDialog, MultiImageUpload, PageHeader } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { usePermissions } from '../lib/permissions/usePermissions.js';
@@ -210,24 +210,19 @@ export function ExpenseDetail() {
         </div>
       </div>
 
-      <Modal open={confirming} size="sm" title="Anular gasto" onClose={() => setConfirming(false)}
-        footer={<>
-          <Button variant="secondary" onClick={() => setConfirming(false)}>Cancelar</Button>
-          <Button variant="danger" icon="fas fa-ban" loading={annulling} onClick={annul}>Anular</Button>
-        </>}>
+      <ConfirmDialog open={confirming} title="Anular gasto"
+        confirmLabel="Anular" cancelLabel="Cancelar" loading={annulling} error={annulError}
+        onConfirm={annul} onClose={() => setConfirming(false)}>
         ¿Seguro que deseas anular el gasto <strong>#{data.id}</strong> por <strong>{expenseMoney(data.total)}</strong>?
         Esta acción no se puede deshacer: el gasto quedará marcado como anulado y saldrá del resumen.
-        {annulError && <div className={s.formError}><i className="fas fa-triangle-exclamation" /> {annulError}</div>}
-      </Modal>
+      </ConfirmDialog>
 
-      <Modal open={!!delPhoto} size="sm" title="Quitar foto" onClose={() => setDelPhoto(null)}
-        footer={<>
-          <Button variant="secondary" onClick={() => setDelPhoto(null)}>Cancelar</Button>
-          <Button variant="danger" icon="fas fa-trash" loading={savingPhotos} onClick={removePhoto}>Quitar</Button>
-        </>}>
+      <ConfirmDialog open={!!delPhoto} title="Quitar foto"
+        confirmLabel="Quitar" cancelLabel="Cancelar" icon="fas fa-trash" loading={savingPhotos}
+        onConfirm={removePhoto} onClose={() => setDelPhoto(null)}>
         ¿Seguro que deseas quitar esta foto de la factura? Se borra definitivamente (también del
         almacenamiento) y no se puede recuperar.
-      </Modal>
+      </ConfirmDialog>
 
       {viewerIndex != null && files[viewerIndex] && (
         <PhotoViewer

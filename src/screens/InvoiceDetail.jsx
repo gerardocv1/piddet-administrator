@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Card, Badge, Button, Spinner, Modal, Textarea, PageHeader } from '../components';
+import { Card, Badge, Button, Spinner, ConfirmDialog, PageHeader } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { usePermissions } from '../lib/permissions/usePermissions.js';
@@ -24,21 +24,18 @@ export function InvoiceDetail() {
   useSetPageTitle(data?.order ? `Factura ${data.order.order_number || data.order.id}` : null);
 
   const [cancelOpen, setCancelOpen] = React.useState(false);
-  const [cancelReason, setCancelReason] = React.useState('');
   const [busy, setBusy] = React.useState(false);
   const [actionError, setActionError] = React.useState('');
 
   // Conserva la consulta del listado (?date=&page=) al volver.
   const goBack = () => navigate(`/invoices${params.toString() ? `?${params.toString()}` : ''}`);
 
-  const doCancel = async () => {
-    const reason = cancelReason.trim();
-    if (reason.length < 3 || busy) return;
+  const doCancel = async (reason) => {
+    if (busy) return;
     setBusy(true); setActionError('');
     try {
       setData(await api.cancelOrder(orderId, reason));
       setCancelOpen(false);
-      setCancelReason('');
     } catch (e) {
       setActionError(e?.message || 'No se pudo cancelar la factura.');
     } finally {
@@ -198,18 +195,13 @@ export function InvoiceDetail() {
         {personCard('Creada por', creator, creator?.creator_name, 'Sin datos del creador.')}
       </div>
 
-      <Modal open={cancelOpen} size="sm" title="Cancelar factura" onClose={() => setCancelOpen(false)}
-        footer={<>
-          <Button variant="secondary" onClick={() => setCancelOpen(false)}>Volver</Button>
-          <Button variant="danger" icon="fas fa-ban" loading={busy} disabled={cancelReason.trim().length < 3} onClick={doCancel}>Cancelar factura</Button>
-        </>}>
-        <div className={s.formCol}>
-          <p>La factura quedará cancelada y saldrá de las métricas de ventas. Esta acción no se puede deshacer.</p>
-          <Textarea label="Motivo de la cancelación" required rows={3}
-            placeholder="Describe por qué se cancela esta factura…"
-            value={cancelReason} onChange={(e) => setCancelReason(e.target.value)} />
-        </div>
-      </Modal>
+      <ConfirmDialog open={cancelOpen} title="Cancelar factura"
+        confirmLabel="Cancelar factura" loading={busy}
+        reason="required" reasonLabel="Motivo de la cancelación"
+        reasonPlaceholder="Describe por qué se cancela esta factura…"
+        onConfirm={doCancel} onClose={() => setCancelOpen(false)}>
+        <p>La factura quedará cancelada y saldrá de las métricas de ventas. Esta acción no se puede deshacer.</p>
+      </ConfirmDialog>
     </div>
   );
 }

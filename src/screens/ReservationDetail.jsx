@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Card, Badge, Button, IconButton, Avatar, Spinner, Modal, Input, Select, MoneyInput, Autocomplete, PageHeader } from '../components';
+import { Card, Badge, Button, IconButton, Avatar, Spinner, Modal, ConfirmDialog, Input, Select, MoneyInput, Autocomplete, PageHeader } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { usePermissions } from '../lib/permissions/usePermissions.js';
@@ -28,7 +28,6 @@ export function ReservationDetail() {
   const [busy, setBusy] = React.useState(false);
   const [actionError, setActionError] = React.useState('');
   const [cancelOpen, setCancelOpen] = React.useState(false);
-  const [cancelReason, setCancelReason] = React.useState('');
   const [reopenOpen, setReopenOpen] = React.useState(false);
   const [payOpen, setPayOpen] = React.useState(false);
   const [payment, setPayment] = React.useState({ payment_method: '', value: '' });
@@ -117,8 +116,8 @@ export function ReservationDetail() {
   };
   const removeCharge = (chargeId) => run(() => api.removeReservationCharge(reservationId, chargeId), 'No se pudo quitar el cargo.');
 
-  const doCancel = async () => {
-    const ok = await run(() => api.cancelReservation(reservationId, cancelReason.trim() || null), 'No se pudo cancelar la reserva.');
+  const doCancel = async (reason) => {
+    const ok = await run(() => api.cancelReservation(reservationId, reason), 'No se pudo cancelar la reserva.');
     if (ok) { setCancelOpen(false); reloadOrders(); }
   };
 
@@ -447,16 +446,12 @@ export function ReservationDetail() {
       )}
 
       {/* Modales */}
-      <Modal open={cancelOpen} size="sm" title="Cancelar reserva" onClose={() => setCancelOpen(false)}
-        footer={<>
-          <Button variant="secondary" onClick={() => setCancelOpen(false)}>Volver</Button>
-          <Button variant="danger" icon="fas fa-ban" loading={busy} onClick={doCancel}>Cancelar reserva</Button>
-        </>}>
-        <div className={s.formCol}>
-          <p>Se liberan las fechas de la unidad y se cancelan también todas las facturas de la reserva (abonos, consumos POS y cierre). Esta acción no se puede deshacer.</p>
-          <Input label="Motivo (opcional)" value={cancelReason} onChange={(e) => setCancelReason(e.target.value)} />
-        </div>
-      </Modal>
+      <ConfirmDialog open={cancelOpen} title="Cancelar reserva"
+        confirmLabel="Cancelar reserva" loading={busy}
+        reason="optional" reasonLabel="Motivo"
+        onConfirm={doCancel} onClose={() => setCancelOpen(false)}>
+        <p>Se liberan las fechas de la unidad y se cancelan también todas las facturas de la reserva (abonos, consumos POS y cierre). Esta acción no se puede deshacer.</p>
+      </ConfirmDialog>
 
       <Modal open={reopenOpen} size="sm" title="Reabrir reserva" onClose={() => setReopenOpen(false)}
         footer={<>

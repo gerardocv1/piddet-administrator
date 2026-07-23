@@ -2112,6 +2112,7 @@ const mockGuests = [
 ];
 
 const mockReservations = [];
+let mockReservationOrderSeq = 0;
 
 // Vista de listado (sin espacios ni fotos completas, con conteo).
 const unitRow = (u) => ({
@@ -2330,11 +2331,13 @@ function resolveReservationsCore(sub, query, { method, body }) {
     r.total = (Number(r.lodging_subtotal) + servicesTotal).toFixed(2);
   };
   const find = (id) => mockReservations.find((r) => r.id === id);
+  // Consecutivo corto propio de las facturas de reserva: prefijo «R» + secuencia por compañía.
+  const nextReservationOrderNumber = () => 'R' + String(++mockReservationOrderSeq).padStart(7, '0');
   // Cada abono genera su factura (orden LODGING pagada) vinculada a la reserva.
   const invoiceAdvance = (r, payment) => {
     const orderId = 'ord-' + Math.random().toString(36).slice(2, 10);
     r.linked_orders.unshift({
-      id: orderId, order_number: null, status: 'ACCEPTED_IN_STORE', status_payment: 'PAID',
+      id: orderId, order_number: nextReservationOrderNumber(), status: 'ACCEPTED_IN_STORE', status_payment: 'PAID',
       service_type: 'LODGING', is_lodging: true, type: 'advance', discount: '0.00',
       total: Number(payment.value).toFixed(2), date: new Date().toISOString(),
     });
@@ -2444,7 +2447,7 @@ function resolveReservationsCore(sub, query, { method, body }) {
     r.payments.forEach((p) => { if (p.status === 1 && !p.consolidated_at) p.consolidated_at = new Date().toISOString(); });
     r.status = 4; r.checkout_at = new Date().toISOString(); r.checkout_order_id = 'ord-' + Math.random().toString(36).slice(2, 10);
     r.linked_orders.unshift({
-      id: r.checkout_order_id, order_number: null, status: 'ACCEPTED_IN_STORE', status_payment: 'PAID',
+      id: r.checkout_order_id, order_number: nextReservationOrderNumber(), status: 'ACCEPTED_IN_STORE', status_payment: 'PAID',
       service_type: 'LODGING', is_lodging: true, type: 'checkout', discount: applied.toFixed(2),
       total: (accountTotal - applied).toFixed(2), date: new Date().toISOString(),
     });

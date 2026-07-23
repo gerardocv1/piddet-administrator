@@ -1,0 +1,12 @@
+.body { display: flex; flex-direction: column; gap: 14px; }
+
+.error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border-radius: var(--radius);
+  background: var(--color-danger-100);
+  color: var(--color-danger-fg);
+  font-size: var(--text-sm);
+}
