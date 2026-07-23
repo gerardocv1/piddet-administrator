@@ -70,6 +70,10 @@ export const reservationsService = {
   // item de facturación de la unidad y los servicios adicionales de la reserva.
   serviceItems: () => list(http.get(`${base()}/service-items`)),
 
+  // Items activos facturables en la cuenta de una reserva (productos Y servicios):
+  // [{ id, name, description, price, type: 'PRODUCT'|'SERVICE' }]. `q` busca por nombre.
+  consumableItems: (q = '') => list(http.get(`${base()}/consumable-items${qs({ q })}`)),
+
   // ── Huéspedes (usuarios de la compañía como clientes) ───────────────────
   guestsSearch: (q) => list(http.get(`${base()}/guests${qs({ q })}`)),
   guest: (userId) => http.get(`${base()}/guests/${userId}`),
@@ -92,13 +96,20 @@ export const reservationsService = {
   addReservationService: (reservationId, data) => http.post(`${base()}/reservations/${reservationId}/services`, data),
   removeReservationService: (reservationId, lineId) => http.del(`${base()}/reservations/${reservationId}/services/${lineId}`),
 
-  // Pagos/adelantos de la reserva.
+  // Cargos de la cuenta (productos o servicios del catálogo); se facturan en el checkout.
+  addReservationCharge: (reservationId, data) => http.post(`${base()}/reservations/${reservationId}/charges`, data),
+  removeReservationCharge: (reservationId, chargeId) => http.del(`${base()}/reservations/${reservationId}/charges/${chargeId}`),
+
+  // Pagos/abonos de la reserva. Cada abono genera su factura (orden LODGING) en la fecha del pago;
+  // anular el pago cancela también esa factura.
   addReservationPayment: (reservationId, data) => http.post(`${base()}/reservations/${reservationId}/payments`, data),
   annulReservationPayment: (reservationId, paymentId) => http.patch(`${base()}/reservations/${reservationId}/payments/${paymentId}/annul`),
 
-  // Checkout: genera la factura de hospedaje (orden LODGING). Acepta un pago final opcional.
+  // Checkout: factura toda la cuenta (hospedaje + servicios + cargos) con los anticipos aplicados
+  // como descuento y salda los consumos POS pendientes. Acepta un pago final opcional.
   checkoutReservation: (reservationId, payment = null) => http.post(`${base()}/reservations/${reservationId}/checkout`, payment ? { payment } : {}),
-  // Órdenes vinculadas a la reserva (consumos POS + orden de cierre).
+  // Facturas vinculadas a la reserva: abonos, consumos POS y orden de cierre
+  // [{ id, order_number, type: 'advance'|'consumption'|'checkout', total, date, status_payment, … }].
   reservationOrders: (reservationId) => list(http.get(`${base()}/reservations/${reservationId}/orders`)),
 
   // ── Pre-check-in público (sin sesión, autenticado por el código de reserva) ──
