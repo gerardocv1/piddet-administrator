@@ -1,10 +1,11 @@
 import React from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Card, Badge, Button, IconButton, Spinner, Modal, Textarea } from '../components';
+import { Card, Badge, Button, Spinner, Modal, Textarea, PageHeader } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { usePermissions } from '../lib/permissions/usePermissions.js';
 import { orderStatusOf, paymentStatusOf, serviceTypeLabel, originLabel } from '../lib/orderLabels.js';
+import { useSetPageTitle } from '../lib/pageTitle.jsx';
 import s from './screens.module.css';
 import t from './InvoiceDetail.module.css';
 
@@ -19,6 +20,8 @@ export function InvoiceDetail() {
 
   const fetcher = React.useCallback(() => api.order(orderId), [orderId]);
   const { data, setData, loading, error } = useResource(fetcher, null, [orderId]);
+
+  useSetPageTitle(data?.order ? `Factura ${data.order.order_number || data.order.id}` : null);
 
   const [cancelOpen, setCancelOpen] = React.useState(false);
   const [cancelReason, setCancelReason] = React.useState('');
@@ -79,36 +82,30 @@ export function InvoiceDetail() {
 
   return (
     <div className={s.page}>
-      <div className={t.header}>
-        <IconButton icon="fas fa-arrow-left" variant="light" title="Volver a facturas" onClick={goBack} />
-        <div className={t.headText}>
-          <h2 className={t.title}>Factura {order.order_number || order.id}</h2>
-          <span className={s.muted}>{order.created_date}</span>
-        </div>
-        <div className={t.headBadges}>
+      <PageHeader
+        onBack={goBack}
+        backTitle="Volver a facturas"
+        subtitle={order.created_date}
+        actions={<>
           <Badge variant={st.variant} dot>{status?.name || st.label}</Badge>
           <Badge variant={pay.variant}>{pay.label}</Badge>
           {order.status !== 'CANCELLED' && can('order-cancel') && (
             <Button variant="danger" size="sm" icon="fas fa-ban" onClick={() => setCancelOpen(true)}>Cancelar factura</Button>
           )}
-        </div>
-      </div>
+        </>}
+        meta={[
+          { label: 'Origen', value: originLabel(order.origin_code) },
+          { label: 'Servicio', value: serviceTypeLabel(order.service_type) },
+          order.table_id != null ? { label: 'Mesa', value: order.table_id } : null,
+        ]}
+        note={data.cancellation ? (
+          <><i className="fas fa-ban" /> Factura cancelada
+            {data.cancellation.created_at ? <> el {String(data.cancellation.created_at).slice(0, 10)}</> : null}
+            {data.cancellation.comment ? <> · Motivo: {data.cancellation.comment}</> : null}</>
+        ) : null}
+      />
 
       {actionError && <div className={s.formError}><i className="fas fa-triangle-exclamation" /> {actionError}</div>}
-
-      {data.cancellation && (
-        <div className={t.cancelNote}>
-          <i className="fas fa-ban" /> Factura cancelada
-          {data.cancellation.created_at ? <> el {String(data.cancellation.created_at).slice(0, 10)}</> : null}
-          {data.cancellation.comment ? <> · Motivo: {data.cancellation.comment}</> : null}
-        </div>
-      )}
-
-      <p className={t.metaLine}>
-        <span><i className="fas fa-cash-register" /> Origen: {originLabel(order.origin_code)}</span>
-        <span><i className="fas fa-utensils" /> Servicio: {serviceTypeLabel(order.service_type)}</span>
-        {order.table_id != null && <span><i className="fas fa-chair" /> Mesa: {order.table_id}</span>}
-      </p>
 
       <div className={t.mainGrid}>
         <Card>

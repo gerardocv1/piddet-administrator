@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Card, Badge, Button, IconButton, Avatar, Spinner, Modal, Input, Select, MoneyInput, Autocomplete } from '../components';
+import { Card, Badge, Button, IconButton, Avatar, Spinner, Modal, Input, Select, MoneyInput, Autocomplete, PageHeader } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { usePermissions } from '../lib/permissions/usePermissions.js';
@@ -157,44 +157,35 @@ export function ReservationDetail() {
 
   return (
     <div className={s.page}>
-      <div className={t.headerCard}>
-        <div className={t.headTop}>
-          <IconButton icon="fas fa-arrow-left" variant="light" title="Volver a reservas" onClick={goBack} />
-          <div className={t.headText}>
-            <span className={t.headSubtitle}>
-              {formatStayRange(data.check_in_date, data.check_out_date)} · {data.nights} {Number(data.nights) === 1 ? 'noche' : 'noches'}
-            </span>
-          </div>
-          <div className={t.headActions}>
-            <Badge variant={meta.variant} dot>{meta.label}</Badge>
-            {isPending && <Button variant="secondary" size="sm" icon="fas fa-circle-check" loading={busy} onClick={() => run(() => api.confirmReservation(reservationId), 'No se pudo confirmar.')}>Confirmar</Button>}
-            {isConfirmed && <Button variant="primary" size="sm" icon="fas fa-door-open" loading={busy} onClick={() => run(() => api.checkInReservation(reservationId), 'No se pudo hacer check-in.')}>Check-in</Button>}
-            {isCheckedIn && can('reservation-checkout') && (
-              <Button variant="primary" size="sm" icon="fas fa-file-invoice-dollar" onClick={() => setCheckoutOpen(true)}>Checkout</Button>
-            )}
-            {isCheckedOut && can('reservation-checkout') && (
-              <Button variant="secondary" size="sm" icon="fas fa-rotate-left" onClick={() => setReopenOpen(true)}>Reabrir</Button>
-            )}
-            {status !== RESERVATION_STATUS.CANCELLED && can('reservation-cancel') && (
-              <Button variant="danger" size="sm" icon="fas fa-ban" onClick={() => setCancelOpen(true)}>Cancelar</Button>
-            )}
-          </div>
-        </div>
-
-        <dl className={t.metaGrid}>
-          <div><dt>Unidad</dt><dd>{data.rentable_unit_name}</dd></div>
-          <div><dt>Llegada estimada</dt><dd>{arrivalSlotLabel(data.expected_arrival_time)}</dd></div>
-          <div><dt>Registró</dt><dd>{data.created_by_name || '—'}</dd></div>
-        </dl>
-
-        {status === RESERVATION_STATUS.CANCELLED && (
-          <div className={t.cancelNote}>
-            <i className="fas fa-ban" /> Reserva cancelada
+      <PageHeader
+        onBack={goBack}
+        backTitle="Volver a reservas"
+        subtitle={`${formatStayRange(data.check_in_date, data.check_out_date)} · ${data.nights} ${Number(data.nights) === 1 ? 'noche' : 'noches'}`}
+        actions={<>
+          <Badge variant={meta.variant} dot>{meta.label}</Badge>
+          {isPending && <Button variant="secondary" size="sm" icon="fas fa-circle-check" loading={busy} onClick={() => run(() => api.confirmReservation(reservationId), 'No se pudo confirmar.')}>Confirmar</Button>}
+          {isConfirmed && <Button variant="primary" size="sm" icon="fas fa-door-open" loading={busy} onClick={() => run(() => api.checkInReservation(reservationId), 'No se pudo hacer check-in.')}>Check-in</Button>}
+          {isCheckedIn && can('reservation-checkout') && (
+            <Button variant="primary" size="sm" icon="fas fa-file-invoice-dollar" onClick={() => setCheckoutOpen(true)}>Checkout</Button>
+          )}
+          {isCheckedOut && can('reservation-checkout') && (
+            <Button variant="secondary" size="sm" icon="fas fa-rotate-left" onClick={() => setReopenOpen(true)}>Reabrir</Button>
+          )}
+          {status !== RESERVATION_STATUS.CANCELLED && can('reservation-cancel') && (
+            <Button variant="danger" size="sm" icon="fas fa-ban" onClick={() => setCancelOpen(true)}>Cancelar</Button>
+          )}
+        </>}
+        meta={[
+          { label: 'Unidad', value: data.rentable_unit_name },
+          { label: 'Llegada estimada', value: arrivalSlotLabel(data.expected_arrival_time) },
+          { label: 'Registró', value: data.created_by_name || '—' },
+        ]}
+        note={status === RESERVATION_STATUS.CANCELLED ? (
+          <><i className="fas fa-ban" /> Reserva cancelada
             {data.cancelled_by_name ? <> por <strong>{data.cancelled_by_name}</strong></> : null}
-            {data.cancellation_reason ? <> · {data.cancellation_reason}</> : null}
-          </div>
-        )}
-      </div>
+            {data.cancellation_reason ? <> · {data.cancellation_reason}</> : null}</>
+        ) : null}
+      />
 
       {actionError && <div className={s.formError}><i className="fas fa-triangle-exclamation" /> {actionError}</div>}
 

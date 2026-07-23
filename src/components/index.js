@@ -36,3 +36,4 @@ export { Notifications } from './feedback/Notifications.jsx';
 // navigation
 export { Sidebar } from './navigation/Sidebar.jsx';
 export { Topbar } from './navigation/Topbar.jsx';
+export { PageHeader } from './navigation/PageHeader.jsx';

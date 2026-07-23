@@ -1,11 +1,12 @@
 import React from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
-  Card, Badge, Button, IconButton, Input, Select, Textarea, MoneyInput, Switch, Spinner, Modal, MultiImageUpload,
+  Card, Badge, Button, IconButton, Input, Select, Textarea, MoneyInput, Switch, Spinner, Modal, MultiImageUpload, PageHeader,
 } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { reservationMoney } from '../lib/reservationLabels.js';
+import { useSetPageTitle } from '../lib/pageTitle.jsx';
 import s from './screens.module.css';
 import t from './RentableUnitDetail.module.css';
 
@@ -44,6 +45,8 @@ export function RentableUnitDetail() {
   const [saving, setSaving] = React.useState(false);
   const [formError, setFormError] = React.useState('');
   const set = (key, value) => setForm((f) => ({ ...f, [key]: value }));
+
+  useSetPageTitle(isEdit ? (data?.name || null) : 'Nueva unidad');
 
   // Creación: fotos generales y espacios locales (los espacios se envían con el POST).
   const generalPhotosRef = React.useRef(null);
@@ -142,21 +145,17 @@ export function RentableUnitDetail() {
 
   return (
     <div className={s.page}>
-      <div className={t.header}>
-        <IconButton icon="fas fa-arrow-left" variant="light" title="Volver a unidades" onClick={goBack} />
-        <div className={t.headText}>
-          <h2 className={t.title}>{isEdit ? data.name : 'Nueva unidad'}</h2>
-          <span className={s.muted}>
-            {isEdit ? (data.type_name || 'Unidad reservable') : 'Registra una cabaña, habitación o lugar para reservar.'}
-          </span>
-        </div>
-        {isEdit && (
-          <div className={t.headActions}>
+      <PageHeader
+        onBack={goBack}
+        backTitle="Volver a unidades"
+        subtitle={isEdit ? (data.type_name || 'Unidad reservable') : 'Registra una cabaña, habitación o lugar para reservar.'}
+        actions={isEdit ? (
+          <>
             <Badge variant={active ? 'success' : 'neutral'} dot>{active ? 'Reservable' : 'Inactiva'}</Badge>
             <Switch checked={active} onChange={toggleStatus} label="Reservable" />
-          </div>
-        )}
-      </div>
+          </>
+        ) : null}
+      />
 
       <div className={t.grid}>
         <Card>

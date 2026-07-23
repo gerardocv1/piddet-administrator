@@ -1,10 +1,12 @@
 import React from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Card, Badge, Button, IconButton, Spinner, Modal, MultiImageUpload } from '../components';
+import { Card, Badge, Button, Spinner, Modal, MultiImageUpload, PageHeader } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { usePermissions } from '../lib/permissions/usePermissions.js';
 import { expenseMoney } from '../lib/expenseLabels.js';
+import { formatShortDate } from '../lib/dates.js';
+import { useSetPageTitle } from '../lib/pageTitle.jsx';
 import s from './screens.module.css';
 import t from './ExpenseDetail.module.css';
 
@@ -20,6 +22,8 @@ export function ExpenseDetail() {
 
   const fetcher = React.useCallback(() => api.expense(expenseId), [expenseId]);
   const { data, setData, loading, error, reload } = useResource(fetcher, null, [expenseId]);
+
+  useSetPageTitle(data?.id ? `Gasto #${data.id}` : null);
 
   const [confirming, setConfirming] = React.useState(false);
   const [annulling, setAnnulling] = React.useState(false);
@@ -116,13 +120,11 @@ export function ExpenseDetail() {
 
   return (
     <div className={s.page}>
-      <div className={t.header}>
-        <IconButton icon="fas fa-arrow-left" variant="light" title="Volver a gastos" onClick={goBack} />
-        <div className={t.headText}>
-          <h2 className={t.title}>Gasto #{data.id}</h2>
-          <span className={s.muted}>{data.expense_date}</span>
-        </div>
-        <div className={t.headActions}>
+      <PageHeader
+        onBack={goBack}
+        backTitle="Volver a gastos"
+        subtitle={formatShortDate(data.expense_date)}
+        actions={<>
           {active
             ? <Badge variant="success" dot>Activo</Badge>
             : <Badge variant="danger" dot>Anulado</Badge>}
@@ -131,16 +133,18 @@ export function ExpenseDetail() {
               Anular
             </Button>
           )}
-        </div>
-      </div>
-
-      {!active && (
-        <div className={t.annulledBanner}>
-          <i className="fas fa-ban" /> Gasto anulado
-          {data.annulled_by_name ? <> por <strong>{data.annulled_by_name}</strong></> : null}
-          {data.annulled_at ? <> el {String(data.annulled_at).slice(0, 10)}</> : null}. No se incluye en el resumen.
-        </div>
-      )}
+        </>}
+        meta={[
+          { label: 'Proveedor', value: data.supplier?.name || '—' },
+          { label: 'Método de pago', value: data.payment_method_name || '—' },
+          { label: 'Registrado por', value: data.created_by_name || '—' },
+        ]}
+        note={!active ? (
+          <><i className="fas fa-ban" /> Gasto anulado
+            {data.annulled_by_name ? <> por <strong>{data.annulled_by_name}</strong></> : null}
+            {data.annulled_at ? <> el {String(data.annulled_at).slice(0, 10)}</> : null}. No se incluye en el resumen.</>
+        ) : null}
+      />
 
       <div className={t.mainGrid}>
         <Card>
@@ -169,26 +173,6 @@ export function ExpenseDetail() {
         </Card>
 
         <div className={t.sideCol}>
-          <Card>
-            <Card.Header title="Datos del gasto" />
-            <Card.Body>
-              <dl className={t.meta}>
-                <div>
-                  <dt><i className="fas fa-truck-field" /> Proveedor</dt>
-                  <dd>{data.supplier?.name || '—'}</dd>
-                </div>
-                <div>
-                  <dt><i className="fas fa-wallet" /> Método de pago</dt>
-                  <dd>{data.payment_method_name || '—'}</dd>
-                </div>
-                <div>
-                  <dt><i className="fas fa-user" /> Registrado por</dt>
-                  <dd>{data.created_by_name || '—'}</dd>
-                </div>
-              </dl>
-            </Card.Body>
-          </Card>
-
           <Card>
             <Card.Header title="Fotos de la factura" />
             <Card.Body>

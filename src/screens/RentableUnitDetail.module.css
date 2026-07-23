@@ -1,12 +1,3 @@
-.header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.headText { flex: 1; min-width: 0; }
-.title { margin: 0; font-size: var(--text-xl); color: var(--gray-900); }
-.headActions { display: inline-flex; align-items: center; gap: 12px; }
-
 .grid {
   display: grid;
   grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);

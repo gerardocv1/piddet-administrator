@@ -34,6 +34,7 @@ const META = {
   '/roles': { title: 'Roles', crumb: 'Cuentas' },
   '/company': { title: 'Empresa', crumb: 'Cuenta' },
   '/reservations': { title: 'Reservas', crumb: 'Hospedaje' },
+  '/rentable-units': { title: 'Unidades', crumb: 'Hospedaje' },
   '/expenses': { title: 'Gastos', crumb: 'Operación' },
   '/invoices': { title: 'Facturas', crumb: 'Operación' },
 };
@@ -78,7 +79,7 @@ export function Layout({ theme, onToggleTheme, onLogout }) {
   // La administración de un menú (/menus/:id) no tiene entrada exacta: usa un título genérico
   // (la propia pantalla muestra el nombre del menú en su cabecera).
   const sectionOf = (path) => {
-    for (const base of ['/reservations', '/expenses', '/invoices', '/products', '/menus']) {
+    for (const base of ['/reservations', '/rentable-units', '/expenses', '/invoices', '/products', '/menus']) {
       if (path === base || path.startsWith(`${base}/`)) return META[base] || null;
     }
     return null;
