@@ -22,10 +22,15 @@ const qs = (params = {}) => {
   return s ? `?${s}` : '';
 };
 
+// El backend omite la clave `data` cuando una lista viene vacía (ControllerApi::responseJson),
+// y el cliente HTTP devuelve entonces el envoltorio en vez de un array. Esto garantiza que los
+// endpoints de lista siempre resuelvan a un array.
+const list = (promise) => promise.then((d) => (Array.isArray(d) ? d : []));
+
 export const reservationsService = {
   // ── Unidades reservables ────────────────────────────────────────────────
   // Tipos de unidad visibles para la compañía (globales + propios): [{ id, name, icon }].
-  rentableUnitTypes: () => http.get(`${base()}/rentable-unit-types`),
+  rentableUnitTypes: () => list(http.get(`${base()}/rentable-unit-types`)),
 
   // Listado paginado de unidades (con tipo y conteo de fotos).
   rentableUnits: ({ typeId = '', status = '', search = '', page = 1, perPage = 15 } = {}) =>
@@ -57,17 +62,17 @@ export const reservationsService = {
 
   // Unidades activas con su disponibilidad para un rango (selector del wizard de reserva).
   unitAvailability: ({ checkIn, checkOut }) =>
-    http.get(`${base()}/rentable-units/availability${qs({ check_in: checkIn, check_out: checkOut })}`),
+    list(http.get(`${base()}/rentable-units/availability${qs({ check_in: checkIn, check_out: checkOut })}`)),
 
   // ── Catálogo de servicios adicionales ───────────────────────────────────
   reservationServiceTypes: ({ onlyActive = false } = {}) =>
-    http.get(`${base()}/reservation-service-types${qs({ only_active: onlyActive || '' })}`),
+    list(http.get(`${base()}/reservation-service-types${qs({ only_active: onlyActive || '' })}`)),
   createReservationServiceType: (data) => http.post(`${base()}/reservation-service-types`, data),
   updateReservationServiceType: (id, data) => http.put(`${base()}/reservation-service-types/${id}`, data),
   setReservationServiceTypeStatus: (id, status) => http.patch(`${base()}/reservation-service-types/${id}/status`, { status }),
 
   // ── Huéspedes (usuarios de la compañía como clientes) ───────────────────
-  guestsSearch: (q) => http.get(`${base()}/guests${qs({ q })}`),
+  guestsSearch: (q) => list(http.get(`${base()}/guests${qs({ q })}`)),
   guest: (userId) => http.get(`${base()}/guests/${userId}`),
 
   // ── Reservas ────────────────────────────────────────────────────────────
@@ -95,7 +100,7 @@ export const reservationsService = {
   // Checkout: genera la factura de hospedaje (orden LODGING). Acepta un pago final opcional.
   checkoutReservation: (reservationId, payment = null) => http.post(`${base()}/reservations/${reservationId}/checkout`, payment ? { payment } : {}),
   // Órdenes vinculadas a la reserva (consumos POS + orden de cierre).
-  reservationOrders: (reservationId) => http.get(`${base()}/reservations/${reservationId}/orders`),
+  reservationOrders: (reservationId) => list(http.get(`${base()}/reservations/${reservationId}/orders`)),
 
   // ── Pre-check-in público (sin sesión, autenticado por el código de reserva) ──
   checkinSummary: (code) => http.get(`/public/checkin/${code}`),
