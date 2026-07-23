@@ -90,7 +90,10 @@ export const reservationsService = {
 
   confirmReservation: (reservationId) => http.patch(`${base()}/reservations/${reservationId}/confirm`),
   checkInReservation: (reservationId) => http.patch(`${base()}/reservations/${reservationId}/check-in`),
+  // Cancela la reserva en cualquier estado no cancelado; cancela también sus facturas vigentes.
   cancelReservation: (reservationId, reason) => http.patch(`${base()}/reservations/${reservationId}/cancel`, { reason }),
+  // Reabre una reserva finalizada conservando pagos y facturas (los consolidados no se anulan).
+  reopenReservation: (reservationId) => http.patch(`${base()}/reservations/${reservationId}/reopen`),
   rescheduleReservation: (reservationId, data) => http.put(`${base()}/reservations/${reservationId}/dates`, data),
   syncReservationGuests: (reservationId, data) => http.put(`${base()}/reservations/${reservationId}/guests`, data),
   addReservationService: (reservationId, data) => http.post(`${base()}/reservations/${reservationId}/services`, data),

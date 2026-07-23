@@ -27,6 +27,7 @@ export function ReservationDetail() {
   const [actionError, setActionError] = React.useState('');
   const [cancelOpen, setCancelOpen] = React.useState(false);
   const [cancelReason, setCancelReason] = React.useState('');
+  const [reopenOpen, setReopenOpen] = React.useState(false);
   const [payOpen, setPayOpen] = React.useState(false);
   const [payment, setPayment] = React.useState({ payment_method: '', value: '' });
   const [serviceOpen, setServiceOpen] = React.useState(false);
@@ -75,6 +76,7 @@ export function ReservationDetail() {
   const isPending = status === RESERVATION_STATUS.PENDING;
   const isConfirmed = status === RESERVATION_STATUS.CONFIRMED;
   const isCheckedIn = status === RESERVATION_STATUS.CHECKED_IN;
+  const isCheckedOut = status === RESERVATION_STATUS.CHECKED_OUT;
   const isOpen = [RESERVATION_STATUS.PENDING, RESERVATION_STATUS.CONFIRMED, RESERVATION_STATUS.CHECKED_IN].includes(status);
   const checkinLink = `${window.location.origin}/checkin/${data.code}`;
 
@@ -113,7 +115,12 @@ export function ReservationDetail() {
 
   const doCancel = async () => {
     const ok = await run(() => api.cancelReservation(reservationId, cancelReason.trim() || null), 'No se pudo cancelar la reserva.');
-    if (ok) setCancelOpen(false);
+    if (ok) { setCancelOpen(false); reloadOrders(); }
+  };
+
+  const doReopen = async () => {
+    const ok = await run(() => api.reopenReservation(reservationId), 'No se pudo reabrir la reserva.');
+    if (ok) { setReopenOpen(false); reloadOrders(); }
   };
 
   const doCheckout = async () => {
@@ -159,7 +166,10 @@ export function ReservationDetail() {
           {isCheckedIn && can('reservation-checkout') && (
             <Button variant="primary" size="sm" icon="fas fa-file-invoice-dollar" onClick={() => setCheckoutOpen(true)}>Checkout</Button>
           )}
-          {isOpen && !isCheckedIn && can('reservation-cancel') && (
+          {isCheckedOut && can('reservation-checkout') && (
+            <Button variant="secondary" size="sm" icon="fas fa-rotate-left" onClick={() => setReopenOpen(true)}>Reabrir</Button>
+          )}
+          {status !== RESERVATION_STATUS.CANCELLED && can('reservation-cancel') && (
             <Button variant="danger" size="sm" icon="fas fa-ban" onClick={() => setCancelOpen(true)}>Cancelar</Button>
           )}
         </div>
@@ -354,7 +364,7 @@ export function ReservationDetail() {
                             {!active && <Badge variant="danger" dot>Anulado</Badge>}
                           </span>
                           <span className={t.linePrice}>{reservationMoney(p.value)}</span>
-                          {active && isOpen && can('reservation-payment-annul') && (
+                          {active && isOpen && !p.consolidated_at && can('reservation-payment-annul') && (
                             <IconButton icon="fas fa-ban" variant="light" title="Anular pago (cancela su factura de abono)" onClick={() => annulPayment(p.id)} />
                           )}
                         </li>
@@ -445,9 +455,17 @@ export function ReservationDetail() {
           <Button variant="danger" icon="fas fa-ban" loading={busy} onClick={doCancel}>Cancelar reserva</Button>
         </>}>
         <div className={s.formCol}>
-          <p>Se liberan las fechas de la unidad. Esta acción no se puede deshacer.</p>
+          <p>Se liberan las fechas de la unidad y se cancelan también todas las facturas de la reserva (abonos, consumos POS y cierre). Esta acción no se puede deshacer.</p>
           <Input label="Motivo (opcional)" value={cancelReason} onChange={(e) => setCancelReason(e.target.value)} />
         </div>
+      </Modal>
+
+      <Modal open={reopenOpen} size="sm" title="Reabrir reserva" onClose={() => setReopenOpen(false)}
+        footer={<>
+          <Button variant="secondary" onClick={() => setReopenOpen(false)}>Volver</Button>
+          <Button variant="primary" icon="fas fa-rotate-left" loading={busy} onClick={doReopen}>Reabrir</Button>
+        </>}>
+        <p>La cuenta vuelve a operar: podrás agregar cargos, registrar pagos y hacer un nuevo checkout. Los pagos y facturas existentes se conservan (los pagos ya consolidados no se pueden anular) y las facturas previas quedan aplicadas como abonos de la cuenta.</p>
       </Modal>
 
       <Modal open={payOpen} size="sm" title="Registrar pago" onClose={() => setPayOpen(false)}
