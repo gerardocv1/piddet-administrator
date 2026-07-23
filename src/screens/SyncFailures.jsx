@@ -6,7 +6,6 @@ import { useResource } from '../lib/useResource.js';
 import { supportStatusOf, SUPPORT_STATUS_OPTIONS, formatDateTime } from '../lib/syncFailureLabels.js';
 import { originLabel } from '../lib/orderLabels.js';
 import s from './screens.module.css';
-import t from './SyncFailures.module.css';
 
 const EMPTY = { items: [], pagination: null };
 
@@ -35,8 +34,8 @@ export function SyncFailures() {
     { key: 'order_number', header: 'Nº orden', width: 100, render: (r) => <span className={s.cellStrong}>{r.order_number || '—'}</span> },
     { key: 'reported_origin', header: 'Origen', width: 90, render: (r) => originLabel(r.reported_origin) },
     {
-      key: 'error_message', header: 'Error',
-      render: (r) => <span className={t.errorCell} title={r.error_message || ''}>{r.error_message || <span className={s.faint}>—</span>}</span>,
+      key: 'error_message', header: 'Error', ellipsis: true,
+      render: (r) => <span title={r.error_message || ''}>{r.error_message || <span className={s.faint}>—</span>}</span>,
     },
     { key: 'attempts', header: 'Intentos', width: 90, align: 'right', render: (r) => r.attempts },
     { key: 'reported_username', header: 'Reportó', width: 120, render: (r) => r.reported_username || <span className={s.faint}>—</span> },

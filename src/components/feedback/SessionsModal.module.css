@@ -1,8 +1,8 @@
 .tableWrap { min-height: 220px; }
 
-.device { display: flex; flex-direction: column; line-height: 1.25; }
-.deviceName { font-size: var(--text-sm); color: var(--gray-800); font-weight: 500; }
-.deviceMeta { font-size: var(--text-xs); color: var(--gray-500); }
+.device { display: flex; flex-direction: column; line-height: 1.25; min-width: 0; }
+.deviceName { font-size: var(--text-sm); color: var(--gray-800); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.deviceMeta { font-size: var(--text-xs); color: var(--gray-500); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .ip { font-variant-numeric: tabular-nums; color: var(--gray-600); }
 

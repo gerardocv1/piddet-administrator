@@ -7,7 +7,9 @@ import styles from './DataTable.module.css';
  * En móvil hace scroll horizontal con ancho mínimo. Centraliza los estados
  * de carga, error y vacío para que todas las pantallas se vean igual.
  *
- * columns: [{ key, header, width?, align?: 'left'|'right'|'center', render?: (row) => node }]
+ * columns: [{ key, header, width?, align?: 'left'|'right'|'center', render?: (row) => node,
+ *   nowrap?: bool, ellipsis?: bool }]  — la tabla es table-layout:fixed, así que los width se
+ *   respetan; ellipsis implica nowrap y corta con puntos suspensivos.
  * onRowClick?: (row) => void — hace la fila clickeable (cursor + Enter con teclado).
  */
 export function DataTable({ columns = [], rows = [], rowKey = 'id', empty = 'Sin registros', loading = false, error = null, onRowClick }) {
@@ -39,7 +41,9 @@ export function DataTable({ columns = [], rows = [], rowKey = 'id', empty = 'Sin
               onClick={onRowClick ? () => onRowClick(r) : undefined}
               onKeyDown={onRowClick ? (e) => { if (e.key === 'Enter') onRowClick(r); } : undefined}>
               {columns.map((c) => (
-                <td key={c.key} className={styles.td} style={{ textAlign: c.align || 'left' }}>
+                <td key={c.key}
+                  className={[styles.td, c.ellipsis ? styles.ellipsisCell : (c.nowrap && styles.nowrap)].filter(Boolean).join(' ')}
+                  style={{ textAlign: c.align || 'left' }}>
                   {c.render ? c.render(r) : r[c.key]}
                 </td>
               ))}

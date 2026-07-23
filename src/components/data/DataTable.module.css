@@ -2,13 +2,14 @@
 
 .table {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
   font-family: var(--font-sans);
 }
 
 .th {
   text-align: left;
-  padding: 0.8rem 1.5rem;
+  padding: 0.8rem 1rem;
   font-size: var(--text-xs);
   font-weight: 700;
   text-transform: uppercase;
@@ -19,11 +20,14 @@
 }
 
 .td {
-  padding: 0.9rem 1.5rem;
+  padding: 0.9rem 1rem;
   font-size: var(--text-base);
   color: var(--gray-700);
   vertical-align: middle;
 }
+
+.nowrap { white-space: nowrap; }
+.ellipsisCell { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .row { border-top: 1px solid var(--gray-100); }
 .row:first-child { border-top: none; }

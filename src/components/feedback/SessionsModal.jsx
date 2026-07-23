@@ -27,13 +27,13 @@ const fmtDate = (iso) => {
 
 const COLUMNS = [
   {
-    key: 'status', header: 'Evento',
+    key: 'status', header: 'Evento', width: 190,
     render: (r) => {
       const e = eventOf(r.status);
       return <Badge variant={e.variant}><i className={`${e.icon} ${styles.evIcon}`} /> {e.label}</Badge>;
     },
   },
-  { key: 'logged_at', header: 'Fecha y hora', render: (r) => fmtDate(r.logged_at) },
+  { key: 'logged_at', header: 'Fecha y hora', width: 160, nowrap: true, render: (r) => fmtDate(r.logged_at) },
   {
     key: 'device', header: 'Dispositivo',
     render: (r) => (
@@ -43,7 +43,7 @@ const COLUMNS = [
       </div>
     ),
   },
-  { key: 'ip', header: 'IP', align: 'right', render: (r) => <span className={styles.ip}>{r.ip || '—'}</span> },
+  { key: 'ip', header: 'IP', width: 130, align: 'right', render: (r) => <span className={styles.ip}>{r.ip || '—'}</span> },
 ];
 
 /** Modal con el historial de sesiones (logins exitosos) del usuario, paginado. */
