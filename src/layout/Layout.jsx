@@ -4,6 +4,7 @@ import { Sidebar, Topbar } from '../components';
 import { api } from '../lib/api.js';
 import { auth as authLib } from '../lib/auth/index.js';
 import { useIsMobile } from '../lib/useIsMobile.js';
+import { PageTitleProvider, usePageTitle } from '../lib/pageTitle.jsx';
 import styles from './Layout.module.css';
 
 // Normaliza el usuario de la sesión (formato backend o mock) a lo que pinta el Topbar.
@@ -32,6 +33,9 @@ const META = {
   '/users': { title: 'Usuarios', crumb: 'Cuentas' },
   '/roles': { title: 'Roles', crumb: 'Cuentas' },
   '/company': { title: 'Empresa', crumb: 'Cuenta' },
+  '/reservations': { title: 'Reservas', crumb: 'Hospedaje' },
+  '/expenses': { title: 'Gastos', crumb: 'Operación' },
+  '/invoices': { title: 'Facturas', crumb: 'Operación' },
 };
 
 /** Chrome de la app autenticada: menú lateral + barra superior + contenido (Outlet). */
@@ -73,7 +77,14 @@ export function Layout({ theme, onToggleTheme, onLogout }) {
 
   // La administración de un menú (/menus/:id) no tiene entrada exacta: usa un título genérico
   // (la propia pantalla muestra el nombre del menú en su cabecera).
+  const sectionOf = (path) => {
+    for (const base of ['/reservations', '/expenses', '/invoices', '/products', '/menus']) {
+      if (path === base || path.startsWith(`${base}/`)) return META[base] || null;
+    }
+    return null;
+  };
   const meta = META[location.pathname]
+    || sectionOf(location.pathname)
     || (/^\/menus\/[^/]+$/.test(location.pathname) ? { title: 'Menú', crumb: 'Oferta' } : null)
     || (/^\/products\/[^/]+$/.test(location.pathname) ? { title: 'Producto', crumb: 'Oferta' } : null)
     || { title: 'Piddet', crumb: '' };
@@ -84,10 +95,20 @@ export function Layout({ theme, onToggleTheme, onLogout }) {
       <Sidebar onLogout={onLogout} open={navOpen} onClose={() => setNavOpen(false)}
         company={company} companies={companies} onSwitchCompany={switchCompany}
         onOpenProfile={openCompanyProfile} />
-      <div className={styles.contentCol}>
-        <Topbar title={meta.title} crumb={meta.crumb} user={user} onLogout={onLogout} onMenu={() => setNavOpen(true)} theme={theme} onToggleTheme={onToggleTheme} />
-        <main className={styles.main}><Outlet /></main>
-      </div>
+      <PageTitleProvider>
+        <div className={styles.contentCol}>
+          <LayoutTopbar meta={meta} user={user} onLogout={onLogout} onMenu={() => setNavOpen(true)}
+            theme={theme} onToggleTheme={onToggleTheme} />
+          <main className={styles.main}><Outlet /></main>
+        </div>
+      </PageTitleProvider>
     </div>
   );
+}
+
+// El título dinámico (fijado por la pantalla activa vía useSetPageTitle) tiene prioridad
+// sobre el título por ruta; al desmontarse la pantalla vuelve el título de la sección.
+function LayoutTopbar({ meta, ...rest }) {
+  const { title } = usePageTitle();
+  return <Topbar title={title || meta.title} crumb={title ? '' : meta.crumb} {...rest} />;
 }

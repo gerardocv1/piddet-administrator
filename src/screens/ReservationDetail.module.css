@@ -1,22 +1,50 @@
-.header { display: flex; align-items: center; gap: 12px; }
+.headerCard {
+  background: var(--surface-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xs);
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.headTop { display: flex; align-items: center; gap: 12px; }
 .headText { flex: 1; min-width: 0; }
-.title { margin: 0; font-size: var(--text-xl); color: var(--gray-900); }
+.headSubtitle { color: var(--gray-700); font-size: var(--text-base); font-weight: 600; }
 .headActions { display: inline-flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 
-.metaLine {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 18px;
+.metaGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px 24px;
   margin: 0;
-  color: var(--gray-600);
-  font-size: var(--text-sm);
+  padding-top: 14px;
+  border-top: 1px solid var(--gray-100);
 }
-.metaLine i { color: var(--gray-400); margin-right: 5px; }
+.metaGrid > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.metaGrid dt {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--gray-500);
+}
+.metaGrid dd {
+  margin: 0;
+  color: var(--gray-800);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+@media (max-width: 600px) { .metaGrid { grid-template-columns: 1fr 1fr; } }
 
 .cancelNote {
   display: flex;
   align-items: center;
   gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--gray-100);
   color: var(--gray-600);
   font-size: var(--text-sm);
 }

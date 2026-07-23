@@ -6,6 +6,7 @@ import { useResource } from '../lib/useResource.js';
 import { usePermissions } from '../lib/permissions/usePermissions.js';
 import { reservationMoney, reservationStatusMeta, arrivalSlotLabel, idTypeLabel, RESERVATION_STATUS } from '../lib/reservationLabels.js';
 import { formatStayRange } from '../lib/dates.js';
+import { useSetPageTitle } from '../lib/pageTitle.jsx';
 import s from './screens.module.css';
 import t from './ReservationDetail.module.css';
 
@@ -46,6 +47,8 @@ export function ReservationDetail() {
   const { data: serviceItems } = useResource(React.useCallback(() => api.serviceItems(), []), [], []);
   const ordersFetcher = React.useCallback(() => api.reservationOrders(reservationId), [reservationId]);
   const { data: linkedOrders, reload: reloadOrders } = useResource(ordersFetcher, [], [reservationId]);
+
+  useSetPageTitle(data?.code ? `Reserva ${data.code}` : null);
 
   const goBack = () => navigate(`/reservations${params.toString() ? `?${params.toString()}` : ''}`);
 
@@ -154,41 +157,44 @@ export function ReservationDetail() {
 
   return (
     <div className={s.page}>
-      <div className={t.header}>
-        <IconButton icon="fas fa-arrow-left" variant="light" title="Volver a reservas" onClick={goBack} />
-        <div className={t.headText}>
-          <h2 className={t.title}>Reserva {data.code}</h2>
-          <span className={s.muted}>{formatStayRange(data.check_in_date, data.check_out_date)}</span>
+      <div className={t.headerCard}>
+        <div className={t.headTop}>
+          <IconButton icon="fas fa-arrow-left" variant="light" title="Volver a reservas" onClick={goBack} />
+          <div className={t.headText}>
+            <span className={t.headSubtitle}>
+              {formatStayRange(data.check_in_date, data.check_out_date)} · {data.nights} {Number(data.nights) === 1 ? 'noche' : 'noches'}
+            </span>
+          </div>
+          <div className={t.headActions}>
+            <Badge variant={meta.variant} dot>{meta.label}</Badge>
+            {isPending && <Button variant="secondary" size="sm" icon="fas fa-circle-check" loading={busy} onClick={() => run(() => api.confirmReservation(reservationId), 'No se pudo confirmar.')}>Confirmar</Button>}
+            {isConfirmed && <Button variant="primary" size="sm" icon="fas fa-door-open" loading={busy} onClick={() => run(() => api.checkInReservation(reservationId), 'No se pudo hacer check-in.')}>Check-in</Button>}
+            {isCheckedIn && can('reservation-checkout') && (
+              <Button variant="primary" size="sm" icon="fas fa-file-invoice-dollar" onClick={() => setCheckoutOpen(true)}>Checkout</Button>
+            )}
+            {isCheckedOut && can('reservation-checkout') && (
+              <Button variant="secondary" size="sm" icon="fas fa-rotate-left" onClick={() => setReopenOpen(true)}>Reabrir</Button>
+            )}
+            {status !== RESERVATION_STATUS.CANCELLED && can('reservation-cancel') && (
+              <Button variant="danger" size="sm" icon="fas fa-ban" onClick={() => setCancelOpen(true)}>Cancelar</Button>
+            )}
+          </div>
         </div>
-        <div className={t.headActions}>
-          <Badge variant={meta.variant} dot>{meta.label}</Badge>
-          {isPending && <Button variant="secondary" size="sm" icon="fas fa-circle-check" loading={busy} onClick={() => run(() => api.confirmReservation(reservationId), 'No se pudo confirmar.')}>Confirmar</Button>}
-          {isConfirmed && <Button variant="primary" size="sm" icon="fas fa-door-open" loading={busy} onClick={() => run(() => api.checkInReservation(reservationId), 'No se pudo hacer check-in.')}>Check-in</Button>}
-          {isCheckedIn && can('reservation-checkout') && (
-            <Button variant="primary" size="sm" icon="fas fa-file-invoice-dollar" onClick={() => setCheckoutOpen(true)}>Checkout</Button>
-          )}
-          {isCheckedOut && can('reservation-checkout') && (
-            <Button variant="secondary" size="sm" icon="fas fa-rotate-left" onClick={() => setReopenOpen(true)}>Reabrir</Button>
-          )}
-          {status !== RESERVATION_STATUS.CANCELLED && can('reservation-cancel') && (
-            <Button variant="danger" size="sm" icon="fas fa-ban" onClick={() => setCancelOpen(true)}>Cancelar</Button>
-          )}
-        </div>
+
+        <dl className={t.metaGrid}>
+          <div><dt>Unidad</dt><dd>{data.rentable_unit_name}</dd></div>
+          <div><dt>Llegada estimada</dt><dd>{arrivalSlotLabel(data.expected_arrival_time)}</dd></div>
+          <div><dt>Registró</dt><dd>{data.created_by_name || '—'}</dd></div>
+        </dl>
+
+        {status === RESERVATION_STATUS.CANCELLED && (
+          <div className={t.cancelNote}>
+            <i className="fas fa-ban" /> Reserva cancelada
+            {data.cancelled_by_name ? <> por <strong>{data.cancelled_by_name}</strong></> : null}
+            {data.cancellation_reason ? <> · {data.cancellation_reason}</> : null}
+          </div>
+        )}
       </div>
-
-      <p className={t.metaLine}>
-        <span><i className="fas fa-house-chimney" />{data.rentable_unit_name}</span>
-        <span><i className="fas fa-clock" />{arrivalSlotLabel(data.expected_arrival_time)}</span>
-        <span><i className="fas fa-user" />{data.created_by_name || '—'}</span>
-      </p>
-
-      {status === RESERVATION_STATUS.CANCELLED && (
-        <div className={t.cancelNote}>
-          <i className="fas fa-ban" /> Reserva cancelada
-          {data.cancelled_by_name ? <> por <strong>{data.cancelled_by_name}</strong></> : null}
-          {data.cancellation_reason ? <> · {data.cancellation_reason}</> : null}
-        </div>
-      )}
 
       {actionError && <div className={s.formError}><i className="fas fa-triangle-exclamation" /> {actionError}</div>}
 
