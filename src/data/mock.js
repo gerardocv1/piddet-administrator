@@ -2285,11 +2285,16 @@ function resolveReservationsCore(sub, query, { method, body }) {
   const detail = (r) => {
     const activePayments = r.payments.filter((p) => p.status === 1);
     const paid = activePayments.reduce((s, p) => s + Number(p.value), 0);
-    const advancesInvoiced = activePayments.filter((p) => p.order_id).reduce((s, p) => s + Number(p.value), 0);
     const chargesTotal = (r.charges || []).reduce((s, ch) => s + Number(ch.total), 0);
     const accountTotal = Number(r.total) + chargesTotal;
-    const balance = accountTotal - paid;
-    const consumptionOrders = (r.linked_orders || []).filter((o) => o.type === 'consumption');
+    // Igual que el backend: lo facturado a la cuenta se suma desde las órdenes (soporta
+    // reaperturas) y los fondos disponibles son pagos activos sin factura ni consolidar.
+    const advancesInvoiced = (r.linked_orders || [])
+      .filter((o) => o.type !== 'consumption' && o.status !== 'CANCELLED')
+      .reduce((s, o) => s + Number(o.total), 0);
+    const availableFunds = activePayments.filter((p) => !p.order_id && !p.consolidated_at).reduce((s, p) => s + Number(p.value), 0);
+    const balance = accountTotal - advancesInvoiced - availableFunds;
+    const consumptionOrders = (r.linked_orders || []).filter((o) => o.type === 'consumption' && o.status !== 'CANCELLED');
     const consumptionsTotal = consumptionOrders.reduce((s, o) => s + Number(o.total), 0);
     const consumptionsPaid = consumptionOrders.filter((o) => o.status_payment === 'PAID').reduce((s, o) => s + Number(o.total), 0);
     return {
@@ -2326,7 +2331,7 @@ function resolveReservationsCore(sub, query, { method, body }) {
   const newPayment = (r, data) => ({
     id: nextId(r.payments), payment_method: data.payment_method, payment_method_name: data.payment_method,
     value: Number(data.value).toFixed(2), payment_date: data.payment_date || expenseDayIso(0),
-    notes: data.notes || null, order_id: null, status: 1, created_by_name: mockUser.name,
+    notes: data.notes || null, order_id: null, consolidated_at: null, status: 1, created_by_name: mockUser.name,
     annulled_by_name: null, annulled_at: null,
   });
 
@@ -2390,7 +2395,19 @@ function resolveReservationsCore(sub, query, { method, body }) {
   if (!action) return detail(r); // GET detalle
   if (action === 'confirm') { if (r.status === 1) r.status = 2; return detail(r); }
   if (action === 'check-in') { if (r.status === 2) { r.status = 3; r.checkin_at = new Date().toISOString(); } return detail(r); }
-  if (action === 'cancel') { r.status = 0; r.cancelled_by_name = mockUser.name; r.cancellation_reason = body.reason || null; return detail(r); }
+  if (action === 'cancel') {
+    r.status = 0; r.cancelled_by_name = mockUser.name; r.cancellation_reason = body.reason || null;
+    // Cancelar la reserva cancela también todas sus facturas vigentes.
+    (r.linked_orders || []).forEach((o) => { if (o.status !== 'CANCELLED') o.status = 'CANCELLED'; });
+    return detail(r);
+  }
+  if (action === 'reopen') {
+    if (r.status !== 4) return null;
+    r.status = 3; r.checkout_at = null; r.checkout_order_id = null;
+    // Los cierres previos quedan como abonos de la cuenta reabierta.
+    (r.linked_orders || []).forEach((o) => { if (o.type === 'checkout') o.type = 'advance'; });
+    return detail(r);
+  }
   if (action === 'dates') {
     const nights = Math.round((new Date(body.check_out_date) - new Date(body.check_in_date)) / 86400000);
     r.check_in_date = body.check_in_date; r.check_out_date = body.check_out_date; r.nights = nights;
@@ -2402,13 +2419,17 @@ function resolveReservationsCore(sub, query, { method, body }) {
     if (body.payment && body.payment.value) {
       r.payments.push(newPayment(r, body.payment));
     }
-    // La orden de cierre factura hospedaje + servicios + cargos con los anticipos facturados
-    // aplicados como descuento (sale por el saldo). Los consumos POS pendientes quedan pagados.
+    // La orden de cierre factura hospedaje + servicios + cargos con lo ya facturado a la cuenta
+    // (abonos y cierres previos) aplicado como descuento: sale por el saldo. Los consumos POS
+    // pendientes quedan pagados y los pagos activos se consolidan (dejan de ser anulables).
     const chargesTotal = (r.charges || []).reduce((s, ch) => s + Number(ch.total), 0);
     const accountTotal = Number(r.total) + chargesTotal;
-    const advances = r.payments.filter((p) => p.status === 1 && p.order_id).reduce((s, p) => s + Number(p.value), 0);
+    const advances = (r.linked_orders || [])
+      .filter((o) => o.type !== 'consumption' && o.status !== 'CANCELLED')
+      .reduce((s, o) => s + Number(o.total), 0);
     const applied = Math.min(advances, accountTotal);
     (r.linked_orders || []).forEach((o) => { if (o.type === 'consumption') o.status_payment = 'PAID'; });
+    r.payments.forEach((p) => { if (p.status === 1 && !p.consolidated_at) p.consolidated_at = new Date().toISOString(); });
     r.status = 4; r.checkout_at = new Date().toISOString(); r.checkout_order_id = 'ord-' + Math.random().toString(36).slice(2, 10);
     r.linked_orders.unshift({
       id: r.checkout_order_id, order_number: null, status: 'ACCEPTED_IN_STORE', status_payment: 'PAID',
@@ -2450,7 +2471,7 @@ function resolveReservationsCore(sub, query, { method, body }) {
   let pm = action.match(/^payments\/(\d+)\/annul$/);
   if (pm) {
     const p = r.payments.find((x) => x.id === Number(pm[1]));
-    if (p) {
+    if (p && !p.consolidated_at) {
       p.status = 0; p.annulled_by_name = mockUser.name;
       // Anular el abono cancela también su factura.
       const order = (r.linked_orders || []).find((o) => o.id === p.order_id);
