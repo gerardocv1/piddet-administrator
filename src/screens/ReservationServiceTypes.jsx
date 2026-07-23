@@ -10,6 +10,8 @@ import s from './screens.module.css';
 export function ReservationServiceTypes() {
   const fetcher = React.useCallback(() => api.reservationServiceTypes(), []);
   const { data, loading, error, setData, reload } = useResource(fetcher, [], []);
+  // Blindaje: el backend omite `data` cuando la lista viene vacía, así que garantizamos un array.
+  const rows = Array.isArray(data) ? data : [];
 
   const [editing, setEditing] = React.useState(null); // { id?, name, description, price }
   const [saving, setSaving] = React.useState(false);
@@ -40,7 +42,7 @@ export function ReservationServiceTypes() {
   const toggle = async (row) => {
     const next = Number(row.status) === 1 ? 0 : 1;
     const updated = await api.setReservationServiceTypeStatus(row.id, next);
-    setData((rows) => rows.map((r) => (r.id === row.id ? { ...r, status: updated.status } : r)));
+    setData((prev) => (Array.isArray(prev) ? prev : []).map((r) => (r.id === row.id ? { ...r, status: updated.status } : r)));
   };
 
   const columns = [
@@ -70,7 +72,7 @@ export function ReservationServiceTypes() {
       </div>
 
       <Card>
-        <DataTable columns={columns} rows={data || []} loading={loading} error={error}
+        <DataTable columns={columns} rows={rows} loading={loading} error={error}
           empty="No hay servicios adicionales. Crea el primero." />
       </Card>
 
