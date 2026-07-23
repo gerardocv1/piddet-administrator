@@ -2264,11 +2264,15 @@ function resolveReservationsCore(sub, query, { method, body }) {
   const detail = (r) => {
     const paid = r.payments.filter((p) => p.status === 1).reduce((s, p) => s + Number(p.value), 0);
     const total = Number(r.total);
+    const balance = total - paid;
     return {
       ...r,
       summary: {
         lodging_subtotal: r.lodging_subtotal, services_total: r.services_total, total: r.total,
-        paid: paid.toFixed(2), balance: (total - paid).toFixed(2),
+        paid: paid.toFixed(2), balance: balance.toFixed(2),
+        // En demo no hay consumos POS vinculados.
+        consumptions: { count: 0, total: '0.00', paid: '0.00', pending: '0.00' },
+        stay_grand_total: total.toFixed(2), pending_total: balance.toFixed(2),
       },
     };
   };
