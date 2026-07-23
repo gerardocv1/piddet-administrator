@@ -1,24 +1,47 @@
 import React from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Card, Badge, IconButton, Spinner } from '../components';
+import { Card, Badge, Button, IconButton, Spinner, Modal, Textarea } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
+import { usePermissions } from '../lib/permissions/usePermissions.js';
 import { orderStatusOf, paymentStatusOf, serviceTypeLabel, originLabel } from '../lib/orderLabels.js';
 import s from './screens.module.css';
 import t from './InvoiceDetail.module.css';
 
 // Detalle completo de una factura (orden): ítems con opciones, impuestos, pagos, totales,
-// cliente (OWNER) y quién la creó (CREATOR). Solo lectura.
+// cliente (OWNER) y quién la creó (CREATOR). Con permiso `order-cancel` la factura puede
+// cancelarse indicando un motivo obligatorio (queda en el historial y sale de las métricas).
 export function InvoiceDetail() {
   const { orderId } = useParams();
   const navigate = useNavigate();
   const [params] = useSearchParams();
+  const { can } = usePermissions();
 
   const fetcher = React.useCallback(() => api.order(orderId), [orderId]);
-  const { data, loading, error } = useResource(fetcher, null, [orderId]);
+  const { data, setData, loading, error } = useResource(fetcher, null, [orderId]);
+
+  const [cancelOpen, setCancelOpen] = React.useState(false);
+  const [cancelReason, setCancelReason] = React.useState('');
+  const [busy, setBusy] = React.useState(false);
+  const [actionError, setActionError] = React.useState('');
 
   // Conserva la consulta del listado (?date=&page=) al volver.
   const goBack = () => navigate(`/invoices${params.toString() ? `?${params.toString()}` : ''}`);
+
+  const doCancel = async () => {
+    const reason = cancelReason.trim();
+    if (reason.length < 3 || busy) return;
+    setBusy(true); setActionError('');
+    try {
+      setData(await api.cancelOrder(orderId, reason));
+      setCancelOpen(false);
+      setCancelReason('');
+    } catch (e) {
+      setActionError(e?.message || 'No se pudo cancelar la factura.');
+    } finally {
+      setBusy(false);
+    }
+  };
 
   if (loading) return <Spinner center label="Cargando factura…" />;
   if (error || !data?.order) {
@@ -65,8 +88,21 @@ export function InvoiceDetail() {
         <div className={t.headBadges}>
           <Badge variant={st.variant} dot>{status?.name || st.label}</Badge>
           <Badge variant={pay.variant}>{pay.label}</Badge>
+          {order.status !== 'CANCELLED' && can('order-cancel') && (
+            <Button variant="danger" size="sm" icon="fas fa-ban" onClick={() => setCancelOpen(true)}>Cancelar factura</Button>
+          )}
         </div>
       </div>
+
+      {actionError && <div className={s.formError}><i className="fas fa-triangle-exclamation" /> {actionError}</div>}
+
+      {data.cancellation && (
+        <div className={t.cancelNote}>
+          <i className="fas fa-ban" /> Factura cancelada
+          {data.cancellation.created_at ? <> el {String(data.cancellation.created_at).slice(0, 10)}</> : null}
+          {data.cancellation.comment ? <> · Motivo: {data.cancellation.comment}</> : null}
+        </div>
+      )}
 
       <p className={t.metaLine}>
         <span><i className="fas fa-cash-register" /> Origen: {originLabel(order.origin_code)}</span>
@@ -164,6 +200,19 @@ export function InvoiceDetail() {
         {personCard('Cliente (solicitó)', customer, customer?.customer_name, 'Sin datos del cliente.')}
         {personCard('Creada por', creator, creator?.creator_name, 'Sin datos del creador.')}
       </div>
+
+      <Modal open={cancelOpen} size="sm" title="Cancelar factura" onClose={() => setCancelOpen(false)}
+        footer={<>
+          <Button variant="secondary" onClick={() => setCancelOpen(false)}>Volver</Button>
+          <Button variant="danger" icon="fas fa-ban" loading={busy} disabled={cancelReason.trim().length < 3} onClick={doCancel}>Cancelar factura</Button>
+        </>}>
+        <div className={s.formCol}>
+          <p>La factura quedará cancelada y saldrá de las métricas de ventas. Esta acción no se puede deshacer.</p>
+          <Textarea label="Motivo de la cancelación" required rows={3}
+            placeholder="Describe por qué se cancela esta factura…"
+            value={cancelReason} onChange={(e) => setCancelReason(e.target.value)} />
+        </div>
+      </Modal>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-// Servicio: facturas/órdenes de la compañía activa (solo lectura).
+// Servicio: facturas/órdenes de la compañía activa (consulta y cancelación).
 //
 // Company-scoped: las rutas cuelgan de /companies/{company}/orders. El listado se consulta
 // por fecha (un solo día; sin `date` el backend asume hoy) y viene paginado. El detalle
@@ -26,4 +26,7 @@ export const ordersService = {
     http.get(`${base()}/orders${qs({ date, page, per_page: perPage })}`, { paginated: true }),
   // Detalle completo de una orden por uuid.
   order: (orderId) => http.get(`${base()}/orders/${orderId}`),
+  // Cancela la factura (permiso order-cancel). El motivo es obligatorio y queda en el historial
+  // de estados; la orden cancelada sale de las métricas de ventas. Devuelve el detalle actualizado.
+  cancelOrder: (orderId, reason) => http.patch(`${base()}/orders/${orderId}/cancel`, { reason }),
 };

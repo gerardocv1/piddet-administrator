@@ -268,7 +268,7 @@ export const mockMenuItems = [
 // el panel muestra Productos (y sus categorías), Menús y Usuarios; el resto queda oculto.
 const mockPermissions = {
   roles: ['Administrador'],
-  permissions: ['user-administrator', 'api-module-menus', 'api-module-products', 'api-module-company', 'api-module-stores', 'api-module-orders', 'order-sync-failure-admin', 'api-module-expenses', 'expense-annul', 'api-module-reservations', 'api-module-rentable-units', 'reservation-checkout', 'reservation-cancel', 'reservation-payment-annul'],
+  permissions: ['user-administrator', 'api-module-menus', 'api-module-products', 'api-module-company', 'api-module-stores', 'api-module-orders', 'order-cancel', 'order-sync-failure-admin', 'api-module-expenses', 'expense-annul', 'api-module-reservations', 'api-module-rentable-units', 'reservation-checkout', 'reservation-cancel', 'reservation-payment-annul'],
 };
 
 // Empresa (tenant) activa y empresas disponibles para el usuario (SaaS multi-tenant).
@@ -1393,7 +1393,7 @@ const mockInvoiceOrders = [
   }),
 ];
 
-function resolveOrdersMock(path, query) {
+function resolveOrdersMock(path, query, { method = 'GET', body } = {}) {
   const m = path.match(/^\/companies\/[^/]+\/orders(\/.*)?$/);
   if (!m) return undefined;
   const sub = m[1] || '';
@@ -1404,6 +1404,18 @@ function resolveOrdersMock(path, query) {
       .filter((o) => o.date === date)
       .map(({ detail, date: _d, ...row }) => row);
     return mockPaginate(rows, query);
+  }
+
+  // Cancelación con motivo obligatorio: /orders/{uuid}/cancel
+  const cancelMatch = sub.match(/^\/([^/]+)\/cancel$/);
+  if (cancelMatch && method === 'PATCH') {
+    const found = mockInvoiceOrders.find((o) => o.id === cancelMatch[1]);
+    if (!found || !body?.reason) return null;
+    found.status = 'CANCELLED';
+    found.detail.order.status = 'CANCELLED';
+    found.detail.status = { type: 'GENERAL', name: ORDER_STATUS_NAMES.CANCELLED };
+    found.detail.cancellation = { comment: String(body.reason), created_at: new Date().toISOString() };
+    return found.detail;
   }
 
   const idMatch = sub.match(/^\/([^/]+)$/);
@@ -2575,7 +2587,7 @@ export function resolveMock(rawPath, opts = {}) {
   if (syncFailures !== undefined) return syncFailures;
 
   // Módulo de facturas/órdenes (company-scoped: /companies/{company}/orders…)
-  const orders = resolveOrdersMock(path, query);
+  const orders = resolveOrdersMock(path, query, opts);
   if (orders !== undefined) return orders;
 
   // Módulo de gastos (company-scoped: /companies/{company}/expenses|expense-categories|expense-suppliers…)

@@ -47,9 +47,12 @@ conectar: `cp .env.example .env`, define `VITE_API_URL` y reinicia. Detalle en `
   categorías), `user-administrator` (Usuarios: administración de los usuarios vinculados a la
   compañía — vincular/desvincular, editar datos básicos, asignar roles y fijar contraseña
   temporal), `api-module-orders` (Facturas: órdenes de la compañía consultables por fecha en
-  `/invoices` — un solo día, hoy por defecto — con detalle completo de solo lectura en
+  `/invoices` — un solo día, hoy por defecto — con detalle completo en
   `/invoices/:orderId`: ítems con opciones, impuestos, pagos, cliente y creador; el detalle
   reusa el permiso del listado; también gatea el dash de Ventas del Dashboard),
+  `order-cancel` (cancelar una factura desde su detalle con motivo obligatorio — irreversible,
+  el motivo queda en el historial de estados y la orden sale de las métricas de ventas; solo
+  gatea el botón),
   `order-sync-failure-admin` (Fallos de órdenes: reportes de
   fallo de sincronización del POS en `/sync-failures` — listado por estado de soporte
   pendiente/resuelto/no recuperable — con detalle en `/sync-failures/:reportId` que reusa el

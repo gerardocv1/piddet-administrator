@@ -33,6 +33,15 @@
   margin-right: 5px;
 }
 
+.cancelNote {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--gray-600);
+  font-size: var(--text-sm);
+}
+.cancelNote i { color: var(--color-danger); }
+
 .mainGrid {
   display: grid;
   grid-template-columns: 2fr 1fr;
