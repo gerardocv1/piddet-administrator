@@ -54,19 +54,19 @@ export function Users() {
   };
 
   const columns = [
-    { key: 'name', header: 'Usuario', render: (r) => (
+    { key: 'name', header: 'Usuario', ellipsis: true, render: (r) => (
       <span className={s.user}><Avatar name={r.name} size="sm" />{r.name}</span>
     ) },
-    { key: 'phone', header: 'Teléfono', render: (r) => (
+    { key: 'phone', header: 'Teléfono', width: 170, nowrap: true, render: (r) => (
       <span className={s.muted}>{r.phone_number ? `+${r.phone_code} ${r.phone_number}` : '—'}</span>
     ) },
     { key: 'roles', header: 'Roles', render: (r) => <RolesCell roles={r.roles} /> },
-    { key: 'status', header: 'Estado', render: (r) => (
+    { key: 'status', header: 'Estado', width: 120, render: (r) => (
       <span className={[s.status, r.status ? s.on : s.off].join(' ')}>
         <span className={s.statusDot} />{r.status ? 'Activo' : 'Inactivo'}
       </span>
     ) },
-    { key: 'acc', header: '', align: 'right', render: (r) => (
+    { key: 'acc', header: '', width: 130, align: 'right', render: (r) => (
       <span className={s.actions}>
         <IconButton icon="fas fa-pen" variant="light" title="Editar" size="sm" onClick={() => setForm(r)} />
         <IconButton icon="fas fa-key" variant="light" title="Cambiar contraseña" size="sm" onClick={() => setPwd(r)} />

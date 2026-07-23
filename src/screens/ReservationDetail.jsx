@@ -5,6 +5,7 @@ import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { usePermissions } from '../lib/permissions/usePermissions.js';
 import { reservationMoney, reservationStatusMeta, arrivalSlotLabel, idTypeLabel, RESERVATION_STATUS } from '../lib/reservationLabels.js';
+import { formatStayRange } from '../lib/dates.js';
 import s from './screens.module.css';
 import t from './ReservationDetail.module.css';
 
@@ -157,7 +158,7 @@ export function ReservationDetail() {
         <IconButton icon="fas fa-arrow-left" variant="light" title="Volver a reservas" onClick={goBack} />
         <div className={t.headText}>
           <h2 className={t.title}>Reserva {data.code}</h2>
-          <span className={s.muted}>{data.rentable_unit_name} · {data.check_in_date} → {data.check_out_date}</span>
+          <span className={s.muted}>{formatStayRange(data.check_in_date, data.check_out_date)}</span>
         </div>
         <div className={t.headActions}>
           <Badge variant={meta.variant} dot>{meta.label}</Badge>
@@ -175,8 +176,14 @@ export function ReservationDetail() {
         </div>
       </div>
 
+      <p className={t.metaLine}>
+        <span><i className="fas fa-house-chimney" />{data.rentable_unit_name}</span>
+        <span><i className="fas fa-clock" />{arrivalSlotLabel(data.expected_arrival_time)}</span>
+        <span><i className="fas fa-user" />{data.created_by_name || '—'}</span>
+      </p>
+
       {status === RESERVATION_STATUS.CANCELLED && (
-        <div className={t.banner}>
+        <div className={t.cancelNote}>
           <i className="fas fa-ban" /> Reserva cancelada
           {data.cancelled_by_name ? <> por <strong>{data.cancelled_by_name}</strong></> : null}
           {data.cancellation_reason ? <> · {data.cancellation_reason}</> : null}
@@ -219,10 +226,7 @@ export function ReservationDetail() {
                   </div>
                 </div>
                 <dl className={t.meta}>
-                  <div><dt><i className="fas fa-house-chimney" /> Unidad</dt><dd>{data.rentable_unit_name}</dd></div>
                   <div><dt><i className="fas fa-moon" /> Tarifa / noche</dt><dd>{reservationMoney(data.price_per_night)}</dd></div>
-                  <div><dt><i className="fas fa-clock" /> Llegada estimada</dt><dd>{arrivalSlotLabel(data.expected_arrival_time)}</dd></div>
-                  <div><dt><i className="fas fa-user" /> Registró</dt><dd>{data.created_by_name || '—'}</dd></div>
                 </dl>
                 {data.notes && <p className={t.notes}>{data.notes}</p>}
               </Card.Body>
@@ -241,7 +245,7 @@ export function ReservationDetail() {
                           <span className={t.guestName}>{g.name}</span>
                           <span className={s.muted}>{g.document_number || 'Documento pendiente'}</span>
                         </div>
-                        {g.is_holder && <Badge variant="info" dot>Titular</Badge>}
+                        {g.is_holder && <span className={t.roleTag}>Titular</span>}
                         <i className={`fas fa-chevron-right ${t.guestChevron}`} />
                       </button>
                     </li>
@@ -276,8 +280,8 @@ export function ReservationDetail() {
             <Card>
               <Card.Header title="Pre-check-in" action={
                 data.precheckin_completed_at
-                  ? <Badge variant="success" dot>Completado</Badge>
-                  : <Badge variant="warning" dot>Pendiente</Badge>
+                  ? <span className={t.statusDone}>Completado</span>
+                  : <span className={t.statusPending}>Pendiente</span>
               } />
               <Card.Body>
                 <div className={t.linkBox}>
@@ -335,7 +339,7 @@ export function ReservationDetail() {
                         <span className={t.lineName}>
                           {o.order_number ? `#${o.order_number}` : 'Consumo'}
                           <span className={s.muted}> · {String(o.date).slice(0, 10)}</span>
-                          {o.status_payment !== 'PAID' && <Badge variant="warning" dot>Por pagar</Badge>}
+                          {o.status_payment !== 'PAID' && <span className={`${t.lineStatus} ${t.lineStatusWarn}`}>Por pagar</span>}
                         </span>
                         <span className={t.linePrice}>{reservationMoney(o.total)}</span>
                       </li>
@@ -361,7 +365,7 @@ export function ReservationDetail() {
                             {p.payment_method_name || p.payment_method}
                             <span className={s.muted}> · {p.payment_date}</span>
                             {p.order_id && <i className="fas fa-file-invoice" title="Abono con factura" />}
-                            {!active && <Badge variant="danger" dot>Anulado</Badge>}
+                            {!active && <span className={`${t.lineStatus} ${t.lineStatusOff}`}>Anulado</span>}
                           </span>
                           <span className={t.linePrice}>{reservationMoney(p.value)}</span>
                           {active && isOpen && !p.consolidated_at && can('reservation-payment-annul') && (
@@ -393,10 +397,10 @@ export function ReservationDetail() {
                             {o.order_number ? <span className={s.muted}> · #{o.order_number}</span> : null}
                             <span className={s.muted}> · {String(o.date).slice(0, 10)}</span>
                             {o.status === 'CANCELLED'
-                              ? <Badge variant="danger" dot>Cancelada</Badge>
+                              ? <span className={`${t.lineStatus} ${t.lineStatusOff}`}>Cancelada</span>
                               : o.status_payment === 'PAID'
-                                ? <Badge variant="success" dot>Pagada</Badge>
-                                : <Badge variant="warning" dot>Por pagar</Badge>}
+                                ? <span className={`${t.lineStatus} ${t.lineStatusMuted}`}>Pagada</span>
+                                : <span className={`${t.lineStatus} ${t.lineStatusWarn}`}>Por pagar</span>}
                           </span>
                           <span className={t.linePrice}>{reservationMoney(o.total)}</span>
                         </>
@@ -428,18 +432,15 @@ export function ReservationDetail() {
                   <SummaryRow label="Servicios" value={reservationMoney(summary.services_total)} />
                   {chargesTotal > 0 && <SummaryRow label="Consumos y cargos" value={reservationMoney(summary.charges_total)} />}
                   <SummaryRow label="Total cuenta" value={reservationMoney(accountTotal)} strong />
-                  <div className={t.summaryDivider} />
                   <SummaryRow label="Pagado" value={reservationMoney(summary.paid)} />
                   <SummaryRow label="Saldo cuenta" value={reservationMoney(summary.balance)} strong />
                   {Number(summary.consumptions?.count) > 0 && (
                     <>
-                      <div className={t.summaryDivider} />
                       <SummaryRow label={`Consumos POS (${summary.consumptions.count})`} value={reservationMoney(summary.consumptions.total)} />
                       <SummaryRow label="Consumos POS pagados" value={reservationMoney(summary.consumptions.paid)} />
                       <SummaryRow label="Total estadía" value={reservationMoney(summary.stay_grand_total)} />
                     </>
                   )}
-                  <div className={t.summaryDivider} />
                   <SummaryRow label="Por cobrar" value={reservationMoney(pendingTotal)} strong />
                 </div>
               </Card.Body>
@@ -562,7 +563,7 @@ function GuestProfile({ guest, detail, loading }) {
         <Avatar name={name} size="lg" />
         <div>
           <span className={t.guestProfileName}>{name}</span>
-          {guest.is_holder && <Badge variant="info" dot>Titular</Badge>}
+          {guest.is_holder && <span className={t.roleTag}>Titular</span>}
         </div>
       </div>
 
@@ -598,9 +599,9 @@ function GuestProfile({ guest, detail, loading }) {
 
 function SummaryRow({ label, value, strong }) {
   return (
-    <div className={t.summaryRow}>
-      <span className={s.muted}>{label}</span>
-      <span className={strong ? t.summaryStrong : ''}>{value}</span>
+    <div className={`${t.summaryRow} ${strong ? t.summaryRowStrong : ''}`}>
+      <span>{label}</span>
+      <span>{value}</span>
     </div>
   );
 }

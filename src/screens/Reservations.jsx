@@ -4,6 +4,7 @@ import { Card, DataTable, Badge, Button, FilterBar, Pagination } from '../compon
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { todayIso } from '../lib/orderLabels.js';
+import { formatStayRange } from '../lib/dates.js';
 import { reservationMoney, reservationStatusMeta } from '../lib/reservationLabels.js';
 import s from './screens.module.css';
 
@@ -57,12 +58,12 @@ export function Reservations() {
   );
 
   const columns = [
-    { key: 'code', header: 'Código', width: 120, render: (r) => <span className={s.cellStrong}>{r.code}</span> },
-    { key: 'holder_user_name', header: 'Titular', render: (r) => r.holder_user_name },
-    { key: 'rentable_unit_name', header: 'Unidad', render: (r) => r.rentable_unit_name },
+    { key: 'code', header: 'Código', width: 110, render: (r) => <span className={s.cellStrong}>{r.code}</span> },
+    { key: 'holder_user_name', header: 'Titular', ellipsis: true, render: (r) => r.holder_user_name },
+    { key: 'rentable_unit_name', header: 'Unidad', ellipsis: true, render: (r) => r.rentable_unit_name },
     {
-      key: 'check_in_date', header: 'Estadía', width: 190,
-      render: (r) => <span className={s.muted}>{r.check_in_date} → {r.check_out_date} ({r.nights}n)</span>,
+      key: 'check_in_date', header: 'Estadía', width: 170, nowrap: true,
+      render: (r) => <span className={s.muted}>{formatStayRange(r.check_in_date, r.check_out_date)} · {r.nights}n</span>,
     },
     {
       key: 'status', header: 'Estado', width: 130,
@@ -71,7 +72,7 @@ export function Reservations() {
         return <Badge variant={m.variant} dot>{m.label}</Badge>;
       },
     },
-    { key: 'total', header: 'Total', align: 'right', render: (r) => <span className={s.priceCell}>{reservationMoney(r.total)}</span> },
+    { key: 'total', header: 'Total', width: 130, align: 'right', render: (r) => <span className={s.priceCell}>{reservationMoney(r.total)}</span> },
   ];
 
   const filterDefs = [

@@ -47,8 +47,8 @@ export function RentableUnits() {
   );
 
   const columns = [
-    { key: 'name', header: 'Unidad', render: (r) => <span className={s.cellStrong}>{r.name}</span> },
-    { key: 'type_name', header: 'Tipo', render: (r) => r.type_name || <span className={s.faint}>—</span> },
+    { key: 'name', header: 'Unidad', ellipsis: true, render: (r) => <span className={s.cellStrong}>{r.name}</span> },
+    { key: 'type_name', header: 'Tipo', ellipsis: true, render: (r) => r.type_name || <span className={s.faint}>—</span> },
     { key: 'capacity', header: 'Capacidad', width: 110, render: (r) => `${r.capacity} pers.` },
     {
       key: 'status', header: 'Estado', width: 120,
@@ -56,7 +56,7 @@ export function RentableUnits() {
         ? <Badge variant="success" dot>Reservable</Badge>
         : <Badge variant="neutral" dot>Inactiva</Badge>),
     },
-    { key: 'base_price_per_night', header: 'Tarifa / noche', align: 'right', render: (r) => <span className={s.priceCell}>{reservationMoney(r.base_price_per_night)}</span> },
+    { key: 'base_price_per_night', header: 'Tarifa / noche', width: 140, align: 'right', render: (r) => <span className={s.priceCell}>{reservationMoney(r.base_price_per_night)}</span> },
   ];
 
   const filterDefs = [

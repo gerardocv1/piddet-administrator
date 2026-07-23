@@ -6,6 +6,7 @@ import { useResource } from '../lib/useResource.js';
 import { useIsMobile } from '../lib/useIsMobile.js';
 import { todayIso } from '../lib/orderLabels.js';
 import { expenseMoney, monthStartIso } from '../lib/expenseLabels.js';
+import { formatShortDate } from '../lib/dates.js';
 import s from './screens.module.css';
 
 const EMPTY = { items: [], pagination: null };
@@ -79,16 +80,16 @@ export function Expenses() {
   }, [tree]);
 
   const columns = [
-    { key: 'expense_date', header: 'Fecha', width: 110, render: (r) => <span className={s.cellStrong}>{r.expense_date}</span> },
-    { key: 'supplier_name', header: 'Proveedor', render: (r) => r.supplier_name || <span className={s.faint}>—</span> },
-    { key: 'payment_method', header: 'Pago', render: (r) => r.payment_method_name || <span className={s.faint}>—</span> },
+    { key: 'expense_date', header: 'Fecha', width: 120, nowrap: true, render: (r) => <span className={s.cellStrong}>{formatShortDate(r.expense_date)}</span> },
+    { key: 'supplier_name', header: 'Proveedor', ellipsis: true, render: (r) => r.supplier_name || <span className={s.faint}>—</span> },
+    { key: 'payment_method', header: 'Pago', width: 150, ellipsis: true, render: (r) => r.payment_method_name || <span className={s.faint}>—</span> },
     {
       key: 'status', header: 'Estado', width: 110,
       render: (r) => (Number(r.status) === 1
         ? <Badge variant="success" dot>Activo</Badge>
         : <Badge variant="danger" dot>Anulado</Badge>),
     },
-    { key: 'total', header: 'Total', align: 'right', render: (r) => <span className={s.priceCell}>{expenseMoney(r.total)}</span> },
+    { key: 'total', header: 'Total', width: 130, align: 'right', render: (r) => <span className={s.priceCell}>{expenseMoney(r.total)}</span> },
   ];
 
   const filterDefs = [
