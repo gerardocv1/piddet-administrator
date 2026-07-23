@@ -13,6 +13,7 @@ export function CheckinWizard({ code }) {
   const [summary, setSummary] = React.useState(undefined); // undefined=cargando, null=no encontrada
   const [step, setStep] = React.useState(0); // 0 resumen, 1 titular, 2 acompañantes, 3 llegada, 4 ok
   const [holder, setHolder] = React.useState(emptyPerson);
+  const [holderHasPhoto, setHolderHasPhoto] = React.useState(false); // documento ya cargado antes
   const [companions, setCompanions] = React.useState([]);
   const [arrival, setArrival] = React.useState('');
   const [saving, setSaving] = React.useState(false);
@@ -21,7 +22,35 @@ export function CheckinWizard({ code }) {
   React.useEffect(() => {
     let alive = true;
     api.checkinSummary(code)
-      .then((data) => { if (alive) { setSummary(data); const [fn, ...ln] = (data.holder?.name || '').split(' '); setHolder((h) => ({ ...h, first_name: fn || '', last_name: ln.join(' ') })); } })
+      .then((data) => {
+        if (!alive) return;
+        setSummary(data);
+        // Precarga los datos del titular ya registrados para que no los reescriba.
+        const h = data.holder || {};
+        setHolder((prev) => ({
+          ...prev,
+          first_name: h.first_name || (h.name || '').split(' ')[0] || '',
+          last_name: h.last_name || (h.name || '').split(' ').slice(1).join(' '),
+          phone_code: h.phone_code || '57',
+          phone_number: h.phone_number || '',
+          email: h.email || '',
+          id_type_id: String(h.id_type_id || '1'),
+          id_number: h.id_number || '',
+          birthdate: h.birthdate || '',
+          origin_city: h.origin_city || '',
+        }));
+        setHolderHasPhoto(!!h.has_document_photo);
+        if (data.expected_arrival_time) setArrival(data.expected_arrival_time);
+        // Precarga los acompañantes ya registrados.
+        if (Array.isArray(data.companions) && data.companions.length) {
+          setCompanions(data.companions.map((c, i) => ({
+            key: `pre-${i}`, ...emptyPerson(),
+            first_name: c.first_name || (c.name || '').split(' ')[0] || '',
+            last_name: c.last_name || (c.name || '').split(' ').slice(1).join(' '),
+            id_number: c.document_number || '',
+          })));
+        }
+      })
       .catch(() => { if (alive) setSummary(null); });
     return () => { alive = false; };
   }, [code]);
@@ -84,7 +113,9 @@ export function CheckinWizard({ code }) {
     );
   }
 
-  const holderValid = holder.first_name.trim() && holder.last_name.trim() && holder.phone_number.trim() && holder.id_number.trim() && holder.id_document_file;
+  // Ya no se obliga a re-subir el documento si el titular ya tiene uno registrado.
+  const holderValid = holder.first_name.trim() && holder.last_name.trim() && holder.phone_number.trim()
+    && holder.id_number.trim() && (holder.id_document_file || holderHasPhoto);
 
   return (
     <div className={s.screen}>
@@ -123,7 +154,8 @@ export function CheckinWizard({ code }) {
         {step === 1 && (
           <>
             <h2 className={s.stepTitle}>Tus datos</h2>
-            <PersonForm person={holder} onField={setHolderField} onUpload={(f) => uploadDoc(setHolderField, f)} isHolder />
+            <p className={s.hint}>Confirma tus datos. Si algo cambió, edítalo.</p>
+            <PersonForm person={holder} onField={setHolderField} onUpload={(f) => uploadDoc(setHolderField, f)} isHolder hasPhoto={holderHasPhoto} />
             <StepNav onBack={() => setStep(0)} onNext={() => setStep(2)} nextDisabled={!holderValid} />
           </>
         )}
@@ -170,7 +202,7 @@ export function CheckinWizard({ code }) {
   );
 }
 
-function PersonForm({ person, onField, onUpload, isHolder }) {
+function PersonForm({ person, onField, onUpload, isHolder, hasPhoto }) {
   return (
     <div className={s.form}>
       <div className={s.formGrid}>
@@ -196,7 +228,8 @@ function PersonForm({ person, onField, onUpload, isHolder }) {
         <span className={s.uploadBtn}>
           {person._uploading ? <><i className="fas fa-spinner fa-spin" /> Subiendo…</>
             : person.id_document_file ? <><i className="fas fa-circle-check" /> Documento cargado</>
-              : <><i className="fas fa-camera" /> Foto del documento</>}
+              : hasPhoto ? <><i className="fas fa-circle-check" /> Documento ya registrado · toca para cambiarlo</>
+                : <><i className="fas fa-camera" /> Foto del documento</>}
         </span>
       </label>
     </div>
