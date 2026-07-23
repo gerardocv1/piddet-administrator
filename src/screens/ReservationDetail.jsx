@@ -233,17 +233,26 @@ export function ReservationDetail() {
         </div>
 
         <div className={t.sideCol}>
-          {/* Resumen de saldo */}
+          {/* Resumen consolidado: reserva + consumos POS de la estadía */}
           <Card>
             <Card.Header title="Resumen" />
             <Card.Body>
               <div className={t.summary}>
                 <SummaryRow label="Hospedaje" value={reservationMoney(data.summary.lodging_subtotal)} />
                 <SummaryRow label="Servicios" value={reservationMoney(data.summary.services_total)} />
-                <SummaryRow label="Total" value={reservationMoney(data.summary.total)} strong />
+                <SummaryRow label="Total reserva" value={reservationMoney(data.summary.total)} strong />
                 <div className={t.summaryDivider} />
                 <SummaryRow label="Pagado" value={reservationMoney(data.summary.paid)} />
-                <SummaryRow label="Saldo" value={reservationMoney(data.summary.balance)} strong />
+                <SummaryRow label="Saldo reserva" value={reservationMoney(data.summary.balance)} strong />
+                {Number(data.summary.consumptions?.count) > 0 && (
+                  <>
+                    <div className={t.summaryDivider} />
+                    <SummaryRow label={`Consumos (${data.summary.consumptions.count})`} value={reservationMoney(data.summary.consumptions.total)} />
+                    <SummaryRow label="Consumos pagados" value={reservationMoney(data.summary.consumptions.paid)} />
+                    <SummaryRow label="Total estadía" value={reservationMoney(data.summary.stay_grand_total)} />
+                    <SummaryRow label="Por cobrar" value={reservationMoney(data.summary.pending_total)} strong />
+                  </>
+                )}
               </div>
             </Card.Body>
           </Card>
