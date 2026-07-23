@@ -2066,6 +2066,14 @@ const mockServiceItems = [
 
 const serviceItemName = (id) => mockServiceItems.find((it) => it.id === Number(id))?.name || null;
 
+// Catálogo facturable en la cuenta de una reserva: servicios + productos (para los cargos).
+const mockConsumableItems = [
+  ...mockServiceItems.map((it) => ({ ...it, type: 'SERVICE' })),
+  { id: 905, name: 'Hamburguesa de la casa', description: 'Con papas rústicas', price: '32000.00', type: 'PRODUCT' },
+  { id: 906, name: 'Plato de carne a la parrilla', description: 'Con guarnición', price: '48000.00', type: 'PRODUCT' },
+  { id: 907, name: 'Limonada de coco', description: null, price: '12000.00', type: 'PRODUCT' },
+];
+
 const mockRentableUnits = [
   {
     id: 1, rentable_unit_type_id: 1, type_name: 'Cabaña', name: 'Cabaña El Roble',
@@ -2122,6 +2130,12 @@ function resolveReservationsMock(path, query, { method = 'GET', body } = {}) {
 
   // Items de servicio del catálogo de productos: /service-items
   if (sub === 'service-items') return [...mockServiceItems];
+
+  // Catálogo facturable en la cuenta de una reserva (productos + servicios): /consumable-items[?q=]
+  if (sub === 'consumable-items') {
+    const q = (query.get('q') || '').toLowerCase();
+    return mockConsumableItems.filter((it) => !q || it.name.toLowerCase().includes(q));
+  }
 
   // Huéspedes: /guests[?q=] y /guests/{userId}
   if (sub === 'guests') {
@@ -2269,17 +2283,27 @@ function unitDetail(unit) {
 // Núcleo del mock de reservas (todas las subrutas /reservations…). Devuelve undefined si no matchea.
 function resolveReservationsCore(sub, query, { method, body }) {
   const detail = (r) => {
-    const paid = r.payments.filter((p) => p.status === 1).reduce((s, p) => s + Number(p.value), 0);
-    const total = Number(r.total);
-    const balance = total - paid;
+    const activePayments = r.payments.filter((p) => p.status === 1);
+    const paid = activePayments.reduce((s, p) => s + Number(p.value), 0);
+    const advancesInvoiced = activePayments.filter((p) => p.order_id).reduce((s, p) => s + Number(p.value), 0);
+    const chargesTotal = (r.charges || []).reduce((s, ch) => s + Number(ch.total), 0);
+    const accountTotal = Number(r.total) + chargesTotal;
+    const balance = accountTotal - paid;
+    const consumptionOrders = (r.linked_orders || []).filter((o) => o.type === 'consumption');
+    const consumptionsTotal = consumptionOrders.reduce((s, o) => s + Number(o.total), 0);
+    const consumptionsPaid = consumptionOrders.filter((o) => o.status_payment === 'PAID').reduce((s, o) => s + Number(o.total), 0);
     return {
       ...r,
       summary: {
-        lodging_subtotal: r.lodging_subtotal, services_total: r.services_total, total: r.total,
-        paid: paid.toFixed(2), balance: balance.toFixed(2),
-        // En demo no hay consumos POS vinculados.
-        consumptions: { count: 0, total: '0.00', paid: '0.00', pending: '0.00' },
-        stay_grand_total: total.toFixed(2), pending_total: balance.toFixed(2),
+        lodging_subtotal: r.lodging_subtotal, services_total: r.services_total,
+        charges_total: chargesTotal.toFixed(2), total: r.total, account_total: accountTotal.toFixed(2),
+        paid: paid.toFixed(2), advances_invoiced: advancesInvoiced.toFixed(2), balance: balance.toFixed(2),
+        consumptions: {
+          count: consumptionOrders.length, total: consumptionsTotal.toFixed(2),
+          paid: consumptionsPaid.toFixed(2), pending: (consumptionsTotal - consumptionsPaid).toFixed(2),
+        },
+        stay_grand_total: (accountTotal + consumptionsTotal).toFixed(2),
+        pending_total: (balance + consumptionsTotal - consumptionsPaid).toFixed(2),
       },
     };
   };
@@ -2289,6 +2313,22 @@ function resolveReservationsCore(sub, query, { method, body }) {
     r.total = (Number(r.lodging_subtotal) + servicesTotal).toFixed(2);
   };
   const find = (id) => mockReservations.find((r) => r.id === id);
+  // Cada abono genera su factura (orden LODGING pagada) vinculada a la reserva.
+  const invoiceAdvance = (r, payment) => {
+    const orderId = 'ord-' + Math.random().toString(36).slice(2, 10);
+    r.linked_orders.unshift({
+      id: orderId, order_number: null, status: 'ACCEPTED_IN_STORE', status_payment: 'PAID',
+      service_type: 'LODGING', is_lodging: true, type: 'advance', discount: '0.00',
+      total: Number(payment.value).toFixed(2), date: new Date().toISOString(),
+    });
+    payment.order_id = orderId;
+  };
+  const newPayment = (r, data) => ({
+    id: nextId(r.payments), payment_method: data.payment_method, payment_method_name: data.payment_method,
+    value: Number(data.value).toFixed(2), payment_date: data.payment_date || expenseDayIso(0),
+    notes: data.notes || null, order_id: null, status: 1, created_by_name: mockUser.name,
+    annulled_by_name: null, annulled_at: null,
+  });
 
   // Listado / creación
   if (sub === 'reservations') {
@@ -2318,9 +2358,14 @@ function resolveReservationsCore(sub, query, { method, body }) {
         status: hasPayment ? 2 : 1, precheckin_completed_at: null, checkin_at: null, checkout_at: null,
         checkout_order_id: null, notes: body.notes || null, created_by_name: mockUser.name,
         cancelled_by_name: null, cancelled_at: null, cancellation_reason: null,
-        guests, services,
-        payments: hasPayment ? [{ id: 1, payment_method: body.payment.payment_method, payment_method_name: body.payment.payment_method, value: Number(body.payment.value).toFixed(2), payment_date: expenseDayIso(0), notes: null, status: 1, created_by_name: mockUser.name, annulled_by_name: null, annulled_at: null }] : [],
+        guests, services, charges: [], linked_orders: [],
+        payments: [],
       };
+      if (hasPayment) {
+        const payment = newPayment(row, body.payment);
+        row.payments.push(payment);
+        invoiceAdvance(row, payment);
+      }
       mockReservations.unshift(row);
       return detail(row);
     }
@@ -2351,13 +2396,25 @@ function resolveReservationsCore(sub, query, { method, body }) {
     r.check_in_date = body.check_in_date; r.check_out_date = body.check_out_date; r.nights = nights;
     r.lodging_subtotal = (Number(r.price_per_night) * nights).toFixed(2); recalc(r); return detail(r);
   }
-  if (action === 'orders') return r.checkout_order_id ? [{ id: r.checkout_order_id, order_number: null, status: 'ACCEPTED_IN_STORE', status_payment: 'PAID', service_type: 'LODGING', is_lodging: true, total: r.total, date: new Date().toISOString() }] : [];
+  if (action === 'orders') return [...(r.linked_orders || [])];
   if (action === 'checkout' && method === 'POST') {
     if (r.status !== 3) return null;
     if (body.payment && body.payment.value) {
-      r.payments.push({ id: nextId(r.payments), payment_method: body.payment.payment_method, payment_method_name: body.payment.payment_method, value: Number(body.payment.value).toFixed(2), payment_date: expenseDayIso(0), notes: null, status: 1, created_by_name: mockUser.name, annulled_by_name: null, annulled_at: null });
+      r.payments.push(newPayment(r, body.payment));
     }
+    // La orden de cierre factura hospedaje + servicios + cargos con los anticipos facturados
+    // aplicados como descuento (sale por el saldo). Los consumos POS pendientes quedan pagados.
+    const chargesTotal = (r.charges || []).reduce((s, ch) => s + Number(ch.total), 0);
+    const accountTotal = Number(r.total) + chargesTotal;
+    const advances = r.payments.filter((p) => p.status === 1 && p.order_id).reduce((s, p) => s + Number(p.value), 0);
+    const applied = Math.min(advances, accountTotal);
+    (r.linked_orders || []).forEach((o) => { if (o.type === 'consumption') o.status_payment = 'PAID'; });
     r.status = 4; r.checkout_at = new Date().toISOString(); r.checkout_order_id = 'ord-' + Math.random().toString(36).slice(2, 10);
+    r.linked_orders.unshift({
+      id: r.checkout_order_id, order_number: null, status: 'ACCEPTED_IN_STORE', status_payment: 'PAID',
+      service_type: 'LODGING', is_lodging: true, type: 'checkout', discount: applied.toFixed(2),
+      total: (accountTotal - applied).toFixed(2), date: new Date().toISOString(),
+    });
     return detail(r);
   }
   if (action === 'guests') {
@@ -2374,13 +2431,33 @@ function resolveReservationsCore(sub, query, { method, body }) {
   }
   let sm = action.match(/^services\/(\d+)$/);
   if (sm && method === 'DELETE') { r.services = r.services.filter((sv) => sv.id !== Number(sm[1])); recalc(r); return detail(r); }
+  if (action === 'charges' && method === 'POST') {
+    const it = mockConsumableItems.find((x) => x.id === Number(body.item_id));
+    const qty = Number(body.quantity) || 1;
+    r.charges = r.charges || [];
+    r.charges.push({ id: nextId(r.charges), item_id: it.id, name: it.name, quantity: qty, unit_price: it.price, total: (Number(it.price) * qty).toFixed(2), created_by_name: mockUser.name, created_at: new Date().toISOString() });
+    return detail(r);
+  }
+  let cm = action.match(/^charges\/(\d+)$/);
+  if (cm && method === 'DELETE') { r.charges = (r.charges || []).filter((ch) => ch.id !== Number(cm[1])); return detail(r); }
   if (action === 'payments' && method === 'POST') {
-    r.payments.push({ id: nextId(r.payments), payment_method: body.payment_method, payment_method_name: body.payment_method, value: Number(body.value).toFixed(2), payment_date: body.payment_date || expenseDayIso(0), notes: body.notes || null, status: 1, created_by_name: mockUser.name, annulled_by_name: null, annulled_at: null });
+    const payment = newPayment(r, body);
+    r.payments.push(payment);
+    invoiceAdvance(r, payment);
     if (r.status === 1) r.status = 2;
     return detail(r);
   }
   let pm = action.match(/^payments\/(\d+)\/annul$/);
-  if (pm) { const p = r.payments.find((x) => x.id === Number(pm[1])); if (p) { p.status = 0; p.annulled_by_name = mockUser.name; } return detail(r); }
+  if (pm) {
+    const p = r.payments.find((x) => x.id === Number(pm[1]));
+    if (p) {
+      p.status = 0; p.annulled_by_name = mockUser.name;
+      // Anular el abono cancela también su factura.
+      const order = (r.linked_orders || []).find((o) => o.id === p.order_id);
+      if (order) order.status = 'CANCELLED';
+    }
+    return detail(r);
+  }
 
   return undefined;
 }
