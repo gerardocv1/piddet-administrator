@@ -35,7 +35,7 @@ export function ReservationWizard() {
   const [guestResults, setGuestResults] = React.useState(null);
 
   // Paso 3: servicios
-  const { data: serviceItems } = useResource(React.useCallback(() => api.serviceItems(), []), [], []);
+  const { data: serviceItems } = useResource(React.useCallback(() => api.serviceItems({ reservable: true }), []), [], []);
   const [services, setServices] = React.useState([]); // [{ item_id, name, price, quantity }]
 
   // Paso 4: adelanto
@@ -272,7 +272,7 @@ export function ReservationWizard() {
           {step === 2 && (
             <div className={s.formCol}>
               {(serviceItems || []).length === 0 ? (
-                <p className={s.faint}>No hay items de servicio activos en el catálogo de productos. Puedes continuar sin servicios.</p>
+                <p className={s.faint}>No hay servicios marcados como disponibles para reservas en el catálogo de productos. Puedes continuar sin servicios.</p>
               ) : (
                 serviceItems.map((st) => {
                   const picked = services.find((x) => x.item_id === st.id);

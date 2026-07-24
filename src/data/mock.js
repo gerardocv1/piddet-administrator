@@ -739,7 +739,7 @@ function resolveItemsMock(path, query, { method = 'GET', body } = {}) {
   }
   if (sub === 'items') {
     if (method === 'POST') {
-      const row = { id: nextId(mockItems), name: body.name, code: body.code || null, value: Number(body.value) || 0, file: null, item_type_id: Number(body.item_type_id), item_category_id: Number(body.item_category_id), item_status_id: 1, tax_family_id: body.tax_family_id != null && body.tax_family_id !== '' ? Number(body.tax_family_id) : null, description: body.description || '', position: mockItems.length };
+      const row = { id: nextId(mockItems), name: body.name, code: body.code || null, value: Number(body.value) || 0, file: null, item_type_id: Number(body.item_type_id), item_category_id: Number(body.item_category_id), item_status_id: 1, tax_family_id: body.tax_family_id != null && body.tax_family_id !== '' ? Number(body.tax_family_id) : null, description: body.description || '', position: mockItems.length, reservable: !!body.reservable };
       mockItems.push(row);
       return decorateItem(row);
     }
@@ -2068,12 +2068,12 @@ const mockRentableUnitTypes = [
 ];
 
 // Items tipo SERVICE del catálogo de productos: facturan el hospedaje de las unidades y los
-// servicios adicionales de las reservas.
+// servicios adicionales de las reservas. Solo los marcados `reservable` se ofrecen al reservar.
 const mockServiceItems = [
-  { id: 901, name: 'Hospedaje cabaña', description: 'Noche de hospedaje en cabaña', price: '320000.00' },
-  { id: 902, name: 'Hospedaje habitación', description: 'Noche de hospedaje en habitación', price: '180000.00' },
-  { id: 903, name: 'Cena romántica', description: 'Cena para dos con decoración', price: '120000.00' },
-  { id: 904, name: 'Decoración de aniversario', description: 'Globos, pétalos y velas', price: '80000.00' },
+  { id: 901, name: 'Hospedaje cabaña', description: 'Noche de hospedaje en cabaña', price: '320000.00', reservable: false },
+  { id: 902, name: 'Hospedaje habitación', description: 'Noche de hospedaje en habitación', price: '180000.00', reservable: false },
+  { id: 903, name: 'Cena romántica', description: 'Cena para dos con decoración', price: '120000.00', reservable: true },
+  { id: 904, name: 'Decoración de aniversario', description: 'Globos, pétalos y velas', price: '80000.00', reservable: true },
 ];
 
 const serviceItemName = (id) => mockServiceItems.find((it) => it.id === Number(id))?.name || null;
@@ -2141,8 +2141,11 @@ function resolveReservationsMock(path, query, { method = 'GET', body } = {}) {
     }));
   }
 
-  // Items de servicio del catálogo de productos: /service-items
-  if (sub === 'service-items') return [...mockServiceItems];
+  // Items de servicio del catálogo de productos: /service-items[?reservable=1]
+  if (sub === 'service-items') {
+    const reservableOnly = query.get('reservable') === '1';
+    return mockServiceItems.filter((it) => !reservableOnly || it.reservable);
+  }
 
   // Catálogo facturable en la cuenta de una reserva (productos + servicios): /consumable-items[?q=]
   if (sub === 'consumable-items') {

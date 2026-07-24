@@ -67,8 +67,11 @@ export const reservationsService = {
 
   // ── Items de servicio del catálogo de productos ─────────────────────────
   // Items tipo SERVICE activos: [{ id, name, description, price }]. Alimentan el selector del
-  // item de facturación de la unidad y los servicios adicionales de la reserva.
-  serviceItems: () => list(http.get(`${base()}/service-items`)),
+  // item de facturación de la unidad y el de agregar servicio en el detalle de la reserva.
+  // Con `reservable: true` limita a los marcados como disponibles para reservas: es el catálogo
+  // que se ofrece SOLO al crear la reserva (wizard y agente de IA).
+  serviceItems: ({ reservable = false } = {}) =>
+    list(http.get(`${base()}/service-items${qs({ reservable: reservable ? 1 : '' })}`)),
 
   // Items activos facturables en la cuenta de una reserva (productos Y servicios):
   // [{ id, name, description, price, type: 'PRODUCT'|'SERVICE' }]. `q` busca por nombre.

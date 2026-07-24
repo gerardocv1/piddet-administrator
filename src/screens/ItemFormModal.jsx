@@ -1,6 +1,7 @@
 import React from 'react';
-import { Button, Input, MoneyInput, Select, Textarea, Modal, CategoryCascader } from '../components';
+import { Button, Input, MoneyInput, Select, Switch, Textarea, Modal, CategoryCascader } from '../components';
 import { api } from '../lib/api.js';
+import { SERVICE_ITEM_TYPE_ID } from '../lib/services/itemTypes.js';
 import { useFunctionalities } from '../lib/permissions/useFunctionalities.js';
 import s from './screens.module.css';
 
@@ -24,6 +25,7 @@ export function ItemFormModal({ item, onClose, onSaved }) {
     description: item?.description || '',
     value: item?.value != null ? String(item.value) : '',
     tax_family_id: item?.tax_family_id ? String(item.tax_family_id) : '',
+    reservable: !!item?.reservable,
   }));
   const [saving, setSaving] = React.useState(false);
   const [err, setErr] = React.useState(null);
@@ -53,6 +55,7 @@ export function ItemFormModal({ item, onClose, onSaved }) {
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
   // Cambiar el tipo invalida la categoría elegida (las categorías pertenecen a un tipo).
   const onChangeType = (v) => setForm((f) => ({ ...f, item_type_id: v, item_category_id: '' }));
+  const isService = Number(form.item_type_id) === SERVICE_ITEM_TYPE_ID;
 
   const valid = form.item_type_id && form.item_category_id && form.name.trim()
     && form.description.trim() && form.value !== '' && (!taxesOn || form.tax_family_id);
@@ -68,6 +71,7 @@ export function ItemFormModal({ item, onClose, onSaved }) {
       code: form.code.trim() || null,
       description: form.description.trim(),
       value: Number(form.value),
+      reservable: isService && form.reservable,
     };
     // El impuesto solo se envía cuando la funcionalidad está activa (si no, el backend lo acepta nulo).
     if (taxesOn && form.tax_family_id) payload.tax_family_id = Number(form.tax_family_id);
@@ -112,6 +116,10 @@ export function ItemFormModal({ item, onClose, onSaved }) {
         {taxesOn && (
           <Select label="Impuesto" value={form.tax_family_id} onChange={(e) => set('tax_family_id', e.target.value)}
             options={[{ value: '', label: 'Selecciona un impuesto' }, ...taxes.map((tx) => ({ value: String(tx.id), label: tx.name }))]} />
+        )}
+        {isService && (
+          <Switch label="Disponible para reservas (se ofrece como servicio adicional al reservar hospedaje)"
+            checked={form.reservable} onChange={(e) => set('reservable', e.target.checked)} />
         )}
         <Textarea label="Descripción" placeholder="Describe el producto"
           value={form.description} onChange={(e) => set('description', e.target.value)} />

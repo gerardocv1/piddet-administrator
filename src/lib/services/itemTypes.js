@@ -11,6 +11,10 @@ const base = () => {
   return `/companies/${c?.username ?? c?.id}`;
 };
 
+// Contrato del backend (ItemType::TYPE_SERVICE): identifica los items de tipo servicio,
+// los únicos que pueden marcarse como disponibles para reservas.
+export const SERVICE_ITEM_TYPE_ID = 2;
+
 export const itemTypesService = {
   itemTypes: () => http.get(`${base()}/item-types?_row=200`, { paginated: true }),
 };
