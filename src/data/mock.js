@@ -2090,6 +2090,7 @@ const mockRentableUnits = [
   {
     id: 1, rentable_unit_type_id: 1, type_name: 'Cabaña', name: 'Cabaña El Roble',
     description: 'Cabaña de montaña con vista al valle.', capacity: 4, base_price_per_night: '320000.00',
+    check_in_time: '15:00', check_out_time: '12:00',
     item_id: 901, item_name: 'Hospedaje cabaña',
     position: 1, status: 1,
     files: [], files_count: 0,
@@ -2101,6 +2102,7 @@ const mockRentableUnits = [
   {
     id: 2, rentable_unit_type_id: 2, type_name: 'Habitación', name: 'Habitación Colibrí',
     description: 'Habitación doble estándar.', capacity: 2, base_price_per_night: '180000.00',
+    check_in_time: '14:00', check_out_time: '11:00',
     item_id: 902, item_name: 'Hospedaje habitación',
     position: 2, status: 1,
     files: [], files_count: 0, spaces: [],
@@ -2313,8 +2315,11 @@ function resolveReservationsCore(sub, query, { method, body }) {
     const consumptionOrders = (r.linked_orders || []).filter((o) => o.type === 'consumption' && o.status !== 'CANCELLED');
     const consumptionsTotal = consumptionOrders.reduce((s, o) => s + Number(o.total), 0);
     const consumptionsPaid = consumptionOrders.filter((o) => o.status_payment === 'PAID').reduce((s, o) => s + Number(o.total), 0);
+    const stayUnit = mockRentableUnits.find((u) => u.id === r.rentable_unit_id);
     return {
       ...r,
+      check_in_time: stayUnit?.check_in_time || null,
+      check_out_time: stayUnit?.check_out_time || null,
       summary: {
         lodging_subtotal: r.lodging_subtotal, services_total: r.services_total,
         charges_total: chargesTotal.toFixed(2), total: r.total, account_total: accountTotal.toFixed(2),
@@ -2353,6 +2358,19 @@ function resolveReservationsCore(sub, query, { method, body }) {
     annulled_by_name: null, annulled_at: null,
   });
 
+  // Calendario: reservas que se solapan con [from, to], excluyendo canceladas.
+  if (sub === 'reservations/calendar') {
+    const from = query.get('from');
+    const to = query.get('to');
+    return mockReservations
+      .filter((r) => r.status !== 0 && r.check_in_date <= to && r.check_out_date >= from)
+      .map((r) => ({
+        id: r.id, code: r.code, rentable_unit_name: r.rentable_unit_name, holder_user_name: r.holder_user_name,
+        guests_count: r.guests_count || 1, check_in_date: r.check_in_date, check_out_date: r.check_out_date,
+        nights: r.nights, total: r.total, status: r.status, services_count: (r.services || []).length,
+      }));
+  }
+
   // Listado / creación
   if (sub === 'reservations') {
     if (method === 'POST') {
@@ -2374,7 +2392,10 @@ function resolveReservationsCore(sub, query, { method, body }) {
       (body.companions || []).forEach((c, i) => guests.push({ id: i + 2, user_id: 600 + i, is_holder: false, first_name: c.first_name, last_name: c.last_name, name: `${c.first_name} ${c.last_name}`, document_number: c.id_number || null }));
       const row = {
         id, code, rentable_unit_id: unit.id, rentable_unit_name: unit.name,
+        guests_count: Number(body.guests_count) || 1,
         holder_user_id: 501, holder_user_name: holderName, holder_document_number: body.holder.id_number || null,
+        holder_first_name: body.holder.first_name, holder_last_name: body.holder.last_name,
+        holder_phone_number: body.holder.phone_number || '',
         check_in_date: body.check_in_date, check_out_date: body.check_out_date, expected_arrival_time: null,
         nights, price_per_night: pricePerNight.toFixed(2), lodging_subtotal: lodging.toFixed(2),
         services_total: servicesTotal.toFixed(2), total: (lodging + servicesTotal).toFixed(2),
@@ -2412,7 +2433,12 @@ function resolveReservationsCore(sub, query, { method, body }) {
 
   if (!action) return detail(r); // GET detalle
   if (action === 'confirm') { if (r.status === 1) r.status = 2; return detail(r); }
-  if (action === 'check-in') { if (r.status === 2) { r.status = 3; r.checkin_at = new Date().toISOString(); } return detail(r); }
+  // El check-in exige el pre-check-in del huésped (misma regla que el backend).
+  if (action === 'check-in') {
+    if (!r.precheckin_completed_at) throw new Error('El huésped debe completar el pre-check-in antes de registrar la entrada');
+    if (r.status === 2) { r.status = 3; r.checkin_at = new Date().toISOString(); }
+    return detail(r);
+  }
   if (action === 'cancel') {
     r.status = 0; r.cancelled_by_name = mockUser.name; r.cancellation_reason = body.reason || null;
     // Cancelar la reserva cancela también todas sus facturas vigentes.
@@ -2503,6 +2529,40 @@ function resolveReservationsCore(sub, query, { method, body }) {
 
 // Pre-check-in público (demo): resuelve /public/checkin/{code}… contra mockReservations.
 function resolveCheckinMock(path, query, { method = 'GET', body } = {}) {
+  // Entrada digitando código + nombre: el nombre se compara sin tildes ni mayúsculas y basta con
+  // acertar cualquiera de las palabras del titular (mismo criterio que el backend).
+  if (path === '/public/checkin/access' && method === 'POST') {
+    const normalize = (v) => String(v || '').toLowerCase()
+      .normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .replace(/[^a-z0-9 ]/g, ' ').trim().replace(/\s+/g, ' ');
+    const wanted = String(body?.code || '').replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+    const found = mockReservations.find((x) => x.code === wanted);
+    const holderParts = found ? normalize(found.holder_user_name).split(' ').filter(Boolean) : [];
+    const typedParts = normalize(body?.name).split(' ').filter(Boolean);
+    const matches = found && typedParts.length > 0 && typedParts.every((p) => p.length >= 2 && holderParts.includes(p));
+    if (!matches) return null;
+
+    // Reserva del titular pero ya cerrada: 409 con el motivo, igual que el backend.
+    if (![1, 2, 3].includes(found.status)) {
+      const cancelled = found.status === 0;
+      const err = new Error(cancelled ? 'Esta reserva fue cancelada' : 'Esta reserva ya finalizó');
+      err.status = 409;
+      err.data = {
+        cancelled,
+        title: cancelled ? 'Esta reserva fue cancelada' : 'Esta reserva ya finalizó',
+        detail: cancelled
+          ? 'Ya no es posible hacer el pre-check-in. Si crees que es un error, comunícate con el alojamiento.'
+          : 'Tu estadía terminó, así que el pre-check-in ya no está disponible. ¡Gracias por visitarnos!',
+        company_name: mockCompany.name, company_phone: mockCompany.phone,
+        check_in_date: found.check_in_date, check_out_date: found.check_out_date,
+        unit_name: found.rentable_unit_name,
+      };
+      throw err;
+    }
+
+    return resolveCheckinMock(`/public/checkin/${found.code}`, query, {});
+  }
+
   const m = path.match(/^\/public\/checkin\/([^/]+)(?:\/(.+))?$/);
   if (!m) return undefined;
   const code = m[1];
@@ -2512,27 +2572,67 @@ function resolveCheckinMock(path, query, { method = 'GET', body } = {}) {
   const summary = (res) => {
     const paid = res.payments.filter((p) => p.status === 1).reduce((s, p) => s + Number(p.value), 0);
     const maskDoc = (d) => (!d ? null : (String(d).length <= 4 ? '****' : '****' + String(d).slice(-4)));
+    const unit = mockRentableUnits.find((u) => u.id === res.rentable_unit_id);
     return {
-      code: res.code, company_name: mockCompany.name, unit_name: res.rentable_unit_name, unit_photo: null,
+      code: res.code,
+      company_name: mockCompany.name,
+      company_logo: mockCompany.icon || null,
+      company_address: mockCompany.address || null,
+      unit_name: res.rentable_unit_name,
+      unit_type_name: unit?.type_name || null,
+      unit_description: unit?.description || null,
+      unit_capacity: unit?.capacity || null,
+      unit_check_in_time: unit?.check_in_time || null,
+      unit_check_out_time: unit?.check_out_time || null,
+      unit_photo: null,
       check_in_date: res.check_in_date, check_out_date: res.check_out_date, nights: res.nights,
+      guests_count: res.guests_count || 1,
       total: res.total, paid: paid.toFixed(2), balance: (Number(res.total) - paid).toFixed(2),
       expected_arrival_time: res.expected_arrival_time, precheckin_completed: !!res.precheckin_completed_at,
-      holder: { name: res.holder_user_name, document_masked: maskDoc(res.holder_document_number) },
-      companions: res.guests.filter((g) => !g.is_holder).map((g) => ({ name: g.name })),
+      holder: {
+        name: res.holder_user_name,
+        document_masked: maskDoc(res.holder_document_number),
+        first_name: res.holder_first_name || null,
+        last_name: res.holder_last_name || null,
+        phone_number: res.holder_phone_number || '',
+        id_number: res.holder_document_number || '',
+        has_document_photo: !!res.holder_has_document_photo,
+      },
+      companions: res.guests.filter((g) => !g.is_holder).map((g) => ({
+        name: g.name, first_name: g.first_name, last_name: g.last_name, document_number: g.document_number,
+      })),
     };
   };
 
   if (!action) return r ? summary(r) : null;
-  if (action === 'guests/lookup') return { exists: false };
+  // ¿Existe ya alguien con ese documento o celular? Nombre enmascarado (anti-enumeración).
+  if (action === 'guests/lookup') {
+    const mask = (n) => (n ? String(n).charAt(0) + '***' : '');
+    const doc = (query.get('document') || '').trim();
+    const phone = (query.get('phone') || '').replace(/\D+/g, '');
+    let person = null;
+    if (doc) person = mockGuests.find((g) => String(g.id_number) === doc);
+    else if (phone.length >= 7) person = mockGuests.find((g) => String(g.phone_number).replace(/\D+/g, '') === phone);
+    return person ? { exists: true, first_name: mask(person.first_name), last_name: mask(person.last_name) } : { exists: false };
+  }
   if (!r) return null;
   if (action === 'files' && method === 'POST') return { name: 'doc-' + Math.random().toString(36).slice(2, 8) };
   if (action === 'guests' && method === 'POST') {
+    // Un acompañante reutilizado llega solo con celular: se resuelve su nombre del "sistema".
+    const resolveCompanion = (c) => {
+      if (!c.reused) return { first_name: c.first_name, last_name: c.last_name, document_number: c.id_number || null };
+      const p = mockGuests.find((g) => String(g.phone_number).replace(/\D+/g, '') === String(c.phone_number).replace(/\D+/g, '')) || {};
+      return { first_name: p.first_name || 'Acompañante', last_name: p.last_name || '', document_number: p.id_number || null };
+    };
     r.expected_arrival_time = body.expected_arrival_time || null;
     r.precheckin_completed_at = new Date().toISOString();
     r.holder_user_name = `${body.holder.first_name} ${body.holder.last_name}`;
     r.holder_document_number = body.holder.id_number || r.holder_document_number;
     r.guests = [{ id: 1, user_id: 501, is_holder: true, first_name: body.holder.first_name, last_name: body.holder.last_name, name: r.holder_user_name, document_number: body.holder.id_number || null },
-      ...(body.companions || []).map((c, i) => ({ id: i + 2, user_id: 600 + i, is_holder: false, first_name: c.first_name, last_name: c.last_name, name: `${c.first_name} ${c.last_name}`, document_number: c.id_number || null }))];
+      ...(body.companions || []).map((c, i) => {
+        const g = resolveCompanion(c);
+        return { id: i + 2, user_id: 600 + i, is_holder: false, first_name: g.first_name, last_name: g.last_name, name: `${g.first_name} ${g.last_name}`.trim(), document_number: g.document_number };
+      })];
     return summary(r);
   }
   return null;

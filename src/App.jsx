@@ -20,6 +20,7 @@ import { Expenses } from './screens/Expenses.jsx';
 import { RentableUnits } from './screens/RentableUnits.jsx';
 import { RentableUnitDetail } from './screens/RentableUnitDetail.jsx';
 import { Reservations } from './screens/Reservations.jsx';
+import { ReservationsCalendar } from './screens/ReservationsCalendar.jsx';
 import { ReservationDetail } from './screens/ReservationDetail.jsx';
 import { ReservationWizard } from './screens/ReservationWizard/ReservationWizard.jsx';
 import { ExpenseForm } from './screens/ExpenseForm.jsx';
@@ -46,8 +47,10 @@ import { ADMIN_BASE } from './lib/adminBase.js';
 // del panel admin (sin sesión ni permisos), por eso se detecta antes de montar el router.
 const PUBLIC_MENU_RE = /^\/([^/]+)\/m\/([^/]+)\/?$/;
 
-// Pre-check-in del huésped: /checkin/{código} (dos segmentos). Se sirve fuera del panel, sin sesión.
-const PUBLIC_CHECKIN_RE = /^\/checkin\/([^/]+)\/?$/;
+// Pre-check-in del huésped, fuera del panel y sin sesión. Se entra por /checkin?code={código}: el
+// código solo autocompleta el formulario, que siempre pide además el nombre del titular. Se acepta
+// /checkin/{código} por los enlaces ya compartidos.
+const PUBLIC_CHECKIN_RE = /^\/checkin(?:\/([^/]+))?\/?$/;
 
 // Patrón de la portada pública de una compañía: /{username-compañía} (un solo segmento). El panel
 // vive bajo /admin, así que cualquier raíz limpia de un segmento (salvo `admin`) es una empresa.
@@ -76,10 +79,12 @@ export default function App() {
     );
   }
 
-  // 1a-bis) Pre-check-in del huésped: /checkin/{código} (dos segmentos, sin sesión).
+  // 1a-bis) Pre-check-in del huésped (sin sesión): el código puede venir en ?code= o en la ruta.
   const checkinMatch = path.match(PUBLIC_CHECKIN_RE);
   if (checkinMatch) {
-    return <CheckinWizard code={decodeURIComponent(checkinMatch[1])} />;
+    const queryCode = new URLSearchParams(window.location.search).get('code');
+    const pathCode = checkinMatch[1] ? decodeURIComponent(checkinMatch[1]) : null;
+    return <CheckinWizard code={queryCode || pathCode} />;
   }
 
   // 1b) Portada pública de la compañía: raíz limpia de un solo segmento (salvo `admin`).
@@ -151,6 +156,7 @@ function AdminApp() {
             <Route path="rentable-units/new" element={<RequirePermission path="/rentable-units"><RentableUnitDetail /></RequirePermission>} />
             <Route path="rentable-units/:unitId" element={<RequirePermission path="/rentable-units"><RentableUnitDetail /></RequirePermission>} />
             <Route path="reservations" element={<RequirePermission path="/reservations"><Reservations /></RequirePermission>} />
+            <Route path="reservations/calendar" element={<RequirePermission path="/reservations"><ReservationsCalendar /></RequirePermission>} />
             <Route path="reservations/new" element={<RequirePermission path="/reservations"><ReservationWizard /></RequirePermission>} />
             <Route path="reservations/:reservationId" element={<RequirePermission path="/reservations"><ReservationDetail /></RequirePermission>} />
             <Route path="tables" element={<RequirePermission path="/tables"><Tables /></RequirePermission>} />

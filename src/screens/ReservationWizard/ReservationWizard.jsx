@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Card, Button, IconButton, Input, Select, Textarea, MoneyInput, DatePicker, Badge, Spinner,
+  Card, Button, IconButton, Input, Select, Textarea, MoneyInput, DateRangePicker, Badge, Spinner,
 } from '../../components';
 import { api } from '../../lib/api.js';
 import { useResource } from '../../lib/useResource.js';
@@ -24,7 +24,8 @@ export function ReservationWizard() {
   // Paso 1: fechas + unidad
   const [checkIn, setCheckIn] = React.useState('');
   const [checkOut, setCheckOut] = React.useState('');
-  const [unit, setUnit] = React.useState(null); // { id, name, base_price_per_night, available }
+  const [unit, setUnit] = React.useState(null); // { id, name, base_price_per_night, capacity, available }
+  const [guestsCount, setGuestsCount] = React.useState(1); // total de personas, titular incluido
   const [availability, setAvailability] = React.useState(null); // resultado o null
   const [loadingAvail, setLoadingAvail] = React.useState(false);
 
@@ -58,17 +59,20 @@ export function ReservationWizard() {
   const servicesTotal = services.reduce((sum, sv) => sum + Number(sv.price) * sv.quantity, 0);
   const total = lodgingSubtotal + servicesTotal;
 
-  const loadAvailability = async () => {
+  // Al completar el rango se consulta la disponibilidad automáticamente (sin botón). Un token de
+  // petición evita que una respuesta lenta de un rango anterior pise a la del rango vigente.
+  const availReq = React.useRef(0);
+  React.useEffect(() => {
+    setUnit(null);
+    setAvailability(null);
     if (!checkIn || !checkOut || nights < 1) return;
+    const reqId = ++availReq.current;
     setLoadingAvail(true); setError('');
-    try {
-      setAvailability(await api.unitAvailability({ checkIn, checkOut }));
-    } catch (e) {
-      setError(e?.message || 'No se pudo consultar la disponibilidad.');
-    } finally {
-      setLoadingAvail(false);
-    }
-  };
+    api.unitAvailability({ checkIn, checkOut })
+      .then((res) => { if (reqId === availReq.current) setAvailability(res); })
+      .catch((e) => { if (reqId === availReq.current) setError(e?.message || 'No se pudo consultar la disponibilidad.'); })
+      .finally(() => { if (reqId === availReq.current) setLoadingAvail(false); });
+  }, [checkIn, checkOut, nights]);
 
   const searchGuest = async () => {
     if (!guestQuery.trim()) return;
@@ -101,6 +105,23 @@ export function ReservationWizard() {
   const setCompanionField = (key, k, v) => setCompanions((c) => c.map((x) => (x.key === key ? { ...x, [k]: v } : x)));
   const removeCompanion = (key) => setCompanions((c) => c.filter((x) => x.key !== key));
 
+  // Al elegir unidad, el número de personas se acota a su capacidad y los acompañantes que sobren
+  // se descartan (el titular ocupa uno de los cupos).
+  const pickUnit = (u) => {
+    setUnit(u);
+    const capped = Math.min(guestsCount, Math.max(1, Number(u.capacity) || 1));
+    setGuestsCount(capped);
+    setCompanions((c) => c.slice(0, capped - 1));
+  };
+
+  const changeGuestsCount = (value) => {
+    const n = Math.max(1, Number(value) || 1);
+    setGuestsCount(n);
+    setCompanions((c) => c.slice(0, n - 1));
+  };
+
+  const maxCompanions = guestsCount - 1;
+
   const step1Valid = checkIn && checkOut && nights >= 1 && unit && unit.available;
   const step2Valid = holder.first_name.trim() && holder.last_name.trim() && holder.phone_number.trim();
 
@@ -118,6 +139,7 @@ export function ReservationWizard() {
         rentable_unit_id: unit.id,
         check_in_date: checkIn,
         check_out_date: checkOut,
+        guests_count: guestsCount,
         notes: notes.trim() || null,
         holder: {
           first_name: holder.first_name.trim(),
@@ -149,13 +171,13 @@ export function ReservationWizard() {
   };
 
   if (created) {
-    const link = `${window.location.origin}/checkin/${created.code}`;
+    const link = `${window.location.origin}/checkin?code=${created.code}`;
     return (
       <div className={s.page}>
         <div className={t.success}>
           <div className={t.successIcon}><i className="fas fa-circle-check" /></div>
           <h2 className={t.title}>Reserva creada</h2>
-          <p className={s.muted}>Comparte el código del pre-check-in con el huésped para que complete sus datos.</p>
+          <p className={s.muted}>Comparte el enlace con el huésped para que complete sus datos. Para entrar necesita este código y su nombre.</p>
           <div className={t.codeBox}>
             <span className={t.code}>{created.code}</span>
             <span className={t.codeLink}>{link}</span>
@@ -188,23 +210,20 @@ export function ReservationWizard() {
         <Card.Body>
           {step === 0 && (
             <div className={s.formCol}>
-              <div className={s.formGrid}>
-                <DatePicker label="Entrada" icon="fas fa-calendar" min={todayIso()} value={checkIn}
-                  onChange={(d) => { setCheckIn(d); setUnit(null); setAvailability(null); }} />
-                <DatePicker label="Salida" icon="fas fa-calendar" min={checkIn || todayIso()} value={checkOut}
-                  onChange={(d) => { setCheckOut(d); setUnit(null); setAvailability(null); }} />
-              </div>
-              {nights > 0 && <p className={s.muted}>{nights} noche{nights === 1 ? '' : 's'}</p>}
-              <Button variant="secondary" icon="fas fa-magnifying-glass" disabled={!checkIn || !checkOut || nights < 1}
-                loading={loadingAvail} onClick={loadAvailability}>Ver disponibilidad</Button>
+              <DateRangePicker label="Fechas de la estadía" icon="fas fa-calendar" min={todayIso()}
+                value={{ from: checkIn, to: checkOut }}
+                onChange={({ from, to }) => { setCheckIn(from); setCheckOut(to); }} />
+              {nights > 0 && <p className={s.muted}>{nights} noche{nights === 1 ? '' : 's'} · elige la unidad disponible</p>}
 
-              {availability && (
+              {loadingAvail && <Spinner center label="Consultando disponibilidad…" />}
+
+              {availability && !loadingAvail && (
                 <div className={t.unitGrid}>
                   {availability.length === 0 && <p className={s.faint}>No hay unidades registradas.</p>}
                   {availability.map((u) => (
                     <button key={u.id} type="button"
                       className={`${t.unitCard} ${unit?.id === u.id ? t.unitSelected : ''} ${!u.available ? t.unitBusy : ''}`}
-                      disabled={!u.available} onClick={() => setUnit(u)}>
+                      disabled={!u.available} onClick={() => pickUnit(u)}>
                       <span className={t.unitName}>{u.name}</span>
                       <span className={s.muted}>{u.type_name} · {u.capacity} pers.</span>
                       <span className={t.unitPrice}>{reservationMoney(u.base_price_per_night)} / noche</span>
@@ -212,6 +231,15 @@ export function ReservationWizard() {
                     </button>
                   ))}
                 </div>
+              )}
+
+              {unit && (
+                <Select label="Número de personas" icon="fas fa-users" value={String(guestsCount)}
+                  onChange={(e) => changeGuestsCount(e.target.value)}
+                  hint={`${unit.name} admite hasta ${unit.capacity} ${Number(unit.capacity) === 1 ? 'persona' : 'personas'}. El titular cuenta como una.`}
+                  options={Array.from({ length: Math.max(1, Number(unit.capacity) || 1) }, (_, i) => ({
+                    value: String(i + 1), label: `${i + 1} ${i === 0 ? 'persona' : 'personas'}`,
+                  }))} />
               )}
             </div>
           )}
@@ -254,9 +282,15 @@ export function ReservationWizard() {
               </div>
 
               <div className={t.companionsHead}>
-                <h4 className={t.subTitle}>Acompañantes</h4>
-                <Button variant="secondary" size="sm" icon="fas fa-plus" onClick={addCompanion}>Agregar</Button>
+                <h4 className={t.subTitle}>Acompañantes ({companions.length}/{maxCompanions})</h4>
+                <Button variant="secondary" size="sm" icon="fas fa-plus"
+                  disabled={companions.length >= maxCompanions} onClick={addCompanion}>Agregar</Button>
               </div>
+              <p className={s.muted}>
+                {maxCompanions === 0
+                  ? 'La reserva es para una sola persona.'
+                  : `La reserva es para ${guestsCount} personas: el titular y ${maxCompanions} ${maxCompanions === 1 ? 'acompañante' : 'acompañantes'}. Puedes dejarlos en blanco: el huésped los completa en su pre-check-in.`}
+              </p>
               {companions.map((c) => (
                 <div key={c.key} className={t.companionRow}>
                   <Input label="Nombres" value={c.first_name} onChange={(e) => setCompanionField(c.key, 'first_name', e.target.value)} />
@@ -313,7 +347,8 @@ export function ReservationWizard() {
               <SummaryRow label="Unidad" value={unit?.name} />
               <SummaryRow label="Fechas" value={`${checkIn} → ${checkOut} (${nights}n)`} />
               <SummaryRow label="Titular" value={`${holder.first_name} ${holder.last_name}`} />
-              <SummaryRow label="Acompañantes" value={String(companions.filter((c) => c.first_name.trim()).length)} />
+              <SummaryRow label="Personas" value={`${guestsCount} (titular incluido)`} />
+              <SummaryRow label="Acompañantes registrados" value={`${companions.filter((c) => c.first_name.trim()).length} de ${maxCompanions}`} />
               <div className={t.summaryDivider} />
               <SummaryRow label="Hospedaje" value={reservationMoney(lodgingSubtotal)} />
               <SummaryRow label="Servicios" value={reservationMoney(servicesTotal)} />

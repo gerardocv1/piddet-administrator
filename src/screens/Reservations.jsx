@@ -98,6 +98,10 @@ export function Reservations() {
                 {pg.total === 0 ? 'Sin reservas' : `${pg.total} reserva${pg.total === 1 ? '' : 's'}`}
               </p>
             )}
+            <Button variant="secondary" size="sm" icon="fas fa-calendar-days"
+              onClick={() => navigate(`/reservations/calendar${params.toString() ? `?${params.toString()}` : ''}`)}>
+              Calendario
+            </Button>
             <Button variant="primary" size="sm" icon="fas fa-plus" onClick={() => navigate('/reservations/new')}>
               Nueva reserva
             </Button>

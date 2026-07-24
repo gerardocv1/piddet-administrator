@@ -12,6 +12,7 @@ import t from './RentableUnitDetail.module.css';
 
 const emptyForm = {
   name: '', rentable_unit_type_id: '', capacity: 1, base_price_per_night: '', item_id: '', description: '',
+  check_in_time: '15:00', check_out_time: '12:00',
 };
 
 // Detalle de una unidad reservable: crear (/rentable-units/new) o administrar (/rentable-units/:id).
@@ -61,6 +62,8 @@ export function RentableUnitDetail() {
       base_price_per_night: data.base_price_per_night ?? '',
       item_id: String(data.item_id || ''),
       description: data.description || '',
+      check_in_time: data.check_in_time || '15:00',
+      check_out_time: data.check_out_time || '12:00',
     });
   }, [data, isEdit]);
 
@@ -82,6 +85,8 @@ export function RentableUnitDetail() {
         rentable_unit_type_id: Number(form.rentable_unit_type_id),
         capacity: Number(form.capacity) || 1,
         base_price_per_night: form.base_price_per_night,
+        check_in_time: form.check_in_time,
+        check_out_time: form.check_out_time,
         item_id: Number(form.item_id),
         description: form.description.trim() || null,
         files,
@@ -113,6 +118,8 @@ export function RentableUnitDetail() {
         rentable_unit_type_id: Number(form.rentable_unit_type_id),
         capacity: Number(form.capacity) || 1,
         base_price_per_night: form.base_price_per_night,
+        check_in_time: form.check_in_time,
+        check_out_time: form.check_out_time,
         item_id: Number(form.item_id),
         description: form.description.trim() || null,
       }));
@@ -173,6 +180,13 @@ export function RentableUnitDetail() {
               </div>
               <MoneyInput label="Tarifa por noche" icon="fas fa-dollar-sign" placeholder="0"
                 value={form.base_price_per_night} onChange={(v) => set('base_price_per_night', v)} />
+              <div className={s.formGrid}>
+                <Input label="Hora de ingreso" icon="fas fa-right-to-bracket" type="time"
+                  value={form.check_in_time} onChange={(e) => set('check_in_time', e.target.value)} />
+                <Input label="Hora de salida" icon="fas fa-right-from-bracket" type="time"
+                  value={form.check_out_time} onChange={(e) => set('check_out_time', e.target.value)} />
+              </div>
+              <p className={s.faint}>El huésped ve estos horarios en su pre-check-in.</p>
               <Select label="Item de facturación" icon="fas fa-receipt"
                 value={form.item_id} onChange={(e) => set('item_id', e.target.value)}
                 options={[{ value: '', label: itemOptions.length ? 'Selecciona…' : 'No hay items de servicio activos' }, ...itemOptions]} />

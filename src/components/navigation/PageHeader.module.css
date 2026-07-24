@@ -38,6 +38,8 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* Valores que no son texto (p. ej. el Badge de estado): sin recorte ni caja de línea de texto. */
+.metaNode { display: flex; align-items: center; overflow: visible; }
 
 .note {
   display: flex;

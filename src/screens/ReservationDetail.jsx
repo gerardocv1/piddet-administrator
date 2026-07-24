@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Card, Badge, Button, IconButton, Avatar, Spinner, Modal, ConfirmDialog, Input, Select, MoneyInput, Autocomplete, PageHeader } from '../components';
+import { Card, Badge, Button, IconButton, Avatar, Spinner, Modal, ConfirmDialog, Input, Select, MoneyInput, Autocomplete, PageHeader, Dropdown } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { usePermissions } from '../lib/permissions/usePermissions.js';
@@ -28,6 +28,7 @@ export function ReservationDetail() {
   const [busy, setBusy] = React.useState(false);
   const [actionError, setActionError] = React.useState('');
   const [cancelOpen, setCancelOpen] = React.useState(false);
+  const [checkInOpen, setCheckInOpen] = React.useState(false);
   const [reopenOpen, setReopenOpen] = React.useState(false);
   const [payOpen, setPayOpen] = React.useState(false);
   const [payment, setPayment] = React.useState({ payment_method: '', value: '' });
@@ -81,7 +82,10 @@ export function ReservationDetail() {
   const isCheckedIn = status === RESERVATION_STATUS.CHECKED_IN;
   const isCheckedOut = status === RESERVATION_STATUS.CHECKED_OUT;
   const isOpen = [RESERVATION_STATUS.PENDING, RESERVATION_STATUS.CONFIRMED, RESERVATION_STATUS.CHECKED_IN].includes(status);
-  const checkinLink = `${window.location.origin}/checkin/${data.code}`;
+  const checkinLink = `${window.location.origin}/checkin?code=${data.code}`;
+  // Sin pre-check-in del huésped no se puede registrar la entrada (regla del backend).
+  const precheckinDone = !!data.precheckin_completed_at;
+  const guestsCount = Number(data.guests_count) || data.guests.length;
 
   const summary = data.summary || {};
   const accountTotal = summary.account_total ?? summary.total;
@@ -119,6 +123,11 @@ export function ReservationDetail() {
   const doCancel = async (reason) => {
     const ok = await run(() => api.cancelReservation(reservationId, reason), 'No se pudo cancelar la reserva.');
     if (ok) { setCancelOpen(false); reloadOrders(); }
+  };
+
+  const doCheckIn = async () => {
+    const ok = await run(() => api.checkInReservation(reservationId), 'No se pudo hacer check-in.');
+    if (ok) setCheckInOpen(false);
   };
 
   const doReopen = async () => {
@@ -161,21 +170,29 @@ export function ReservationDetail() {
         backTitle="Volver a reservas"
         subtitle={`${formatStayRange(data.check_in_date, data.check_out_date)} · ${data.nights} ${Number(data.nights) === 1 ? 'noche' : 'noches'}`}
         actions={<>
-          <Badge variant={meta.variant} dot>{meta.label}</Badge>
           {isPending && <Button variant="secondary" size="sm" icon="fas fa-circle-check" loading={busy} onClick={() => run(() => api.confirmReservation(reservationId), 'No se pudo confirmar.')}>Confirmar</Button>}
-          {isConfirmed && <Button variant="primary" size="sm" icon="fas fa-door-open" loading={busy} onClick={() => run(() => api.checkInReservation(reservationId), 'No se pudo hacer check-in.')}>Check-in</Button>}
+          {isConfirmed && (
+            <Button variant="outline-primary" size="sm" icon="fas fa-door-open" disabled={!precheckinDone}
+              title={precheckinDone ? 'Registrar la entrada del huésped' : 'El huésped debe completar su pre-check-in antes de la entrada'}
+              onClick={() => setCheckInOpen(true)}>Check-in</Button>
+          )}
           {isCheckedIn && can('reservation-checkout') && (
-            <Button variant="primary" size="sm" icon="fas fa-file-invoice-dollar" onClick={() => setCheckoutOpen(true)}>Checkout</Button>
+            <Button variant="outline-primary" size="sm" icon="fas fa-file-invoice-dollar" onClick={() => setCheckoutOpen(true)}>Checkout</Button>
           )}
           {isCheckedOut && can('reservation-checkout') && (
             <Button variant="secondary" size="sm" icon="fas fa-rotate-left" onClick={() => setReopenOpen(true)}>Reabrir</Button>
           )}
           {status !== RESERVATION_STATUS.CANCELLED && can('reservation-cancel') && (
-            <Button variant="danger" size="sm" icon="fas fa-ban" onClick={() => setCancelOpen(true)}>Cancelar</Button>
+            <Dropdown
+              trigger={<IconButton icon="fas fa-ellipsis-vertical" variant="light" size="sm" title="Más acciones" />}
+              items={[{ label: 'Cancelar esta reserva', icon: 'fas fa-ban', variant: 'danger', onClick: () => setCancelOpen(true) }]}
+            />
           )}
         </>}
         meta={[
+          { label: 'Estado', value: <Badge variant={meta.variant} dot>{meta.label}</Badge> },
           { label: 'Unidad', value: data.rentable_unit_name },
+          { label: 'Personas', value: `${guestsCount} (titular incluido)` },
           { label: 'Llegada estimada', value: arrivalSlotLabel(data.expected_arrival_time) },
           { label: 'Registró', value: data.created_by_name || '—' },
         ]}
@@ -187,6 +204,16 @@ export function ReservationDetail() {
       />
 
       {actionError && <div className={s.formError}><i className="fas fa-triangle-exclamation" /> {actionError}</div>}
+
+      {isConfirmed && !precheckinDone && (
+        <div className={t.notice}>
+          <i className="fas fa-circle-info" />
+          <span>
+            Falta el pre-check-in del huésped. Comparte el enlace de la pestaña Reserva para que registre
+            sus datos y los de sus acompañantes; hasta entonces no se puede registrar la entrada.
+          </span>
+        </div>
+      )}
 
       <div className={t.tabs} role="tablist">
         <button type="button" role="tab" aria-selected={tab === 'reservation'}
@@ -211,6 +238,7 @@ export function ReservationDetail() {
                   <div className={t.stayDate}>
                     <span className={t.stayLabel}>Check-in</span>
                     <strong>{data.check_in_date}</strong>
+                    {data.check_in_time && <span className={t.stayTime}>desde {data.check_in_time}</span>}
                   </div>
                   <div className={t.stayNights}>
                     <span className={t.stayNightsNum}>{data.nights}</span>
@@ -219,6 +247,7 @@ export function ReservationDetail() {
                   <div className={`${t.stayDate} ${t.stayDateEnd}`}>
                     <span className={t.stayLabel}>Check-out</span>
                     <strong>{data.check_out_date}</strong>
+                    {data.check_out_time && <span className={t.stayTime}>hasta {data.check_out_time}</span>}
                   </div>
                 </div>
                 <dl className={t.meta}>
@@ -291,7 +320,7 @@ export function ReservationDetail() {
                 <p className={t.linkHint}>
                   {data.precheckin_completed_at
                     ? `El huésped completó sus datos el ${String(data.precheckin_completed_at).slice(0, 10)}.`
-                    : 'Comparte el enlace para que el huésped complete sus datos.'}
+                    : 'Comparte el enlace para que el huésped complete sus datos. Para entrar le pedimos este código y su nombre.'}
                 </p>
               </Card.Body>
             </Card>
@@ -452,6 +481,18 @@ export function ReservationDetail() {
         onConfirm={doCancel} onClose={() => setCancelOpen(false)}>
         <p>Se liberan las fechas de la unidad y se cancelan también todas las facturas de la reserva (abonos, consumos POS y cierre). Esta acción no se puede deshacer.</p>
       </ConfirmDialog>
+
+      <Modal open={checkInOpen} size="sm" title="Registrar entrada" onClose={() => setCheckInOpen(false)}
+        footer={<>
+          <Button variant="secondary" onClick={() => setCheckInOpen(false)}>Cancelar</Button>
+          <Button variant="primary" icon="fas fa-door-open" loading={busy} onClick={doCheckIn}>Iniciar estadía</Button>
+        </>}>
+        <p>
+          Vas a registrar la entrada de <strong>{data.holder_user_name}</strong> en {data.rentable_unit_name},
+          por {data.nights} {Number(data.nights) === 1 ? 'noche' : 'noches'} y {guestsCount} {guestsCount === 1 ? 'persona' : 'personas'}.
+          La reserva pasa a “En estadía” y podrás agregar consumos a su cuenta.
+        </p>
+      </Modal>
 
       <Modal open={reopenOpen} size="sm" title="Reabrir reserva" onClose={() => setReopenOpen(false)}
         footer={<>

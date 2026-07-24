@@ -85,6 +85,12 @@ export const reservationsService = {
   reservations: ({ dateFrom = '', dateTo = '', status = '', unitId = '', search = '', page = 1, perPage = 15 } = {}) =>
     http.get(`${base()}/reservations${qs({ date_from: dateFrom, date_to: dateTo, status, rentable_unit_id: unitId, _search: search, page, per_page: perPage })}`, { paginated: true }),
 
+  // Reservas que se solapan con un rango, para la vista de calendario:
+  // [{ id, code, rentable_unit_name, holder_user_name, guests_count, check_in_date, check_out_date,
+  //    nights, total, status, services_count }].
+  reservationsCalendar: ({ from, to }) =>
+    list(http.get(`${base()}/reservations/calendar${qs({ from, to })}`)),
+
   // Detalle completo: huéspedes, servicios, pagos y resumen de saldo.
   reservation: (reservationId) => http.get(`${base()}/reservations/${reservationId}`),
 
@@ -119,8 +125,13 @@ export const reservationsService = {
   reservationOrders: (reservationId) => list(http.get(`${base()}/reservations/${reservationId}/orders`)),
 
   // ── Pre-check-in público (sin sesión, autenticado por el código de reserva) ──
-  checkinSummary: (code) => http.get(`/public/checkin/${code}`),
+  // Única entrada a la reserva: código + nombre del titular (el código por sí solo no abre nada).
+  // Devuelve el resumen de la estadía con los datos del alojamiento y de la unidad.
+  checkinAccess: (code, name) => http.post('/public/checkin/access', { code, name }),
   checkinLookup: (code, document) => http.get(`/public/checkin/${code}/guests/lookup?document=${encodeURIComponent(document)}`),
+  // ¿Existe ya esta persona por celular? Devuelve { exists, first_name, last_name } con el nombre
+  // enmascarado, para ofrecer reutilizarla al agregar un acompañante.
+  checkinLookupByPhone: (code, phone) => http.get(`/public/checkin/${code}/guests/lookup?phone=${encodeURIComponent(phone)}`),
   checkinSubmit: (code, data) => http.post(`/public/checkin/${code}/guests`, data),
   checkinUploadDocument: (code, file) => {
     const fd = new FormData();

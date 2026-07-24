@@ -1,64 +1,94 @@
 import React from 'react';
-import { Button, Input, Select, Spinner } from '../../../components';
+import { Button, Input, Select } from '../../../components';
 import { api } from '../../../lib/api.js';
-import { reservationMoney, ARRIVAL_SLOTS } from '../../../lib/reservationLabels.js';
+import { reservationMoney, ARRIVAL_SLOTS, ID_TYPES } from '../../../lib/reservationLabels.js';
 import s from './CheckinWizard.module.css';
 
 const emptyPerson = () => ({ first_name: '', last_name: '', phone_code: '57', phone_number: '', email: '', id_type_id: '1', id_number: '', birthdate: '', origin_city: '', id_document_file: null, _uploading: false });
 
-// Pre-check-in del huésped (público, móvil-first). Entra con el código de la reserva, revisa el
-// resumen y completa sus datos y los de sus acompañantes (documento con foto), la ciudad de
-// procedencia y la hora aproximada de llegada. No requiere sesión.
-export function CheckinWizard({ code }) {
-  const [summary, setSummary] = React.useState(undefined); // undefined=cargando, null=no encontrada
+const STEPS = [
+  { title: 'Tus datos', hint: 'Titular de la reserva y foto del documento' },
+  { title: 'Acompañantes', hint: 'Datos de quienes te acompañan' },
+  { title: 'Llegada', hint: 'Hora aproximada en que llegas' },
+];
+
+// Pre-check-in del huésped (público, móvil-first). La entrada es siempre código de reserva +
+// nombre del titular: el enlace del alojamiento (/checkin?code=…) solo autocompleta el código,
+// nunca abre la reserva por sí solo. Ya dentro, registra al titular con la foto de su documento y
+// a todos sus acompañantes, porque la reserva se hizo para un número concreto de personas.
+export function CheckinWizard({ code: linkCode }) {
+  const [code, setCode] = React.useState('');
+  const [summary, setSummary] = React.useState(null);
   const [step, setStep] = React.useState(0); // 0 resumen, 1 titular, 2 acompañantes, 3 llegada, 4 ok
   const [holder, setHolder] = React.useState(emptyPerson);
-  const [holderHasPhoto, setHolderHasPhoto] = React.useState(false); // documento ya cargado antes
+  const [holderHasPhoto, setHolderHasPhoto] = React.useState(false);
   const [companions, setCompanions] = React.useState([]);
   const [arrival, setArrival] = React.useState('');
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState('');
 
-  React.useEffect(() => {
-    let alive = true;
-    api.checkinSummary(code)
-      .then((data) => {
-        if (!alive) return;
-        setSummary(data);
-        // Precarga los datos del titular ya registrados para que no los reescriba.
-        const h = data.holder || {};
-        setHolder((prev) => ({
-          ...prev,
-          first_name: h.first_name || (h.name || '').split(' ')[0] || '',
-          last_name: h.last_name || (h.name || '').split(' ').slice(1).join(' '),
-          phone_code: h.phone_code || '57',
-          phone_number: h.phone_number || '',
-          email: h.email || '',
-          id_type_id: String(h.id_type_id || '1'),
-          id_number: h.id_number || '',
-          birthdate: h.birthdate || '',
-          origin_city: h.origin_city || '',
-        }));
-        setHolderHasPhoto(!!h.has_document_photo);
-        if (data.expected_arrival_time) setArrival(data.expected_arrival_time);
-        // Precarga los acompañantes ya registrados.
-        if (Array.isArray(data.companions) && data.companions.length) {
-          setCompanions(data.companions.map((c, i) => ({
-            key: `pre-${i}`, ...emptyPerson(),
-            first_name: c.first_name || (c.name || '').split(' ')[0] || '',
-            last_name: c.last_name || (c.name || '').split(' ').slice(1).join(' '),
-            id_number: c.document_number || '',
-          })));
-        }
-      })
-      .catch(() => { if (alive) setSummary(null); });
-    return () => { alive = false; };
-  }, [code]);
+  // Precarga al titular y deja tantos acompañantes como personas se reservaron (menos el titular),
+  // reusando los que ya estuvieran registrados.
+  const applySummary = React.useCallback((data) => {
+    setSummary(data);
+    const h = data.holder || {};
+    setHolder((prev) => ({
+      ...prev,
+      first_name: h.first_name || (h.name || '').split(' ')[0] || '',
+      last_name: h.last_name || (h.name || '').split(' ').slice(1).join(' '),
+      phone_code: h.phone_code || '57',
+      phone_number: h.phone_number || '',
+      email: h.email || '',
+      id_type_id: String(h.id_type_id || '1'),
+      id_number: h.id_number || '',
+      birthdate: h.birthdate || '',
+      origin_city: h.origin_city || '',
+    }));
+    setHolderHasPhoto(!!h.has_document_photo);
+    if (data.expected_arrival_time) setArrival(data.expected_arrival_time);
+
+    const registered = Array.isArray(data.companions) ? data.companions : [];
+    const slots = Math.max(0, (Number(data.guests_count) || 1) - 1);
+    setCompanions(Array.from({ length: slots }, (_, i) => {
+      const c = registered[i] || {};
+      return {
+        key: `c-${i}`, ...emptyPerson(),
+        first_name: c.first_name || (c.name || '').split(' ')[0] || '',
+        last_name: c.last_name || (c.name || '').split(' ').slice(1).join(' '),
+        id_number: c.document_number || '',
+        // Estado del flujo "buscar por celular": lookup y reutilización.
+        reused: false, confirmed: false, masked_name: '', _looking: false,
+      };
+    }));
+  }, []);
 
   const setHolderField = (k, v) => setHolder((h) => ({ ...h, [k]: v }));
-  const addCompanion = () => setCompanions((c) => [...c, { key: Date.now(), ...emptyPerson() }]);
-  const setCompanionField = (key, k, v) => setCompanions((c) => c.map((x) => (x.key === key ? { ...x, [k]: v } : x)));
-  const removeCompanion = (key) => setCompanions((c) => c.filter((x) => x.key !== key));
+  const patchCompanion = (key, patch) => setCompanions((c) => c.map((x) => (x.key === key ? { ...x, ...patch } : x)));
+  const setCompanionField = (key, k, v) => patchCompanion(key, { [k]: v });
+
+  // Al salir del celular de un acompañante, busca si ya existe para ofrecer reutilizarlo. Si el
+  // celular ya está en la reserva no consulta (lo resuelve el aviso de duplicado).
+  const lookupCompanionPhone = async (key) => {
+    const c = companions.find((x) => x.key === key);
+    if (!c || c.confirmed) return;
+    const phone = c.phone_number.trim();
+    if (String(phone).replace(/\D+/g, '').length < 7) { patchCompanion(key, { masked_name: '' }); return; }
+    if (phoneUsedElsewhere(key, phone)) return;
+    patchCompanion(key, { _looking: true, masked_name: '' });
+    try {
+      const res = await api.checkinLookupByPhone(code, phone);
+      patchCompanion(key, {
+        _looking: false,
+        masked_name: res?.exists ? `${res.first_name} ${res.last_name}`.trim() : '',
+      });
+    } catch {
+      patchCompanion(key, { _looking: false, masked_name: '' });
+    }
+  };
+
+  const confirmCompanion = (key) => patchCompanion(key, { reused: true, confirmed: true });
+  // "No, es otra persona" o "cambiar": vuelve al formulario en blanco conservando el celular.
+  const resetCompanion = (key) => patchCompanion(key, { reused: false, confirmed: false, masked_name: '' });
 
   const uploadDoc = async (setter, file) => {
     if (!file) return;
@@ -67,7 +97,7 @@ export function CheckinWizard({ code }) {
       const res = await api.checkinUploadDocument(code, file);
       setter('id_document_file', res.name);
     } catch {
-      setError('No se pudo subir la foto del documento.');
+      setError('No se pudo subir la foto del documento. Intenta de nuevo.');
     } finally {
       setter('_uploading', false);
     }
@@ -84,10 +114,15 @@ export function CheckinWizard({ code }) {
         id_number: p.id_number.trim() || null, id_document_file: p.id_document_file || null,
         birthdate: p.birthdate || null, origin_city: p.origin_city?.trim() || null,
       });
+      // Un acompañante reutilizado se envía solo con su celular + `reused`; el backend completa el
+      // resto. Uno nuevo va con todos sus datos.
+      const cleanCompanion = (c) => (c.reused
+        ? { phone_code: c.phone_code, phone_number: c.phone_number.trim(), reused: true }
+        : clean(c));
       const data = await api.checkinSubmit(code, {
         expected_arrival_time: arrival || null,
         holder: clean(holder),
-        companions: companions.filter((c) => c.first_name.trim() && c.last_name.trim() && c.phone_number.trim()).map(clean),
+        companions: companions.map(cleanCompanion),
       });
       setSummary(data);
       setStep(4);
@@ -98,55 +133,81 @@ export function CheckinWizard({ code }) {
     }
   };
 
-  if (summary === undefined) return <div className={s.screen}><Spinner center label="Cargando reserva…" /></div>;
-  if (summary === null) {
+  // Puerta de entrada: sin reserva validada no se muestra nada de ella.
+  if (!summary) {
     return (
       <div className={s.screen}>
         <div className={s.card}>
-          <div className={s.errorState}>
-            <i className="fas fa-triangle-exclamation" />
-            <h2>Reserva no encontrada</h2>
-            <p>Verifica el código con el alojamiento.</p>
-          </div>
+          <AccessForm initialCode={linkCode} onAccess={(data, usedCode) => { setCode(usedCode); applySummary(data); setStep(0); }} />
         </div>
       </div>
     );
   }
 
-  // Ya no se obliga a re-subir el documento si el titular ya tiene uno registrado.
-  const holderValid = holder.first_name.trim() && holder.last_name.trim() && holder.phone_number.trim()
-    && holder.id_number.trim() && (holder.id_document_file || holderHasPhoto);
+  const digits = (v) => String(v || '').replace(/\D+/g, '');
+  const personValid = (p) => p.first_name.trim() && p.last_name.trim() && p.phone_number.trim() && p.id_number.trim();
+  const holderValid = personValid(holder) && holder.birthdate && holder.origin_city.trim()
+    && (holder.id_document_file || holderHasPhoto);
+  // Un acompañante reutilizado (confirmado por celular) basta con su celular; uno nuevo, datos completos.
+  const companionValid = (c) => (c.reused && c.confirmed ? c.phone_number.trim() : personValid(c));
+  // Un mismo celular no puede repetirse entre titular y acompañantes (misma persona dos veces).
+  const phoneUsedElsewhere = (key, phone) => {
+    const d = digits(phone);
+    if (!d) return false;
+    if (digits(holder.phone_number) === d) return true;
+    return companions.some((c) => c.key !== key && digits(c.phone_number) === d);
+  };
+  const companionsValid = companions.every((c) => companionValid(c) && !phoneUsedElsewhere(c.key, c.phone_number));
+  const hasCompanions = companions.length > 0;
+  const guests = Number(summary.guests_count) || 1;
+  // El paso de acompañantes se omite si la reserva es de una sola persona.
+  const visibleSteps = hasCompanions ? STEPS : [STEPS[0], STEPS[2]];
+  const currentIndex = hasCompanions ? step - 1 : (step === 1 ? 0 : 1);
 
   return (
     <div className={s.screen}>
       <div className={s.card}>
-        <div className={s.brand}>piddet</div>
+        <StayHeader summary={summary} guests={guests} />
 
         {step > 0 && step < 4 && (
-          <div className={s.progress}>
-            {['Titular', 'Acompañantes', 'Llegada'].map((label, i) => (
-              <span key={label} className={`${s.progressDot} ${i === step - 1 ? s.progressActive : ''}`}>{label}</span>
+          <div className={s.stepper}>
+            {visibleSteps.map((st, i) => (
+              <div key={st.title} className={`${s.step} ${i === currentIndex ? s.stepActive : ''} ${i < currentIndex ? s.stepDone : ''}`}>
+                <span className={s.stepNum}>{i < currentIndex ? <i className="fas fa-check" /> : i + 1}</span>
+                <span className={s.stepText}>
+                  <strong>{st.title}</strong>
+                  <small>{st.hint}</small>
+                </span>
+              </div>
             ))}
           </div>
         )}
 
         {step === 0 && (
           <>
-            {summary.unit_photo && <img className={s.photo} src={summary.unit_photo} alt={summary.unit_name} />}
-            <h1 className={s.title}>{summary.company_name}</h1>
-            <p className={s.subtitle}>{summary.unit_name}</p>
             <div className={s.summaryRows}>
-              <Row label="Entrada" value={summary.check_in_date} />
-              <Row label="Salida" value={summary.check_out_date} />
+              <Row label="Entrada" value={summary.unit_check_in_time ? `${summary.check_in_date} · desde ${summary.unit_check_in_time}` : summary.check_in_date} />
+              <Row label="Salida" value={summary.unit_check_out_time ? `${summary.check_out_date} · hasta ${summary.unit_check_out_time}` : summary.check_out_date} />
               <Row label="Noches" value={String(summary.nights)} />
+              <Row label="Personas" value={String(guests)} />
               <Row label="Total" value={reservationMoney(summary.total)} />
               <Row label="Pagado" value={reservationMoney(summary.paid)} />
-              <Row label="Saldo" value={reservationMoney(summary.balance)} strong />
+              <Row label="Saldo por pagar" value={reservationMoney(summary.balance)} strong />
             </div>
             {summary.precheckin_completed ? (
               <div className={s.done}><i className="fas fa-circle-check" /> Ya completaste tu pre-check-in.</div>
             ) : (
-              <Button variant="primary" block icon="fas fa-arrow-right" onClick={() => setStep(1)}>Comenzar pre-check-in</Button>
+              <>
+                <div className={s.checklist}>
+                  <span className={s.checklistTitle}>Vas a necesitar</span>
+                  <ul>
+                    <li><i className="fas fa-id-card" /> Tu documento de identidad, para tomarle una foto</li>
+                    {guests > 1 && <li><i className="fas fa-users" /> Nombre, celular y documento de {guests - 1} {guests - 1 === 1 ? 'acompañante' : 'acompañantes'}</li>}
+                    <li><i className="fas fa-clock" /> La hora aproximada a la que llegas</li>
+                  </ul>
+                </div>
+                <Button variant="primary" block size="lg" icon="fas fa-arrow-right" onClick={() => setStep(1)}>Comenzar pre-check-in</Button>
+              </>
             )}
           </>
         )}
@@ -154,39 +215,49 @@ export function CheckinWizard({ code }) {
         {step === 1 && (
           <>
             <h2 className={s.stepTitle}>Tus datos</h2>
-            <p className={s.hint}>Confirma tus datos. Si algo cambió, edítalo.</p>
+            <p className={s.hint}>Eres el titular de la reserva. Confirma tus datos y sube la foto de tu documento.</p>
             <PersonForm person={holder} onField={setHolderField} onUpload={(f) => uploadDoc(setHolderField, f)} isHolder hasPhoto={holderHasPhoto} />
-            <StepNav onBack={() => setStep(0)} onNext={() => setStep(2)} nextDisabled={!holderValid} />
+            {error && <div className={s.error}><i className="fas fa-triangle-exclamation" /> {error}</div>}
+            <StepNav onBack={() => setStep(0)} onNext={() => setStep(hasCompanions ? 2 : 3)} nextDisabled={!holderValid} />
           </>
         )}
 
         {step === 2 && (
           <>
             <h2 className={s.stepTitle}>Acompañantes</h2>
-            {companions.length === 0 && <p className={s.hint}>Si viajas solo, continúa.</p>}
-            {companions.map((c) => (
-              <div key={c.key} className={s.companion}>
-                <button type="button" className={s.remove} onClick={() => removeCompanion(c.key)} aria-label="Quitar"><i className="fas fa-times" /></button>
-                <PersonForm person={c} onField={(k, v) => setCompanionField(c.key, k, v)} onUpload={(f) => uploadDoc((k, v) => setCompanionField(c.key, k, v), f)} />
-              </div>
+            <p className={s.hint}>
+              La reserva es para {guests} personas. Escribe el celular de
+              {companions.length === 1 ? ' tu acompañante' : ` cada uno de tus ${companions.length} acompañantes`}:
+              si ya está registrado, lo reconocemos y no tienes que escribir sus datos.
+            </p>
+            {companions.map((c, i) => (
+              <CompanionCard key={c.key} index={i} companion={c}
+                duplicate={phoneUsedElsewhere(c.key, c.phone_number)}
+                onField={(k, v) => setCompanionField(c.key, k, v)}
+                onPhoneBlur={() => lookupCompanionPhone(c.key)}
+                onConfirm={() => confirmCompanion(c.key)}
+                onReset={() => resetCompanion(c.key)}
+                onUpload={(f) => uploadDoc((k, v) => setCompanionField(c.key, k, v), f)} />
             ))}
-            <Button variant="secondary" block icon="fas fa-plus" onClick={addCompanion}>Agregar acompañante</Button>
-            <StepNav onBack={() => setStep(1)} onNext={() => setStep(3)} />
+            <StepNav onBack={() => setStep(1)} onNext={() => setStep(3)} nextDisabled={!companionsValid} />
           </>
         )}
 
         {step === 3 && (
           <>
-            <h2 className={s.stepTitle}>Hora aproximada de llegada</h2>
+            <h2 className={s.stepTitle}>¿A qué hora llegas?</h2>
+            <p className={s.hint}>Nos ayuda a tener todo listo para recibirte.</p>
             <div className={s.slots}>
               {ARRIVAL_SLOTS.map((slot) => (
                 <button key={slot.value} type="button"
                   className={`${s.slot} ${arrival === slot.value ? s.slotActive : ''}`}
-                  onClick={() => setArrival(slot.value)}>{slot.label}</button>
+                  onClick={() => setArrival(slot.value)}>
+                  <i className="fas fa-clock" /> {slot.label}
+                </button>
               ))}
             </div>
             {error && <div className={s.error}><i className="fas fa-triangle-exclamation" /> {error}</div>}
-            <StepNav onBack={() => setStep(2)} nextLabel="Enviar" onNext={submit} nextLoading={saving} />
+            <StepNav onBack={() => setStep(hasCompanions ? 2 : 1)} nextLabel="Enviar" onNext={submit} nextLoading={saving} nextDisabled={!arrival} />
           </>
         )}
 
@@ -194,7 +265,13 @@ export function CheckinWizard({ code }) {
           <div className={s.done}>
             <i className="fas fa-circle-check" />
             <h2 className={s.title}>¡Pre-check-in completado!</h2>
-            <p className={s.subtitle}>Te esperamos en {summary.company_name}.</p>
+            <p className={s.subtitle}>Registramos a las {guests} {guests === 1 ? 'persona' : 'personas'} de la reserva.</p>
+            <div className={s.summaryRows}>
+              <Row label="Entrada" value={summary.check_in_date} />
+              <Row label="Unidad" value={summary.unit_name} />
+              <Row label="Saldo por pagar" value={reservationMoney(summary.balance)} strong />
+            </div>
+            <p className={s.hint}>Te esperamos en {summary.company_name}. Lleva tu documento el día de la entrada.</p>
           </div>
         )}
       </div>
@@ -202,36 +279,210 @@ export function CheckinWizard({ code }) {
   );
 }
 
-function PersonForm({ person, onField, onUpload, isHolder, hasPhoto }) {
+// Presentación del alojamiento y la unidad: acompaña todos los pasos para que el huésped sepa
+// siempre dónde está haciendo su pre-check-in.
+function StayHeader({ summary, guests }) {
+  const meta = [
+    summary.unit_type_name,
+    `${guests} ${guests === 1 ? 'persona' : 'personas'}`,
+    `${summary.nights} ${Number(summary.nights) === 1 ? 'noche' : 'noches'}`,
+  ].filter(Boolean).join(' · ');
+
+  return (
+    <div className={s.stay}>
+      {/* Marca del alojamiento: el logo conserva su proporción (los hay cuadrados y apaisados). */}
+      <div className={s.brandRow}>
+        {summary.company_logo
+          ? <img className={s.brandLogo} src={summary.company_logo} alt={summary.company_name} />
+          : <span className={s.brandFallback}><i className="fas fa-hotel" /></span>}
+        <div className={s.brandText}>
+          <h1 className={s.brandName}>{summary.company_name}</h1>
+          {summary.company_address && <p className={s.brandAddress}><i className="fas fa-location-dot" /> {summary.company_address}</p>}
+        </div>
+      </div>
+
+      <div className={s.unitCard}>
+        {summary.unit_photo && <img className={s.unitPhoto} src={summary.unit_photo} alt={summary.unit_name} />}
+        <div className={s.unitBody}>
+          <span className={s.unitLabel}>Tu alojamiento</span>
+          <span className={s.unitName}>{summary.unit_name}</span>
+          <span className={s.unitMeta}>{meta}</span>
+          {summary.unit_description && <p className={s.unitDescription}>{summary.unit_description}</p>}
+          {(summary.unit_check_in_time || summary.unit_check_out_time) && (
+            <div className={s.times}>
+              {summary.unit_check_in_time && (
+                <span className={s.timeItem}><i className="fas fa-right-to-bracket" /> Ingreso desde las {summary.unit_check_in_time}</span>
+              )}
+              {summary.unit_check_out_time && (
+                <span className={s.timeItem}><i className="fas fa-right-from-bracket" /> Salida hasta las {summary.unit_check_out_time}</span>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Entrada a la reserva: código (autocompletado desde el enlace) + nombre del titular.
+function AccessForm({ initialCode, onAccess }) {
+  const [code, setCode] = React.useState((initialCode || '').toUpperCase());
+  const [name, setName] = React.useState('');
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState('');
+  const [closed, setClosed] = React.useState(null); // reserva encontrada pero ya no operable
+
+  const submit = async () => {
+    if (loading || !code.trim() || !name.trim()) return;
+    setLoading(true); setError('');
+    try {
+      const cleanCode = code.trim().toUpperCase();
+      onAccess(await api.checkinAccess(cleanCode, name.trim()), cleanCode);
+    } catch (e) {
+      // 409: la reserva es suya pero está cerrada; se explica en vez de mostrarlo como error.
+      if (e?.status === 409 && e.data) setClosed(e.data);
+      else setError(e?.message || 'No encontramos una reserva con esos datos.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (closed) {
+    return (
+      <ClosedReservation info={closed} onRetry={() => { setClosed(null); setName(''); }} />
+    );
+  }
+
+  return (
+    <>
+      <div className={s.brand}>piddet</div>
+      <div className={s.accessIntro}>
+        <h1 className={s.title}>Pre-check-in</h1>
+        <p className={s.subtitle}>Adelanta tu registro y llega directo a disfrutar.</p>
+      </div>
+      <div className={s.form}>
+        <Input label="Código de la reserva" icon="fas fa-hashtag" placeholder="Ej. K7M2PQ4XTR"
+          value={code} autoCapitalize="characters" autoCorrect="off" spellCheck={false}
+          onChange={(e) => setCode(e.target.value.toUpperCase())}
+          onKeyDown={(e) => { if (e.key === 'Enter') submit(); }} />
+        <Input label="Tu nombre" icon="fas fa-user" placeholder="Como se lo diste al alojamiento"
+          value={name} onChange={(e) => setName(e.target.value)}
+          hint="Basta con tu nombre o tu apellido."
+          autoFocus={!!initialCode}
+          onKeyDown={(e) => { if (e.key === 'Enter') submit(); }} />
+      </div>
+      {error && <div className={s.error}><i className="fas fa-triangle-exclamation" /> {error}</div>}
+      <Button variant="primary" block size="lg" icon="fas fa-arrow-right" loading={loading}
+        disabled={!code.trim() || !name.trim()} onClick={submit}>Buscar mi reserva</Button>
+      <p className={s.accessFoot}>¿No tienes el código? Pídelo al alojamiento donde reservaste.</p>
+    </>
+  );
+}
+
+// Reserva cerrada (finalizada o cancelada): no es un error del huésped, así que se presenta como
+// información y no como fallo.
+function ClosedReservation({ info, onRetry }) {
+  return (
+    <>
+      <div className={s.brand}>piddet</div>
+      <div className={s.closed}>
+        <span className={`${s.closedIcon} ${info.cancelled ? s.closedIconCancelled : ''}`}>
+          <i className={info.cancelled ? 'fas fa-ban' : 'fas fa-flag-checkered'} />
+        </span>
+        <h1 className={s.title}>{info.title}</h1>
+        <p className={s.subtitle}>{info.detail}</p>
+      </div>
+      <div className={s.summaryRows}>
+        {info.unit_name && <Row label="Unidad" value={info.unit_name} />}
+        {info.check_in_date && <Row label="Entrada" value={info.check_in_date} />}
+        {info.check_out_date && <Row label="Salida" value={info.check_out_date} />}
+      </div>
+      {info.company_phone && (
+        <a className={s.closedPhone} href={`tel:${info.company_phone}`}>
+          <i className="fas fa-phone" /> Llamar a {info.company_name || 'el alojamiento'}
+        </a>
+      )}
+      <Button variant="secondary" block icon="fas fa-arrow-left" onClick={onRetry}>Buscar otra reserva</Button>
+    </>
+  );
+}
+
+// Tarjeta de un acompañante: primero el celular (con búsqueda de persona ya registrada). Según el
+// resultado, ofrece reutilizarla (colapsando el formulario) o pide sus datos como persona nueva.
+function CompanionCard({ index, companion: c, duplicate, onField, onPhoneBlur, onConfirm, onReset, onUpload }) {
+  return (
+    <div className={s.companion}>
+      <span className={s.companionTag}>Acompañante {index + 1}</span>
+
+      {c.reused && c.confirmed ? (
+        <div className={s.reused}>
+          <span className={s.reusedText}><i className="fas fa-circle-check" /> {c.masked_name || 'Persona registrada'} · ya está en el sistema</span>
+          <button type="button" className={s.reusedChange} onClick={onReset}>Cambiar</button>
+        </div>
+      ) : (
+        <div className={s.form}>
+          <Input label="Celular" type="tel" inputMode="tel" value={c.phone_number}
+            onChange={(e) => onField('phone_number', e.target.value)} onBlur={onPhoneBlur} />
+
+          {duplicate ? (
+            <p className={s.dupNote}><i className="fas fa-triangle-exclamation" /> Esta persona ya está en la reserva. Usa el celular de otra persona.</p>
+          ) : c._looking ? (
+            <p className={s.hint}><i className="fas fa-spinner fa-spin" /> Buscando…</p>
+          ) : c.masked_name ? (
+            <div className={s.matchCard}>
+              <span className={s.matchText}>¿Es <strong>{c.masked_name}</strong>?</span>
+              <div className={s.matchActions}>
+                <Button variant="primary" size="sm" icon="fas fa-check" onClick={onConfirm}>Sí, es esta persona</Button>
+                <Button variant="secondary" size="sm" onClick={onReset}>No, es otra</Button>
+              </div>
+            </div>
+          ) : (
+            <PersonForm person={c} onField={onField} onUpload={onUpload} hidePhone />
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PersonForm({ person, onField, onUpload, isHolder, hasPhoto, hidePhone }) {
   return (
     <div className={s.form}>
       <div className={s.formGrid}>
         <Input label="Nombres" value={person.first_name} onChange={(e) => onField('first_name', e.target.value)} />
         <Input label="Apellidos" value={person.last_name} onChange={(e) => onField('last_name', e.target.value)} />
       </div>
-      <Input label="Celular" value={person.phone_number} onChange={(e) => onField('phone_number', e.target.value)} />
-      {isHolder && <Input label="Correo (opcional)" value={person.email} onChange={(e) => onField('email', e.target.value)} />}
+      {!hidePhone && <Input label="Celular" type="tel" inputMode="tel" value={person.phone_number} onChange={(e) => onField('phone_number', e.target.value)} />}
+      {isHolder && <Input label="Correo (opcional)" type="email" inputMode="email" value={person.email} onChange={(e) => onField('email', e.target.value)} />}
+
+      <span className={s.sectionTitle}>Documento de identidad</span>
       <div className={s.formGrid}>
-        <Select label="Documento" value={person.id_type_id} onChange={(e) => onField('id_type_id', e.target.value)}
-          options={[{ value: '1', label: 'Cédula' }, { value: '3', label: 'C. extranjería' }, { value: '4', label: 'Pasaporte' }]} />
-        <Input label="Número" value={person.id_number} onChange={(e) => onField('id_number', e.target.value)} />
+        <Select label="Tipo" value={person.id_type_id} onChange={(e) => onField('id_type_id', e.target.value)} options={ID_TYPES} />
+        <Input label="Número" inputMode="numeric" value={person.id_number} onChange={(e) => onField('id_number', e.target.value)} />
       </div>
-      {isHolder && (
-        <div className={s.formGrid}>
-          <Input label="Nacimiento" type="date" value={person.birthdate} onChange={(e) => onField('birthdate', e.target.value)} />
-          <Input label="Ciudad de origen" value={person.origin_city} onChange={(e) => onField('origin_city', e.target.value)} />
-        </div>
-      )}
       <label className={s.upload}>
         <input type="file" accept="image/*" capture="environment" hidden
           onChange={(e) => onUpload(e.target.files?.[0])} />
         <span className={s.uploadBtn}>
           {person._uploading ? <><i className="fas fa-spinner fa-spin" /> Subiendo…</>
-            : person.id_document_file ? <><i className="fas fa-circle-check" /> Documento cargado</>
+            : person.id_document_file ? <><i className="fas fa-circle-check" /> Documento cargado · toca para cambiarlo</>
               : hasPhoto ? <><i className="fas fa-circle-check" /> Documento ya registrado · toca para cambiarlo</>
-                : <><i className="fas fa-camera" /> Foto del documento</>}
+                : <><i className="fas fa-camera" /> Sube una foto de tu documento de identidad</>}
         </span>
       </label>
+      {isHolder && !person.id_document_file && !hasPhoto && (
+        <p className={s.uploadHint}>Toma la foto por el lado de los datos, sobre una superficie plana y sin reflejos.</p>
+      )}
+
+      {isHolder && (
+        <>
+          <span className={s.sectionTitle}>Procedencia</span>
+          <div className={s.formGrid}>
+            <Input label="Fecha de nacimiento" type="date" value={person.birthdate} onChange={(e) => onField('birthdate', e.target.value)} />
+            <Input label="Ciudad de origen" value={person.origin_city} onChange={(e) => onField('origin_city', e.target.value)} />
+          </div>
+        </>
+      )}
     </div>
   );
 }
