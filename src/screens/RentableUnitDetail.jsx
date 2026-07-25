@@ -11,7 +11,7 @@ import s from './screens.module.css';
 import t from './RentableUnitDetail.module.css';
 
 const emptyForm = {
-  name: '', rentable_unit_type_id: '', capacity: 1, base_price_per_night: '', item_id: '', description: '',
+  name: '', rentable_unit_type_id: '', capacity: 1, included_guests: 1, base_price_per_night: '', item_id: '', description: '',
   check_in_time: '15:00', check_out_time: '12:00',
 };
 
@@ -59,6 +59,7 @@ export function RentableUnitDetail() {
       name: data.name || '',
       rentable_unit_type_id: String(data.rentable_unit_type_id || ''),
       capacity: data.capacity ?? 1,
+      included_guests: data.included_guests ?? 1,
       base_price_per_night: data.base_price_per_night ?? '',
       item_id: String(data.item_id || ''),
       description: data.description || '',
@@ -84,6 +85,7 @@ export function RentableUnitDetail() {
         name: form.name.trim(),
         rentable_unit_type_id: Number(form.rentable_unit_type_id),
         capacity: Number(form.capacity) || 1,
+        included_guests: Math.min(Number(form.included_guests) || 1, Number(form.capacity) || 1),
         base_price_per_night: form.base_price_per_night,
         check_in_time: form.check_in_time,
         check_out_time: form.check_out_time,
@@ -117,6 +119,7 @@ export function RentableUnitDetail() {
         name: form.name.trim(),
         rentable_unit_type_id: Number(form.rentable_unit_type_id),
         capacity: Number(form.capacity) || 1,
+        included_guests: Math.min(Number(form.included_guests) || 1, Number(form.capacity) || 1),
         base_price_per_night: form.base_price_per_night,
         check_in_time: form.check_in_time,
         check_out_time: form.check_out_time,
@@ -171,13 +174,16 @@ export function RentableUnitDetail() {
             <div className={s.formCol}>
               <Input label="Nombre" icon="fas fa-tag" placeholder="Ej. Cabaña El Roble"
                 value={form.name} onChange={(e) => set('name', e.target.value)} />
+              <Select label="Tipo" icon="fas fa-house-chimney"
+                value={form.rentable_unit_type_id} onChange={(e) => set('rentable_unit_type_id', e.target.value)}
+                options={[{ value: '', label: 'Selecciona…' }, ...typeOptions]} />
               <div className={s.formGrid}>
-                <Select label="Tipo" icon="fas fa-house-chimney"
-                  value={form.rentable_unit_type_id} onChange={(e) => set('rentable_unit_type_id', e.target.value)}
-                  options={[{ value: '', label: 'Selecciona…' }, ...typeOptions]} />
-                <Input label="Capacidad (personas)" icon="fas fa-users" type="number" min="1"
+                <Input label="Capacidad máxima (personas)" icon="fas fa-users" type="number" min="1"
                   value={form.capacity} onChange={(e) => set('capacity', e.target.value)} />
+                <Input label="Personas incluidas" icon="fas fa-user-check" type="number" min="1" max={form.capacity || undefined}
+                  value={form.included_guests} onChange={(e) => set('included_guests', e.target.value)} />
               </div>
+              <p className={s.faint}>Las personas incluidas van en la tarifa base; las que superen (hasta el máximo) se cobran como adicionales.</p>
               <MoneyInput label="Tarifa por noche" icon="fas fa-dollar-sign" placeholder="0"
                 value={form.base_price_per_night} onChange={(v) => set('base_price_per_night', v)} />
               <div className={s.formGrid}>

@@ -2089,7 +2089,7 @@ const mockConsumableItems = [
 const mockRentableUnits = [
   {
     id: 1, rentable_unit_type_id: 1, type_name: 'Cabaña', name: 'Cabaña El Roble',
-    description: 'Cabaña de montaña con vista al valle.', capacity: 4, base_price_per_night: '320000.00',
+    description: 'Cabaña de montaña con vista al valle.', capacity: 4, included_guests: 2, base_price_per_night: '320000.00',
     check_in_time: '15:00', check_out_time: '12:00',
     item_id: 901, item_name: 'Hospedaje cabaña',
     position: 1, status: 1,
@@ -2101,7 +2101,7 @@ const mockRentableUnits = [
   },
   {
     id: 2, rentable_unit_type_id: 2, type_name: 'Habitación', name: 'Habitación Colibrí',
-    description: 'Habitación doble estándar.', capacity: 2, base_price_per_night: '180000.00',
+    description: 'Habitación doble estándar.', capacity: 2, included_guests: 2, base_price_per_night: '180000.00',
     check_in_time: '14:00', check_out_time: '11:00',
     item_id: 902, item_name: 'Hospedaje habitación',
     position: 2, status: 1,
@@ -2119,7 +2119,7 @@ let mockReservationOrderSeq = 0;
 // Vista de listado (sin espacios ni fotos completas, con conteo).
 const unitRow = (u) => ({
   id: u.id, rentable_unit_type_id: u.rentable_unit_type_id, name: u.name, type_name: u.type_name,
-  capacity: u.capacity, base_price_per_night: u.base_price_per_night, position: u.position, status: u.status,
+  capacity: u.capacity, included_guests: u.included_guests, base_price_per_night: u.base_price_per_night, position: u.position, status: u.status,
   files_count: (u.files || []).length,
 });
 
@@ -2243,6 +2243,7 @@ function resolveReservationsMock(path, query, { method = 'GET', body } = {}) {
         name: body.name ?? unit.name,
         description: body.description ?? unit.description,
         capacity: body.capacity ?? unit.capacity,
+        included_guests: body.included_guests ?? unit.included_guests,
         base_price_per_night: body.base_price_per_night ?? unit.base_price_per_night,
         item_id: body.item_id ?? unit.item_id,
       });
@@ -2261,6 +2262,7 @@ function resolveReservationsMock(path, query, { method = 'GET', body } = {}) {
       const unit = {
         id, rentable_unit_type_id: Number(body.rentable_unit_type_id), type_name: type?.name || '',
         name: body.name, description: body.description || null, capacity: Number(body.capacity) || 1,
+        included_guests: Math.min(Number(body.included_guests) || 1, Number(body.capacity) || 1),
         base_price_per_night: Number(body.base_price_per_night).toFixed(2),
         item_id: Number(body.item_id) || null, item_name: serviceItemName(body.item_id),
         position: id, status: 1,
