@@ -49,7 +49,7 @@ export function RentableUnits() {
   const columns = [
     { key: 'name', header: 'Unidad', ellipsis: true, render: (r) => <span className={s.cellStrong}>{r.name}</span> },
     { key: 'type_name', header: 'Tipo', ellipsis: true, render: (r) => r.type_name || <span className={s.faint}>—</span> },
-    { key: 'capacity', header: 'Capacidad', width: 110, render: (r) => `${r.capacity} pers.` },
+    { key: 'capacity', header: 'Capacidad', width: 130, render: (r) => (r.included_guests && r.included_guests !== r.capacity ? `${r.included_guests}–${r.capacity} pers.` : `${r.capacity} pers.`) },
     {
       key: 'status', header: 'Estado', width: 120,
       render: (r) => (Number(r.status) === 1
