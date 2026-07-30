@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { StatStrip, SalesComparisonChart, Card, Input, Select, IconButton, Spinner } from '../components';
 import { useResource } from '../lib/useResource.js';
 import { usePermissions } from '../lib/permissions/usePermissions.js';
+import { useFunctionalities } from '../lib/permissions/useFunctionalities.js';
 import { api } from '../lib/api.js';
 import s from './Dashboard.module.css';
 
@@ -92,7 +93,8 @@ export function Dashboard() {
   // api-module-expenses-own el backend limita las métricas a los gastos del usuario.
   const canSales = can('api-module-orders');
   const canExpenses = canAny(['api-module-expenses', 'api-module-expenses-own']);
-  const canReservations = can('api-module-reservations');
+  const { has } = useFunctionalities();
+  const canReservations = can('api-module-reservations') && has('functionality_reservations');
 
   // ── Filtros compartidos: una sola fecha fin + rango + refresh para todos los reportes ──
   const [endDate, setEndDate] = React.useState(todayStr);

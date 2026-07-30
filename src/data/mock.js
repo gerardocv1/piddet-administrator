@@ -43,6 +43,7 @@ export const mockFunctionalities = [
   { id: 1, name: 'functionality_taxes', description: 'Funcionalidad de impuestos', is_active: true },
   { id: 2, name: 'functionality_tables', description: 'Funcionalidad de mesas', is_active: false },
   { id: 3, name: 'functionality_logistic', description: 'Funcionalidad de logística', is_active: false },
+  { id: 4, name: 'functionality_reservations', description: 'Funcionalidad de reservas y hospedaje', is_active: true },
 ];
 
 // Categorías de producto: scopeadas por compañía y por tipo de ítem (item_type_id). `position` ordena dentro del tipo.

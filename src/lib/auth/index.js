@@ -14,6 +14,9 @@ const PLATFORM = 'ADMIN'; // valor de plataforma para el panel de administració
 // (no se persisten): se recargan al iniciar sesión o cambiar de compañía. Caché simple + listeners
 // para que el hook `useFunctionalities` reaccione sin context global.
 let _functionalities = [];
+// true cuando ya se resolvió al menos una carga (con éxito o no): permite a los guards de ruta
+// distinguir "flag apagado" de "aún no sé" y no redirigir en falso durante el primer render.
+let _functionalitiesLoaded = false;
 const _funcListeners = new Set();
 const _notifyFunctionalities = () => {
   for (const l of _funcListeners) { try { l(); } catch { /* aislado */ } }
@@ -48,6 +51,7 @@ export const auth = {
   logout() {
     tokenManager.clearSession();
     _functionalities = [];
+    _functionalitiesLoaded = false;
     _notifyFunctionalities();
   },
 
@@ -121,26 +125,35 @@ export const auth = {
     if (!force && _functionalities.length) return _functionalities;
     const company = tokenManager.getSession().company;
     const ref = companyRef ?? (company && (company.username ?? company.id));
-    if (!ref) { _functionalities = []; _notifyFunctionalities(); return []; }
+    if (!ref) { _functionalities = []; _functionalitiesLoaded = true; _notifyFunctionalities(); return []; }
     try {
       const data = await functionalitiesService.companyFunctionalities(ref);
       _functionalities = Array.isArray(data) ? data : [];
+      _functionalitiesLoaded = true;
       _notifyFunctionalities();
       return _functionalities;
     } catch {
       if (force) {
         // Cambió el contexto: las funcionalidades en memoria son de otra compañía.
         _functionalities = [];
+        _functionalitiesLoaded = true;
         _notifyFunctionalities();
         return [];
       }
-      return _functionalities; // error transitorio: conserva lo que haya
+      _functionalitiesLoaded = true; // error transitorio: conserva lo que haya
+      _notifyFunctionalities();
+      return _functionalities;
     }
   },
 
   /** Funcionalidades guardadas de la compañía activa. */
   getFunctionalities() {
     return _functionalities;
+  },
+
+  /** ¿Ya se resolvió al menos una carga de funcionalidades para la sesión actual? */
+  functionalitiesReady() {
+    return _functionalitiesLoaded;
   },
 
   /** ¿La compañía activa tiene activa esta funcionalidad? (por nombre, p. ej. 'functionality_taxes'). */

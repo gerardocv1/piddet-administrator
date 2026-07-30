@@ -12,6 +12,7 @@ export function ItemFormModal({ item, onClose, onSaved }) {
   const editing = !!item;
   const { has } = useFunctionalities();
   const taxesOn = has('functionality_taxes');
+  const reservationsOn = has('functionality_reservations');
 
   const [types, setTypes] = React.useState([]);
   const [taxes, setTaxes] = React.useState([]);
@@ -71,7 +72,7 @@ export function ItemFormModal({ item, onClose, onSaved }) {
       code: form.code.trim() || null,
       description: form.description.trim(),
       value: Number(form.value),
-      reservable: isService && form.reservable,
+      reservable: isService && reservationsOn && form.reservable,
     };
     // El impuesto solo se envía cuando la funcionalidad está activa (si no, el backend lo acepta nulo).
     if (taxesOn && form.tax_family_id) payload.tax_family_id = Number(form.tax_family_id);
@@ -117,7 +118,7 @@ export function ItemFormModal({ item, onClose, onSaved }) {
           <Select label="Impuesto" value={form.tax_family_id} onChange={(e) => set('tax_family_id', e.target.value)}
             options={[{ value: '', label: 'Selecciona un impuesto' }, ...taxes.map((tx) => ({ value: String(tx.id), label: tx.name }))]} />
         )}
-        {isService && (
+        {isService && reservationsOn && (
           <Switch label="Disponible para reservas (se ofrece como servicio adicional al reservar hospedaje)"
             checked={form.reservable} onChange={(e) => set('reservable', e.target.checked)} />
         )}
