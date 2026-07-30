@@ -10,14 +10,24 @@ import { auth } from '../auth/index.js';
  */
 export function useFunctionalities() {
   const [functionalities, setFunctionalities] = React.useState(() => auth.getFunctionalities());
+  const [ready, setReady] = React.useState(() => auth.functionalitiesReady());
 
   React.useEffect(() => {
-    const off = auth.onFunctionalitiesChange(() => setFunctionalities(auth.getFunctionalities()));
+    const off = auth.onFunctionalitiesChange(() => {
+      setFunctionalities(auth.getFunctionalities());
+      setReady(auth.functionalitiesReady());
+    });
     auth.loadFunctionalities(); // sin force: solo carga si aún no hay
     return off;
   }, []);
 
   const has = React.useCallback((name) => auth.hasFunctionality(name), [functionalities]);
 
-  return { functionalities, has };
+  // Nombres de las funcionalidades activas, para pasar a canAccess/firstAccessible.
+  const activeNames = React.useMemo(
+    () => functionalities.filter((f) => f.is_active === true || f.is_active === 1).map((f) => f.name),
+    [functionalities]
+  );
+
+  return { functionalities, has, ready, activeNames };
 }

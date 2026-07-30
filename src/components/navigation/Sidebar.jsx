@@ -3,6 +3,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import styles from './Sidebar.module.css';
 import { HOME_ITEM, POS_ITEM, MODULE_GROUPS, canAccess } from '../../lib/permissions/modules.js';
 import { usePermissions } from '../../lib/permissions/usePermissions.js';
+import { useFunctionalities } from '../../lib/permissions/useFunctionalities.js';
 
 const initials = (s = '') => s.split(' ').filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
 
@@ -43,17 +44,22 @@ export function Sidebar({ onLogout, open = false, onClose, company, companies = 
   const [picker, setPicker] = React.useState(false);
   const multi = companies.length > 1;
   const { permissions } = usePermissions();
+  const { ready, activeNames } = useFunctionalities();
+  // Mientras las funcionalidades cargan (`null`) no se gatea por ellas, para no ocultar
+  // módulos en falso; al resolverse, los que la compañía tenga apagados desaparecen.
+  const activeFunctionalities = ready ? activeNames : null;
 
   const openProfile = () => { onClose && onClose(); onOpenProfile && onOpenProfile(); };
 
-  // Solo módulos con permiso; grupos sin módulos visibles se omiten (incluida su cabecera).
-  // En items desplegables se filtran las rutas hijas y se descarta el padre si queda vacío.
+  // Solo módulos con permiso y funcionalidad activa; grupos sin módulos visibles se omiten
+  // (incluida su cabecera). En items desplegables se filtran las rutas hijas y se descarta el
+  // padre si queda vacío.
   const groups = MODULE_GROUPS
     .map((g) => ({
       section: g.section,
       items: g.items
-        .map((m) => (m.children ? { ...m, children: m.children.filter((c) => canAccess(c.to, permissions)) } : m))
-        .filter((m) => (m.children ? m.children.length > 0 : canAccess(m.to, permissions))),
+        .map((m) => (m.children ? { ...m, children: m.children.filter((c) => canAccess(c.to, permissions, activeFunctionalities)) } : m))
+        .filter((m) => (m.children ? m.children.length > 0 : canAccess(m.to, permissions, activeFunctionalities))),
     }))
     .filter((g) => g.items.length > 0);
 

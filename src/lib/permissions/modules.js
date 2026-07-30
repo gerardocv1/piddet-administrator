@@ -61,12 +61,13 @@ export const MODULE_GROUPS = [
       },
       // Hospedaje: reservas de cabañas/habitaciones/lugares. `api-module-reservations` opera las
       // reservas; `api-module-rentable-units` configura unidades (los servicios adicionales salen
-      // de los items tipo servicio del catálogo de productos).
+      // de los items tipo servicio del catálogo de productos). Además del permiso del usuario,
+      // la compañía debe tener activa la funcionalidad de reservas (`func`).
       {
         label: 'Hospedaje', icon: 'fas fa-bed',
         children: [
-          { to: '/reservations', label: 'Reservas', icon: 'fas fa-calendar-check', perm: 'api-module-reservations' },
-          { to: '/rentable-units', label: 'Unidades', icon: 'fas fa-house-chimney', perm: 'api-module-rentable-units' },
+          { to: '/reservations', label: 'Reservas', icon: 'fas fa-calendar-check', perm: 'api-module-reservations', func: 'functionality_reservations' },
+          { to: '/rentable-units', label: 'Unidades', icon: 'fas fa-house-chimney', perm: 'api-module-rentable-units', func: 'functionality_reservations' },
         ],
       },
       { to: '/tables', label: 'Mesas', icon: 'fas fa-chair', badge: 4 }, // sin permiso aún → oculto
@@ -101,16 +102,29 @@ export const MODULES = [HOME_ITEM, ...MODULE_GROUPS.flatMap((g) => flattenItems(
 // Mapa ruta → permiso requerido (undefined si la ruta no declara permiso).
 export const ROUTE_PERMISSION = Object.fromEntries(MODULES.map((m) => [m.to, m.perm]));
 
-/** ¿Puede el usuario acceder a esta ruta, dados sus permisos? */
-export function canAccess(path, permissions = []) {
+// Mapa ruta → funcionalidad de compañía requerida (solo rutas que declaran `func`).
+export const ROUTE_FUNCTIONALITY = Object.fromEntries(
+  MODULES.filter((m) => m.func).map((m) => [m.to, m.func])
+);
+
+/**
+ * ¿Puede el usuario acceder a esta ruta, dados sus permisos y las funcionalidades activas de
+ * la compañía? `activeFunctionalities` es la lista de nombres activos; `null` significa "aún
+ * no cargadas" y omite ese chequeo (los guards de ruta esperan con `ready` antes de decidir).
+ */
+export function canAccess(path, permissions = [], activeFunctionalities = null) {
   const required = ROUTE_PERMISSION[path];
   if (required === ALWAYS) return true;
   if (!required) return false; // ruta sin permiso declarado → oculta (whitelist estricta)
   // `perm` puede ser un string o una lista de alternativas (basta tener una).
-  return [].concat(required).some((p) => permissions.includes(p));
+  const hasPerm = [].concat(required).some((p) => permissions.includes(p));
+  if (!hasPerm) return false;
+  const func = ROUTE_FUNCTIONALITY[path];
+  if (!func || activeFunctionalities === null) return true;
+  return activeFunctionalities.includes(func);
 }
 
 /** Primer módulo accesible (en orden de menú) para usar como landing; null si ninguno. */
-export function firstAccessible(permissions = []) {
-  return MODULES.find((m) => canAccess(m.to, permissions))?.to ?? null;
+export function firstAccessible(permissions = [], activeFunctionalities = null) {
+  return MODULES.find((m) => canAccess(m.to, permissions, activeFunctionalities))?.to ?? null;
 }
