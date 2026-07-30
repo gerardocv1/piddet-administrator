@@ -9,7 +9,9 @@ Piddet es una SPA de panel de administración SaaS **multi-compañía** para res
 **Concepto central — todo gira en torno a la compañía (`Company`).** Productos, tiendas,
 mesas, pedidos y usuarios pertenecen a una compañía (`company_id`) y solo existen dentro de
 ella. Un usuario puede pertenecer a varias compañías pero opera bajo una **compañía activa**
-(`company_default_id`), con rol/permisos por compañía; cambiarla recarga todo el contexto.
+(`company_default_id`), con rol/permisos por compañía; cambiarla desde el selector fuerza una
+**recarga completa del navegador** (`window.location.assign`) para que ninguna pantalla conserve
+datos de la compañía anterior.
 Cualquier listado/creación es **implícitamente de la compañía activa** — nunca asumas datos
 globales entre compañías. Detalle en [`specs/functional.md`](specs/functional.md).
 
@@ -71,7 +73,12 @@ conectar: `cp .env.example .env`, define `VITE_API_URL` y reinicia. Detalle en `
   `created_by`; sin Resumen ni Categorías; en `modules.js` la ruta `/expenses` declara ambos
   permisos como alternativas `perm: [a, b]`; ve el dash de Gastos del Dashboard calculado solo
   sobre sus gastos — el backend aplica el mismo filtro en `/metrics/expenses-*`) y `expense-annul` (anular un gasto desde su detalle —
-  irreversible, las líneas no se editan; solo gatea el botón). Las **categorías de menú** pertenecen a un menú concreto
+  irreversible, las líneas no se editan; solo gatea el botón),
+  `table-list` (Mesas: rejilla de mesas del local en `/tables` con su estado de ocupación y el
+  código QR que escanea el POS —descarga PNG por mesa y hoja imprimible de todas—; requiere
+  además la funcionalidad `functionality_tables` de la compañía), `table-create` (crear mesas) y
+  `table-update` (editar nombre/capacidad, activar/desactivar y forzar disponible/ocupada,
+  incluido "liberar todas"; una mesa nunca se borra, se desactiva). Las **categorías de menú** pertenecen a un menú concreto
   (`menu_id`) y se administran dentro del detalle del menú (`/menus/:menuId`), que reusa el permiso
   de `/menus`; su `position` define el orden con el que se agrupan los productos dentro de ese menú.
   Las **categorías de producto**
@@ -81,6 +88,10 @@ conectar: `cp .env.example .env`, define `VITE_API_URL` y reinicia. Detalle en `
   (`functionality_taxes`, etc.), independientes de los permisos. Se consultan en
   `/companies/{company}/functionalities` y se exponen con el hook `useFunctionalities().has(name)`
   (p. ej. el selector de impuesto del producto solo aparece con `functionality_taxes` activa).
+  El catálogo trae `label`, `icon` (clase FontAwesome) y `description` para mostrarlas al usuario.
+  Se administran desde el perfil de empresa (`/company` → tarjeta *Funcionalidades*), gateadas por
+  el permiso `company-edit-functionalities`; se guardan con `auth.saveFunctionalities([{ id, is_active }])`,
+  que hace `PUT /companies/{company}/functionalities` y refresca el caché en memoria.
 
 ## Hoja de ruta de documentación (`specs/`)
 

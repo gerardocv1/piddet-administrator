@@ -146,6 +146,25 @@ export const auth = {
     }
   },
 
+  /**
+   * Activa/desactiva funcionalidades de la compañía activa (permiso `company-edit-functionalities`).
+   * El backend responde con el catálogo ya actualizado, que reemplaza el caché en memoria para que
+   * las pantallas gateadas reaccionen sin recargar.
+   * @param {Array<{ id:number, is_active:boolean }>} changes
+   * @returns {Promise<Array>} funcionalidades actualizadas.
+   */
+  async saveFunctionalities(changes = []) {
+    const company = tokenManager.getSession().company;
+    const ref = company && (company.username ?? company.id);
+    if (!ref) return _functionalities;
+
+    const data = await functionalitiesService.updateCompanyFunctionalities(ref, changes);
+    _functionalities = Array.isArray(data) ? data : _functionalities;
+    _functionalitiesLoaded = true;
+    _notifyFunctionalities();
+    return _functionalities;
+  },
+
   /** Funcionalidades guardadas de la compañía activa. */
   getFunctionalities() {
     return _functionalities;

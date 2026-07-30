@@ -3,6 +3,7 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Sidebar, Topbar } from '../components';
 import { api } from '../lib/api.js';
 import { auth as authLib } from '../lib/auth/index.js';
+import { ADMIN_BASE } from '../lib/adminBase.js';
 import { useIsMobile } from '../lib/useIsMobile.js';
 import { PageTitleProvider, usePageTitle } from '../lib/pageTitle.jsx';
 import styles from './Layout.module.css';
@@ -68,10 +69,12 @@ export function Layout({ theme, onToggleTheme, onLogout }) {
       if (switched && switched.id) next = switched;
     } catch { /* si falla, seguimos en local con los datos del selector */ }
     authLib.setCompany(next); // persiste la empresa activa y notifica al widget
-    // Permisos y funcionalidades son por compañía: forzar recarga para la nueva antes de ir al inicio.
+    // Permisos y funcionalidades son por compañía: forzar recarga para la nueva antes de salir.
     await authLib.loadPermissions(next.username ?? next.id, { force: true });
-    await authLib.loadFunctionalities(next.username ?? next.id, { force: true });
-    navigate('/');
+    // Recarga dura al inicio en vez de navegar: cada pantalla cachea datos de la compañía en la
+    // que se montó (listados, resources, estado en memoria) y con una navegación interna esos
+    // datos sobreviven al cambio. El arranque limpio garantiza que TODO sea de la nueva empresa.
+    window.location.assign(`${ADMIN_BASE}/`);
   };
 
   const openCompanyProfile = () => navigate('/company');

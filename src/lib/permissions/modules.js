@@ -70,7 +70,10 @@ export const MODULE_GROUPS = [
           { to: '/rentable-units', label: 'Unidades', icon: 'fas fa-house-chimney', perm: 'api-module-rentable-units', func: 'functionality_reservations' },
         ],
       },
-      { to: '/tables', label: 'Mesas', icon: 'fas fa-chair', badge: 4 }, // sin permiso aún → oculto
+      // Mesas: configuración (nombre, capacidad), estado de ocupación y códigos QR para el POS.
+      // `table-list` deja ver; crear/editar/liberar exigen además table-create / table-update.
+      // Requiere la funcionalidad de mesas activa en la compañía.
+      { to: '/tables', label: 'Mesas', icon: 'fas fa-chair', perm: 'table-list', func: 'functionality_tables' },
       { to: '/roles', label: 'Roles', icon: 'fas fa-user-shield' }, // sin permiso aún → oculto
     ],
   },

@@ -5,6 +5,7 @@ import { auth as authLib } from '../lib/auth/index.js';
 import { useResource } from '../lib/useResource.js';
 import { usePermissions } from '../lib/permissions/usePermissions.js';
 import { AiTokensCard } from './CompanyAiTokens.jsx';
+import { FunctionalitiesCard } from './CompanyFunctionalities.jsx';
 import s from './screens.module.css';
 import t from './CompanyProfile.module.css';
 
@@ -109,6 +110,8 @@ export function CompanyProfile() {
           </dl>
         </Card.Body>
       </Card>
+
+      <FunctionalitiesCard />
 
       {editable && <AiTokensCard />}
 

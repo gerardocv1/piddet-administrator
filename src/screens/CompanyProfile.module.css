@@ -87,6 +87,44 @@
 .factLink a { color: var(--color-primary); }
 .empty { color: var(--gray-400); }
 
+/* ── Funcionalidades (módulos habilitados por empresa) ── */
+.funcHint { margin: 0 0 14px; color: var(--gray-500); font-size: var(--text-sm); }
+.funcEmpty { margin: 0; color: var(--gray-400); font-size: var(--text-sm); }
+
+.funcList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.funcRow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 0;
+  min-width: 0;
+}
+.funcRow + .funcRow { border-top: 1px solid var(--border-color); }
+
+.funcIcon {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  border-radius: var(--radius-lg);
+  background: var(--gray-100);
+  color: var(--gray-500);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--text-base);
+}
+.funcIconOn { background: var(--color-primary-100); color: var(--color-primary); }
+
+.funcInfo { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.funcLabel { color: var(--gray-800); font-size: var(--text-base); font-weight: 600; }
+.funcDesc { color: var(--gray-500); font-size: var(--text-sm); }
+
 /* ── Tokens de IA ── */
 .tokenHint { margin: 0 0 14px; color: var(--gray-500); font-size: var(--text-sm); }
 .tokenPrefix {

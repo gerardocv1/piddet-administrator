@@ -40,10 +40,38 @@ export const mockTaxFamilies = [
 
 // Funcionalidades de la compañía activa (flag is_active por compañía). Con impuestos activos.
 export const mockFunctionalities = [
-  { id: 1, name: 'functionality_taxes', description: 'Funcionalidad de impuestos', is_active: true },
-  { id: 2, name: 'functionality_tables', description: 'Funcionalidad de mesas', is_active: false },
-  { id: 3, name: 'functionality_logistic', description: 'Funcionalidad de logística', is_active: false },
-  { id: 4, name: 'functionality_reservations', description: 'Funcionalidad de reservas y hospedaje', is_active: true },
+  {
+    id: 1,
+    name: 'functionality_taxes',
+    label: 'Impuestos',
+    icon: 'fas fa-percent',
+    description: 'Permite asignar impuestos a los productos y calcularlos en las facturas.',
+    is_active: true,
+  },
+  {
+    id: 2,
+    name: 'functionality_tables',
+    label: 'Mesas',
+    icon: 'fas fa-chair',
+    description: 'Habilita la administración de mesas: asignarlas a las órdenes y ver su ocupación en el POS.',
+    is_active: false,
+  },
+  {
+    id: 3,
+    name: 'functionality_logistic',
+    label: 'Logística de cocina',
+    icon: 'fas fa-utensils',
+    description: 'Activa el seguimiento de preparación en cocina: estados de la orden y tiempos de atención.',
+    is_active: false,
+  },
+  {
+    id: 4,
+    name: 'functionality_reservations',
+    label: 'Reservas y hospedaje',
+    icon: 'fas fa-bed',
+    description: 'Habilita reservas de unidades rentables, check-in, cuenta del huésped y checkout.',
+    is_active: true,
+  },
 ];
 
 // Categorías de producto: scopeadas por compañía y por tipo de ítem (item_type_id). `position` ordena dentro del tipo.
@@ -84,13 +112,16 @@ export const mockItemOptions = [
   { id: 7, item_id: 3, group_id: 3, name: 'Familiar', description: '', value: 10000, status: 1, position: 1 },
 ];
 
+// Mesas de la compañía activa, con el mismo shape del backend.
 export const mockTables = [
-  { n: 1, cap: 2, st: 'libre' }, { n: 2, cap: 4, st: 'ocupada', t: '24 min', tot: '$48.000' },
-  { n: 3, cap: 4, st: 'cuenta', t: '52 min', tot: '$96.500' }, { n: 4, cap: 2, st: 'libre' },
-  { n: 5, cap: 6, st: 'ocupada', t: '8 min', tot: '$31.000' }, { n: 6, cap: 4, st: 'reservada', t: '19:30' },
-  { n: 7, cap: 2, st: 'libre' }, { n: 8, cap: 8, st: 'ocupada', t: '40 min', tot: '$120.000' },
-  { n: 9, cap: 4, st: 'cuenta', t: '61 min', tot: '$74.000' }, { n: 10, cap: 2, st: 'libre' },
-  { n: 11, cap: 4, st: 'libre' }, { n: 12, cap: 6, st: 'reservada', t: '20:00' },
+  { id: 1, name: 'Mesa 1', description: 'Ventana', capacity: 2, status: 'available', is_active: true },
+  { id: 2, name: 'Mesa 2', description: '', capacity: 4, status: 'occupied', is_active: true },
+  { id: 3, name: 'Mesa 3', description: 'Terraza', capacity: 4, status: 'occupied', is_active: true },
+  { id: 4, name: 'Mesa 4', description: '', capacity: 2, status: 'available', is_active: true },
+  { id: 5, name: 'Mesa 5', description: 'Salón principal', capacity: 6, status: 'available', is_active: true },
+  { id: 6, name: 'Mesa 6', description: '', capacity: 4, status: 'available', is_active: false },
+  { id: 7, name: 'Barra 1', description: 'Barra', capacity: 2, status: 'occupied', is_active: true },
+  { id: 8, name: 'Salón privado', description: 'Eventos', capacity: 8, status: 'available', is_active: true },
 ];
 
 export const mockNotifications = [
@@ -269,7 +300,7 @@ export const mockMenuItems = [
 // el panel muestra Productos (y sus categorías), Menús y Usuarios; el resto queda oculto.
 const mockPermissions = {
   roles: ['Administrador'],
-  permissions: ['user-administrator', 'api-module-menus', 'api-module-products', 'api-module-company', 'api-module-stores', 'api-module-orders', 'order-cancel', 'order-sync-failure-admin', 'api-module-expenses', 'expense-annul', 'api-module-reservations', 'api-module-rentable-units', 'reservation-checkout', 'reservation-cancel', 'reservation-payment-annul'],
+  permissions: ['user-administrator', 'api-module-menus', 'api-module-products', 'api-module-company', 'company-edit-functionalities', 'api-module-stores', 'table-list', 'table-create', 'table-update', 'api-module-orders', 'order-cancel', 'order-sync-failure-admin', 'api-module-expenses', 'expense-annul', 'api-module-reservations', 'api-module-rentable-units', 'reservation-checkout', 'reservation-cancel', 'reservation-payment-annul'],
 };
 
 // Empresa (tenant) activa y empresas disponibles para el usuario (SaaS multi-tenant).
@@ -607,8 +638,49 @@ function resolveItemsMock(path, query, { method = 'GET', body } = {}) {
 
   // ── Lecturas simples ──
   if (sub === 'taxes') return mockTaxFamilies;
-  if (sub === 'functionalities') return mockFunctionalities;
+  if (sub === 'functionalities') {
+    if (method === 'PUT') {
+      (body?.functionalities || []).forEach((change) => {
+        const f = mockFunctionalities.find((x) => x.id === change.id);
+        if (f) f.is_active = !!change.is_active;
+      });
+    }
+    return mockFunctionalities;
+  }
   if (sub === 'item-types') return mockPaginate(mockItemTypes.filter((t) => t.status !== 0), query);
+
+  // ── Mesas ──
+  if (sub === 'tables') {
+    if (method === 'POST') {
+      const table = {
+        id: Math.max(0, ...mockTables.map((t) => t.id)) + 1,
+        name: body?.name || 'Mesa',
+        description: body?.description || '',
+        capacity: Number(body?.capacity) || 1,
+        status: 'available',
+        is_active: true,
+      };
+      mockTables.push(table);
+      return table;
+    }
+    return mockTables;
+  }
+  if (sub === 'tables/make-all-available') {
+    mockTables.forEach((t) => { if (t.is_active) t.status = 'available'; });
+    return { updated: mockTables.filter((t) => t.is_active).length };
+  }
+  if ((m = sub.match(/^tables\/(\d+)(?:\/(active|status))?$/))) {
+    const table = mockTables.find((t) => t.id === Number(m[1]));
+    if (!table) return { ok: false };
+    if (m[2] === 'active') table.is_active = !!body?.is_active;
+    else if (m[2] === 'status') table.status = body?.status === 'occupied' ? 'occupied' : 'available';
+    else if (method === 'PUT') {
+      table.name = body?.name ?? table.name;
+      table.description = body?.description ?? table.description;
+      table.capacity = Number(body?.capacity) || table.capacity;
+    }
+    return table;
+  }
 
   // ── Subida de archivos a S3 (demo) ──
   if (sub === 'files') {
@@ -2742,7 +2814,6 @@ export function resolveMock(rawPath, opts = {}) {
     '/tiendas': mockStores,
     '/tiendas-detalle': mockStoresDetail,
     '/usuarios': mockUsers,
-    '/mesas': mockTables,
     '/notificaciones': mockNotifications,
     '/me': mockUser,
   };
