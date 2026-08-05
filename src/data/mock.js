@@ -2212,7 +2212,8 @@ function resolveReservationsMock(path, query, { method = 'GET', body } = {}) {
       .map((r) => r.rentable_unit_id));
     return mockRentableUnits.filter((u) => u.status === 1).map((u) => ({
       id: u.id, name: u.name, rentable_unit_type_id: u.rentable_unit_type_id, type_name: u.type_name,
-      capacity: u.capacity, base_price_per_night: u.base_price_per_night, available: !busy.has(u.id),
+      capacity: u.capacity, included_guests: u.included_guests, base_price_per_night: u.base_price_per_night,
+      available: !busy.has(u.id),
     }));
   }
 
@@ -2489,14 +2490,18 @@ function resolveReservationsCore(sub, query, { method, body }) {
       return detail(row);
     }
     let rows = mockReservations.map((r) => ({
-      id: r.id, code: r.code, rentable_unit_name: r.rentable_unit_name, holder_user_name: r.holder_user_name,
+      id: r.id, code: r.code, rentable_unit_id: r.rentable_unit_id, rentable_unit_name: r.rentable_unit_name,
+      holder_user_name: r.holder_user_name,
       check_in_date: r.check_in_date, check_out_date: r.check_out_date, nights: r.nights, total: r.total, status: r.status,
       precheckin_completed_at: r.precheckin_completed_at,
     }));
     const status = query.get('status');
-    if (status !== null && status !== '') rows = rows.filter((r) => String(r.status) === status);
+    if (status === 'open') rows = rows.filter((r) => r.status !== 0);
+    else if (status !== null && status !== '') rows = rows.filter((r) => String(r.status) === status);
     const unitId = query.get('rentable_unit_id');
     if (unitId) rows = rows.filter((r) => String(r.rentable_unit_id) === unitId);
+    const term = (query.get('_search') || '').toLowerCase();
+    if (term) rows = rows.filter((r) => r.code.toLowerCase().includes(term) || r.holder_user_name.toLowerCase().includes(term));
     return mockPaginate(rows, query);
   }
 

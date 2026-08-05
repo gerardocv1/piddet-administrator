@@ -105,13 +105,14 @@ export function ReservationWizard() {
   const setCompanionField = (key, k, v) => setCompanions((c) => c.map((x) => (x.key === key ? { ...x, [k]: v } : x)));
   const removeCompanion = (key) => setCompanions((c) => c.filter((x) => x.key !== key));
 
-  // Al elegir unidad, el número de personas se acota a su capacidad y los acompañantes que sobren
-  // se descartan (el titular ocupa uno de los cupos).
+  // Al elegir unidad, el número de personas arranca en las incluidas en su tarifa (acotado a la
+  // capacidad) y los acompañantes que sobren se descartan (el titular ocupa uno de los cupos).
   const pickUnit = (u) => {
     setUnit(u);
-    const capped = Math.min(guestsCount, Math.max(1, Number(u.capacity) || 1));
-    setGuestsCount(capped);
-    setCompanions((c) => c.slice(0, capped - 1));
+    const capacity = Math.max(1, Number(u.capacity) || 1);
+    const included = Math.min(Math.max(1, Number(u.included_guests) || 1), capacity);
+    setGuestsCount(included);
+    setCompanions((c) => c.slice(0, included - 1));
   };
 
   const changeGuestsCount = (value) => {

@@ -13,14 +13,15 @@ export const RESERVATION_STATUS = {
   CHECKED_OUT: 4,
 };
 
-// Etiqueta + variante de Badge por estado de reserva.
+// Etiqueta + variante de Badge por estado de reserva. Cancelada va en gris a propósito:
+// es un estado terminal sin relevancia operativa y no debe llamar la atención en los listados.
 export const reservationStatusMeta = (status) => {
   switch (Number(status)) {
     case RESERVATION_STATUS.PENDING: return { label: 'Pendiente', variant: 'warning' };
     case RESERVATION_STATUS.CONFIRMED: return { label: 'Confirmada', variant: 'info' };
     case RESERVATION_STATUS.CHECKED_IN: return { label: 'En estadía', variant: 'success' };
     case RESERVATION_STATUS.CHECKED_OUT: return { label: 'Finalizada', variant: 'neutral' };
-    case RESERVATION_STATUS.CANCELLED: return { label: 'Cancelada', variant: 'danger' };
+    case RESERVATION_STATUS.CANCELLED: return { label: 'Cancelada', variant: 'neutral' };
     default: return { label: '—', variant: 'neutral' };
   }
 };

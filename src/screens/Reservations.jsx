@@ -3,30 +3,31 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, DataTable, Badge, Button, FilterBar, Pagination } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
-import { todayIso } from '../lib/orderLabels.js';
-import { formatStayRange } from '../lib/dates.js';
+import { formatShortDate } from '../lib/dates.js';
 import { reservationMoney, reservationStatusMeta } from '../lib/reservationLabels.js';
 import s from './screens.module.css';
 
 const EMPTY = { items: [], pagination: null };
 
+// `open` = todas menos las canceladas; es el filtro por defecto para que las canceladas
+// no estorben en la operación diaria.
+const DEFAULT_STATUS = 'open';
 const STATUS_OPTIONS = [
-  { value: '1', label: 'Pendiente' },
-  { value: '2', label: 'Confirmada' },
-  { value: '3', label: 'En estadía' },
-  { value: '4', label: 'Finalizada' },
-  { value: '0', label: 'Cancelada' },
+  { value: 'open', label: 'Abiertas' },
+  { value: '0', label: 'Canceladas' },
 ];
 
-// Listado de reservas de la compañía activa, filtrable por rango de fechas de entrada, estado y
-// unidad. Todo vive en la URL para conservar la consulta al volver del detalle.
+// Listado de reservas de la compañía activa, filtrable por rango de fechas de entrada, estado
+// (abiertas/canceladas), unidad y búsqueda por código o titular. Todo vive en la URL para
+// conservar la consulta al volver del detalle.
 export function Reservations() {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const dateFrom = params.get('date_from') || undefined;
   const dateTo = params.get('date_to') || undefined;
-  const status = params.get('status') || undefined;
+  const status = params.get('status') || DEFAULT_STATUS;
   const unitId = params.get('rentable_unit_id') || undefined;
+  const search = params.get('q') || undefined;
   const page = Math.max(1, Number(params.get('page')) || 1);
 
   const setQuery = (next = {}, nextPage = 1) => {
@@ -35,19 +36,30 @@ export function Reservations() {
     const to = 'date_to' in next ? next.date_to : dateTo;
     const st = 'status' in next ? next.status : status;
     const unit = 'rentable_unit_id' in next ? next.rentable_unit_id : unitId;
+    const term = 'q' in next ? next.q : search;
     if (from) q.date_from = from;
     if (to) q.date_to = to;
-    if (st) q.status = st;
+    if (st && st !== DEFAULT_STATUS) q.status = st;
     if (unit) q.rentable_unit_id = unit;
+    if (term) q.q = term;
     if (nextPage > 1) q.page = String(nextPage);
     setParams(q);
   };
 
+  // Búsqueda con debounce: escribe en la URL y vuelve a la primera página.
+  const [searchInput, setSearchInput] = React.useState(search || '');
+  React.useEffect(() => {
+    const id = setTimeout(() => {
+      if ((searchInput.trim() || undefined) !== search) setQuery({ q: searchInput.trim() || undefined });
+    }, 300);
+    return () => clearTimeout(id);
+  }, [searchInput]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const fetcher = React.useCallback(
-    () => api.reservations({ dateFrom, dateTo, status, unitId, page }),
-    [dateFrom, dateTo, status, unitId, page],
+    () => api.reservations({ dateFrom, dateTo, status, unitId, search, page }),
+    [dateFrom, dateTo, status, unitId, search, page],
   );
-  const { data, loading, error } = useResource(fetcher, EMPTY, [dateFrom, dateTo, status, unitId, page]);
+  const { data, loading, error } = useResource(fetcher, EMPTY, [dateFrom, dateTo, status, unitId, search, page]);
   const rows = data.items || [];
   const pg = data.pagination;
 
@@ -62,8 +74,13 @@ export function Reservations() {
     { key: 'holder_user_name', header: 'Titular', ellipsis: true, render: (r) => r.holder_user_name },
     { key: 'rentable_unit_name', header: 'Unidad', ellipsis: true, render: (r) => r.rentable_unit_name },
     {
-      key: 'check_in_date', header: 'Estadía', width: 170, nowrap: true,
-      render: (r) => <span className={s.muted}>{formatStayRange(r.check_in_date, r.check_out_date)} · {r.nights}n</span>,
+      key: 'check_in_date', header: 'Entrada', width: 160, nowrap: true,
+      render: (r) => (
+        <span className={s.muted}>
+          {formatShortDate(r.check_in_date)}{' '}
+          <Badge variant="neutral">{Number(r.nights) === 1 ? '1 noche' : `${r.nights} noches`}</Badge>
+        </span>
+      ),
     },
     {
       key: 'status', header: 'Estado', width: 130,
@@ -84,6 +101,10 @@ export function Reservations() {
   return (
     <div className={s.page}>
       <FilterBar
+        searchable
+        searchValue={searchInput}
+        onSearchChange={setSearchInput}
+        searchPlaceholder="Buscar por titular o código"
         filters={filterDefs}
         values={{ date_from: dateFrom, date_to: dateTo, status, rentable_unit_id: unitId }}
         onChange={(next) => setQuery({
