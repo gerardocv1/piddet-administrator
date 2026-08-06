@@ -388,7 +388,7 @@ function AccessForm({ initialCode, onAccess }) {
 
   if (closed) {
     return (
-      <ClosedReservation info={closed} onRetry={() => { setClosed(null); setName(''); }} />
+      <ClosedReservation info={closed} code={code.trim().toUpperCase()} onRetry={() => { setClosed(null); setName(''); }} />
     );
   }
 
@@ -419,8 +419,11 @@ function AccessForm({ initialCode, onAccess }) {
 }
 
 // Reserva cerrada (finalizada o cancelada): no es un error del huésped, así que se presenta como
-// información y no como fallo.
-function ClosedReservation({ info, onRetry }) {
+// información y no como fallo. El contacto es por WhatsApp al teléfono de la compañía.
+function ClosedReservation({ info, code, onRetry }) {
+  const whatsappDigits = String(info.company_phone || '').replace(/\D+/g, '');
+  const whatsappText = encodeURIComponent(`Hola, tengo una consulta sobre mi reserva ${code}.`);
+
   return (
     <>
       <div className={s.brand}>piddet</div>
@@ -436,9 +439,10 @@ function ClosedReservation({ info, onRetry }) {
         {info.check_in_date && <Row label="Entrada" value={info.check_in_date} />}
         {info.check_out_date && <Row label="Salida" value={info.check_out_date} />}
       </div>
-      {info.company_phone && (
-        <a className={s.closedPhone} href={`tel:${info.company_phone}`}>
-          <i className="fas fa-phone" /> Llamar a {info.company_name || 'el alojamiento'}
+      {whatsappDigits && (
+        <a className={s.closedWhatsapp} href={`https://wa.me/${whatsappDigits}?text=${whatsappText}`}
+          target="_blank" rel="noopener noreferrer">
+          <i className="fab fa-whatsapp" /> Escríbenos por WhatsApp
         </a>
       )}
       <Button variant="secondary" block icon="fas fa-arrow-left" onClick={onRetry}>Buscar otra reserva</Button>
