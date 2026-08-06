@@ -166,7 +166,7 @@ export function CheckinWizard({ code: linkCode }) {
               <div className={s.done}><i className="fas fa-circle-check" /> Ya completaste tu pre-check-in.</div>
             ) : summary.payment_pending ? (
               <PaymentPendingNotice validating={summary.payment_validating} deadline={summary.payment_deadline}
-                companyName={summary.company_name} companyPhone={summary.company_phone} />
+                companyName={summary.company_name} whatsapp={summary.whatsapp_number} code={summary.code} />
             ) : (
               <>
                 <div className={s.checklist}>
@@ -315,9 +315,11 @@ const formatRemaining = (ms) => {
 
 // Pago sin confirmar: el pre-check-in queda bloqueado. Si el huésped aún no reporta el pago, corre
 // el plazo límite (creación + plazo configurado); si ya lo reportó, está en validación del personal.
-function PaymentPendingNotice({ validating, deadline, companyName, companyPhone }) {
+function PaymentPendingNotice({ validating, deadline, companyName, whatsapp, code }) {
   const remaining = useCountdown(validating ? null : deadline);
   const expired = !validating && deadline && remaining <= 0;
+  const whatsappDigits = String(whatsapp || '').replace(/\D+/g, '');
+  const whatsappText = encodeURIComponent(`Hola, mi reserva es ${code} y quiero confirmar mi pago.`);
 
   return (
     <div className={`${s.payNotice} ${validating ? s.payNoticeInfo : expired ? s.payNoticeDanger : s.payNoticeWarning}`}>
@@ -351,9 +353,10 @@ function PaymentPendingNotice({ validating, deadline, companyName, companyPhone 
           </p>
         </>
       )}
-      {companyPhone && (
-        <a className={s.payPhone} href={`tel:${companyPhone}`}>
-          <i className="fas fa-phone" /> Llamar a {companyName || 'el alojamiento'}
+      {whatsappDigits && (
+        <a className={s.payWhatsapp} href={`https://wa.me/${whatsappDigits}?text=${whatsappText}`}
+          target="_blank" rel="noopener noreferrer">
+          <i className="fab fa-whatsapp" /> Escríbenos por WhatsApp
         </a>
       )}
     </div>

@@ -2674,6 +2674,7 @@ function resolveCheckinMock(path, query, { method = 'GET', body } = {}) {
       payment_pending: [1, 5].includes(res.status),
       payment_validating: res.status === 5,
       payment_deadline: [1, 5].includes(res.status) ? new Date(Date.now() + 40 * 60000).toISOString() : null,
+      whatsapp_number: '+573138198457',
       holder: {
         name: res.holder_user_name,
         document_masked: maskDoc(res.holder_document_number),

@@ -284,7 +284,7 @@
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.05em;
 }
-.payPhone {
+.payWhatsapp {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -292,12 +292,13 @@
   width: 100%;
   padding: 14px;
   border-radius: var(--radius);
-  background: var(--gray-100);
-  color: var(--gray-800);
+  background: var(--color-success-100, var(--gray-100));
+  color: var(--color-success-fg, var(--gray-800));
   font-weight: 600;
   text-decoration: none;
 }
-.payPhone:hover { background: var(--gray-200); }
+.payWhatsapp i { font-size: 1.25rem; }
+.payWhatsapp:hover { filter: brightness(0.96); }
 
 /* Reserva cerrada: tono informativo, nunca de error. */
 .closed { display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
