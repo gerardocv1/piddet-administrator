@@ -2623,7 +2623,7 @@ function resolveCheckinMock(path, query, { method = 'GET', body } = {}) {
     if (!matches) return null;
 
     // Reserva del titular pero ya cerrada: 409 con el motivo, igual que el backend.
-    if (![1, 2, 3].includes(found.status)) {
+    if (![1, 2, 3, 5].includes(found.status)) {
       const cancelled = found.status === 0;
       const err = new Error(cancelled ? 'Esta reserva fue cancelada' : 'Esta reserva ya finalizó');
       err.status = 409;
@@ -2647,7 +2647,7 @@ function resolveCheckinMock(path, query, { method = 'GET', body } = {}) {
   if (!m) return undefined;
   const code = m[1];
   const action = m[2];
-  const r = mockReservations.find((x) => x.code === code && [1, 2, 3].includes(x.status));
+  const r = mockReservations.find((x) => x.code === code && [1, 2, 3, 5].includes(x.status));
 
   const summary = (res) => {
     const paid = res.payments.filter((p) => p.status === 1).reduce((s, p) => s + Number(p.value), 0);
@@ -2669,6 +2669,11 @@ function resolveCheckinMock(path, query, { method = 'GET', body } = {}) {
       guests_count: res.guests_count || 1,
       total: res.total, paid: paid.toFixed(2), balance: (Number(res.total) - paid).toFixed(2),
       expected_arrival_time: res.expected_arrival_time, precheckin_completed: !!res.precheckin_completed_at,
+      // Pago sin confirmar (pendiente o en validación): bloquea el pre-check-in. Las reservas demo
+      // no guardan created_at, así que el plazo se simula a 40 minutos de ahora.
+      payment_pending: [1, 5].includes(res.status),
+      payment_validating: res.status === 5,
+      payment_deadline: [1, 5].includes(res.status) ? new Date(Date.now() + 40 * 60000).toISOString() : null,
       holder: {
         name: res.holder_user_name,
         document_masked: maskDoc(res.holder_document_number),
@@ -2688,6 +2693,7 @@ function resolveCheckinMock(path, query, { method = 'GET', body } = {}) {
   if (!r) return null;
   if (action === 'files' && method === 'POST') return { name: 'doc-' + Math.random().toString(36).slice(2, 8) };
   if (action === 'guests' && method === 'POST') {
+    if ([1, 5].includes(r.status)) throw new Error('El pre-check-in estará disponible cuando confirmemos el pago de tu reserva.');
     r.expected_arrival_time = body.expected_arrival_time || null;
     r.precheckin_completed_at = new Date().toISOString();
     r.holder_user_name = `${body.holder.first_name} ${body.holder.last_name}`;

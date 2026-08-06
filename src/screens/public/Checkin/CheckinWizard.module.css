@@ -262,6 +262,43 @@
 .done i { font-size: 3rem; color: var(--color-success, var(--gray-500)); }
 .done .summaryRows { width: 100%; text-align: left; }
 
+/* Pago sin confirmar: aviso central con contador; bloquea el inicio del pre-check-in. */
+.payNotice {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 16px;
+  border-radius: var(--radius);
+  text-align: center;
+}
+.payNoticeWarning { background: var(--color-warning-100, var(--gray-100)); color: var(--color-warning-fg, var(--gray-800)); }
+.payNoticeInfo { background: var(--color-info-100, var(--gray-100)); color: var(--color-info-fg, var(--gray-800)); }
+.payNoticeDanger { background: var(--color-danger-100, var(--gray-100)); color: var(--color-danger, var(--gray-800)); }
+.payIcon { font-size: 2.5rem; }
+.payTitle { margin: 0; font-size: var(--text-lg); font-weight: 700; }
+.payText { margin: 0; font-size: var(--text-sm); line-height: 1.5; }
+.payTimer {
+  font-size: 2.25rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.05em;
+}
+.payPhone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 14px;
+  border-radius: var(--radius);
+  background: var(--gray-100);
+  color: var(--gray-800);
+  font-weight: 600;
+  text-decoration: none;
+}
+.payPhone:hover { background: var(--gray-200); }
+
 /* Reserva cerrada: tono informativo, nunca de error. */
 .closed { display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
 .closedIcon {

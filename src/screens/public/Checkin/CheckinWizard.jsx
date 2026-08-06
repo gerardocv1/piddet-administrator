@@ -164,6 +164,9 @@ export function CheckinWizard({ code: linkCode }) {
             </div>
             {summary.precheckin_completed ? (
               <div className={s.done}><i className="fas fa-circle-check" /> Ya completaste tu pre-check-in.</div>
+            ) : summary.payment_pending ? (
+              <PaymentPendingNotice validating={summary.payment_validating} deadline={summary.payment_deadline}
+                companyName={summary.company_name} companyPhone={summary.company_phone} />
             ) : (
               <>
                 <div className={s.checklist}>
@@ -284,6 +287,75 @@ function StayHeader({ summary, guests }) {
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+// Milisegundos restantes hasta un instante ISO, refrescados cada segundo; 0 si no hay plazo.
+function useCountdown(deadlineIso) {
+  const [remaining, setRemaining] = React.useState(() => (deadlineIso ? new Date(deadlineIso) - Date.now() : 0));
+  React.useEffect(() => {
+    if (!deadlineIso) return undefined;
+    const tick = () => setRemaining(new Date(deadlineIso) - Date.now());
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [deadlineIso]);
+  return deadlineIso ? remaining : 0;
+}
+
+const formatRemaining = (ms) => {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const sec = total % 60;
+  const two = (n) => String(n).padStart(2, '0');
+  return h > 0 ? `${h}:${two(m)}:${two(sec)}` : `${two(m)}:${two(sec)}`;
+};
+
+// Pago sin confirmar: el pre-check-in queda bloqueado. Si el huésped aún no reporta el pago, corre
+// el plazo límite (creación + plazo configurado); si ya lo reportó, está en validación del personal.
+function PaymentPendingNotice({ validating, deadline, companyName, companyPhone }) {
+  const remaining = useCountdown(validating ? null : deadline);
+  const expired = !validating && deadline && remaining <= 0;
+
+  return (
+    <div className={`${s.payNotice} ${validating ? s.payNoticeInfo : expired ? s.payNoticeDanger : s.payNoticeWarning}`}>
+      <span className={s.payIcon}>
+        <i className={validating ? 'fas fa-hourglass-half' : expired ? 'fas fa-circle-xmark' : 'fas fa-triangle-exclamation'} />
+      </span>
+      {validating ? (
+        <>
+          <h2 className={s.payTitle}>Estamos validando tu pago</h2>
+          <p className={s.payText}>
+            Recibimos el reporte de tu pago y está en revisión. En cuanto {companyName || 'el alojamiento'} lo
+            confirme podrás completar tu pre-check-in.
+          </p>
+        </>
+      ) : expired ? (
+        <>
+          <h2 className={s.payTitle}>El plazo para pagar venció</h2>
+          <p className={s.payText}>
+            No registramos tu pago dentro del plazo y la reserva puede ser cancelada.
+            Comunícate con {companyName || 'el alojamiento'} para confirmar si aún está disponible.
+          </p>
+        </>
+      ) : (
+        <>
+          <h2 className={s.payTitle}>Falta confirmar tu pago</h2>
+          <p className={s.payText}>Para conservar tu reserva completa el pago antes de que termine el tiempo:</p>
+          <span className={s.payTimer}>{formatRemaining(remaining)}</span>
+          <p className={s.payText}>
+            Si el plazo vence sin pago, la reserva se cancela. Cuando el pago sea confirmado podrás
+            completar tu pre-check-in aquí mismo.
+          </p>
+        </>
+      )}
+      {companyPhone && (
+        <a className={s.payPhone} href={`tel:${companyPhone}`}>
+          <i className="fas fa-phone" /> Llamar a {companyName || 'el alojamiento'}
+        </a>
+      )}
     </div>
   );
 }

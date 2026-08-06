@@ -11,6 +11,7 @@ export const RESERVATION_STATUS = {
   CONFIRMED: 2,
   CHECKED_IN: 3,
   CHECKED_OUT: 4,
+  VALIDATING_PAYMENT: 5,
 };
 
 // Etiqueta + variante de Badge por estado de reserva. Cancelada va en gris a propósito:
@@ -18,6 +19,7 @@ export const RESERVATION_STATUS = {
 export const reservationStatusMeta = (status) => {
   switch (Number(status)) {
     case RESERVATION_STATUS.PENDING: return { label: 'Pendiente', variant: 'warning' };
+    case RESERVATION_STATUS.VALIDATING_PAYMENT: return { label: 'Validando pago', variant: 'warning' };
     case RESERVATION_STATUS.CONFIRMED: return { label: 'Confirmada', variant: 'info' };
     case RESERVATION_STATUS.CHECKED_IN: return { label: 'En estadía', variant: 'success' };
     case RESERVATION_STATUS.CHECKED_OUT: return { label: 'Finalizada', variant: 'neutral' };
