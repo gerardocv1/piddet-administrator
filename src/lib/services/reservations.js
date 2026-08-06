@@ -128,10 +128,6 @@ export const reservationsService = {
   // Única entrada a la reserva: código + nombre del titular (el código por sí solo no abre nada).
   // Devuelve el resumen de la estadía con los datos del alojamiento y de la unidad.
   checkinAccess: (code, name) => http.post('/public/checkin/access', { code, name }),
-  checkinLookup: (code, document) => http.get(`/public/checkin/${code}/guests/lookup?document=${encodeURIComponent(document)}`),
-  // ¿Existe ya esta persona por celular? Devuelve { exists, first_name, last_name } con el nombre
-  // enmascarado, para ofrecer reutilizarla al agregar un acompañante.
-  checkinLookupByPhone: (code, phone) => http.get(`/public/checkin/${code}/guests/lookup?phone=${encodeURIComponent(phone)}`),
   checkinSubmit: (code, data) => http.post(`/public/checkin/${code}/guests`, data),
   checkinUploadDocument: (code, file) => {
     const fd = new FormData();

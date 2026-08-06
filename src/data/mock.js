@@ -2685,34 +2685,17 @@ function resolveCheckinMock(path, query, { method = 'GET', body } = {}) {
   };
 
   if (!action) return r ? summary(r) : null;
-  // ¿Existe ya alguien con ese documento o celular? Nombre enmascarado (anti-enumeración).
-  if (action === 'guests/lookup') {
-    const mask = (n) => (n ? String(n).charAt(0) + '***' : '');
-    const doc = (query.get('document') || '').trim();
-    const phone = (query.get('phone') || '').replace(/\D+/g, '');
-    let person = null;
-    if (doc) person = mockGuests.find((g) => String(g.id_number) === doc);
-    else if (phone.length >= 7) person = mockGuests.find((g) => String(g.phone_number).replace(/\D+/g, '') === phone);
-    return person ? { exists: true, first_name: mask(person.first_name), last_name: mask(person.last_name) } : { exists: false };
-  }
   if (!r) return null;
   if (action === 'files' && method === 'POST') return { name: 'doc-' + Math.random().toString(36).slice(2, 8) };
   if (action === 'guests' && method === 'POST') {
-    // Un acompañante reutilizado llega solo con celular: se resuelve su nombre del "sistema".
-    const resolveCompanion = (c) => {
-      if (!c.reused) return { first_name: c.first_name, last_name: c.last_name, document_number: c.id_number || null };
-      const p = mockGuests.find((g) => String(g.phone_number).replace(/\D+/g, '') === String(c.phone_number).replace(/\D+/g, '')) || {};
-      return { first_name: p.first_name || 'Acompañante', last_name: p.last_name || '', document_number: p.id_number || null };
-    };
     r.expected_arrival_time = body.expected_arrival_time || null;
     r.precheckin_completed_at = new Date().toISOString();
     r.holder_user_name = `${body.holder.first_name} ${body.holder.last_name}`;
     r.holder_document_number = body.holder.id_number || r.holder_document_number;
     r.guests = [{ id: 1, user_id: 501, is_holder: true, first_name: body.holder.first_name, last_name: body.holder.last_name, name: r.holder_user_name, document_number: body.holder.id_number || null },
-      ...(body.companions || []).map((c, i) => {
-        const g = resolveCompanion(c);
-        return { id: i + 2, user_id: 600 + i, is_holder: false, first_name: g.first_name, last_name: g.last_name, name: `${g.first_name} ${g.last_name}`.trim(), document_number: g.document_number };
-      })];
+      ...(body.companions || []).map((c, i) => (
+        { id: i + 2, user_id: 600 + i, is_holder: false, first_name: c.first_name, last_name: c.last_name, name: `${c.first_name} ${c.last_name}`.trim(), document_number: c.id_number || null }
+      ))];
     return summary(r);
   }
   return null;

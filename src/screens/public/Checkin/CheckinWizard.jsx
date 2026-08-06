@@ -56,39 +56,12 @@ export function CheckinWizard({ code: linkCode }) {
         first_name: c.first_name || (c.name || '').split(' ')[0] || '',
         last_name: c.last_name || (c.name || '').split(' ').slice(1).join(' '),
         id_number: c.document_number || '',
-        // Estado del flujo "buscar por celular": lookup y reutilización.
-        reused: false, confirmed: false, masked_name: '', _looking: false,
       };
     }));
   }, []);
 
   const setHolderField = (k, v) => setHolder((h) => ({ ...h, [k]: v }));
-  const patchCompanion = (key, patch) => setCompanions((c) => c.map((x) => (x.key === key ? { ...x, ...patch } : x)));
-  const setCompanionField = (key, k, v) => patchCompanion(key, { [k]: v });
-
-  // Al salir del celular de un acompañante, busca si ya existe para ofrecer reutilizarlo. Si el
-  // celular ya está en la reserva no consulta (lo resuelve el aviso de duplicado).
-  const lookupCompanionPhone = async (key) => {
-    const c = companions.find((x) => x.key === key);
-    if (!c || c.confirmed) return;
-    const phone = c.phone_number.trim();
-    if (String(phone).replace(/\D+/g, '').length < 7) { patchCompanion(key, { masked_name: '' }); return; }
-    if (phoneUsedElsewhere(key, phone)) return;
-    patchCompanion(key, { _looking: true, masked_name: '' });
-    try {
-      const res = await api.checkinLookupByPhone(code, phone);
-      patchCompanion(key, {
-        _looking: false,
-        masked_name: res?.exists ? `${res.first_name} ${res.last_name}`.trim() : '',
-      });
-    } catch {
-      patchCompanion(key, { _looking: false, masked_name: '' });
-    }
-  };
-
-  const confirmCompanion = (key) => patchCompanion(key, { reused: true, confirmed: true });
-  // "No, es otra persona" o "cambiar": vuelve al formulario en blanco conservando el celular.
-  const resetCompanion = (key) => patchCompanion(key, { reused: false, confirmed: false, masked_name: '' });
+  const setCompanionField = (key, k, v) => setCompanions((c) => c.map((x) => (x.key === key ? { ...x, [k]: v } : x)));
 
   const uploadDoc = async (setter, file) => {
     if (!file) return;
@@ -114,15 +87,12 @@ export function CheckinWizard({ code: linkCode }) {
         id_number: p.id_number.trim() || null, id_document_file: p.id_document_file || null,
         birthdate: p.birthdate || null, origin_city: p.origin_city?.trim() || null,
       });
-      // Un acompañante reutilizado se envía solo con su celular + `reused`; el backend completa el
-      // resto. Uno nuevo va con todos sus datos.
-      const cleanCompanion = (c) => (c.reused
-        ? { phone_code: c.phone_code, phone_number: c.phone_number.trim(), reused: true }
-        : clean(c));
+      // Todos van con sus datos completos; si el celular o el correo ya existen, el backend
+      // enlaza a la persona registrada por debajo, sin anticiparlo aquí.
       const data = await api.checkinSubmit(code, {
         expected_arrival_time: arrival || null,
         holder: clean(holder),
-        companions: companions.map(cleanCompanion),
+        companions: companions.map(clean),
       });
       setSummary(data);
       setStep(4);
@@ -148,8 +118,6 @@ export function CheckinWizard({ code: linkCode }) {
   const personValid = (p) => p.first_name.trim() && p.last_name.trim() && p.phone_number.trim() && p.id_number.trim();
   const holderValid = personValid(holder) && holder.birthdate && holder.origin_city.trim()
     && (holder.id_document_file || holderHasPhoto);
-  // Un acompañante reutilizado (confirmado por celular) basta con su celular; uno nuevo, datos completos.
-  const companionValid = (c) => (c.reused && c.confirmed ? c.phone_number.trim() : personValid(c));
   // Un mismo celular no puede repetirse entre titular y acompañantes (misma persona dos veces).
   const phoneUsedElsewhere = (key, phone) => {
     const d = digits(phone);
@@ -157,7 +125,7 @@ export function CheckinWizard({ code: linkCode }) {
     if (digits(holder.phone_number) === d) return true;
     return companions.some((c) => c.key !== key && digits(c.phone_number) === d);
   };
-  const companionsValid = companions.every((c) => companionValid(c) && !phoneUsedElsewhere(c.key, c.phone_number));
+  const companionsValid = companions.every((c) => personValid(c) && !phoneUsedElsewhere(c.key, c.phone_number));
   const hasCompanions = companions.length > 0;
   const guests = Number(summary.guests_count) || 1;
   // El paso de acompañantes se omite si la reserva es de una sola persona.
@@ -226,17 +194,13 @@ export function CheckinWizard({ code: linkCode }) {
           <>
             <h2 className={s.stepTitle}>Acompañantes</h2>
             <p className={s.hint}>
-              La reserva es para {guests} personas. Escribe el celular de
-              {companions.length === 1 ? ' tu acompañante' : ` cada uno de tus ${companions.length} acompañantes`}:
-              si ya está registrado, lo reconocemos y no tienes que escribir sus datos.
+              La reserva es para {guests} personas. Completa los datos de
+              {companions.length === 1 ? ' tu acompañante' : ` cada uno de tus ${companions.length} acompañantes`}.
             </p>
             {companions.map((c, i) => (
               <CompanionCard key={c.key} index={i} companion={c}
                 duplicate={phoneUsedElsewhere(c.key, c.phone_number)}
                 onField={(k, v) => setCompanionField(c.key, k, v)}
-                onPhoneBlur={() => lookupCompanionPhone(c.key)}
-                onConfirm={() => confirmCompanion(c.key)}
-                onReset={() => resetCompanion(c.key)}
                 onUpload={(f) => uploadDoc((k, v) => setCompanionField(c.key, k, v), f)} />
             ))}
             <StepNav onBack={() => setStep(1)} onNext={() => setStep(3)} nextDisabled={!companionsValid} />
@@ -407,40 +371,21 @@ function ClosedReservation({ info, onRetry }) {
   );
 }
 
-// Tarjeta de un acompañante: primero el celular (con búsqueda de persona ya registrada). Según el
-// resultado, ofrece reutilizarla (colapsando el formulario) o pide sus datos como persona nueva.
-function CompanionCard({ index, companion: c, duplicate, onField, onPhoneBlur, onConfirm, onReset, onUpload }) {
+// Tarjeta de un acompañante: celular + datos completos. Si la persona ya existe por su celular o
+// correo, el backend la enlaza al guardar sin revelarlo aquí (no se expone quién está registrado).
+function CompanionCard({ index, companion: c, duplicate, onField, onUpload }) {
   return (
     <div className={s.companion}>
       <span className={s.companionTag}>Acompañante {index + 1}</span>
-
-      {c.reused && c.confirmed ? (
-        <div className={s.reused}>
-          <span className={s.reusedText}><i className="fas fa-circle-check" /> {c.masked_name || 'Persona registrada'} · ya está en el sistema</span>
-          <button type="button" className={s.reusedChange} onClick={onReset}>Cambiar</button>
-        </div>
-      ) : (
-        <div className={s.form}>
-          <Input label="Celular" type="tel" inputMode="tel" value={c.phone_number}
-            onChange={(e) => onField('phone_number', e.target.value)} onBlur={onPhoneBlur} />
-
-          {duplicate ? (
-            <p className={s.dupNote}><i className="fas fa-triangle-exclamation" /> Esta persona ya está en la reserva. Usa el celular de otra persona.</p>
-          ) : c._looking ? (
-            <p className={s.hint}><i className="fas fa-spinner fa-spin" /> Buscando…</p>
-          ) : c.masked_name ? (
-            <div className={s.matchCard}>
-              <span className={s.matchText}>¿Es <strong>{c.masked_name}</strong>?</span>
-              <div className={s.matchActions}>
-                <Button variant="primary" size="sm" icon="fas fa-check" onClick={onConfirm}>Sí, es esta persona</Button>
-                <Button variant="secondary" size="sm" onClick={onReset}>No, es otra</Button>
-              </div>
-            </div>
-          ) : (
-            <PersonForm person={c} onField={onField} onUpload={onUpload} hidePhone />
-          )}
-        </div>
-      )}
+      <div className={s.form}>
+        <Input label="Celular" type="tel" inputMode="tel" value={c.phone_number}
+          onChange={(e) => onField('phone_number', e.target.value)} />
+        {duplicate ? (
+          <p className={s.dupNote}><i className="fas fa-triangle-exclamation" /> Esta persona ya está en la reserva. Usa el celular de otra persona.</p>
+        ) : (
+          <PersonForm person={c} onField={onField} onUpload={onUpload} hidePhone />
+        )}
+      </div>
     </div>
   );
 }
