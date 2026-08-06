@@ -292,7 +292,7 @@
   width: 100%;
   padding: 14px;
   border-radius: var(--radius);
-  background: var(--color-success-100, var(--gray-100));
+  background: var(--surface-card, var(--white));
   color: var(--color-success-fg, var(--gray-800));
   font-weight: 600;
   text-decoration: none;
