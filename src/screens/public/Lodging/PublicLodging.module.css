@@ -1,0 +1,60 @@
+/* Listado público del hospedaje: encabezado compacto de marca, selector de fechas y tarjetas de
+   unidades. Móvil primero, misma línea gráfica de la portada pública. */
+
+.screen {
+  min-height: 100vh;
+  background: var(--bg-body);
+  padding: 24px 14px calc(100px + env(safe-area-inset-bottom));
+}
+
+.container {
+  max-width: 640px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* ── Encabezado (marca pequeña + título) ── */
+.head { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px; }
+.brand { display: flex; align-items: center; gap: 9px; text-decoration: none; }
+.brandLogo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius);
+  background: var(--gradient-primary);
+  color: var(--white);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  overflow: hidden;
+}
+.brandLogoImg { background: var(--surface-card); }
+.brandLogo img { width: 100%; height: 100%; object-fit: cover; }
+.brandName { font-size: var(--text-sm); font-weight: 700; color: var(--text-muted); }
+.brand:hover .brandName { color: var(--color-primary); }
+.title { margin: 4px 0 0; font-size: var(--text-xl); color: var(--text-heading); }
+.subtitle { margin: 0; max-width: 46ch; color: var(--text-muted); font-size: var(--text-sm); }
+
+/* ── Tarjetas ── */
+.grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
+@media (min-width: 600px) {
+  .grid { grid-template-columns: 1fr 1fr; }
+}
+
+/* ── Estados y pie ── */
+.state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 40px 16px;
+  text-align: center;
+  color: var(--text-muted);
+}
+.state i { color: var(--color-primary); }
+
+.footer { margin-top: 4px; text-align: center; font-size: var(--text-xs); color: var(--text-muted); }
+.footer strong { font-family: var(--font-logo); color: var(--brand-piddet); }

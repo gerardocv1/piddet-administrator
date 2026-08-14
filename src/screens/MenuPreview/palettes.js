@@ -1,27 +1,12 @@
-// Paletas de la carta. Cada paleta de acento define un conjunto armónico de tonos que se aplican
-// como variables CSS (--carta-*) sobre el diseño, para que la persona elija el color principal y
-// el fondo sin salirse de combinaciones cuidadas. No son estilos sueltos: son tokens dinámicos.
+// Paletas de la carta. El acento sale del catálogo único de colores de marca de la plataforma
+// (src/lib/brand/palettes.js), el mismo que elige la compañía en su perfil; aquí se aplica como
+// variables CSS (--carta-*) sobre el diseño. No son estilos sueltos: son tokens dinámicos.
+
+import { BRAND_PALETTES } from '../../lib/brand/palettes.js';
 
 // Color principal (acento): se usa en el nombre de la compañía, los títulos de categoría, el
 // filete del encabezado, el precio y la miniatura de respaldo.
-//   accent     → color principal
-//   strong     → variante oscura (títulos de categoría, buena legibilidad)
-//   soft       → tinte muy claro (fondo de la imagen de respaldo)
-//   onSoft     → color del icono sobre el tinte claro
-export const ACCENT_PALETTES = [
-  { key: 'orange', label: 'Naranja', accent: '#ff7c00', strong: '#b85a00', soft: '#fff1e0', onSoft: '#ffb866' },
-  { key: 'teal', label: 'Verde petróleo', accent: '#0f7a86', strong: '#0b5a63', soft: '#e3f2f3', onSoft: '#57b3bc' },
-  { key: 'blue', label: 'Azul océano', accent: '#1f6fb2', strong: '#15517f', soft: '#e7f0f8', onSoft: '#6aa0d0' },
-  { key: 'forest', label: 'Verde bosque', accent: '#2f7d4f', strong: '#1f5a39', soft: '#e6f3ec', onSoft: '#6bae87' },
-  { key: 'wine', label: 'Vino tinto', accent: '#9b2242', strong: '#6f182f', soft: '#f7e7eb', onSoft: '#c76d82' },
-  { key: 'cocoa', label: 'Cacao', accent: '#8a5a2b', strong: '#67401d', soft: '#f4ebe0', onSoft: '#c2986a' },
-  { key: 'charcoal', label: 'Grafito', accent: '#2d2d2d', strong: '#111111', soft: '#ececec', onSoft: '#9a9a9a' },
-  { key: 'gold', label: 'Dorado', accent: '#c08a1e', strong: '#8a6312', soft: '#f8f0dd', onSoft: '#d8b766' },
-  { key: 'plum', label: 'Ciruela', accent: '#7a3b8f', strong: '#592a69', soft: '#f1e7f4', onSoft: '#b07fc0' },
-  { key: 'slate', label: 'Azul pizarra', accent: '#3f5a73', strong: '#2c4255', soft: '#e9eef3', onSoft: '#8aa1b5' },
-  { key: 'crimson', label: 'Rojo carmesí', accent: '#c0392b', strong: '#922a20', soft: '#fbe7e4', onSoft: '#dd8e85' },
-  { key: 'rose', label: 'Rosa frambuesa', accent: '#c2456b', strong: '#933350', soft: '#fbe8ee', onSoft: '#dd8aa3' },
-];
+export const ACCENT_PALETTES = BRAND_PALETTES;
 
 // Fondo de la página. Incluye crema cálida (por defecto), blanco, dos pasteles suaves y una
 // opción transparente (al imprimir queda blanco del papel).

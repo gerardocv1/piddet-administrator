@@ -46,7 +46,10 @@ conectar: `cp .env.example .env`, define `VITE_API_URL` y reinicia. Detalle en `
   estricta). Al añadir un módulo, decláralo en `src/lib/permissions/modules.js` y envuelve su
   ruta con `RequirePermission`. Permisos actuales: `api-module-products` (Productos: listado,
   Categorías y las opciones/toppings de cada producto), `api-module-menus` (Menús, con sus
-  categorías), `user-administrator` (Usuarios: administración de los usuarios vinculados a la
+  categorías; cada menú tiene un interruptor `is_active` — se enciende/apaga desde el listado o el
+  detalle con confirmación, vía `api.setMenuActive` → `PUT /companies/{company}/menus/{id}/active` —
+  que decide si se publica en la portada pública y si su carta es accesible; apagado se sigue
+  administrando con normalidad), `user-administrator` (Usuarios: administración de los usuarios vinculados a la
   compañía — vincular/desvincular, editar datos básicos, asignar roles y fijar contraseña
   temporal), `api-module-orders` (Facturas: órdenes de la compañía consultables por fecha en
   `/invoices` — un solo día, hoy por defecto — con detalle completo en

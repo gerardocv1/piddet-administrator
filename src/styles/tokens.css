@@ -15,6 +15,15 @@
   --color-primary-050: #fff6ed;
   --gradient-primary: linear-gradient(87deg, #ff7c00 0%, #ffab3e 100%);
 
+  /* Naranja de la plataforma. A diferencia de --color-primary, NO se retiñe con los colores de
+     la compañía: es la firma de piddet (wordmark) en las páginas públicas de cualquier empresa. */
+  --brand-piddet: #ff7c00;
+
+  /* Verde de WhatsApp (marca externa): `--brand-whatsapp` es su verde de icono y
+     `--brand-whatsapp-fg` el tono oscuro que sí se lee como texto sobre fondo blanco. */
+  --brand-whatsapp: #25d366;
+  --brand-whatsapp-fg: #128c4a;
+
   /* ---- Color secundario (teal, combina con el naranja) ---- */
   --color-accent: #0ea5a3;
   --color-accent-100: rgba(14, 165, 163, 0.16);

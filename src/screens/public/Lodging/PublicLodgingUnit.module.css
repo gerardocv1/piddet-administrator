@@ -1,0 +1,193 @@
+/* Detalle público de una unidad de hospedaje: carrusel de fotos, tarifa y capacidad, descripción y
+   espacios internos. Móvil primero, misma línea gráfica de las vistas públicas. */
+
+.screen {
+  min-height: 100vh;
+  background: var(--bg-body);
+  padding: 14px 14px calc(100px + env(safe-area-inset-bottom));
+}
+
+.container {
+  max-width: 640px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* ── Carrusel de fotos ── */
+.carousel { position: relative; border-radius: var(--radius-lg); overflow: hidden; }
+.carouselTrack {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.carouselTrack::-webkit-scrollbar { display: none; }
+.carouselTrack img {
+  flex: 0 0 100%;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  scroll-snap-align: center;
+  cursor: zoom-in;
+}
+.carouselEmpty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--radius-lg);
+  background: var(--gray-100);
+  color: var(--gray-400);
+  font-size: var(--text-2xl);
+}
+.carouselCount {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgb(0 0 0 / 55%);
+  color: var(--white);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+}
+.carouselDots {
+  position: absolute;
+  bottom: 10px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  gap: 5px;
+}
+.dot { width: 6px; height: 6px; border-radius: 50%; background: rgb(255 255 255 / 55%); }
+.dotActive { background: var(--white); }
+
+/* ── Encabezado ── */
+.head { padding: 0 4px; }
+.type {
+  display: inline-block;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-primary);
+}
+.name { margin: 3px 0 0; font-size: var(--text-xl); color: var(--text-heading); }
+.byCompany { margin: 3px 0 0; font-size: var(--text-sm); color: var(--text-muted); }
+.byCompany a { color: var(--color-primary); font-weight: 600; text-decoration: none; }
+.price { margin: 12px 0 0; display: flex; align-items: baseline; gap: 6px; }
+.price strong { font-size: var(--text-xl); color: var(--text-heading); }
+.price span { font-size: var(--text-base); color: var(--text-muted); }
+.priceNote { margin: 6px 0 0; font-size: var(--text-sm); color: var(--text-muted); }
+
+/* Acción para consultar fechas: abre el modal de disponibilidad. */
+.availabilityCta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  width: 100%;
+  height: 46px;
+  border: none;
+  border-radius: var(--radius);
+  background: var(--color-primary);
+  color: var(--white);
+  font: inherit;
+  font-size: var(--text-base);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.availabilityCta:hover { background: var(--color-primary-600); }
+
+/* ── Datos clave ── */
+.factsCard {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px 12px;
+  background: var(--surface-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+}
+.fact { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.factIco {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border-radius: 9px;
+  background: var(--color-primary-050);
+  color: var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.factText { display: flex; flex-direction: column; min-width: 0; }
+.factLabel { font-size: var(--text-xs); font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.factValue { font-size: var(--text-sm); color: var(--text-body); }
+
+/* ── Descripción y espacios ── */
+.sectionTitle { margin: 0 0 10px; padding: 0 4px; font-size: var(--text-md); color: var(--text-heading); font-weight: 800; }
+.description { margin: 0; padding: 0 4px; color: var(--text-body); font-size: var(--text-base); line-height: 1.6; white-space: pre-line; }
+
+.spaces { display: flex; flex-direction: column; gap: 12px; }
+.space {
+  background: var(--surface-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 14px 16px;
+}
+.spaceHead { display: flex; align-items: flex-start; gap: 11px; }
+.spaceIco {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: 9px;
+  background: var(--color-primary-050);
+  color: var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.spaceName { margin: 0; font-size: var(--text-base); font-weight: 700; color: var(--text-heading); }
+.spaceDesc { margin: 2px 0 0; font-size: var(--text-sm); color: var(--text-muted); }
+
+.spacePhotos {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.spacePhotos::-webkit-scrollbar { display: none; }
+.spacePhotos img {
+  width: 108px;
+  height: 82px;
+  object-fit: cover;
+  border-radius: var(--radius);
+  display: block;
+  cursor: zoom-in;
+}
+
+/* ── Estados y pie ── */
+.state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 40px 16px;
+  text-align: center;
+  color: var(--text-muted);
+}
+.state i { color: var(--color-primary); }
+
+.footer { margin-top: 4px; text-align: center; font-size: var(--text-xs); color: var(--text-muted); }
+.footer strong { font-family: var(--font-logo); color: var(--brand-piddet); }

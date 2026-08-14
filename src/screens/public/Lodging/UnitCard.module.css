@@ -1,0 +1,91 @@
+/* Tarjeta pública de una unidad reservable: foto de portada, tipo, nombre, capacidad y tarifa.
+   Se usa en la sección Hospedaje de la portada y en el listado /hospedaje (móvil primero). */
+
+.card {
+  display: block;
+  background: var(--surface-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  text-decoration: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+.card:hover { border-color: var(--color-primary); box-shadow: var(--shadow-lg); transform: translateY(-1px); }
+
+/* ── Variante compacta (portada): miniatura + datos en una fila ── */
+.row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px 10px 10px;
+  background: var(--surface-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  text-decoration: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.row:hover { border-color: var(--color-primary); box-shadow: var(--shadow-lg); }
+.rowThumb {
+  flex-shrink: 0;
+  width: 62px;
+  height: 62px;
+  border-radius: var(--radius);
+  background: var(--gray-100);
+  color: var(--gray-400);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.rowThumb img { width: 100%; height: 100%; object-fit: cover; }
+.rowInfo { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.rowName {
+  font-size: var(--text-base);
+  font-weight: 700;
+  color: var(--text-heading);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rowMeta {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rowPrice { font-size: var(--text-sm); color: var(--text-muted); }
+.rowPrice strong { color: var(--text-heading); }
+.rowArrow { color: var(--gray-400); flex-shrink: 0; }
+
+.cover {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  background: var(--gray-100);
+}
+.cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.coverFallback {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--gray-400);
+  font-size: var(--text-2xl);
+}
+
+.body { padding: 12px 16px 14px; }
+.type {
+  display: inline-block;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-primary);
+}
+.name { margin: 2px 0 0; font-size: var(--text-md); font-weight: 700; color: var(--text-heading); }
+.meta { margin: 6px 0 0; display: flex; align-items: center; gap: 7px; font-size: var(--text-sm); color: var(--text-muted); }
+.meta i { color: var(--gray-400); }
+.price { margin: 10px 0 0; display: flex; align-items: baseline; gap: 5px; }
+.price strong { font-size: var(--text-lg); color: var(--text-heading); }
+.price span { font-size: var(--text-sm); color: var(--text-muted); }

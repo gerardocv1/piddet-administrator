@@ -1,0 +1,73 @@
+/* Consulta de disponibilidad de una unidad: fechas, resultado y salida a WhatsApp. */
+
+.body { display: flex; flex-direction: column; gap: 14px; }
+
+.dates { display: flex; gap: 10px; }
+.field { flex: 1; display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.label {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.field input {
+  width: 100%;
+  height: 42px;
+  padding: 0 10px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  background: var(--surface-card);
+  color: var(--text-body);
+  font: inherit;
+  font-size: var(--text-base);
+}
+.field input:focus { outline: none; border-color: var(--color-primary); }
+
+.hint { margin: 0; font-size: var(--text-sm); color: var(--text-muted); }
+.error { margin: 0; font-size: var(--text-sm); color: var(--color-danger-fg); }
+.error i { margin-right: 6px; }
+
+/* ── Resultado ── */
+.result {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+}
+.resultYes { background: var(--color-success-100); border-color: transparent; }
+.resultNo { background: var(--gray-100); }
+
+.resultTitle {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--text-base);
+  font-weight: 700;
+  color: var(--text-heading);
+}
+.resultYes .resultTitle i { color: var(--color-success-fg); }
+.resultNo .resultTitle i { color: var(--gray-500); }
+.resultStay { margin: 0; font-size: var(--text-sm); font-weight: 600; color: var(--text-body); }
+.resultNote { margin: 0; font-size: var(--text-sm); color: var(--text-muted); }
+
+.whatsapp {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  height: 42px;
+  margin-top: 6px;
+  border-radius: var(--radius);
+  background: var(--surface-card);
+  border: 1px solid var(--border-color);
+  color: var(--brand-whatsapp-fg);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  text-decoration: none;
+}
+.whatsapp i { color: var(--brand-whatsapp); font-size: var(--text-md); }
+.whatsapp:hover { border-color: var(--brand-whatsapp); }

@@ -4,6 +4,9 @@ import { api } from '../../lib/api.js';
 import { useResource } from '../../lib/useResource.js';
 import { shareImage, applyMetaTags, buildShareMeta, shareOrCopy } from '../public/shareMeta.js';
 import { PublicBottomBar } from '../public/PublicBottomBar.jsx';
+import { UnitCard } from '../public/Lodging/UnitCard.jsx';
+import { companyBrandTheme } from '../../lib/brand/palettes.js';
+import { whatsappHref } from '../public/whatsapp.js';
 import { getStoreStatus, getWeekSchedule, googleMapsUrl, googleMapsEmbedUrl } from '../../lib/storeHours.js';
 import s from './PublicCompany.module.css';
 
@@ -17,54 +20,54 @@ const CONTACT_FIELDS = [
   { key: 'website', icon: 'fas fa-globe', href: httpHref },
 ];
 
-const telHref = (store) => {
-  const num = `${store.phone_code || ''}${store.phone_number || ''}`.replace(/\s+/g, '');
-  return num ? `tel:${num.startsWith('+') ? num : `+${num}`}` : null;
-};
+const storePhone = (store) => `${store.phone_code || ''}${store.phone_number || ''}`;
 
-// Tarjeta de una tienda: mini-mapa → Google Maps, estado abierto/cerrado, horario desplegable y
-// acciones (cómo llegar / llamar).
-function StoreCard({ store }) {
+// Tarjeta de una tienda: mini-mapa → Google Maps, estado con el horario como dato principal
+// (el visitante quiere saber a qué hora abre, no solo que está cerrado), horario semanal
+// desplegable y acciones (cómo llegar / escribir por WhatsApp).
+function StoreCard({ store, companyName, companyPhone }) {
   const [open, setOpen] = React.useState(false);
   const status = React.useMemo(() => getStoreStatus(store.schedules || [], store.store_status_id), [store]);
   const week = React.useMemo(() => getWeekSchedule(store.schedules || []), [store]);
   const mapsUrl = googleMapsUrl(store);
   const embedUrl = googleMapsEmbedUrl(store);
-  const tel = telHref(store);
+  // Si la tienda no tiene su propio número, se escribe al de la compañía.
+  const about = store.name || companyName;
+  const whatsapp = whatsappHref(
+    storePhone(store) || companyPhone,
+    about ? `Hola, quiero información sobre ${about}.` : 'Hola, quiero información.',
+  );
   const hasLocation = store.latitude != null && store.longitude != null;
   const showMap = hasLocation || !!store.address;
 
   return (
     <article className={s.storeCard}>
-      {showMap && (
-        <div className={s.storeMap}>
-          <iframe
-            title={`Mapa de ${store.name}`}
-            src={embedUrl}
-            loading="lazy"
-            allowFullScreen
-            referrerPolicy="no-referrer-when-downgrade"
-          />
-          <a className={s.storeMapChip} href={mapsUrl} target="_blank" rel="noopener noreferrer">
-            <i className="fas fa-up-right-from-square" /> Abrir en Maps
-          </a>
-        </div>
-      )}
-
       <div className={s.storeBody}>
         <div className={s.storeTop}>
+          {showMap && (
+            <a className={s.storeMap} href={mapsUrl} target="_blank" rel="noopener noreferrer"
+              title="Abrir en Google Maps">
+              <iframe
+                title={`Mapa de ${store.name}`}
+                src={embedUrl}
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+              />
+              <span className={s.storeMapVeil} />
+            </a>
+          )}
           <div className={s.storeHead}>
             <h3 className={s.storeName}>{store.name}</h3>
             {store.address && <p className={s.storeAddr}>{store.address}</p>}
           </div>
-          <span className={[s.badge, status.open ? s.badgeOpen : s.badgeClosed].join(' ')}>
-            <span className={s.badgeDot} />{status.open ? 'Abierto' : 'Cerrado'}
-          </span>
         </div>
 
+        {/* El horario manda: el estado va como pastilla pequeña y el próximo cambio en grande. */}
         <button type="button" className={s.storeHours} onClick={() => setOpen((v) => !v)} aria-expanded={open}>
-          <i className="far fa-clock" />
-          <span className={s.storeHoursText}>{status.detail || (status.open ? 'Abierto' : 'Cerrado')}</span>
+          <span className={[s.badge, status.open ? s.badgeOpen : s.badgeClosed].join(' ')}>
+            <span className={s.badgeDot} />{status.label}
+          </span>
+          <span className={s.storeHoursText}>{status.detail || 'Ver horario'}</span>
           <i className={`fas fa-chevron-${open ? 'up' : 'down'} ${s.storeHoursChevron}`} />
         </button>
 
@@ -86,9 +89,9 @@ function StoreCard({ store }) {
           <a className={`${s.btn} ${s.btnPrimary}`} href={mapsUrl} target="_blank" rel="noopener noreferrer">
             <i className="fas fa-diamond-turn-right" /> Cómo llegar
           </a>
-          {tel && (
-            <a className={`${s.btn} ${s.btnNeutral}`} href={tel}>
-              <i className="fas fa-phone" /> Llamar
+          {whatsapp && (
+            <a className={`${s.btn} ${s.btnWhatsapp}`} href={whatsapp} target="_blank" rel="noopener noreferrer">
+              <i className="fab fa-whatsapp" /> Escribir
             </a>
           )}
         </div>
@@ -97,8 +100,9 @@ function StoreCard({ store }) {
   );
 }
 
-// Portada pública de la compañía (sin sesión): identidad mínima (logo + nombre) y, debajo, sus
-// tiendas/ubicaciones con horario y mapa, sus menús públicos y un contacto compacto.
+// Portada pública de la compañía (sin sesión): identidad mínima (logo + nombre) y, debajo, un
+// avance de su hospedaje, sus menús públicos, sus tiendas/ubicaciones con horario y mapa, y un
+// contacto compacto. El orden va de lo que se reserva/consume a dónde encontrarlo.
 export function PublicCompany({ companyUsername }) {
   const res = useResource(
     React.useCallback(() => api.publicCompany(companyUsername), [companyUsername]),
@@ -110,6 +114,9 @@ export function PublicCompany({ companyUsername }) {
   const company = data?.company || null;
   const menus = data?.menus || [];
   const stores = data?.stores || [];
+  // Hospedaje: solo llega si la compañía tiene la funcionalidad de reservas activa.
+  const units = data?.rentable_units || [];
+  const unitsCount = data?.rentable_units_count || 0;
 
   const shareInfo = React.useMemo(() => {
     const title = company?.name || 'piddet';
@@ -154,9 +161,16 @@ export function PublicCompany({ companyUsername }) {
 
   const contacts = CONTACT_FIELDS.filter((f) => company[f.key]);
   const storesCountText = stores.length === 1 ? '1 ubicación' : `${stores.length} ubicaciones`;
+  // Contacto de la compañía: si no tiene teléfono propio, se usa el de su primera tienda.
+  const companyWhatsapp = whatsappHref(
+    company.phone || storePhone(stores[0] || {}),
+    `Hola, quiero información sobre ${company.name}.`,
+  );
 
   return (
-    <div className={s.screen}>
+    // Los colores del perfil de la compañía redefinen la escala de --color-primary para toda la
+    // página: sin ellos, la portada llevaría el naranja de piddet en botones, enlaces y realces.
+    <div className={s.screen} style={companyBrandTheme(company)}>
       <div className={s.container}>
         <header className={s.hero}>
           <span className={[s.logo, company.icon ? s.logoImg : ''].filter(Boolean).join(' ')}>
@@ -170,14 +184,19 @@ export function PublicCompany({ companyUsername }) {
           )}
         </header>
 
-        {stores.length > 0 && (
+        {units.length > 0 && (
           <section>
             <div className={s.sectionHead}>
-              <h2 className={s.sectionTitle}>Tiendas</h2>
-              <span className={s.sectionMeta}>{storesCountText}</span>
+              <h2 className={s.sectionTitle}>Hospedaje</h2>
+              <a className={s.sectionLink} href={`/${encodeURIComponent(companyUsername)}/hospedaje`}>
+                {unitsCount > units.length ? `Ver las ${unitsCount}` : 'Ver todo'}
+                <i className="fas fa-chevron-right" />
+              </a>
             </div>
-            <div className={s.storeList}>
-              {stores.map((st) => <StoreCard key={st.id} store={st} />)}
+            <div className={s.unitList}>
+              {units.map((u) => (
+                <UnitCard key={u.id} unit={u} companyUsername={companyUsername} compact />
+              ))}
             </div>
           </section>
         )}
@@ -204,6 +223,20 @@ export function PublicCompany({ companyUsername }) {
           )}
         </section>
 
+        {stores.length > 0 && (
+          <section>
+            <div className={s.sectionHead}>
+              <h2 className={s.sectionTitle}>Dónde estamos</h2>
+              <span className={s.sectionMeta}>{storesCountText}</span>
+            </div>
+            <div className={s.storeList}>
+              {stores.map((st) => (
+                <StoreCard key={st.id} store={st} companyName={company.name} companyPhone={company.phone} />
+              ))}
+            </div>
+          </section>
+        )}
+
         {contacts.length > 0 && (
           <ul className={s.contact}>
             {contacts.map((f) => (
@@ -220,8 +253,14 @@ export function PublicCompany({ companyUsername }) {
         </footer>
       </div>
 
+      {/* Escribir por WhatsApp es la acción principal de la portada: es el canal por el que la
+          gente pregunta y reserva. Compartir queda como acción secundaria. */}
       <PublicBottomBar items={[
-        { key: 'share', icon: 'fas fa-share-nodes', label: shareMsg || 'Compartir', primary: true, onClick: share },
+        { key: 'share', icon: 'fas fa-share-nodes', label: shareMsg || 'Compartir', onClick: share },
+        ...(companyWhatsapp ? [{
+          key: 'whatsapp', icon: 'fab fa-whatsapp', label: 'Escríbenos', primary: true,
+          href: companyWhatsapp, target: '_blank',
+        }] : []),
       ]} />
     </div>
   );

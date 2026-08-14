@@ -31,6 +31,7 @@ export function Menus() {
   const [form, setForm] = React.useState(null); // { id?, name, username, description }
   const [usernameTouched, setUsernameTouched] = React.useState(false);
   const [del, setDel] = React.useState(null);
+  const [toggle, setToggle] = React.useState(null); // menú pendiente de confirmar activación/desactivación
   const [saving, setSaving] = React.useState(false);
 
   // Identificador de la compañía activa para construir la URL pública de la carta.
@@ -76,6 +77,12 @@ export function Menus() {
     finally { setSaving(false); }
   };
 
+  const confirmToggle = async () => {
+    setSaving(true);
+    try { await api.setMenuActive(toggle.id, !toggle.is_active); setToggle(null); reload(); }
+    finally { setSaving(false); }
+  };
+
   return (
     <div className={s.page}>
       <div className={s.toolbar}>
@@ -104,13 +111,19 @@ export function Menus() {
             <span className={t.colActions} />
           </div>
           {menus.map((m) => (
-            <div key={m.id} className={t.row} role="button" tabIndex={0}
+            <div key={m.id} className={`${t.row} ${m.is_active ? '' : t.rowOff}`} role="button" tabIndex={0}
               onClick={() => navigate(`/menus/${m.id}`)}
               onKeyDown={(e) => { if (e.key === 'Enter') navigate(`/menus/${m.id}`); }}>
               <div className={t.menuCell}>
                 <span className={t.icon}><i className="fas fa-book-open" /></span>
                 <div className={t.menuText}>
-                  <div className={t.name}>{m.name}</div>
+                  <div className={t.nameLine}>
+                    <span className={t.name}>{m.name}</span>
+                    <span className={`${t.badge} ${m.is_active ? t.badgeOn : t.badgeOff}`}>
+                      <i className={m.is_active ? 'fas fa-circle-check' : 'fas fa-circle-pause'} />
+                      {m.is_active ? 'Activo' : 'Inactivo'}
+                    </span>
+                  </div>
                   {m.description && <div className={t.desc}>{m.description}</div>}
                 </div>
               </div>
@@ -129,6 +142,11 @@ export function Menus() {
                     { label: 'Generar menú (carta)', icon: 'fas fa-eye', onClick: () => window.open(`${ADMIN_BASE}/menus/${m.id}/preview`, '_blank') },
                     { label: 'Ver carta pública', icon: 'fas fa-share-nodes', onClick: () => window.open(publicUrl(m.username), '_blank') },
                     { label: 'Copiar enlace público', icon: 'fas fa-link', onClick: () => copyPublicUrl(m) },
+                    {
+                      label: m.is_active ? 'Desactivar' : 'Activar',
+                      icon: m.is_active ? 'fas fa-toggle-off' : 'fas fa-toggle-on',
+                      onClick: () => setToggle(m),
+                    },
                     { label: 'Editar', icon: 'fas fa-pen', onClick: () => openEdit(m) },
                     { label: 'Eliminar', icon: 'fas fa-trash', variant: 'danger', onClick: () => setDel(m) },
                   ]}
@@ -166,6 +184,22 @@ export function Menus() {
               value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
           </div>
         )}
+      </Modal>
+
+      {/* Activar / desactivar menú */}
+      <Modal open={!!toggle} size="sm" title={toggle?.is_active ? 'Desactivar menú' : 'Activar menú'}
+        onClose={() => setToggle(null)}
+        footer={<>
+          <Button variant="secondary" onClick={() => setToggle(null)}>Cancelar</Button>
+          <Button variant={toggle?.is_active ? 'danger' : 'primary'}
+            icon={toggle?.is_active ? 'fas fa-toggle-off' : 'fas fa-toggle-on'}
+            loading={saving} onClick={confirmToggle}>
+            {toggle?.is_active ? 'Desactivar' : 'Activar'}
+          </Button>
+        </>}>
+        {toggle?.is_active
+          ? <>Al desactivar <strong>{toggle?.name}</strong> dejará de mostrarse en la página pública de la empresa y su carta no podrá abrirse, ni siquiera con el enlace directo. Podrás volver a activarlo cuando quieras.</>
+          : <>Al activar <strong>{toggle?.name}</strong> volverá a mostrarse en la página pública de la empresa y su carta será accesible.</>}
       </Modal>
 
       {/* Eliminar menú */}

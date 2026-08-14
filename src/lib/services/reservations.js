@@ -124,6 +124,19 @@ export const reservationsService = {
   // [{ id, order_number, type: 'advance'|'consumption'|'checkout', total, date, status_payment, … }].
   reservationOrders: (reservationId) => list(http.get(`${base()}/reservations/${reservationId}/orders`)),
 
+  // ── Hospedaje público (sin sesión): unidades reservables visibles en la portada ──
+  // Listado de unidades activas de la compañía (por username). Con check_in/check_out cada
+  // unidad trae `available`; sin fechas, `available` viene null. Devuelve { company, units }.
+  publicRentableUnits: (companyUsername, { checkIn = '', checkOut = '' } = {}) =>
+    http.get(`/public/${encodeURIComponent(companyUsername)}/rentable-units${qs({ check_in: checkIn, check_out: checkOut })}`),
+  // Detalle público de una unidad activa: fotos, espacios (con fotos), tarifas y horarios.
+  // Devuelve { company, unit }.
+  publicRentableUnit: (companyUsername, unitId) =>
+    http.get(`/public/${encodeURIComponent(companyUsername)}/rentable-units/${unitId}`),
+  // Consulta (sin reservar) si la unidad está libre en un rango: { check_in, check_out, nights, available }.
+  publicRentableUnitAvailability: (companyUsername, unitId, { checkIn, checkOut }) =>
+    http.get(`/public/${encodeURIComponent(companyUsername)}/rentable-units/${unitId}/availability${qs({ check_in: checkIn, check_out: checkOut })}`),
+
   // ── Pre-check-in público (sin sesión, autenticado por el código de reserva) ──
   // Única entrada a la reserva: código + nombre del titular (el código por sí solo no abre nada).
   // Devuelve el resumen de la estadía con los datos del alojamiento y de la unidad.

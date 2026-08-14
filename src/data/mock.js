@@ -210,11 +210,13 @@ export const mockUser = { name: 'Gerardo Cruz', role: 'Administrador' };
 // ── Módulo de menús (datos en memoria; las mutaciones persisten durante la sesión) ──────
 // Replican la forma del backend: los menús son de la compañía activa y cada categoría pertenece a
 // un menú concreto (`menu_id`); su `position` define el orden de sus productos dentro de ese menú.
+// `status` es el borrado lógico del menú (1 vigente, 0 eliminado); `is_active` es el interruptor
+// que la compañía enciende/apaga para publicarlo o no en la portada pública y su carta.
 export const mockMenus = [
-  { id: 1, name: 'Carta principal', username: 'carta_principal', description: 'Disponible todo el día', file: null, position: 0, status: 1 },
-  { id: 2, name: 'Desayunos', username: 'desayunos', description: 'Hasta las 11 a. m.', file: null, position: 1, status: 0 },
-  { id: 3, name: 'Bebidas', username: 'bebidas', description: 'Carta de bebidas y cócteles', file: null, position: 2, status: 1 },
-  { id: 4, name: 'Menú Secundary', username: 'menu_secundary', description: 'Carta de fin de semana', file: null, position: 3, status: 1 },
+  { id: 1, name: 'Carta principal', username: 'carta_principal', description: 'Disponible todo el día', file: null, position: 0, status: 1, is_active: true },
+  { id: 2, name: 'Desayunos', username: 'desayunos', description: 'Hasta las 11 a. m.', file: null, position: 1, status: 0, is_active: true },
+  { id: 3, name: 'Bebidas', username: 'bebidas', description: 'Carta de bebidas y cócteles', file: null, position: 2, status: 1, is_active: false },
+  { id: 4, name: 'Menú Secundary', username: 'menu_secundary', description: 'Carta de fin de semana', file: null, position: 3, status: 1, is_active: true },
 ];
 
 // Categorías de menú: cada una pertenece a UN menú (`menu_id`). Su `position` define el orden con
@@ -309,6 +311,7 @@ export const mockCompany = {
   identification: 'NIT 900.123.456-7',
   address: 'Cra. 43A #1-50', city: 'Medellín, Colombia', phone: '+57 300 123 4567',
   email: 'hola@gruposabor.co', website: 'www.gruposabor.co',
+  brand_primary: 'forest', brand_secondary: 'gold',
   stores_count: 4, menus_count: 5, items_count: 86, users_count: 12,
 };
 export const mockCompanies = [
@@ -427,7 +430,7 @@ function buildMenuFull(menu) {
 function resolvePublicMenuMock(path) {
   const m = path.match(/^\/public\/([^/]+)\/m\/([^/]+)$/);
   if (!m) return undefined;
-  const menu = mockMenus.find((x) => x.username === m[2] && x.status === 1);
+  const menu = mockMenus.find((x) => x.username === m[2] && x.status === 1 && x.is_active);
   if (!menu) return null;
   return {
     ...buildMenuFull(menu),
@@ -442,9 +445,9 @@ function resolvePublicCompanyMock(path) {
   const m = path.match(/^\/public\/([^/]+)$/);
   if (!m) return undefined;
   const menus = mockMenus
-    .filter((x) => x.status === 1)
+    .filter((x) => x.status === 1 && x.is_active)
     .sort((a, b) => a.position - b.position)
-    .map((x) => ({ id: x.id, name: x.name, username: x.username, description: x.description, file: x.file, position: x.position, status: x.status }));
+    .map((x) => ({ id: x.id, name: x.name, username: x.username, description: x.description, file: x.file, position: x.position, status: x.status, is_active: x.is_active }));
   // Tiendas públicas: todas menos las inactivas (store_status_id 2). Incluye horarios y ubicación.
   const stores = mockStoresList
     .filter((st) => st.store_status_id !== 2)
@@ -454,7 +457,94 @@ function resolvePublicCompanyMock(path) {
       latitude: st.latitude, longitude: st.longitude,
       schedules: (st.schedules || []).map((r) => ({ day_id: r.day_id, start_time: r.start_time, end_time: r.end_time })),
     }));
-  return { company: { ...mockCompany }, menus, stores };
+  const activeUnits = mockRentableUnits.filter((u) => u.status === 1);
+  return {
+    company: { ...mockCompany },
+    menus,
+    stores,
+    // Hospedaje: en demo la funcionalidad de reservas está activa, así que la portada trae la
+    // vista previa (primeras 3 unidades activas + total).
+    rentable_units: activeUnits.slice(0, 3).map(publicUnitCard),
+    rentable_units_count: activeUnits.length,
+  };
+}
+
+// ── Hospedaje público (sin sesión): /public/{company}/rentable-units[/{unitId}] ──
+const publicUnitCard = (u) => ({
+  id: u.id, type_name: u.type_name, name: u.name, description: u.description,
+  capacity: u.capacity, included_guests: u.included_guests,
+  base_price_per_night: u.base_price_per_night,
+  check_in_time: u.check_in_time, check_out_time: u.check_out_time,
+  cover_url: u.files.find((f) => f.url && f.rentable_unit_space_id == null)?.url ?? null,
+  cover_thumbnail_url: u.files.find((f) => f.url && f.rentable_unit_space_id == null)?.thumbnail_url ?? null,
+  photos_count: u.files.length,
+});
+
+const publicCompanyBrand = () => ({
+  name: mockCompany.name, username: mockCompany.username, icon: mockCompany.icon ?? null,
+  brand_primary: mockCompany.brand_primary ?? null, brand_secondary: mockCompany.brand_secondary ?? null,
+});
+
+const publicFiles = (files) => files.filter((f) => f.url).map((f) => ({ url: f.url, thumbnail_url: f.thumbnail_url }));
+
+function resolvePublicLodgingMock(path, query) {
+  let m = path.match(/^\/public\/[^/]+\/rentable-units$/);
+  if (m) {
+    const checkIn = query.get('check_in');
+    const checkOut = query.get('check_out');
+    // Mismos estados que bloquean disponibilidad en el backend (BLOCKING_STATUSES).
+    const busy = checkIn && checkOut
+      ? new Set(mockReservations
+        .filter((r) => [1, 2, 3, 5].includes(r.status) && r.check_in_date < checkOut && r.check_out_date > checkIn)
+        .map((r) => r.rentable_unit_id))
+      : null;
+    return {
+      company: publicCompanyBrand(),
+      whatsapp_number: mockCompany.phone ?? null,
+      units: mockRentableUnits
+        .filter((u) => u.status === 1)
+        .map((u) => ({ ...publicUnitCard(u), available: busy ? !busy.has(u.id) : null })),
+    };
+  }
+
+  m = path.match(/^\/public\/[^/]+\/rentable-units\/(\d+)\/availability$/);
+  if (m) {
+    const unit = mockRentableUnits.find((u) => u.id === Number(m[1]) && u.status === 1);
+    if (!unit) return null;
+    const checkIn = query.get('check_in');
+    const checkOut = query.get('check_out');
+    const busy = mockReservations.some((r) => [1, 2, 3, 5].includes(r.status)
+      && r.rentable_unit_id === unit.id && r.check_in_date < checkOut && r.check_out_date > checkIn);
+    return {
+      check_in: checkIn,
+      check_out: checkOut,
+      nights: Math.ceil((new Date(checkOut) - new Date(checkIn)) / 86400000),
+      available: !busy,
+    };
+  }
+
+  m = path.match(/^\/public\/[^/]+\/rentable-units\/(\d+)$/);
+  if (m) {
+    const unit = mockRentableUnits.find((u) => u.id === Number(m[1]) && u.status === 1);
+    if (!unit) return null;
+    syncUnitSpaceFiles(unit);
+    return {
+      company: publicCompanyBrand(),
+      whatsapp_number: mockCompany.phone ?? null,
+      unit: {
+        id: unit.id, type_name: unit.type_name, name: unit.name, description: unit.description,
+        capacity: unit.capacity, included_guests: unit.included_guests,
+        base_price_per_night: unit.base_price_per_night,
+        check_in_time: unit.check_in_time, check_out_time: unit.check_out_time,
+        files: publicFiles(unit.files.filter((f) => f.rentable_unit_space_id == null)),
+        spaces: unit.spaces.map((sp) => ({
+          id: sp.id, name: sp.name, description: sp.description, files: publicFiles(sp.files || []),
+        })),
+      },
+    };
+  }
+
+  return undefined;
 }
 
 function resolveMenuMock(path, query, { method = 'GET', body } = {}) {
@@ -562,7 +652,7 @@ function resolveMenuMock(path, query, { method = 'GET', body } = {}) {
   if (sub === 'menus') {
     if (method === 'POST') {
       const username = slugifyUsername(body.username || body.name);
-      const row = { id: nextId(mockMenus), name: body.name, username, description: body.description || '', file: null, position: body.position ?? mockMenus.length, status: 1 };
+      const row = { id: nextId(mockMenus), name: body.name, username, description: body.description || '', file: null, position: body.position ?? mockMenus.length, status: 1, is_active: true };
       mockMenus.push(row);
       return row;
     }
@@ -579,6 +669,13 @@ function resolveMenuMock(path, query, { method = 'GET', body } = {}) {
       };
     });
     return mockPaginate(rows, query);
+  }
+  m = sub.match(/^menus\/(\d+)\/active$/);
+  if (m) {
+    const menu = mockMenus.find((c) => c.id === Number(m[1]));
+    if (!menu) return null;
+    menu.is_active = !!body?.is_active;
+    return menu;
   }
   m = sub.match(/^menus\/(\d+)$/);
   if (m) {
@@ -2159,6 +2256,15 @@ const mockConsumableItems = [
   { id: 907, name: 'Limonada de coco', description: null, price: '12000.00', type: 'PRODUCT' },
 ];
 
+// Fotos de ejemplo de las unidades (en demo no hay S3; se sirven de picsum como el resto del mock).
+const demoUnitFile = (seed, spaceId = null, position = 1) => ({
+  name: `demo-unit-${seed}.jpg`,
+  rentable_unit_space_id: spaceId,
+  url: `https://picsum.photos/seed/${seed}/1200/900`,
+  thumbnail_url: `https://picsum.photos/seed/${seed}/300/220`,
+  position,
+});
+
 const mockRentableUnits = [
   {
     id: 1, rentable_unit_type_id: 1, type_name: 'Cabaña', name: 'Cabaña El Roble',
@@ -2166,7 +2272,15 @@ const mockRentableUnits = [
     check_in_time: '15:00', check_out_time: '12:00',
     item_id: 901, item_name: 'Hospedaje cabaña',
     position: 1, status: 1,
-    files: [], files_count: 0,
+    files: [
+      demoUnitFile('roble-1', null, 1),
+      demoUnitFile('roble-2', null, 2),
+      demoUnitFile('roble-3', null, 3),
+      demoUnitFile('roble-hab-1', 1, 4),
+      demoUnitFile('roble-hab-2', 1, 5),
+      demoUnitFile('roble-sala-1', 2, 6),
+    ],
+    files_count: 6,
     spaces: [
       { id: 1, name: 'Habitación principal', description: 'Cama queen, A/C, baño privado', position: 1, files: [] },
       { id: 2, name: 'Sala de estar', description: 'Sofá cama, chimenea', position: 2, files: [] },
@@ -2736,6 +2850,10 @@ export function resolveMock(rawPath, opts = {}) {
   // Pre-check-in público (sin sesión): /public/checkin/{code}…
   const checkin = resolveCheckinMock(path, query, opts);
   if (checkin !== undefined) return checkin;
+
+  // Hospedaje público (sin sesión): /public/{company}/rentable-units[/{unitId}]
+  const publicLodging = resolvePublicLodgingMock(path, query);
+  if (publicLodging !== undefined) return publicLodging;
 
   // Portada pública de la compañía (sin sesión): /public/{company}
   const publicCompany = resolvePublicCompanyMock(path);

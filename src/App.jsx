@@ -14,6 +14,8 @@ import { MenuPreview } from './screens/MenuPreview/MenuPreview.jsx';
 import { PublicMenu } from './screens/PublicMenu/PublicMenu.jsx';
 import { PublicCompany } from './screens/PublicCompany/PublicCompany.jsx';
 import { CheckinWizard } from './screens/public/Checkin/CheckinWizard.jsx';
+import { PublicLodging } from './screens/public/Lodging/PublicLodging.jsx';
+import { PublicLodgingUnit } from './screens/public/Lodging/PublicLodgingUnit.jsx';
 import { Invoices } from './screens/Invoices.jsx';
 import { InvoiceDetail } from './screens/InvoiceDetail.jsx';
 import { Expenses } from './screens/Expenses.jsx';
@@ -56,6 +58,12 @@ const PUBLIC_CHECKIN_RE = /^\/checkin(?:\/([^/]+))?\/?$/;
 // vive bajo /admin, así que cualquier raíz limpia de un segmento (salvo `admin`) es una empresa.
 const PUBLIC_COMPANY_RE = /^\/([^/]+)\/?$/;
 
+// Hospedaje público: /{username-compañía}/hospedaje (listado de unidades reservables, con filtro
+// de fechas) y /{username-compañía}/hospedaje/{unitId} (detalle de una unidad). El segmento es en
+// español a propósito: es la URL que ve y comparte el visitante.
+const PUBLIC_LODGING_RE = /^\/([^/]+)\/hospedaje\/?$/;
+const PUBLIC_LODGING_UNIT_RE = /^\/([^/]+)\/hospedaje\/(\d+)\/?$/;
+
 // Landing de la raíz: muestra el Inicio si está habilitado; si no, redirige al primer módulo
 // accesible; si no hay ninguno, muestra el estado "sin módulos".
 function Home() {
@@ -85,6 +93,21 @@ export default function App() {
     const queryCode = new URLSearchParams(window.location.search).get('code');
     const pathCode = checkinMatch[1] ? decodeURIComponent(checkinMatch[1]) : null;
     return <CheckinWizard code={queryCode || pathCode} />;
+  }
+
+  // 1a-ter) Hospedaje público de la compañía: listado de unidades y detalle de cada una.
+  const lodgingUnitMatch = path.match(PUBLIC_LODGING_UNIT_RE);
+  if (lodgingUnitMatch && lodgingUnitMatch[1] !== ADMIN_BASE.slice(1)) {
+    return (
+      <PublicLodgingUnit
+        companyUsername={decodeURIComponent(lodgingUnitMatch[1])}
+        unitId={lodgingUnitMatch[2]}
+      />
+    );
+  }
+  const lodgingMatch = path.match(PUBLIC_LODGING_RE);
+  if (lodgingMatch && lodgingMatch[1] !== ADMIN_BASE.slice(1)) {
+    return <PublicLodging companyUsername={decodeURIComponent(lodgingMatch[1])} />;
   }
 
   // 1b) Portada pública de la compañía: raíz limpia de un solo segmento (salvo `admin`).

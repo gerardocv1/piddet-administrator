@@ -35,6 +35,7 @@ export function MenuDetail() {
   const [delCat, setDelCat] = React.useState(null);
   const [edit, setEdit] = React.useState(null);
   const [del, setDel] = React.useState(null);
+  const [toggle, setToggle] = React.useState(false); // confirmación de activar/desactivar el menú
   const [saving, setSaving] = React.useState(false);
 
   // Conteo de productos por categoría (dentro de este menú).
@@ -92,6 +93,15 @@ export function MenuDetail() {
     setSaving(true);
     try { await api.deleteMenuItem(menuId, del.id); setDel(null); itemsRes.reload(); }
     finally { setSaving(false); }
+  };
+
+  const confirmToggle = async () => {
+    setSaving(true);
+    try {
+      await api.setMenuActive(menuId, !menuRes.data.is_active);
+      setToggle(false);
+      menuRes.reload();
+    } finally { setSaving(false); }
   };
 
   const removeCat = async () => {
@@ -172,10 +182,25 @@ export function MenuDetail() {
       <div className={t.header}>
         <IconButton icon="fas fa-arrow-left" variant="light" title="Volver a menús" onClick={() => navigate('/menus')} />
         <div className={t.headerText}>
-          <h2 className={t.headerTitle}>{menu?.name || 'Menú'}</h2>
+          <div className={t.headerTitleLine}>
+            <h2 className={t.headerTitle}>{menu?.name || 'Menú'}</h2>
+            {menu && (
+              <span className={`${t.badge} ${menu.is_active ? t.badgeOn : t.badgeOff}`}>
+                <i className={menu.is_active ? 'fas fa-circle-check' : 'fas fa-circle-pause'} />
+                {menu.is_active ? 'Activo' : 'Inactivo'}
+              </span>
+            )}
+          </div>
           <p className={t.headerSub}>{headerInfo}</p>
         </div>
         <div className={s.spacer} />
+        {menu && (
+          <Button variant={menu.is_active ? 'secondary' : 'outline-primary'} size="sm"
+            icon={menu.is_active ? 'fas fa-toggle-off' : 'fas fa-toggle-on'}
+            onClick={() => setToggle(true)}>
+            {menu.is_active ? 'Desactivar' : 'Activar'}
+          </Button>
+        )}
         <Button variant="outline-primary" size="sm" icon="fas fa-eye"
           onClick={() => window.open(`${ADMIN_BASE}/menus/${menuId}/preview`, '_blank')}>Ver carta</Button>
       </div>
@@ -291,6 +316,21 @@ export function MenuDetail() {
         <CategoryModal menuId={menuId} category={editCat} onClose={() => setEditCat(null)}
           onSaved={() => { setEditCat(null); catsRes.reload(); }} />
       )}
+
+      <Modal open={toggle} size="sm" title={menu?.is_active ? 'Desactivar menú' : 'Activar menú'}
+        onClose={() => setToggle(false)}
+        footer={<>
+          <Button variant="secondary" onClick={() => setToggle(false)}>Cancelar</Button>
+          <Button variant={menu?.is_active ? 'danger' : 'primary'}
+            icon={menu?.is_active ? 'fas fa-toggle-off' : 'fas fa-toggle-on'}
+            loading={saving} onClick={confirmToggle}>
+            {menu?.is_active ? 'Desactivar' : 'Activar'}
+          </Button>
+        </>}>
+        {menu?.is_active
+          ? <>Al desactivar <strong>{menu?.name}</strong> dejará de mostrarse en la página pública de la empresa y su carta no podrá abrirse, ni siquiera con el enlace directo. Podrás volver a activarlo cuando quieras.</>
+          : <>Al activar <strong>{menu?.name}</strong> volverá a mostrarse en la página pública de la empresa y su carta será accesible.</>}
+      </Modal>
 
       <Modal open={!!del} size="sm" title="Quitar producto" onClose={() => setDel(null)}
         footer={<>

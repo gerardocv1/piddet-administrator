@@ -6,6 +6,8 @@ import { useResource } from '../lib/useResource.js';
 import { usePermissions } from '../lib/permissions/usePermissions.js';
 import { AiTokensCard } from './CompanyAiTokens.jsx';
 import { FunctionalitiesCard } from './CompanyFunctionalities.jsx';
+import { BrandColorPicker, BrandPreview } from './CompanyBrandColors.jsx';
+import { DEFAULT_BRAND_PRIMARY, DEFAULT_BRAND_SECONDARY } from '../lib/brand/palettes.js';
 import s from './screens.module.css';
 import t from './CompanyProfile.module.css';
 
@@ -111,6 +113,21 @@ export function CompanyProfile() {
         </Card.Body>
       </Card>
 
+      <Card>
+        <Card.Header title="Identidad visual"
+          action={editable && (
+            <IconButton icon="fas fa-pen" variant="ghost" size="sm" title="Editar colores" onClick={edit} />
+          )} />
+        <Card.Body>
+          <p className={t.brandHint}>
+            Colores con los que se pintan las páginas públicas de la empresa (portada, hospedaje):
+            botones, enlaces y realces.
+          </p>
+          <BrandPreview primary={company.brand_primary} secondary={company.brand_secondary}
+            name={company.name} />
+        </Card.Body>
+      </Card>
+
       <FunctionalitiesCard />
 
       {editable && <AiTokensCard />}
@@ -133,6 +150,8 @@ function CompanyEditModal({ company, onClose, onSaved }) {
     phone: company.phone || '',
     email: company.email || '',
     website: company.website || '',
+    brand_primary: company.brand_primary || DEFAULT_BRAND_PRIMARY,
+    brand_secondary: company.brand_secondary || DEFAULT_BRAND_SECONDARY,
   }));
   const [saving, setSaving] = React.useState(false);
   const [err, setErr] = React.useState(null);
@@ -153,6 +172,8 @@ function CompanyEditModal({ company, onClose, onSaved }) {
         phone: form.phone.trim(),
         email: form.email.trim(),
         website: form.website.trim(),
+        brand_primary: form.brand_primary,
+        brand_secondary: form.brand_secondary,
       };
       const logo = await uploaderRef.current?.upload();
       if (logo?.name) payload.icon = logo.name;
@@ -182,6 +203,18 @@ function CompanyEditModal({ company, onClose, onSaved }) {
         </div>
         <Input label="Dirección" value={form.address} onChange={(e) => set('address', e.target.value)} />
         <Textarea label="Descripción" rows={3} value={form.description} onChange={(e) => set('description', e.target.value)} />
+
+        <div className={t.brandFields}>
+          <BrandColorPicker label="Color primario"
+            hint="Manda en botones, enlaces y precios de las páginas públicas."
+            value={form.brand_primary} onChange={(v) => set('brand_primary', v)} />
+          <BrandColorPicker label="Color secundario"
+            hint="Acompaña al primario en el degradado del logo."
+            value={form.brand_secondary} fallback={DEFAULT_BRAND_SECONDARY}
+            onChange={(v) => set('brand_secondary', v)} />
+          <BrandPreview primary={form.brand_primary} secondary={form.brand_secondary} name={form.name} />
+        </div>
+
         {err && <div className={s.formError}><i className="fas fa-triangle-exclamation" /> {err}</div>}
       </div>
     </Modal>

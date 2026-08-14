@@ -40,6 +40,9 @@ export const menusService = {
     http.put(`${base()}/menus/${menuId}/categories/${categoryId}/config`, { config }),
   createMenu: (data) => http.post(`${base()}/menus`, data),
   updateMenu: (id, data) => http.put(`${base()}/menus/${id}`, data),
+  // Enciende/apaga el menú: apagado se sigue administrando, pero no se publica en la portada
+  // pública ni en su carta.
+  setMenuActive: (id, isActive) => http.put(`${base()}/menus/${id}/active`, { is_active: isActive }),
   deleteMenu: (id) => http.del(`${base()}/menus/${id}`),
 
   // Ítems del menú (array plano, ya ordenado por categoría y posición; se agrupa en cliente).
