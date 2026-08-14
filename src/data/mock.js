@@ -537,6 +537,9 @@ function resolvePublicLodgingMock(path, query) {
         base_price_per_night: unit.base_price_per_night,
         check_in_time: unit.check_in_time, check_out_time: unit.check_out_time,
         files: publicFiles(unit.files.filter((f) => f.rentable_unit_space_id == null)),
+        inclusions: (unit.inclusions || []).map((inc) => ({
+          id: inc.id, name: inc.name, description: inc.description,
+        })),
         spaces: unit.spaces.map((sp) => ({
           id: sp.id, name: sp.name, description: sp.description, files: publicFiles(sp.files || []),
         })),
@@ -2281,6 +2284,12 @@ const mockRentableUnits = [
       demoUnitFile('roble-sala-1', 2, 6),
     ],
     files_count: 6,
+    inclusions: [
+      { id: 1, name: 'Desayuno', description: 'Tipo americano, servido de 7 a 10 a. m.', position: 1 },
+      { id: 2, name: 'Fogata', description: 'Con vino de cortesía', position: 2 },
+      { id: 3, name: 'Ingreso al sitio', description: null, position: 3 },
+      { id: 4, name: 'Piscina', description: 'Abierta de 9 a. m. a 6 p. m.', position: 4 },
+    ],
     spaces: [
       { id: 1, name: 'Habitación principal', description: 'Cama queen, A/C, baño privado', position: 1, files: [] },
       { id: 2, name: 'Sala de estar', description: 'Sofá cama, chimenea', position: 2, files: [] },
@@ -2292,7 +2301,7 @@ const mockRentableUnits = [
     check_in_time: '14:00', check_out_time: '11:00',
     item_id: 902, item_name: 'Hospedaje habitación',
     position: 2, status: 1,
-    files: [], files_count: 0, spaces: [],
+    files: [], files_count: 0, spaces: [], inclusions: [],
   },
 ];
 
@@ -2392,6 +2401,29 @@ function resolveReservationsMock(path, query, { method = 'GET', body } = {}) {
     }
   }
 
+  // Qué incluye la tarifa: /rentable-units/{id}/inclusions[/{inclusionId}]
+  m = sub.match(/^rentable-units\/(\d+)\/inclusions(?:\/(\d+))?$/);
+  if (m) {
+    const unit = mockRentableUnits.find((u) => u.id === Number(m[1]));
+    if (!unit) return null;
+    unit.inclusions = unit.inclusions || [];
+    const inclusionId = m[2] ? Number(m[2]) : null;
+    if (method === 'POST') {
+      const id = (unit.inclusions.reduce((mx, inc) => Math.max(mx, inc.id), 0) || 0) + 1;
+      unit.inclusions.push({ id, name: body.name, description: body.description || null, position: unit.inclusions.length + 1 });
+      return unitDetail(unit);
+    }
+    if (method === 'PUT' && inclusionId) {
+      const inc = unit.inclusions.find((x) => x.id === inclusionId);
+      if (inc) { inc.name = body.name; inc.description = body.description || null; }
+      return unitDetail(unit);
+    }
+    if (method === 'DELETE' && inclusionId) {
+      unit.inclusions = unit.inclusions.filter((x) => x.id !== inclusionId);
+      return unitDetail(unit);
+    }
+  }
+
   // Espacios: /rentable-units/{id}/spaces[/{spaceId}]
   m = sub.match(/^rentable-units\/(\d+)\/spaces(?:\/(\d+))?$/);
   if (m) {
@@ -2456,6 +2488,7 @@ function resolveReservationsMock(path, query, { method = 'GET', body } = {}) {
         position: id, status: 1,
         files: (body.files || []).map((name, i) => ({ name, rentable_unit_space_id: null, url: null, thumbnail_url: null, position: i + 1 })),
         spaces: (body.spaces || []).map((sp, i) => ({ id: i + 1, name: sp.name, description: sp.description || null, position: i + 1, files: [] })),
+        inclusions: (body.inclusions || []).map((inc, i) => ({ id: i + 1, name: inc.name, description: inc.description || null, position: i + 1 })),
       };
       mockRentableUnits.push(unit);
       return unitDetail(unit);

@@ -56,6 +56,12 @@ export const reservationsService = {
   // Quita una foto de la unidad y la borra de S3 (irreversible). Devuelve el detalle.
   detachRentableUnitFile: (unitId, name) => http.del(`${base()}/rentable-units/${unitId}/files${qs({ name })}`),
 
+  // ── Lo que incluye la tarifa (desayuno, fogata, ingreso al sitio…) ──────
+  // Cada operación devuelve el detalle completo de la unidad, como los espacios.
+  createRentableUnitInclusion: (unitId, data) => http.post(`${base()}/rentable-units/${unitId}/inclusions`, data),
+  updateRentableUnitInclusion: (unitId, inclusionId, data) => http.put(`${base()}/rentable-units/${unitId}/inclusions/${inclusionId}`, data),
+  deleteRentableUnitInclusion: (unitId, inclusionId) => http.del(`${base()}/rentable-units/${unitId}/inclusions/${inclusionId}`),
+
   // ── Espacios (composición interna) de la unidad ─────────────────────────
   createRentableUnitSpace: (unitId, data) => http.post(`${base()}/rentable-units/${unitId}/spaces`, data),
   updateRentableUnitSpace: (unitId, spaceId, data) => http.put(`${base()}/rentable-units/${unitId}/spaces/${spaceId}`, data),

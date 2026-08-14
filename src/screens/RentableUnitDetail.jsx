@@ -52,6 +52,7 @@ export function RentableUnitDetail() {
   // Creación: fotos generales y espacios locales (los espacios se envían con el POST).
   const generalPhotosRef = React.useRef(null);
   const [newSpaces, setNewSpaces] = React.useState([]);
+  const [newInclusions, setNewInclusions] = React.useState([]);
 
   React.useEffect(() => {
     if (!isEdit || !data) return;
@@ -95,6 +96,9 @@ export function RentableUnitDetail() {
         spaces: newSpaces
           .filter((sp) => sp.name.trim())
           .map((sp) => ({ name: sp.name.trim(), description: sp.description.trim() || null })),
+        inclusions: newInclusions
+          .filter((inc) => inc.name.trim())
+          .map((inc) => ({ name: inc.name.trim(), description: inc.description.trim() || null })),
       };
       const created = await api.createRentableUnit(payload);
       navigate(`/rentable-units/${created.id}`);
@@ -227,6 +231,13 @@ export function RentableUnitDetail() {
         </Card>
       </div>
 
+      {/* Lo que incluye la tarifa: lo ve el huésped en la página pública de la unidad. */}
+      {isEdit ? (
+        <InclusionsEditor unit={data} onChange={setData} />
+      ) : (
+        <NewInclusions inclusions={newInclusions} onChange={setNewInclusions} />
+      )}
+
       {/* Espacios (composición interna). En creación son locales; en edición se administran vía API. */}
       {isEdit ? (
         <SpacesEditor unit={data} onChange={setData} />
@@ -308,6 +319,138 @@ function PhotoGallery({ files, folder, onAdd, onRemove }) {
         ¿Seguro que deseas quitar esta foto? Se borra definitivamente (también del almacenamiento).
       </Modal>
     </div>
+  );
+}
+
+// ── Inclusiones locales (modo creación) ───────────────────────────────────
+function NewInclusions({ inclusions, onChange }) {
+  const add = () => onChange([...inclusions, { key: Date.now(), name: '', description: '' }]);
+  const setField = (key, field, value) =>
+    onChange(inclusions.map((inc) => (inc.key === key ? { ...inc, [field]: value } : inc)));
+  const remove = (key) => onChange(inclusions.filter((inc) => inc.key !== key));
+
+  return (
+    <Card>
+      <Card.Header title="Qué incluye la tarifa" action={
+        <Button variant="secondary" size="sm" icon="fas fa-plus" onClick={add}>Agregar</Button>
+      } />
+      <Card.Body>
+        {inclusions.length === 0 ? (
+          <p className={s.faint}>Sin inclusiones. Agrega lo que cubre el precio de la noche
+            (desayuno, fogata, ingreso al sitio, piscina…); el huésped las ve en la página pública.</p>
+        ) : (
+          <div className={t.spaceList}>
+            {inclusions.map((inc) => (
+              <div key={inc.key} className={t.spaceRow}>
+                <Input label="Qué incluye" placeholder="Ej. Desayuno"
+                  value={inc.name} onChange={(e) => setField(inc.key, 'name', e.target.value)} />
+                <Input label="Detalle" placeholder="Ej. Tipo americano, servido de 7 a 10 a. m."
+                  value={inc.description} onChange={(e) => setField(inc.key, 'description', e.target.value)} />
+                <div className={t.spaceRemove}>
+                  <IconButton icon="fas fa-trash" variant="light" title="Quitar"
+                    onClick={() => remove(inc.key)} />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card.Body>
+    </Card>
+  );
+}
+
+// ── Inclusiones administradas vía API (modo edición) ──────────────────────
+function InclusionsEditor({ unit, onChange }) {
+  const [editing, setEditing] = React.useState(null); // { id?, name, description }
+  const [saving, setSaving] = React.useState(false);
+  const [err, setErr] = React.useState(null);
+  const [delInclusion, setDelInclusion] = React.useState(null);
+
+  const inclusions = unit.inclusions || [];
+
+  const submit = async () => {
+    if (saving || !editing.name.trim()) return;
+    setSaving(true); setErr(null);
+    try {
+      const payload = { name: editing.name.trim(), description: editing.description.trim() || null };
+      onChange(editing.id
+        ? await api.updateRentableUnitInclusion(unit.id, editing.id, payload)
+        : await api.createRentableUnitInclusion(unit.id, payload));
+      setEditing(null);
+    } catch (e) {
+      setErr(e?.message || 'No se pudo guardar.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const remove = async () => {
+    setSaving(true); setErr(null);
+    try {
+      onChange(await api.deleteRentableUnitInclusion(unit.id, delInclusion.id));
+      setDelInclusion(null);
+    } catch (e) {
+      setErr(e?.message || 'No se pudo eliminar.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Card>
+      <Card.Header title="Qué incluye la tarifa" action={
+        <Button variant="secondary" size="sm" icon="fas fa-plus"
+          onClick={() => setEditing({ name: '', description: '' })}>Agregar</Button>
+      } />
+      <Card.Body>
+        {inclusions.length === 0 ? (
+          <p className={s.faint}>Sin inclusiones. Agrega lo que cubre el precio de la noche
+            (desayuno, fogata, ingreso al sitio, piscina…); el huésped las ve en la página pública.</p>
+        ) : (
+          <div className={t.inclusionList}>
+            {inclusions.map((inc) => (
+              <div key={inc.id} className={t.inclusionRow}>
+                <div className={t.inclusionInfo}>
+                  <h4 className={t.spaceName}>{inc.name}</h4>
+                  {inc.description && <p className={t.spaceDesc}>{inc.description}</p>}
+                </div>
+                <div className={t.spaceActions}>
+                  <IconButton icon="fas fa-pen" variant="light" title="Editar"
+                    onClick={() => setEditing({ id: inc.id, name: inc.name, description: inc.description || '' })} />
+                  <IconButton icon="fas fa-trash" variant="light" title="Eliminar"
+                    onClick={() => setDelInclusion(inc)} />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card.Body>
+
+      <Modal open={!!editing} size="sm" title={editing?.id ? 'Editar inclusión' : 'Agregar inclusión'}
+        onClose={() => setEditing(null)}
+        footer={<>
+          <Button variant="secondary" onClick={() => setEditing(null)}>Cancelar</Button>
+          <Button variant="primary" icon="fas fa-check" loading={saving} onClick={submit}>Guardar</Button>
+        </>}>
+        {editing && (
+          <div className={s.formCol}>
+            <Input label="Qué incluye" placeholder="Ej. Desayuno"
+              value={editing.name} onChange={(e) => setEditing((ed) => ({ ...ed, name: e.target.value }))} />
+            <Input label="Detalle" placeholder="Ej. Tipo americano, servido de 7 a 10 a. m."
+              value={editing.description} onChange={(e) => setEditing((ed) => ({ ...ed, description: e.target.value }))} />
+            {err && <div className={s.formError}><i className="fas fa-triangle-exclamation" /> {err}</div>}
+          </div>
+        )}
+      </Modal>
+
+      <Modal open={!!delInclusion} size="sm" title="Eliminar inclusión" onClose={() => setDelInclusion(null)}
+        footer={<>
+          <Button variant="secondary" onClick={() => setDelInclusion(null)}>Cancelar</Button>
+          <Button variant="danger" icon="fas fa-trash" loading={saving} onClick={remove}>Eliminar</Button>
+        </>}>
+        ¿Eliminar <strong>{delInclusion?.name}</strong> de lo que incluye la tarifa?
+      </Modal>
+    </Card>
   );
 }
 

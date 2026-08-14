@@ -79,3 +79,15 @@
 .spaceName { margin: 0; font-size: var(--text-base); color: var(--gray-900); }
 .spaceDesc { margin: 3px 0 0; color: var(--gray-600); font-size: var(--text-sm); }
 .spaceActions { display: inline-flex; gap: 6px; flex-shrink: 0; }
+
+/* ── Qué incluye la tarifa (lista simple: nombre + detalle, sin fotos) ── */
+.inclusionList { display: flex; flex-direction: column; }
+.inclusionRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+}
+.inclusionRow + .inclusionRow { border-top: 1px solid var(--border-color); }
+.inclusionInfo { min-width: 0; }

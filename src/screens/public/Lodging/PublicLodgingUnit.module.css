@@ -137,24 +137,40 @@
 .sectionTitle { margin: 0 0 10px; padding: 0 4px; font-size: var(--text-md); color: var(--text-heading); font-weight: 800; }
 .description { margin: 0; padding: 0 4px; color: var(--text-body); font-size: var(--text-base); line-height: 1.6; white-space: pre-line; }
 
+/* ── Incluye (lo que cubre la tarifa) ── */
+.inclusions {
+  list-style: none;
+  margin: 0;
+  padding: 4px 16px;
+  background: var(--surface-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+}
+.inclusion { display: flex; align-items: flex-start; gap: 11px; padding: 12px 0; }
+.inclusion + .inclusion { border-top: 1px solid var(--border-color); }
+.inclusionIco {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  margin-top: 1px;
+  border-radius: 50%;
+  background: var(--color-primary-050);
+  color: var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--text-xs);
+}
+.inclusionText { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.inclusionName { font-size: var(--text-base); font-weight: 700; color: var(--text-heading); }
+.inclusionDesc { font-size: var(--text-sm); color: var(--text-muted); }
+
 .spaces { display: flex; flex-direction: column; gap: 12px; }
 .space {
   background: var(--surface-card);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
   padding: 14px 16px;
-}
-.spaceHead { display: flex; align-items: flex-start; gap: 11px; }
-.spaceIco {
-  width: 34px;
-  height: 34px;
-  flex-shrink: 0;
-  border-radius: 9px;
-  background: var(--color-primary-050);
-  color: var(--color-primary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 .spaceName { margin: 0; font-size: var(--text-base); font-weight: 700; color: var(--text-heading); }
 .spaceDesc { margin: 2px 0 0; font-size: var(--text-sm); color: var(--text-muted); }

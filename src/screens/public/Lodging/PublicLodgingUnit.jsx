@@ -79,13 +79,8 @@ function SpaceBlock({ space, onOpen }) {
   const files = (space.files || []).filter((f) => f.url);
   return (
     <div className={s.space}>
-      <div className={s.spaceHead}>
-        <span className={s.spaceIco}><i className="fas fa-door-open" /></span>
-        <div>
-          <h3 className={s.spaceName}>{space.name}</h3>
-          {space.description && <p className={s.spaceDesc}>{space.description}</p>}
-        </div>
-      </div>
+      <h3 className={s.spaceName}>{space.name}</h3>
+      {space.description && <p className={s.spaceDesc}>{space.description}</p>}
       {files.length > 0 && (
         <div className={s.spacePhotos}>
           {/* Enlace real a la foto: si algo falla con el visor, sigue abriéndose en otra pestaña. */}
@@ -167,6 +162,7 @@ export function PublicLodgingUnit({ companyUsername, unitId }) {
 
   const generalFiles = (unit.files || []).filter((f) => f.url);
   const spaces = (unit.spaces || []).filter((sp) => sp.name);
+  const inclusions = (unit.inclusions || []).filter((inc) => inc.name);
 
   const facts = [
     { icon: 'fas fa-users', label: 'Capacidad', value: capacityText(unit) },
@@ -228,6 +224,23 @@ export function PublicLodgingUnit({ companyUsername, unitId }) {
           <section>
             <h2 className={s.sectionTitle}>Acerca de este lugar</h2>
             <p className={s.description}>{unit.description}</p>
+          </section>
+        )}
+
+        {inclusions.length > 0 && (
+          <section>
+            <h2 className={s.sectionTitle}>Incluye</h2>
+            <ul className={s.inclusions}>
+              {inclusions.map((inc) => (
+                <li key={inc.id} className={s.inclusion}>
+                  <span className={s.inclusionIco}><i className="fas fa-check" /></span>
+                  <span className={s.inclusionText}>
+                    <span className={s.inclusionName}>{inc.name}</span>
+                    {inc.description && <span className={s.inclusionDesc}>{inc.description}</span>}
+                  </span>
+                </li>
+              ))}
+            </ul>
           </section>
         )}
 
