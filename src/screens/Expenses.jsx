@@ -4,7 +4,8 @@ import { Card, DataTable, Badge, Button, FilterBar, Pagination } from '../compon
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { useIsMobile } from '../lib/useIsMobile.js';
-import { todayIso } from '../lib/orderLabels.js';
+import { todayIso, firstNameOf } from '../lib/orderLabels.js';
+import { usePermissions } from '../lib/permissions/usePermissions.js';
 import { expenseMoney, monthStartIso } from '../lib/expenseLabels.js';
 import { formatShortDate } from '../lib/dates.js';
 import s from './screens.module.css';
@@ -19,17 +20,21 @@ const STATUS_OPTIONS = [
 // Listado de gastos de la compañía activa. Las fechas van inline (rango, mes actual por
 // defecto); el resto de filtros usa el modal del FilterBar con chips (patrón del listado de
 // productos, inlineThreshold=0): categoría (árbol completo como selector, filtra incluyendo
-// su subárbol), método de pago y estado. Todo vive en la URL para que volver desde el
-// detalle conserve la consulta.
+// su subárbol), método de pago, estado y quién registró (solo admin: el empleado con
+// api-module-expenses-own siempre ve únicamente lo suyo). Todo vive en la URL para que
+// volver desde el detalle conserve la consulta.
 export function Expenses() {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const { can } = usePermissions();
+  const isExpensesAdmin = can('api-module-expenses');
   const [params, setParams] = useSearchParams();
   const dateFrom = params.get('date_from') || monthStartIso();
   const dateTo = params.get('date_to') || todayIso();
   const categoryId = params.get('category_id') || undefined;
   const paymentMethod = params.get('payment_method') || undefined;
   const status = params.get('status') || undefined;
+  const createdBy = params.get('created_by') || undefined;
   const page = Math.max(1, Number(params.get('page')) || 1);
 
   const setQuery = (next = {}, nextPage = 1) => {
@@ -41,18 +46,20 @@ export function Expenses() {
     const cat = 'category_id' in next ? next.category_id : categoryId;
     const pay = 'payment_method' in next ? next.payment_method : paymentMethod;
     const st = 'status' in next ? next.status : status;
+    const creator = 'created_by' in next ? next.created_by : createdBy;
     if (cat) q.category_id = cat;
     if (pay) q.payment_method = pay;
     if (st) q.status = st;
+    if (creator) q.created_by = creator;
     if (nextPage > 1) q.page = String(nextPage);
     setParams(q);
   };
 
   const fetcher = React.useCallback(
-    () => api.expenses({ dateFrom, dateTo, categoryId, paymentMethod, status, page }),
-    [dateFrom, dateTo, categoryId, paymentMethod, status, page],
+    () => api.expenses({ dateFrom, dateTo, categoryId, paymentMethod, status, createdBy, page }),
+    [dateFrom, dateTo, categoryId, paymentMethod, status, createdBy, page],
   );
-  const { data, loading, error } = useResource(fetcher, EMPTY, [dateFrom, dateTo, categoryId, paymentMethod, status, page]);
+  const { data, loading, error } = useResource(fetcher, EMPTY, [dateFrom, dateTo, categoryId, paymentMethod, status, createdBy, page]);
   const rows = data.items || [];
   const pg = data.pagination;
 
@@ -60,6 +67,17 @@ export function Expenses() {
   // FilterBar lo pinta como selector dentro del modal (y el backend filtra por subárbol).
   const treeFetcher = React.useCallback(() => api.expenseCategoriesTree(), []);
   const { data: tree } = useResource(treeFetcher, [], []);
+
+  // El endpoint de creadores es solo para admin (el empleado ya está limitado a lo suyo).
+  const creatorsFetcher = React.useCallback(
+    () => (isExpensesAdmin ? api.expenseCreators() : Promise.resolve([])),
+    [isExpensesAdmin],
+  );
+  const { data: creators } = useResource(creatorsFetcher, [], [isExpensesAdmin]);
+  const creatorOptions = React.useMemo(
+    () => (creators || []).map((c) => ({ value: String(c.user_id), label: c.name })),
+    [creators],
+  );
 
   const { data: paymentMethods } = useResource(api.paymentMethods, [], []);
   const paymentOptions = React.useMemo(
@@ -84,6 +102,10 @@ export function Expenses() {
     { key: 'supplier_name', header: 'Proveedor', ellipsis: true, render: (r) => r.supplier_name || <span className={s.faint}>—</span> },
     { key: 'payment_method', header: 'Pago', width: 150, ellipsis: true, render: (r) => r.payment_method_name || <span className={s.faint}>—</span> },
     {
+      key: 'created_by_name', header: 'Registró', width: 120, ellipsis: true,
+      render: (r) => firstNameOf(r.created_by_name) || <span className={s.faint}>—</span>,
+    },
+    {
       key: 'status', header: 'Estado', width: 110,
       render: (r) => (Number(r.status) === 1
         ? <Badge variant="success" dot>Activo</Badge>
@@ -97,6 +119,9 @@ export function Expenses() {
     { key: 'category_id', type: 'select', label: 'Categoría', icon: 'fas fa-tags', options: categoryOptions, placeholder: 'Todas las categorías' },
     { key: 'payment_method', type: 'select', label: 'Método de pago', icon: 'fas fa-wallet', options: paymentOptions },
     { key: 'status', type: 'select', label: 'Estado', icon: 'fas fa-circle-check', options: STATUS_OPTIONS },
+    ...(isExpensesAdmin
+      ? [{ key: 'created_by', type: 'select', label: 'Registró', icon: 'fas fa-user', options: creatorOptions, placeholder: 'Todos los usuarios' }]
+      : []),
   ];
 
   const onFilters = (next) => {
@@ -109,6 +134,7 @@ export function Expenses() {
       category_id: next.category_id,
       payment_method: next.payment_method,
       status: next.status,
+      created_by: next.created_by,
     });
   };
 
@@ -116,7 +142,7 @@ export function Expenses() {
     <div className={s.page}>
       <FilterBar
         filters={filterDefs}
-        values={{ date_from: dateFrom, date_to: dateTo, category_id: categoryId, payment_method: paymentMethod, status }}
+        values={{ date_from: dateFrom, date_to: dateTo, category_id: categoryId, payment_method: paymentMethod, status, created_by: createdBy }}
         onChange={onFilters}
         inlineThreshold={0}
         resultCount={pg?.total}

@@ -23,9 +23,13 @@ const qs = (params = {}) => {
 };
 
 export const expensesService = {
-  // Listado paginado por rango de fechas, categoría (incluye su subárbol), método de pago y estado.
-  expenses: ({ dateFrom = '', dateTo = '', categoryId = '', paymentMethod = '', status = '', page = 1, perPage = 15 } = {}) =>
-    http.get(`${base()}/expenses${qs({ date_from: dateFrom, date_to: dateTo, category_id: categoryId, payment_method: paymentMethod, status, page, per_page: perPage })}`, { paginated: true }),
+  // Listado paginado por rango de fechas, categoría (incluye su subárbol), método de pago,
+  // estado y usuario que registró.
+  expenses: ({ dateFrom = '', dateTo = '', categoryId = '', paymentMethod = '', status = '', createdBy = '', page = 1, perPage = 15 } = {}) =>
+    http.get(`${base()}/expenses${qs({ date_from: dateFrom, date_to: dateTo, category_id: categoryId, payment_method: paymentMethod, status, created_by: createdBy, page, per_page: perPage })}`, { paginated: true }),
+
+  // Usuarios que han registrado gastos en la compañía, para el filtro del listado (solo admin).
+  expenseCreators: () => http.get(`${base()}/expenses/creators`),
 
   // Detalle completo: líneas con categoría, fotos con URL firmada temporal, proveedor, creador.
   expense: (expenseId) => http.get(`${base()}/expenses/${expenseId}`),
@@ -42,9 +46,11 @@ export const expensesService = {
   // Quita una foto del gasto y la borra de S3 (irreversible). Devuelve el detalle.
   detachExpenseFile: (expenseId, name) => http.del(`${base()}/expenses/${expenseId}/files${qs({ name })}`),
 
-  // Totales por categoría raíz con drill-down a subcategorías, excluyendo anulados.
-  expensesSummary: ({ dateFrom = '', dateTo = '' } = {}) =>
-    http.get(`${base()}/expenses/summary${qs({ date_from: dateFrom, date_to: dateTo })}`),
+  // Reporte del rango: totales por categoría raíz con drill-down, conteo, promedio, gasto
+  // más alto y distribuciones por método de pago y usuario, excluyendo anulados. Los filtros
+  // de usuario y categoría (con su subárbol) aplican a todo el reporte.
+  expensesSummary: ({ dateFrom = '', dateTo = '', createdBy = '', categoryId = '' } = {}) =>
+    http.get(`${base()}/expenses/summary${qs({ date_from: dateFrom, date_to: dateTo, created_by: createdBy, category_id: categoryId })}`),
 
   // Árbol de categorías visible para la compañía (globales + propias), raíces con children[].
   expenseCategoriesTree: () => http.get(`${base()}/expense-categories/tree`),

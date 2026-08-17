@@ -1,3 +1,84 @@
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--border-color);
+}
+.tile {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px 20px;
+  background: var(--surface-card);
+  min-width: 0;
+}
+.tileLabel {
+  color: var(--gray-500);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.tileValue {
+  color: var(--gray-900);
+  font-size: var(--text-xl);
+  font-weight: 700;
+  white-space: nowrap;
+}
+.tileHint {
+  color: var(--gray-500);
+  font-size: var(--text-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+@media (max-width: 900px) {
+  .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+.cardsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .cardsGrid { grid-template-columns: minmax(0, 1fr); }
+}
+
+.dist { list-style: none; margin: 0; padding: 6px; display: flex; flex-direction: column; }
+.distRow {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) 52px auto;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 10px;
+  border-bottom: 1px solid var(--border-color);
+}
+.distRow:last-child { border-bottom: none; }
+.distIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  background: var(--gray-100);
+  color: var(--gray-500);
+  font-size: 0.78rem;
+}
+.distInfo { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.distName {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  font-weight: 600;
+  color: var(--gray-800);
+  font-size: var(--text-base);
+}
+.distCount { color: var(--gray-500); font-size: var(--text-sm); font-weight: 400; white-space: nowrap; }
+.distTotal { font-weight: 700; color: var(--gray-900); white-space: nowrap; }
+.distEmpty { margin: 0; padding: 16px 20px; }
+
 .grandTotal {
   display: inline-flex;
   align-items: baseline;

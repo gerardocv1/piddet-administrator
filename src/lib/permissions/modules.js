@@ -44,8 +44,15 @@ export const MODULE_GROUPS = [
   {
     section: 'Operación',
     items: [
-      // Facturas: órdenes del día consultables por fecha; el detalle (/invoices/:orderId) reusa este permiso.
-      { to: '/invoices', label: 'Facturas', icon: 'fas fa-file-invoice', perm: 'api-module-orders' },
+      // Ventas: facturas (órdenes consultables por fecha; el detalle /invoices/:orderId reusa el
+      // permiso) y reporte (resumen, métodos de pago, top productos y ventas por día, con filtros).
+      {
+        label: 'Ventas', icon: 'fas fa-sack-dollar',
+        children: [
+          { to: '/invoices', label: 'Facturas', icon: 'fas fa-file-invoice', perm: 'api-module-orders' },
+          { to: '/sales-report', label: 'Reporte', icon: 'fas fa-chart-line', perm: 'api-module-orders' },
+        ],
+      },
       // Gastos: registro (encabezado + líneas + fotos), resumen por categoría y categorías propias.
       // El detalle (/expenses/:expenseId) y la creación (/expenses/new, /expenses/quick) reusan el
       // permiso del listado; anular requiere además `expense-annul` (solo oculta el botón).

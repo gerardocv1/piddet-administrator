@@ -18,6 +18,7 @@ import { PublicLodging } from './screens/public/Lodging/PublicLodging.jsx';
 import { PublicLodgingUnit } from './screens/public/Lodging/PublicLodgingUnit.jsx';
 import { Invoices } from './screens/Invoices.jsx';
 import { InvoiceDetail } from './screens/InvoiceDetail.jsx';
+import { SalesReport } from './screens/SalesReport.jsx';
 import { Expenses } from './screens/Expenses.jsx';
 import { RentableUnits } from './screens/RentableUnits.jsx';
 import { RentableUnitDetail } from './screens/RentableUnitDetail.jsx';
@@ -169,6 +170,7 @@ function AdminApp() {
             <Route path="menus/:menuId" element={<RequirePermission path="/menus"><MenuDetail /></RequirePermission>} />
             <Route path="invoices" element={<RequirePermission path="/invoices"><Invoices /></RequirePermission>} />
             <Route path="invoices/:orderId" element={<RequirePermission path="/invoices"><InvoiceDetail /></RequirePermission>} />
+            <Route path="sales-report" element={<RequirePermission path="/sales-report"><SalesReport /></RequirePermission>} />
             <Route path="expenses" element={<RequirePermission path="/expenses"><Expenses /></RequirePermission>} />
             <Route path="expenses/new" element={<RequirePermission path="/expenses"><ExpenseForm /></RequirePermission>} />
             <Route path="expenses/quick" element={<RequirePermission path="/expenses"><ExpenseWizard /></RequirePermission>} />

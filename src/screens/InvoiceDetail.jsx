@@ -4,7 +4,8 @@ import { Card, Badge, Button, Spinner, ConfirmDialog, PageHeader } from '../comp
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { usePermissions } from '../lib/permissions/usePermissions.js';
-import { orderStatusOf, paymentStatusOf, serviceTypeLabel, originLabel } from '../lib/orderLabels.js';
+import { orderStatusOf, paymentStatusOf, serviceTypeLabel, originLabel, timeOf } from '../lib/orderLabels.js';
+import { formatShortDate } from '../lib/dates.js';
 import { useSetPageTitle } from '../lib/pageTitle.jsx';
 import s from './screens.module.css';
 import t from './InvoiceDetail.module.css';
@@ -27,7 +28,7 @@ export function InvoiceDetail() {
   const [busy, setBusy] = React.useState(false);
   const [actionError, setActionError] = React.useState('');
 
-  // Conserva la consulta del listado (?date=&page=) al volver.
+  // Conserva la consulta del listado (?date_from=&date_to=&status=&creator_id=&page=) al volver.
   const goBack = () => navigate(`/invoices${params.toString() ? `?${params.toString()}` : ''}`);
 
   const doCancel = async (reason) => {
@@ -82,7 +83,7 @@ export function InvoiceDetail() {
       <PageHeader
         onBack={goBack}
         backTitle="Volver a facturas"
-        subtitle={order.created_date}
+        subtitle={`${formatShortDate(order.created_date)} · ${timeOf(order.created_date)}`}
         actions={<>
           <Badge variant={st.variant} dot>{status?.name || st.label}</Badge>
           <Badge variant={pay.variant}>{pay.label}</Badge>

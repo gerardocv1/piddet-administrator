@@ -37,3 +37,9 @@ export const todayIso = () => {
 
 /** Hora HH:mm a partir del `created_date` del backend ("YYYY-MM-DD HH:mm:ss"). */
 export const timeOf = (createdDate) => (createdDate || '').slice(11, 16) || '—';
+
+/** Nombre corto: solo el primer nombre ("María Restrepo" → "María"). */
+export const firstNameOf = (name) => String(name || '').trim().split(/\s+/)[0] || '';
+
+/** La factura tiene descuento aplicado (el backend manda el número y su formato). */
+export const hasDiscount = (order) => Number(order?.discount ?? 0) > 0;

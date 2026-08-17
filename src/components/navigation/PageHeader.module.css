@@ -9,10 +9,19 @@
   gap: 14px;
 }
 
-.top { display: flex; align-items: center; gap: 12px; }
+.top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .text { flex: 1; min-width: 0; }
 .subtitle { color: var(--gray-700); font-size: var(--text-base); font-weight: 600; }
 .actions { display: inline-flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+/* En móvil las acciones (badges + botones) no caben junto al subtítulo: van a su propia
+   fila, alineadas a la izquierda y con los botones a ancho completo. */
+@media (max-width: 860px) {
+  .top { row-gap: 10px; }
+  .text { flex: 1 1 auto; }
+  .actions { flex: 1 0 100%; }
+  .actions button { flex: 1 1 auto; justify-content: center; }
+}
 
 .meta {
   display: grid;

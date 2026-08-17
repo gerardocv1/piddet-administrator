@@ -37,7 +37,8 @@ const META = {
   '/reservations': { title: 'Reservas', crumb: 'Hospedaje' },
   '/rentable-units': { title: 'Unidades', crumb: 'Hospedaje' },
   '/expenses': { title: 'Gastos', crumb: 'Operación' },
-  '/invoices': { title: 'Facturas', crumb: 'Operación' },
+  '/invoices': { title: 'Facturas', crumb: 'Ventas' },
+  '/sales-report': { title: 'Reporte de ventas', crumb: 'Ventas' },
 };
 
 /** Chrome de la app autenticada: menú lateral + barra superior + contenido (Outlet). */

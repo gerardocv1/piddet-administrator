@@ -1,7 +1,7 @@
 // Servicio: facturas/órdenes de la compañía activa (consulta y cancelación).
 //
 // Company-scoped: las rutas cuelgan de /companies/{company}/orders. El listado se consulta
-// por fecha (un solo día; sin `date` el backend asume hoy) y viene paginado. El detalle
+// por rango de fechas (sin fechas el backend asume hoy) y viene paginado. El detalle
 // devuelve la orden completa: ítems con opciones, impuestos agrupados, pagos, estado y
 // los usuarios OWNER (cliente) y CREATOR (quien la creó).
 
@@ -21,9 +21,14 @@ const qs = (params = {}) => {
 };
 
 export const ordersService = {
-  // Listado paginado de órdenes de un día. { date: 'YYYY-MM-DD', page }
-  orders: ({ date = '', page = 1, perPage = 15 } = {}) =>
-    http.get(`${base()}/orders${qs({ date, page, per_page: perPage })}`, { paginated: true }),
+  // Listado paginado por rango de fechas, estados (CSV) y usuario que registró la orden.
+  orders: ({ dateFrom = '', dateTo = '', status = '', creatorId = '', page = 1, perPage = 15 } = {}) =>
+    http.get(
+      `${base()}/orders${qs({ date_from: dateFrom, date_to: dateTo, status, creator_id: creatorId, page, per_page: perPage })}`,
+      { paginated: true },
+    ),
+  // Usuarios que han registrado órdenes en la compañía: [{ user_id, name, first_name }].
+  orderCreators: () => http.get(`${base()}/orders/creators`),
   // Detalle completo de una orden por uuid.
   order: (orderId) => http.get(`${base()}/orders/${orderId}`),
   // Cancela la factura (permiso order-cancel). El motivo es obligatorio y queda en el historial

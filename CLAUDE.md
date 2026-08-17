@@ -51,10 +51,14 @@ conectar: `cp .env.example .env`, define `VITE_API_URL` y reinicia. Detalle en `
   que decide si se publica en la portada pública y si su carta es accesible; apagado se sigue
   administrando con normalidad), `user-administrator` (Usuarios: administración de los usuarios vinculados a la
   compañía — vincular/desvincular, editar datos básicos, asignar roles y fijar contraseña
-  temporal), `api-module-orders` (Facturas: órdenes de la compañía consultables por fecha en
-  `/invoices` — un solo día, hoy por defecto — con detalle completo en
+  temporal), `api-module-orders` (Facturas: órdenes de la compañía consultables en
+  `/invoices` por rango de fechas —hoy por defecto—, estado y usuario que las registró, con detalle completo en
   `/invoices/:orderId`: ítems con opciones, impuestos, pagos, cliente y creador; el detalle
-  reusa el permiso del listado; también gatea el dash de Ventas del Dashboard),
+  reusa el permiso del listado; también gatea el dash de Ventas del Dashboard y el
+  Reporte de ventas en `/sales-report` — resumen de subtotal/descuentos/impuestos/total,
+  ticket promedio, distribución por método de pago, top productos y ventas por día, con
+  filtros de rango de fechas, usuario creador y producto vía
+  `api.salesReport` → `GET /companies/{company}/metrics/sales-report`),
   `order-cancel` (cancelar una factura desde su detalle con motivo obligatorio — irreversible,
   el motivo queda en el historial de estados y la orden sale de las métricas de ventas; solo
   gatea el botón),
@@ -67,7 +71,9 @@ conectar: `cp .env.example .env`, define `VITE_API_URL` y reinicia. Detalle en `
   privadas en S3, proveedor con creación al vuelo y método de pago; listado por rango de
   fechas en `/expenses`, creación en `/expenses/new` — y asistente paso a paso optimizado
   para móvil en `/expenses/quick`, accesible desde el Dashboard —, detalle de solo lectura en
-  `/expenses/:expenseId`, resumen por categoría raíz en `/expenses/summary` y categorías en
+  `/expenses/:expenseId`, reporte en `/expenses/summary` — tablero del rango filtrable por
+  usuario y categoría (subárbol): total/conteo/promedio/gasto más alto, distribución por
+  método de pago y por usuario, y top de categorías raíz con drill-down — y categorías en
   `/expense-categories` — árbol global sembrado por la plataforma + categorías propias por
   compañía; todo reusa este permiso; las FOTOS del gasto sí se editan desde el detalle mientras
   esté activo: agregar y quitar, borrando también de S3; también gatea el dash de Gastos del

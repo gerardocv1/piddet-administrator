@@ -29,6 +29,11 @@ export const metricsService = {
   salesComparison: ({ days = 7, endDate, force = false } = {}) =>
     http.get(`${base()}/metrics/sales-comparison${qs({ days, end_date: endDate, force: force ? 1 : '' })}`),
 
+  // Reporte de ventas con rango de fechas libre (acotado a 92 días por el backend) y filtros
+  // opcionales por usuario creador y por producto/servicio (órdenes que lo incluyen).
+  salesReport: ({ dateFrom, dateTo, creatorId, itemId } = {}) =>
+    http.get(`${base()}/metrics/sales-report${qs({ date_from: dateFrom, date_to: dateTo, creator_id: creatorId, item_id: itemId })}`),
+
   // Reporte de gastos por día con KPIs (total, registros, promedio, mayor gasto) y deltas.
   // Con solo api-module-expenses-own el backend limita todo a los gastos del usuario.
   expensesReport: ({ days = 15, endDate, force = false } = {}) =>

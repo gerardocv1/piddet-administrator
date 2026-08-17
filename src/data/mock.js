@@ -1185,7 +1185,101 @@ function buildExpensesComparison(days, endDateStr, force) {
   };
 }
 
+// Reporte de ventas con rango libre y filtros (creator_id/item_id), misma forma que el backend.
+// Los filtros solo escalan los montos en demo, para que se note que la consulta cambió.
+function buildSalesReport(query) {
+  const toStr = query.get('date_to');
+  const fromStr = query.get('date_from');
+  let end = toStr ? new Date(toStr + 'T00:00:00') : new Date();
+  let start = fromStr ? new Date(fromStr + 'T00:00:00') : null;
+  if (!start) { start = new Date(end); start.setDate(end.getDate() - 6); }
+  if (start > end) [start, end] = [end, start];
+  const days = Math.min(92, Math.max(1, Math.round((end - start) / 86400000) + 1));
+
+  const factor = (query.get('creator_id') ? 0.45 : 1) * (query.get('item_id') ? 0.3 : 1);
+  const daily = mockDailyByType(days, end, factor);
+  const cur = mockSumByType(daily);
+
+  const total = cur.total;
+  const tax = Math.round(total * 0.16);
+  const discount = Math.round(total * 0.04);
+  const subtotal = total + discount - tax;
+
+  const methodShares = [
+    { payment_method_id: 'CASH', payment_method_entity_id: 'CASH', name: 'Efectivo', share: 0.46 },
+    { payment_method_id: 'TRANSFER', payment_method_entity_id: 'NEQUI', name: 'Nequi', share: 0.27 },
+    { payment_method_id: 'CREDIT_CARD', payment_method_entity_id: 'CREDIT_CARD', name: 'Tarjeta de crédito', share: 0.18 },
+    { payment_method_id: 'TRANSFER', payment_method_entity_id: 'DAVIPLATA', name: 'Daviplata', share: 0.09 },
+  ];
+  const methods = methodShares.map((m) => {
+    const value = Math.round(total * m.share);
+    return {
+      payment_method_id: m.payment_method_id,
+      payment_method_entity_id: m.payment_method_entity_id,
+      name: m.name,
+      orders_count: Math.max(1, Math.round(cur.ordersCount * m.share)),
+      value,
+      value_formatted: mockMoney(value),
+      percent: Math.round(m.share * 1000) / 10,
+    };
+  });
+  const paymentsTotal = methods.reduce((s, m) => s + m.value, 0);
+
+  const topShares = [
+    ['Hamburguesa de la casa', 0.22], ['Limonada de coco', 0.14], ['Picada familiar', 0.12],
+    ['Salchipapa especial', 0.09], ['Jugo natural', 0.07], ['Cerveza artesanal', 0.05],
+  ];
+  const topItems = topShares.map(([name, share], i) => {
+    const itemTotal = Math.round(total * share);
+    return {
+      item_id: 101 + i,
+      name,
+      quantity: Math.max(1, Math.round((itemTotal / 18000))),
+      total: itemTotal,
+      total_formatted: mockMoney(itemTotal),
+      percent: Math.round(share * 1000) / 10,
+    };
+  });
+
+  const avgTicket = cur.ordersCount > 0 ? total / cur.ordersCount : 0;
+
+  return {
+    period: {
+      start_date: daily[0]?.date ?? null,
+      end_date: daily[daily.length - 1]?.date ?? null,
+      days,
+    },
+    filters: {
+      creator_id: query.get('creator_id') ? Number(query.get('creator_id')) : null,
+      item_id: query.get('item_id') ? Number(query.get('item_id')) : null,
+    },
+    totals: {
+      subtotal,
+      subtotal_formatted: mockMoney(subtotal),
+      discount,
+      discount_formatted: mockMoney(discount),
+      tax,
+      tax_formatted: mockMoney(tax),
+      total,
+      total_formatted: mockMoney(total),
+      orders_count: cur.ordersCount,
+      avg_ticket: avgTicket,
+      avg_ticket_formatted: mockMoney(avgTicket),
+    },
+    payments: {
+      total: paymentsTotal,
+      total_formatted: mockMoney(paymentsTotal),
+      methods,
+    },
+    top_items: topItems,
+    daily,
+  };
+}
+
 function resolveMetricsMock(path, query) {
+  if (path.match(/^\/companies\/[^/]+\/metrics\/sales-report$/)) {
+    return buildSalesReport(query);
+  }
   if (path.match(/^\/companies\/[^/]+\/metrics\/sales-by-type$/)) {
     const days = Math.max(1, Math.min(30, parseInt(query.get('days'), 10) || 15));
     return buildSalesByTypeReport(days, query.get('end_date'), query.get('force') === '1');
@@ -1471,8 +1565,11 @@ function buildMockInvoice({ seq, dayOffset, time, status, statusPayment, originC
     created_at: createdAt,
     origin_code: originCode,
     total_formatted: orderMoney(total),
+    discount_formatted: orderMoney(discount),
     created_date: createdDate,
     customer_name: customerName,
+    creator_first_name: creator?.first_name ?? null,
+    creator_user_id: creator?.user_id ?? null,
     date,
     detail: {
       order,
@@ -1532,7 +1629,7 @@ const mockInvoiceOrders = [
   buildMockInvoice({
     seq: 9, dayOffset: 0, time: '12:30', status: 'ACCEPTED_IN_STORE', statusPayment: 'PAID',
     originCode: 'POS', serviceType: 'TAKE_OUT',
-    customer: demoCustomers[2], creator: demoCreators[1], taxPct: 0.19, paymentMethod: 'Nequi',
+    customer: demoCustomers[2], creator: demoCreators[1], taxPct: 0.19, paymentMethod: 'Nequi', discount: 5000,
     items: [
       { name: 'Wrap de pollo', quantity: 2, value: 14000, options: [{ name: 'Salsa picante', value: 0 }, { name: 'Papas medianas', value: 5000 }] },
     ],
@@ -1555,7 +1652,7 @@ const mockInvoiceOrders = [
   buildMockInvoice({
     seq: 6, dayOffset: 1, time: '13:10', status: 'ACCEPTED_IN_STORE', statusPayment: 'PAID',
     originCode: 'POS', serviceType: 'TAKE_OUT',
-    customer: demoCustomers[2], creator: demoCreators[0],
+    customer: demoCustomers[2], creator: demoCreators[0], discount: 3000,
     items: [{ name: 'Ensalada césar', quantity: 2, value: 16000 }],
   }),
   buildMockInvoice({
@@ -1572,11 +1669,24 @@ function resolveOrdersMock(path, query, { method = 'GET', body } = {}) {
   const sub = m[1] || '';
 
   if (sub === '') {
-    const date = query.get('date') || isoDay(0);
+    const from = query.get('date_from') || query.get('date') || isoDay(0);
+    const to = query.get('date_to') || query.get('date') || from;
+    const statuses = (query.get('status') || '').split(',').map((x) => x.trim()).filter(Boolean);
+    const creatorId = query.get('creator_id') || '';
     const rows = mockInvoiceOrders
-      .filter((o) => o.date === date)
+      .filter((o) => o.date >= from && o.date <= to)
+      .filter((o) => statuses.length === 0 || statuses.includes(o.status))
+      .filter((o) => !creatorId || String(o.creator_user_id) === String(creatorId))
       .map(({ detail, date: _d, ...row }) => row);
     return mockPaginate(rows, query);
+  }
+
+  if (sub === '/creators') {
+    return demoCreators.map((c) => ({
+      user_id: c.user_id,
+      name: `${c.first_name} ${c.last_name}`.trim(),
+      first_name: c.first_name,
+    }));
   }
 
   // Cancelación con motivo obligatorio: /orders/{uuid}/cancel
@@ -1937,8 +2047,8 @@ export const mockExpenses = [
     notes: null,
     status: 1,
     supplier_id: 3,
-    created_by: 1,
-    created_by_name: 'Gerardo Cruz',
+    created_by: 2,
+    created_by_name: 'Laura Pérez',
     created_at: new Date(Date.now() - 3 * 864e5).toISOString(),
     annulled_by_name: null,
     annulled_at: null,
@@ -1991,6 +2101,7 @@ function decorateExpenseRow(e) {
     notes: e.notes,
     total: expenseTotal(e).toFixed(2),
     status: e.status,
+    created_by: e.created_by,
     created_by_name: e.created_by_name,
     supplier_name: mockExpenseSuppliers.find((s) => s.id === e.supplier_id)?.name ?? null,
     items_count: e.items.length,
@@ -2061,15 +2172,42 @@ function resolveExpensesMock(path, query, { method = 'GET', body } = {}) {
     return mockExpenseSuppliers.filter((s) => !q || s.name.toLowerCase().includes(q)).slice(0, 10);
   }
 
+  // Usuarios que han registrado gastos, distintos y ordenados por nombre (como el backend).
+  if (sub === 'expenses/creators') {
+    const byId = new Map();
+    mockExpenses.forEach((e) => { if (e.created_by != null) byId.set(e.created_by, e.created_by_name); });
+    return [...byId.entries()]
+      .map(([user_id, name]) => ({ user_id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  // Reporte de gastos: mismos agregados del backend, sumando a nivel de línea para que los
+  // totales de todas las cards sean consistentes cuando se filtra por subárbol de categoría.
   if (sub === 'expenses/summary') {
     const from = query.get('date_from') || expenseDayIso(30);
     const to = query.get('date_to') || expenseDayIso(0);
-    const byCat = new Map();
-    mockExpenses
+    const createdBy = query.get('created_by') ? Number(query.get('created_by')) : null;
+    const categoryId = query.get('category_id') ? Number(query.get('category_id')) : null;
+    const categoryPath = categoryId ? mockExpenseCategories.find((c) => c.id === categoryId)?.path : null;
+    const inSubtree = (catId) => {
+      if (!categoryPath) return true;
+      const path = mockExpenseCategories.find((c) => c.id === catId)?.path || '';
+      return path === categoryPath || path.startsWith(`${categoryPath}/`);
+    };
+
+    const perExpense = mockExpenses
       .filter((e) => e.status === 1 && e.expense_date >= from && e.expense_date <= to)
-      .forEach((e) => e.items.forEach((it) => {
-        byCat.set(it.expense_category_id, (byCat.get(it.expense_category_id) || 0) + Number(it.value));
-      }));
+      .filter((e) => createdBy == null || e.created_by === createdBy)
+      .map((e) => {
+        const lines = e.items.filter((it) => inSubtree(it.expense_category_id));
+        return { expense: e, lines, total: lines.reduce((s, it) => s + Number(it.value), 0) };
+      })
+      .filter((x) => x.lines.length > 0);
+
+    const byCat = new Map();
+    perExpense.forEach(({ lines }) => lines.forEach((it) => {
+      byCat.set(it.expense_category_id, (byCat.get(it.expense_category_id) || 0) + Number(it.value));
+    }));
     const byRoot = new Map();
     let total = 0;
     byCat.forEach((sum, catId) => {
@@ -2088,7 +2226,47 @@ function resolveExpensesMock(path, query, { method = 'GET', body } = {}) {
         .sort((a, b) => b.total - a.total)
         .map((r) => ({ ...r, total: r.total.toFixed(2) })),
     })).sort((a, b) => Number(b.total) - Number(a.total));
-    return { date_from: from, date_to: to, total: total.toFixed(2), roots };
+
+    const distribution = (keyOf, labelOf) => {
+      const groups = new Map();
+      perExpense.forEach((x) => {
+        const key = keyOf(x.expense);
+        if (!groups.has(key)) groups.set(key, { ...labelOf(x.expense), total: 0, count: 0 });
+        const g = groups.get(key);
+        g.total += x.total;
+        g.count += 1;
+      });
+      return [...groups.values()]
+        .sort((a, b) => b.total - a.total)
+        .map((g) => ({ ...g, total: g.total.toFixed(2) }));
+    };
+
+    const topRow = perExpense.reduce((mx, x) => (!mx || x.total > mx.total ? x : mx), null);
+
+    return {
+      date_from: from,
+      date_to: to,
+      total: total.toFixed(2),
+      count: perExpense.length,
+      average: (perExpense.length > 0 ? total / perExpense.length : 0).toFixed(2),
+      top_expense: topRow
+        ? {
+            id: topRow.expense.id,
+            expense_date: topRow.expense.expense_date,
+            supplier_name: mockExpenseSuppliers.find((sp) => sp.id === topRow.expense.supplier_id)?.name ?? null,
+            total: topRow.total.toFixed(2),
+          }
+        : null,
+      by_payment_method: distribution(
+        (e) => e.payment_method ?? '',
+        (e) => ({ id: e.payment_method, name: paymentMethodName(e.payment_method) ?? 'Sin método' }),
+      ),
+      by_creator: distribution(
+        (e) => e.created_by ?? '',
+        (e) => ({ user_id: e.created_by, name: e.created_by_name ?? 'Sin usuario' }),
+      ),
+      roots,
+    };
   }
 
   if (sub === 'expenses') {
@@ -2136,6 +2314,8 @@ function resolveExpensesMock(path, query, { method = 'GET', body } = {}) {
       if (payment && e.payment_method !== payment) return false;
       const status = query.get('status');
       if (status !== null && status !== '' && String(e.status) !== status) return false;
+      const creator = query.get('created_by');
+      if (creator && String(e.created_by) !== creator) return false;
       const catId = query.get('category_id');
       if (catId) {
         const cat = mockExpenseCategories.find((c) => c.id === Number(catId));
