@@ -10,8 +10,8 @@ const initials = (s = '') => s.split(' ').filter(Boolean).slice(0, 2).map((w) =>
 
 const matchesRoute = (pathname, to) => pathname === to || pathname.startsWith(`${to}/`);
 
-/** Grupo desplegable del menú: el padre expande/colapsa y agrupa rutas hijas. Se abre solo
- * si alguna ruta hija está activa. */
+/** Grupo desplegable del menú: el padre expande/colapsa y agrupa rutas hijas. Al navegar
+ * solo queda abierto el grupo con la ruta activa; los demás se colapsan. */
 function NavGroup({ item, onClose }) {
   const { pathname } = useLocation();
   // Entre hijos anidados (p. ej. /expenses y /expenses/summary) solo se resalta el más
@@ -21,7 +21,7 @@ function NavGroup({ item, onClose }) {
     .sort((a, b) => b.to.length - a.to.length)[0];
   const childActive = Boolean(activeChild);
   const [open, setOpen] = React.useState(childActive);
-  React.useEffect(() => { if (childActive) setOpen(true); }, [childActive]);
+  React.useEffect(() => { setOpen(childActive); }, [pathname, childActive]);
 
   return (
     <div className={styles.group}>
