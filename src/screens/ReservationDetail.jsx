@@ -28,6 +28,8 @@ export function ReservationDetail() {
   const [busy, setBusy] = React.useState(false);
   const [actionError, setActionError] = React.useState('');
   const [cancelOpen, setCancelOpen] = React.useState(false);
+  const [priceOpen, setPriceOpen] = React.useState(false);
+  const [newPrice, setNewPrice] = React.useState('');
   const [checkInOpen, setCheckInOpen] = React.useState(false);
   const [reopenOpen, setReopenOpen] = React.useState(false);
   const [payOpen, setPayOpen] = React.useState(false);
@@ -125,6 +127,16 @@ export function ReservationDetail() {
     if (ok) { setCancelOpen(false); reloadOrders(); }
   };
 
+  const openPriceModal = () => {
+    setNewPrice(String(Number(data.price_per_night) || ''));
+    setPriceOpen(true);
+  };
+  const doUpdatePrice = async () => {
+    if (newPrice === '' || Number(newPrice) < 0) return;
+    const ok = await run(() => api.updateReservationPrice(reservationId, Number(newPrice)), 'No se pudo modificar el precio.');
+    if (ok) setPriceOpen(false);
+  };
+
   const doCheckIn = async () => {
     const ok = await run(() => api.checkInReservation(reservationId), 'No se pudo hacer check-in.');
     if (ok) setCheckInOpen(false);
@@ -183,10 +195,13 @@ export function ReservationDetail() {
           {isCheckedOut && can('reservation-checkout') && (
             <Button variant="secondary" size="sm" icon="fas fa-rotate-left" onClick={() => setReopenOpen(true)}>Reabrir</Button>
           )}
-          {status !== RESERVATION_STATUS.CANCELLED && can('reservation-cancel') && (
+          {status !== RESERVATION_STATUS.CANCELLED && (
             <Dropdown
               trigger={<IconButton icon="fas fa-ellipsis-vertical" variant="light" size="sm" title="Más acciones" />}
-              items={[{ label: 'Cancelar esta reserva', icon: 'fas fa-ban', variant: 'danger', onClick: () => setCancelOpen(true) }]}
+              items={[
+                { label: 'Modificar precio', icon: 'fas fa-tag', disabled: !isOpen, onClick: openPriceModal },
+                ...(can('reservation-cancel') ? [{ label: 'Cancelar esta reserva', icon: 'fas fa-ban', variant: 'danger', onClick: () => setCancelOpen(true) }] : []),
+              ]}
             />
           )}
         </>}
@@ -482,6 +497,26 @@ export function ReservationDetail() {
         onConfirm={doCancel} onClose={() => setCancelOpen(false)}>
         <p>Se liberan las fechas de la unidad y se cancelan también todas las facturas de la reserva (abonos, consumos POS y cierre). Esta acción no se puede deshacer.</p>
       </ConfirmDialog>
+
+      <Modal open={priceOpen} size="sm" title="Modificar precio de la reserva" onClose={() => setPriceOpen(false)}
+        footer={<>
+          <Button variant="secondary" onClick={() => setPriceOpen(false)}>Cancelar</Button>
+          <Button variant="primary" icon="fas fa-check" loading={busy} onClick={doUpdatePrice}>Guardar precio</Button>
+        </>}>
+        <div className={s.formCol}>
+          <p className={s.muted}>
+            Cambia la tarifa por noche pactada con el huésped (por ejemplo, si la tarifa de la unidad
+            subió después de vender la reserva). El hospedaje y el total de la cuenta se recalculan.
+          </p>
+          <MoneyInput label="Tarifa por noche" icon="fas fa-dollar-sign" placeholder="0"
+            value={newPrice} onChange={setNewPrice} />
+          <div className={t.summary}>
+            <SummaryRow label="Tarifa actual" value={reservationMoney(data.price_per_night)} />
+            <SummaryRow label={`Hospedaje (${data.nights} ${Number(data.nights) === 1 ? 'noche' : 'noches'})`}
+              value={reservationMoney(Number(newPrice || 0) * Number(data.nights))} strong />
+          </div>
+        </div>
+      </Modal>
 
       <Modal open={checkInOpen} size="sm" title="Registrar entrada" onClose={() => setCheckInOpen(false)}
         footer={<>

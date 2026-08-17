@@ -2779,6 +2779,28 @@ function resolveShiftsMock(path, query, { method = 'GET', body } = {}) {
     return decorateShiftDetail(sh);
   }
 
+  m = sub.match(/^shifts\/(\d+)\/base$/);
+  if (m && method === 'PUT') {
+    const sh = mockShifts.find((x) => x.id === Number(m[1]) && visible(x));
+    if (!sh) return null;
+    if (sh.status !== 'OPEN') shiftConflict('El turno no está abierto');
+    sh.base_amount = Number(body?.base_amount || 0).toFixed(2);
+    return decorateShiftDetail(sh);
+  }
+
+  m = sub.match(/^shifts\/(\d+)\/cancel$/);
+  if (m && method === 'POST') {
+    const sh = mockShifts.find((x) => x.id === Number(m[1]) && visible(x));
+    if (!sh) return null;
+    if (sh.status !== 'OPEN') shiftConflict('El turno no está abierto');
+    sh.status = 'CANCELLED';
+    sh.cancellation_reason = body?.reason || null;
+    sh.cancelled_by = 1;
+    sh.cancelled_by_name = 'Gerardo Cruz';
+    sh.cancelled_at = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    return decorateShiftDetail(sh);
+  }
+
   m = sub.match(/^shifts\/(\d+)$/);
   if (m) {
     const sh = mockShifts.find((x) => x.id === Number(m[1]) && visible(x));
@@ -3276,6 +3298,12 @@ function resolveReservationsCore(sub, query, { method, body }) {
     const nights = Math.round((new Date(body.check_out_date) - new Date(body.check_in_date)) / 86400000);
     r.check_in_date = body.check_in_date; r.check_out_date = body.check_out_date; r.nights = nights;
     r.lodging_subtotal = (Number(r.price_per_night) * nights).toFixed(2); recalc(r); return detail(r);
+  }
+  if (action === 'price') {
+    if (![1, 2, 3].includes(r.status)) throw new Error('Solo se puede modificar el precio de una reserva abierta');
+    r.price_per_night = Number(body.price_per_night).toFixed(2);
+    r.lodging_subtotal = (Number(r.price_per_night) * Number(r.nights)).toFixed(2);
+    recalc(r); return detail(r);
   }
   if (action === 'orders') return [...(r.linked_orders || [])];
   if (action === 'checkout' && method === 'POST') {

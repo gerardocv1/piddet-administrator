@@ -15,6 +15,7 @@ export const SHIFT_TYPE_LABELS = {
 export const SHIFT_STATUS_LABELS = {
   OPEN: 'Abierto',
   CLOSED: 'Cerrado',
+  CANCELLED: 'Cancelado',
 };
 
 export const MOVEMENT_TYPE_LABELS = {

@@ -13,6 +13,7 @@ const EMPTY = { items: [], pagination: null };
 const STATUS_OPTIONS = [
   { value: 'OPEN', label: 'Abierto' },
   { value: 'CLOSED', label: 'Cerrado' },
+  { value: 'CANCELLED', label: 'Cancelado' },
 ];
 
 const TYPE_OPTIONS = [
@@ -84,7 +85,9 @@ export function Shifts() {
       key: 'status', header: 'Estado', width: 110,
       render: (r) => (r.status === 'OPEN'
         ? <Badge variant="success" dot>Abierto</Badge>
-        : <Badge variant="neutral" dot>Cerrado</Badge>),
+        : r.status === 'CANCELLED'
+          ? <Badge variant="danger" dot>Cancelado</Badge>
+          : <Badge variant="neutral" dot>Cerrado</Badge>),
     },
   ];
 

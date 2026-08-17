@@ -43,4 +43,11 @@ export const shiftsService = {
 
   // Cierra el turno con el dinero contado. { counted_amount, notes? } Devuelve el detalle.
   closeShift: (shiftId, data) => http.post(`${base()}/shifts/${shiftId}/close`, data),
+
+  // Corrige la base de un turno ABIERTO (solo admin del módulo). Devuelve el detalle.
+  updateShiftBase: (shiftId, baseAmount) => http.put(`${base()}/shifts/${shiftId}/base`, { base_amount: baseAmount }),
+
+  // Cancela un turno ABIERTO mal registrado, con motivo obligatorio (solo admin del módulo).
+  // Irreversible: queda CANCELLED, no recibe más movimientos ni bloquea nuevas aperturas.
+  cancelShift: (shiftId, reason) => http.post(`${base()}/shifts/${shiftId}/cancel`, { reason }),
 };

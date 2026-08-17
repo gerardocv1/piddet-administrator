@@ -110,6 +110,8 @@ export const reservationsService = {
   // Reabre una reserva finalizada conservando pagos y facturas (los consolidados no se anulan).
   reopenReservation: (reservationId) => http.patch(`${base()}/reservations/${reservationId}/reopen`),
   rescheduleReservation: (reservationId, data) => http.put(`${base()}/reservations/${reservationId}/dates`, data),
+  // Cambia la tarifa por noche (solo reserva abierta); el backend recalcula hospedaje y total.
+  updateReservationPrice: (reservationId, pricePerNight) => http.put(`${base()}/reservations/${reservationId}/price`, { price_per_night: pricePerNight }),
   syncReservationGuests: (reservationId, data) => http.put(`${base()}/reservations/${reservationId}/guests`, data),
   addReservationService: (reservationId, data) => http.post(`${base()}/reservations/${reservationId}/services`, data),
   removeReservationService: (reservationId, lineId) => http.del(`${base()}/reservations/${reservationId}/services/${lineId}`),

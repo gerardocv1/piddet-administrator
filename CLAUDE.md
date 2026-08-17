@@ -102,7 +102,13 @@ conectar: `cp .env.example .env`, define `VITE_API_URL` y reinicia. Detalle en `
   `api-module-shifts` (Turnos: sesiones de caja en `/shifts` — un turno GLOBAL por compañía o
   de EMPLEADO por cajero, se abre en `/shifts/open` con una base de dinero y el backend le
   asocia automáticamente las ventas y gastos como movimientos con monto/método denormalizados;
-  detalle con balance en vivo en `/shifts/:shiftId` y cierre paso a paso en
+  detalle con balance en vivo en `/shifts/:shiftId` — donde el admin del módulo puede, con el
+  turno ABIERTO y desde el menú «⋯» junto a *Cerrar turno*, corregir la base
+  (`api.updateShiftBase` → `PUT /shifts/{id}/base`) o cancelar el turno con motivo obligatorio
+  (`api.cancelShift` → `POST /shifts/{id}/cancel`, irreversible: queda `CANCELLED`, no recibe más
+  movimientos ni bloquea nuevas aperturas; sus movimientos se conservan como historial); ambas
+  rutas exigen `api-module-shifts` (sin variante own) y para el GLOBAL además
+  `shift-global-admin` — y cierre paso a paso en
   `/shifts/:shiftId/close` — contar dinero → balance (base + ventas de todos los métodos −
   gastos, con desglose informativo) → confirmar, registrando sobrante/faltante como ajuste. La
   diferencia se respalda con un DOCUMENTO CONTABLE real para que la contabilidad cuadre con la
