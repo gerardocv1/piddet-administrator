@@ -201,10 +201,11 @@ export const mockRoles = [
   { id: 7, name: 'cook', label: 'Cocinero', description: 'Operación de cocina', permissions: [] },
 ];
 
-// Roles asignables a un usuario de la compañía (el backend excluye super-admin). Se calcula en
+// Roles asignables a un usuario de la compañía (el backend excluye los de sistema). Se calcula en
 // cada llamada para que los roles creados en la demo aparezcan de inmediato.
+const NON_ASSIGNABLE_ROLES = ['super-admin', 'client', 'employee'];
 export const mockAssignableRoles = () => mockRoles
-  .filter((r) => r.name !== 'super-admin')
+  .filter((r) => !NON_ASSIGNABLE_ROLES.includes(r.name))
   .map(({ name, label, description, permissions }) => ({ name, label, description, permissions }));
 
 // Catálogo demo de permisos asignables (is_api = true) agrupado por módulo, como lo expone el
@@ -280,11 +281,11 @@ export const mockPermissionCatalog = (() => {
 // Usuarios vinculados a la compañía activa (forma del backend: datos básicos + roles + permisos
 // directos, adicionales a los heredados por rol).
 export const mockUsers = [
-  { id: 1, name: 'Gerardo Cruz', first_name: 'Gerardo', last_name: 'Cruz', phone_code: '57', phone_number: '3001234567', email: 'gerardo@piddet.com', status: true, roles: [{ name: 'admin', label: 'Administrador' }], direct_permissions: [] },
-  { id: 2, name: 'María López', first_name: 'María', last_name: 'López', phone_code: '57', phone_number: '3112223344', email: 'maria@piddet.com', status: true, roles: [{ name: 'cashier', label: 'Cajero' }], direct_permissions: ['order-cancel'] },
-  { id: 3, name: 'Carlos Mejía', first_name: 'Carlos', last_name: 'Mejía', phone_code: '57', phone_number: '3205556677', email: null, status: true, roles: [{ name: 'waiter', label: 'Mesero' }], direct_permissions: [] },
-  { id: 4, name: 'Ana Ruiz', first_name: 'Ana', last_name: 'Ruiz', phone_code: '57', phone_number: '3158889900', email: null, status: false, roles: [{ name: 'cook', label: 'Cocinero' }], direct_permissions: [] },
-  { id: 5, name: 'Jorge Díaz', first_name: 'Jorge', last_name: 'Díaz', phone_code: '57', phone_number: '3014441122', email: null, status: true, roles: [{ name: 'waiter', label: 'Mesero' }], direct_permissions: ['api-module-expenses-own'] },
+  { id: 1, name: 'Gerardo Cruz', first_name: 'Gerardo', last_name: 'Cruz', phone_code: '57', phone_number: '3001234567', email: 'gerardo@piddet.com', status: true, roles: [{ name: 'admin', label: 'Administrador' }], direct_permissions: [], user_type_id: 2 },
+  { id: 2, name: 'María López', first_name: 'María', last_name: 'López', phone_code: '57', phone_number: '3112223344', email: 'maria@piddet.com', status: true, roles: [{ name: 'cashier', label: 'Cajero' }], direct_permissions: ['order-cancel'], user_type_id: 2 },
+  { id: 3, name: 'Carlos Mejía', first_name: 'Carlos', last_name: 'Mejía', phone_code: '57', phone_number: '3205556677', email: null, status: true, roles: [{ name: 'waiter', label: 'Mesero' }], direct_permissions: [], user_type_id: 2 },
+  { id: 4, name: 'Ana Ruiz', first_name: 'Ana', last_name: 'Ruiz', phone_code: '57', phone_number: '3158889900', email: null, status: false, roles: [{ name: 'cook', label: 'Cocinero' }], direct_permissions: [], user_type_id: 2 },
+  { id: 5, name: 'Jorge Díaz', first_name: 'Jorge', last_name: 'Díaz', phone_code: '57', phone_number: '3014441122', email: null, status: true, roles: [{ name: 'waiter', label: 'Mesero' }], direct_permissions: ['api-module-expenses-own'], user_type_id: 1 },
 ];
 
 export const mockUser = { name: 'Gerardo Cruz', role: 'Administrador' };
@@ -1577,12 +1578,18 @@ function resolveUsersMock(path, query, { method = 'GET', body } = {}) {
         status: true,
         roles: toRoles(body?.roles),
         direct_permissions: Array.isArray(body?.permissions) ? body.permissions : [],
+        user_type_id: Number(body?.user_type_id) || 2,
       };
       u.name = `${u.first_name} ${u.last_name}`.trim();
       mockUsers.push(u);
       return u;
     }
-    return mockPaginate(mockUsers, query);
+    const userTypeId = query.get('user_type_id');
+    const role = query.get('_role');
+    const rows = mockUsers
+      .filter((u) => !userTypeId || String(u.user_type_id) === String(userTypeId))
+      .filter((u) => !role || (u.roles || []).some((r) => r.name === role));
+    return mockPaginate(rows, query);
   }
 
   const idMatch = sub.match(/^\/(\d+)(\/password)?$/);
@@ -1601,6 +1608,7 @@ function resolveUsersMock(path, query, { method = 'GET', body } = {}) {
         if (body?.email !== undefined) u.email = body.email;
         if (body?.phone_code != null) u.phone_code = body.phone_code;
         if (body?.phone_number != null) u.phone_number = body.phone_number;
+        if (body?.user_type_id != null) u.user_type_id = Number(body.user_type_id);
         if (Array.isArray(body?.roles)) u.roles = toRoles(body.roles);
         if (Array.isArray(body?.permissions)) u.direct_permissions = body.permissions;
         u.name = `${u.first_name} ${u.last_name}`.trim();

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Card, FilterBar, Spinner } from '../components';
+import { Card, FilterBar, RefreshButton, Spinner } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { todayIso } from '../lib/orderLabels.js';
@@ -39,7 +39,7 @@ export function ExpensesSummary() {
     () => api.expensesSummary({ dateFrom, dateTo, createdBy, categoryId }),
     [dateFrom, dateTo, createdBy, categoryId],
   );
-  const { data, loading, error } = useResource(fetcher, null, [dateFrom, dateTo, createdBy, categoryId]);
+  const { data, loading, error, reload } = useResource(fetcher, null, [dateFrom, dateTo, createdBy, categoryId]);
 
   const treeFetcher = React.useCallback(() => api.expenseCategoriesTree(), []);
   const { data: tree } = useResource(treeFetcher, [], []);
@@ -134,10 +134,13 @@ export function ExpensesSummary() {
         onChange={onFilters}
         inlineThreshold={0}
         actions={
-          <div className={t.grandTotal}>
-            <span>Total del periodo</span>
-            <strong>{expenseMoney(grandTotal)}</strong>
-          </div>
+          <>
+            <RefreshButton loading={loading} onClick={reload} />
+            <div className={t.grandTotal}>
+              <span>Total del periodo</span>
+              <strong>{expenseMoney(grandTotal)}</strong>
+            </div>
+          </>
         }
       />
 

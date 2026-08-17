@@ -1,6 +1,6 @@
 import React from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { Button, IconButton, Badge, Input, MoneyInput, Textarea, Switch, Modal, Spinner } from '../components';
+import { Button, IconButton, RefreshButton, Badge, Input, MoneyInput, Textarea, Switch, Modal, Spinner } from '../components';
 import { SortableList, FileUpload } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
@@ -94,6 +94,10 @@ export function ProductDetail() {
     <div className={s.page}>
       <div className={t.header}>
         <IconButton icon="fas fa-arrow-left" variant="light" title="Volver a productos" onClick={() => navigate('/products')} />
+        <div className={s.spacer} />
+        <RefreshButton
+          loading={itemRes.loading || groupsRes.loading || optsRes.loading}
+          onClick={() => { itemRes.reload(); groupsRes.reload(); optsRes.reload(); }} />
       </div>
 
       {/* Tarjeta del producto (hero): imagen + datos + editar. La foto se cambia desde la imagen. */}

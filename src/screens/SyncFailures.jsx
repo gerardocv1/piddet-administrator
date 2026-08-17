@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Card, DataTable, Badge, FilterBar, Pagination } from '../components';
+import { Card, DataTable, Badge, FilterBar, Pagination, RefreshButton } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { supportStatusOf, SUPPORT_STATUS_OPTIONS, formatDateTime } from '../lib/syncFailureLabels.js';
@@ -25,7 +25,7 @@ export function SyncFailures() {
   };
 
   const fetcher = React.useCallback(() => api.getSyncFailureReports({ status, page }), [status, page]);
-  const { data, loading, error } = useResource(fetcher, EMPTY, [status, page]);
+  const { data, loading, error, reload } = useResource(fetcher, EMPTY, [status, page]);
   const rows = data.items || [];
   const pg = data.pagination;
 
@@ -54,11 +54,14 @@ export function SyncFailures() {
         values={{ status }}
         onChange={(next) => setQuery(next.status || '')}
         actions={
-          pg != null && (
-            <p className={s.toolbarText}>
-              {pg.total === 0 ? 'Sin fallos reportados' : `${pg.total} reporte${pg.total === 1 ? '' : 's'}`}
-            </p>
-          )
+          <>
+            <RefreshButton loading={loading} onClick={reload} />
+            {pg != null && (
+              <p className={s.toolbarText}>
+                {pg.total === 0 ? 'Sin fallos reportados' : `${pg.total} reporte${pg.total === 1 ? '' : 's'}`}
+              </p>
+            )}
+          </>
         }
       />
 

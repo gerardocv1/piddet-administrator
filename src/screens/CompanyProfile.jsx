@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, IconButton, Card, Badge, Input, Textarea, Modal, Spinner, FileUpload } from '../components';
+import { Button, IconButton, RefreshButton, Card, Badge, Input, Textarea, Modal, Spinner, FileUpload } from '../components';
 import { api } from '../lib/api.js';
 import { auth as authLib } from '../lib/auth/index.js';
 import { useResource } from '../lib/useResource.js';
@@ -56,6 +56,11 @@ export function CompanyProfile() {
 
   return (
     <div className={t.page}>
+      <div className={s.toolbar}>
+        <div className={s.spacer} />
+        <RefreshButton loading={loading} onClick={reload} />
+      </div>
+
       <Card className={t.identity}>
         {editable && (
           <IconButton className={t.cornerEdit} icon="fas fa-pen" variant="ghost" size="sm"

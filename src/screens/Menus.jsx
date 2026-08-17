@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, IconButton, Input, Textarea, Modal, Spinner, Pagination, Dropdown } from '../components';
+import { Button, IconButton, RefreshButton, Input, Textarea, Modal, Spinner, Pagination, Dropdown } from '../components';
 import { api } from '../lib/api.js';
 import { auth } from '../lib/auth/index.js';
 import { useResource } from '../lib/useResource.js';
@@ -91,6 +91,7 @@ export function Menus() {
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar menú" />
         </div>
         <div className={s.spacer} />
+        <RefreshButton loading={loading} onClick={reload} />
         <Button variant="primary" size="sm" icon="fas fa-plus" onClick={openNew}>Nuevo menú</Button>
       </div>
 

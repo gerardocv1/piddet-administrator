@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
-  Card, Badge, Button, IconButton, Input, Select, Textarea, MoneyInput, Switch, Spinner, Modal, MultiImageUpload, PageHeader,
+  Card, Badge, Button, IconButton, RefreshButton, Input, Select, Textarea, MoneyInput, Switch, Spinner, Modal, MultiImageUpload, PageHeader,
 } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
@@ -29,7 +29,7 @@ export function RentableUnitDetail() {
     () => (isEdit ? api.rentableUnit(unitId) : Promise.resolve(null)),
     [unitId, isEdit],
   );
-  const { data, setData, loading, error } = useResource(unitFetcher, null, [unitId]);
+  const { data, setData, loading, error, reload } = useResource(unitFetcher, null, [unitId]);
   const { data: types } = useResource(React.useCallback(() => api.rentableUnitTypes(), []), [], []);
   const typeOptions = React.useMemo(
     () => (types || []).map((ty) => ({ value: String(ty.id), label: ty.name })),
@@ -165,6 +165,7 @@ export function RentableUnitDetail() {
         subtitle={isEdit ? (data.type_name || 'Unidad reservable') : 'Registra una cabaña, habitación o lugar para reservar.'}
         actions={isEdit ? (
           <>
+            <RefreshButton loading={loading} onClick={reload} />
             <Badge variant={active ? 'success' : 'neutral'} dot>{active ? 'Reservable' : 'Inactiva'}</Badge>
             <Switch checked={active} onChange={toggleStatus} label="Reservable" />
           </>

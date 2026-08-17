@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Card, DataTable, Badge, Button, FilterBar, Pagination } from '../components';
+import { Card, DataTable, Badge, Button, FilterBar, Pagination, RefreshButton } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { useIsMobile } from '../lib/useIsMobile.js';
@@ -59,7 +59,7 @@ export function Expenses() {
     () => api.expenses({ dateFrom, dateTo, categoryId, paymentMethod, status, createdBy, page }),
     [dateFrom, dateTo, categoryId, paymentMethod, status, createdBy, page],
   );
-  const { data, loading, error } = useResource(fetcher, EMPTY, [dateFrom, dateTo, categoryId, paymentMethod, status, createdBy, page]);
+  const { data, loading, error, reload } = useResource(fetcher, EMPTY, [dateFrom, dateTo, categoryId, paymentMethod, status, createdBy, page]);
   const rows = data.items || [];
   const pg = data.pagination;
 
@@ -153,6 +153,7 @@ export function Expenses() {
                 {pg.total === 0 ? 'Sin gastos en el rango' : `${pg.total} gasto${pg.total === 1 ? '' : 's'}`}
               </p>
             )}
+            <RefreshButton loading={loading} onClick={reload} />
             {/* En móvil abre el asistente paso a paso; en desktop, el formulario clásico. */}
             <Button variant="primary" size="sm" icon="fas fa-plus"
               onClick={() => navigate(isMobile ? '/expenses/quick' : '/expenses/new')}>

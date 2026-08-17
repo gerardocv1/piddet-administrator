@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Card, DataTable, Badge, Button, FilterBar, Pagination } from '../components';
+import { Card, DataTable, Badge, Button, FilterBar, Pagination, RefreshButton } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { todayIso, firstNameOf } from '../lib/orderLabels.js';
@@ -53,7 +53,7 @@ export function Shifts() {
     () => api.shifts({ status, type, dateFrom, dateTo, page }),
     [status, type, dateFrom, dateTo, page],
   );
-  const { data, loading, error } = useResource(fetcher, EMPTY, [status, type, dateFrom, dateTo, page]);
+  const { data, loading, error, reload } = useResource(fetcher, EMPTY, [status, type, dateFrom, dateTo, page]);
   const rows = data.items || [];
   const pg = data.pagination;
 
@@ -119,6 +119,7 @@ export function Shifts() {
                 {pg.total === 0 ? 'Sin turnos' : `${pg.total} turno${pg.total === 1 ? '' : 's'}`}
               </p>
             )}
+            <RefreshButton loading={loading} onClick={reload} />
             <Button variant="primary" size="sm" icon="fas fa-plus" onClick={() => navigate('/shifts/open')}>
               Abrir turno
             </Button>

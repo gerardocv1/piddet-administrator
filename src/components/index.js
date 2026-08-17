@@ -2,6 +2,7 @@
 // core
 export { Button } from './core/Button.jsx';
 export { IconButton } from './core/IconButton.jsx';
+export { RefreshButton } from './core/RefreshButton.jsx';
 export { Badge } from './core/Badge.jsx';
 export { Avatar } from './core/Avatar.jsx';
 export { Card } from './core/Card.jsx';

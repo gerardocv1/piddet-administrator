@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, IconButton, Card, Badge, Modal, Input, Textarea, Spinner, ConfirmDialog } from '../components';
+import { Button, IconButton, RefreshButton, Card, Badge, Modal, Input, Textarea, Spinner, ConfirmDialog } from '../components';
 import { api } from '../lib/api.js';
 import { auth as authLib } from '../lib/auth/index.js';
 import { useResource } from '../lib/useResource.js';
@@ -85,6 +85,7 @@ export function Tables() {
           <span className={t.counter}><span className={[t.dot, t.dotOff].join(' ')} />Inactivas <strong>{counters.inactive}</strong></span>
         </div>
         <div className={t.actions}>
+          <RefreshButton loading={loading} onClick={reload} />
           {activeTables.length > 0 && (
             <Button size="sm" variant="secondary" icon="fas fa-print" onClick={printAll}>
               Imprimir QR

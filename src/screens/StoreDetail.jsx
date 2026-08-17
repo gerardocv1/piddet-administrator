@@ -1,6 +1,6 @@
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Button, IconButton, Input, Select, Switch, Spinner, MapPickerModal } from '../components';
+import { Button, IconButton, RefreshButton, Input, Select, Switch, Spinner, MapPickerModal } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import s from './screens.module.css';
@@ -28,7 +28,7 @@ export function StoreDetail() {
   const isEdit = !!storeId;
 
   const storeFetcher = React.useCallback(() => (isEdit ? api.store(storeId) : Promise.resolve(null)), [storeId, isEdit]);
-  const { data: store, loading, error } = useResource(storeFetcher, null, [storeId]);
+  const { data: store, loading, error, reload } = useResource(storeFetcher, null, [storeId]);
   const { data: catalogs } = useResource(React.useCallback(() => api.storeCatalogs(), []), null, []);
 
   const statuses = catalogs?.statuses || [];
@@ -146,6 +146,7 @@ export function StoreDetail() {
       <div className={s.toolbar}>
         <h2 className={t.title}>{isEdit ? (form.name || 'Editar tienda') : 'Nueva tienda'}</h2>
         <div className={s.spacer} />
+        {isEdit && <RefreshButton loading={loading} onClick={reload} />}
         <Button variant="primary" icon="fas fa-check" loading={saving} onClick={save}>Guardar</Button>
       </div>
 

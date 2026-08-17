@@ -1,11 +1,20 @@
 import React from 'react';
-import { Avatar, Badge, Button, IconButton, Input, Checkbox, Modal, Card, DataTable, Pagination, FilterBar, Spinner } from '../components';
+import { Avatar, Badge, Button, IconButton, RefreshButton, Input, Select, Checkbox, Modal, Card, DataTable, Pagination, FilterBar, Spinner } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import s from './screens.module.css';
 
 const EMPTY = { items: [], pagination: null };
 const ROLES_VISIBLE = 2;
+
+// Tipo del usuario dentro de la compañía (company_users.user_type_id).
+const USER_TYPE_CLIENT = '1';
+const USER_TYPE_EMPLOYEE = '2';
+const USER_TYPES = [
+  { value: USER_TYPE_EMPLOYEE, label: 'Empleado' },
+  { value: USER_TYPE_CLIENT, label: 'Cliente' },
+];
+const userTypeLabel = (id) => (String(id) === USER_TYPE_CLIENT ? 'Cliente' : 'Empleado');
 
 // Muestra hasta ROLES_VISIBLE roles y agrupa el resto en un "+N" (con el detalle en el tooltip).
 function RolesCell({ roles = [] }) {
@@ -26,6 +35,8 @@ export function Users() {
   const [page, setPage] = React.useState(1);
   const [q, setQ] = React.useState('');
   const [search, setSearch] = React.useState('');
+  // Por defecto se listan solo los empleados: son los usuarios que se administran a diario.
+  const [filters, setFilters] = React.useState({ user_type_id: USER_TYPE_EMPLOYEE, role: undefined });
 
   // Búsqueda con debounce: vuelve a la primera página al cambiar el término.
   React.useEffect(() => {
@@ -39,8 +50,12 @@ export function Users() {
     api.assignableRoles().then((d) => setRoles(d || [])).catch(() => {});
   }, []);
 
-  const fetcher = React.useCallback(() => api.users({ page, search }), [page, search]);
-  const { data, loading, error, reload } = useResource(fetcher, EMPTY, [page, search]);
+  const { user_type_id: userTypeId, role } = filters;
+  const fetcher = React.useCallback(
+    () => api.users({ page, search, userTypeId, role }),
+    [page, search, userTypeId, role],
+  );
+  const { data, loading, error, reload } = useResource(fetcher, EMPTY, [page, search, userTypeId, role]);
   const items = data.items || [];
   const pg = data.pagination;
 
@@ -62,6 +77,9 @@ export function Users() {
     ) },
     { key: 'phone', header: 'Teléfono', width: 170, nowrap: true, render: (r) => (
       <span className={s.muted}>{r.phone_number ? `+${r.phone_code} ${r.phone_number}` : '—'}</span>
+    ) },
+    { key: 'type', header: 'Tipo', width: 120, render: (r) => (
+      <Badge variant={String(r.user_type_id) === USER_TYPE_CLIENT ? 'info' : 'neutral'}>{userTypeLabel(r.user_type_id)}</Badge>
     ) },
     { key: 'roles', header: 'Roles', render: (r) => <RolesCell roles={r.roles} /> },
     { key: 'status', header: 'Estado', width: 120, render: (r) => (
@@ -86,7 +104,17 @@ export function Users() {
         searchValue={q}
         onSearchChange={setQ}
         searchPlaceholder="Buscar usuario"
-        actions={<Button variant="primary" size="sm" icon="fas fa-plus" onClick={() => setForm({})}>Nuevo usuario</Button>}
+        filters={[
+          { key: 'user_type_id', label: 'Tipo', icon: 'fas fa-user-tag', type: 'select', options: USER_TYPES },
+          { key: 'role', label: 'Rol', icon: 'fas fa-user-shield', type: 'select', placeholder: 'Todos los roles',
+            options: roles.map((r) => ({ value: r.name, label: r.label })) },
+        ]}
+        values={filters}
+        onChange={(next) => { setFilters(next); setPage(1); }}
+        actions={<>
+          <RefreshButton loading={loading} onClick={reload} />
+          <Button variant="primary" size="sm" icon="fas fa-plus" onClick={() => setForm({})}>Nuevo usuario</Button>
+        </>}
       />
 
       <div className={s.desktopList}>
@@ -153,6 +181,9 @@ function UserMobileCard({ user, onEdit, onRoles, onPassword, onUnlink }) {
               {user.phone_number ? `+${user.phone_code} ${user.phone_number}` : '—'}
             </span>
           </div>
+          <Badge variant={String(user.user_type_id) === USER_TYPE_CLIENT ? 'info' : 'neutral'}>
+            {userTypeLabel(user.user_type_id)}
+          </Badge>
         </div>
         {user.roles?.length > 0 && (
           <div className={s.userCardRoles}>
@@ -172,6 +203,15 @@ function UserMobileCard({ user, onEdit, onRoles, onPassword, onUnlink }) {
         </div>
       </div>
     </Card>
+  );
+}
+
+// ── Tipo del usuario dentro de la compañía ─────────────────────────────────────
+function UserTypeField({ value, onChange }) {
+  return (
+    <Select label="Tipo de usuario" icon="fas fa-user-tag" options={USER_TYPES}
+      value={value} onChange={(e) => onChange(e.target.value)}
+      hint="Los empleados operan la compañía; los clientes solo consumen." />
   );
 }
 
@@ -243,6 +283,7 @@ function UserFormModal({ user, roles, onClose, onSaved }) {
     phone_code: user?.phone_code || '57',
     phone_number: user?.phone_number || '',
     password: '',
+    user_type_id: user?.user_type_id ? String(user.user_type_id) : USER_TYPE_EMPLOYEE,
   }));
   const [selected, setSelected] = React.useState([]);
   const [saving, setSaving] = React.useState(false);
@@ -311,9 +352,10 @@ function UserFormModal({ user, roles, onClose, onSaved }) {
           email: form.email.trim() || null,
           phone_code: form.phone_code.trim(),
           phone_number: form.phone_number.trim(),
+          user_type_id: Number(form.user_type_id),
         });
       } else if (mode === 'link') {
-        await api.createCompanyUser({ user_id: result.user.id, roles: selected });
+        await api.createCompanyUser({ user_id: result.user.id, roles: selected, user_type_id: Number(form.user_type_id) });
       } else {
         await api.createCompanyUser({
           first_name: form.first_name.trim(),
@@ -323,6 +365,7 @@ function UserFormModal({ user, roles, onClose, onSaved }) {
           phone_number: form.phone_number.trim(),
           password: form.password,
           roles: selected,
+          user_type_id: Number(form.user_type_id),
         });
       }
       onSaved();
@@ -373,7 +416,8 @@ function UserFormModal({ user, roles, onClose, onSaved }) {
         {mode === 'link' && (
           <>
             <div className={s.user}><Avatar name={result.user.name} size="sm" />{result.user.name}</div>
-            <span className={s.muted}>Usuario encontrado. Asígnale uno o más roles para vincularlo a la compañía.</span>
+            <span className={s.muted}>Usuario encontrado. Indica su tipo y asígnale uno o más roles para vincularlo a la compañía.</span>
+            <UserTypeField value={form.user_type_id} onChange={(v) => set('user_type_id', v)} />
             <RolesField roles={roles} selected={selected} onToggle={toggleRole} />
           </>
         )}
@@ -387,6 +431,7 @@ function UserFormModal({ user, roles, onClose, onSaved }) {
             </div>
             <Input label="Correo (opcional)" icon="fas fa-envelope" type="email" value={form.email} onChange={(e) => set('email', e.target.value)} />
             <Input label="Contraseña" icon="fas fa-lock" type="password" hint="Mínimo 8 caracteres" value={form.password} onChange={(e) => set('password', e.target.value)} />
+            <UserTypeField value={form.user_type_id} onChange={(v) => set('user_type_id', v)} />
             <RolesField roles={roles} selected={selected} onToggle={toggleRole} />
           </>
         )}
@@ -402,6 +447,7 @@ function UserFormModal({ user, roles, onClose, onSaved }) {
               <Input label="Código" icon="fas fa-globe" value={form.phone_code} onChange={(e) => set('phone_code', e.target.value)} />
               <Input label="Teléfono" icon="fas fa-phone" value={form.phone_number} onChange={(e) => set('phone_number', e.target.value)} />
             </div>
+            <UserTypeField value={form.user_type_id} onChange={(v) => set('user_type_id', v)} />
             <span className={s.muted}>
               Los roles del usuario se asignan desde la acción <i className="fas fa-user-shield" /> del listado.
             </span>

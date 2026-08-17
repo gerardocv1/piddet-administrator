@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, IconButton, Badge, Switch, Modal, Spinner, Pagination, Dropdown, FilterBar } from '../components';
+import { Button, IconButton, RefreshButton, Badge, Switch, Modal, Spinner, Pagination, Dropdown, FilterBar } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { ItemFormModal } from './ItemFormModal.jsx';
@@ -101,6 +101,7 @@ export function Products() {
         onChange={onFilters}
         inlineThreshold={0}
         actions={<>
+          <RefreshButton loading={loading} onClick={reload} />
           <Dropdown
             trigger={<IconButton icon="fas fa-ellipsis-vertical" variant="light" size="sm" title="Más acciones" />}
             items={[{ label: 'Categorías', icon: 'fas fa-tags', onClick: () => navigate('/product-categories') }]}

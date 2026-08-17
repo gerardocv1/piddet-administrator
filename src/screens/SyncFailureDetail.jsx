@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Card, Badge, Button, IconButton, Spinner, Modal, Textarea } from '../components';
+import { Card, Badge, Button, IconButton, RefreshButton, Spinner, Modal, Textarea } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { supportStatusOf, formatDateTime } from '../lib/syncFailureLabels.js';
@@ -22,7 +22,7 @@ export function SyncFailureDetail() {
   const [params] = useSearchParams();
 
   const fetcher = React.useCallback(() => api.getSyncFailureReport(reportId), [reportId]);
-  const { data: report, setData: setReport, loading, error } = useResource(fetcher, null, [reportId]);
+  const { data: report, setData: setReport, loading, error, reload } = useResource(fetcher, null, [reportId]);
 
   const [jsonText, setJsonText] = React.useState('');
   const [jsonDirty, setJsonDirty] = React.useState(false);
@@ -129,6 +129,7 @@ export function SyncFailureDetail() {
           <h2 className={t.title}>Reporte {report.order_number || report.id}</h2>
           <span className={s.muted}>{formatDateTime(report.created_at)}</span>
         </div>
+        <RefreshButton loading={loading} onClick={reload} />
         <Badge variant={st.variant} dot>{st.label}</Badge>
       </div>
 

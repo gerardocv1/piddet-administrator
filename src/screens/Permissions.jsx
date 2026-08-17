@@ -1,5 +1,5 @@
 import React from 'react';
-import { Badge, Card, FilterBar, Spinner, Switch } from '../components';
+import { Badge, Card, FilterBar, RefreshButton, Spinner, Switch } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { usePermissions } from '../lib/permissions/usePermissions.js';
@@ -81,14 +81,6 @@ export function Permissions() {
 
   return (
     <div className={s.page}>
-      <div className={a.notice}>
-        <i className="fas fa-circle-info" />
-        <span>
-          El catálogo de permisos es de la plataforma y se comparte entre todas las compañías. Los
-          permisos se conceden a través de los roles; aquí solo se define cuáles llegan al panel.
-        </span>
-      </div>
-
       <FilterBar
         searchable
         searchValue={q}
@@ -97,7 +89,10 @@ export function Permissions() {
         filters={[moduleFilter]}
         values={filters}
         onChange={setFilters}
-        actions={<span className={a.pickerCount}>{totals.visible} de {totals.total} visibles en el panel</span>}
+        actions={<>
+          <RefreshButton loading={loading} onClick={reload} />
+          <span className={a.pickerCount}>{totals.visible} de {totals.total} visibles en el panel</span>
+        </>}
       />
 
       {actionError && <div className={s.stateError}><i className="fas fa-triangle-exclamation" /> {actionError}</div>}

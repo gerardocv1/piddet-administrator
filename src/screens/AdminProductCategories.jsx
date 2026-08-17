@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, IconButton, Input, Textarea, Select, Modal, Spinner, Badge, Card } from '../components';
+import { Button, IconButton, RefreshButton, Input, Textarea, Select, Modal, Spinner, Badge, Card } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import s from './screens.module.css';
@@ -97,12 +97,16 @@ export function AdminProductCategories() {
 
   return (
     <div className={s.page}>
-      <p className={c.introWide}>
-        Catálogo global de categorías de producto. Se organizan en árbol: una categoría puede tener
-        subcategorías (ej. <strong>Bebidas → Bebidas calientes → Café</strong>). Usa la flecha para
-        desplegar, <i className="fas fa-plus" /> para agregar una subcategoría dentro de otra, y al
-        editar puedes cambiar su categoría padre para reagruparla.
-      </p>
+      <div className={s.toolbar}>
+        <p className={c.introWide}>
+          Catálogo global de categorías de producto. Se organizan en árbol: una categoría puede tener
+          subcategorías (ej. <strong>Bebidas → Bebidas calientes → Café</strong>). Usa la flecha para
+          desplegar, <i className="fas fa-plus" /> para agregar una subcategoría dentro de otra, y al
+          editar puedes cambiar su categoría padre para reagruparla.
+        </p>
+        <div className={s.spacer} />
+        <RefreshButton loading={loading} onClick={reload} />
+      </div>
 
       {loading ? (
         <Spinner center label="Cargando categorías…" />

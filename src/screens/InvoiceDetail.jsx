@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Card, Badge, Button, Spinner, ConfirmDialog, PageHeader } from '../components';
+import { Card, Badge, Button, RefreshButton, Spinner, ConfirmDialog, PageHeader } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { usePermissions } from '../lib/permissions/usePermissions.js';
@@ -20,7 +20,7 @@ export function InvoiceDetail() {
   const { can } = usePermissions();
 
   const fetcher = React.useCallback(() => api.order(orderId), [orderId]);
-  const { data, setData, loading, error } = useResource(fetcher, null, [orderId]);
+  const { data, setData, loading, error, reload } = useResource(fetcher, null, [orderId]);
 
   useSetPageTitle(data?.order ? `Factura ${data.order.order_number || data.order.id}` : null);
 
@@ -85,6 +85,7 @@ export function InvoiceDetail() {
         backTitle="Volver a facturas"
         subtitle={`${formatShortDate(order.created_date)} · ${timeOf(order.created_date)}`}
         actions={<>
+          <RefreshButton loading={loading} onClick={reload} />
           <Badge variant={st.variant} dot>{status?.name || st.label}</Badge>
           <Badge variant={pay.variant}>{pay.label}</Badge>
           {order.status !== 'CANCELLED' && can('order-cancel') && (

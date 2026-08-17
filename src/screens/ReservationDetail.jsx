@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Card, Badge, Button, IconButton, Avatar, Spinner, Modal, ConfirmDialog, Input, Select, MoneyInput, Autocomplete, PageHeader, Dropdown } from '../components';
+import { Card, Badge, Button, IconButton, RefreshButton, Avatar, Spinner, Modal, ConfirmDialog, Input, Select, MoneyInput, Autocomplete, PageHeader, Dropdown } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { usePermissions } from '../lib/permissions/usePermissions.js';
@@ -22,7 +22,7 @@ export function ReservationDetail() {
   const { can } = usePermissions();
 
   const fetcher = React.useCallback(() => api.reservation(reservationId), [reservationId]);
-  const { data, setData, loading, error } = useResource(fetcher, null, [reservationId]);
+  const { data, setData, loading, error, reload } = useResource(fetcher, null, [reservationId]);
 
   const [tab, setTab] = React.useState('reservation');
   const [busy, setBusy] = React.useState(false);
@@ -170,7 +170,8 @@ export function ReservationDetail() {
         backTitle="Volver a reservas"
         subtitle={`${formatStayRange(data.check_in_date, data.check_out_date)} · ${data.nights} ${Number(data.nights) === 1 ? 'noche' : 'noches'}`}
         actions={<>
-          {isPending && <Button variant="secondary" size="sm" icon="fas fa-circle-check" loading={busy} onClick={() => run(() => api.confirmReservation(reservationId), 'No se pudo confirmar.')}>Confirmar</Button>}
+          <RefreshButton loading={loading} onClick={() => { reload(); reloadOrders(); }} />
+          {isPending &&<Button variant="secondary" size="sm" icon="fas fa-circle-check" loading={busy} onClick={() => run(() => api.confirmReservation(reservationId), 'No se pudo confirmar.')}>Confirmar</Button>}
           {isConfirmed && (
             <Button variant="outline-primary" size="sm" icon="fas fa-door-open" disabled={!precheckinDone}
               title={precheckinDone ? 'Registrar la entrada del huésped' : 'El huésped debe completar su pre-check-in antes de la entrada'}

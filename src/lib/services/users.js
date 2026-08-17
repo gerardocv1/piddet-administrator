@@ -22,9 +22,9 @@ const qs = (params = {}) => {
 };
 
 export const usersService = {
-  // Listado paginado de usuarios vinculados a la compañía. { page, search }
-  users: ({ page = 1, search = '', row = 12 } = {}) =>
-    http.get(`${base()}/users${qs({ page, _search: search, _row: row })}`, { paginated: true }),
+  // Listado paginado de usuarios vinculados a la compañía. { page, search, userTypeId, role }
+  users: ({ page = 1, search = '', userTypeId = '', role = '', row = 12 } = {}) =>
+    http.get(`${base()}/users${qs({ page, _search: search, _row: row, user_type_id: userTypeId, _role: role })}`, { paginated: true }),
   // Búsqueda global por teléfono → { exists, linked, user }.
   searchUserByPhone: (phone) => http.get(`${base()}/users/search${qs({ phone })}`),
   // Roles asignables (sin super-admin), con etiqueta amigable y sus permisos:

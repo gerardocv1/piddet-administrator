@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, IconButton, Card, Badge, Input, Select, Modal, DataTable } from '../components';
+import { Button, IconButton, RefreshButton, Card, Badge, Input, Select, Modal, DataTable } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import s from './screens.module.css';
@@ -53,7 +53,10 @@ export function AiTokensCard() {
   return (
     <Card>
       <Card.Header title="Tokens de IA"
-        action={<Button size="sm" icon="fas fa-plus" onClick={() => setCreating(true)}>Generar token</Button>} />
+        action={<>
+          <RefreshButton loading={loading} onClick={reload} />
+          <Button size="sm" icon="fas fa-plus" onClick={() => setCreating(true)}>Generar token</Button>
+        </>} />
       <Card.Body>
         <p className={t.tokenHint}>
           Permiten a agentes de IA externos consultar los datos de la empresa. El token completo

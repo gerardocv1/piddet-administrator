@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Card, Button, IconButton, Badge, Modal, Spinner, PageHeader } from '../components';
+import { Card, Button, IconButton, RefreshButton, Badge, Modal, Spinner, PageHeader } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { formatStayRange } from '../lib/dates.js';
@@ -56,7 +56,7 @@ export function ReservationsCalendar() {
     () => api.reservationsCalendar({ from: gridFrom, to: gridTo }),
     [gridFrom, gridTo],
   );
-  const { data: reservations, loading, error } = useResource(fetcher, [], [gridFrom, gridTo]);
+  const { data: reservations, loading, error, reload } = useResource(fetcher, [], [gridFrom, gridTo]);
 
   // Reservas que ocupan cada día (check_in <= día < check_out), indexadas por fecha ISO.
   const byDay = React.useMemo(() => {
@@ -89,6 +89,7 @@ export function ReservationsCalendar() {
               <span className={t.monthLabel}>{monthLabel}</span>
               <IconButton icon="fas fa-chevron-right" variant="light" title="Mes siguiente" onClick={() => shift(1)} />
             </div>
+            <RefreshButton loading={loading} onClick={reload} />
             <Button variant="secondary" size="sm" icon="fas fa-calendar-day" onClick={goToday}>Hoy</Button>
             <Button variant="primary" size="sm" icon="fas fa-plus" onClick={() => navigate('/reservations/new')}>Nueva reserva</Button>
           </>

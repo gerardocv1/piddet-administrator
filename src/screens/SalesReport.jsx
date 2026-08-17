@@ -1,6 +1,6 @@
 import React from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Button, Card, DataTable, FilterBar, SalesByTypeChart, StatStrip } from '../components';
+import { Button, Card, DataTable, FilterBar, RefreshButton, SalesByTypeChart, StatStrip } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { todayIso } from '../lib/orderLabels.js';
@@ -45,7 +45,7 @@ export function SalesReport() {
     () => api.salesReport({ dateFrom, dateTo, creatorId, itemId }),
     [dateFrom, dateTo, creatorId, itemId],
   );
-  const { data, loading, error } = useResource(fetcher, null, [dateFrom, dateTo, creatorId, itemId]);
+  const { data, loading, error, reload } = useResource(fetcher, null, [dateFrom, dateTo, creatorId, itemId]);
 
   const { data: creators } = useResource(api.orderCreators, [], []);
   const creatorOptions = React.useMemo(
@@ -107,6 +107,7 @@ export function SalesReport() {
         inlineThreshold={0}
         actions={
           <>
+            <RefreshButton loading={loading} onClick={reload} />
             {(dateFrom !== defaultFromIso() || dateTo !== todayIso()) && (
               <Button variant="secondary" size="sm" icon="fas fa-rotate-left"
                 onClick={() => setQuery({ date_from: defaultFromIso(), date_to: todayIso() })}>

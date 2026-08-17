@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, IconButton, Input, Textarea, Select, Modal, Spinner, Badge, Card } from '../components';
+import { Button, IconButton, RefreshButton, Input, Textarea, Select, Modal, Spinner, Badge, Card } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import s from './screens.module.css';
@@ -71,6 +71,7 @@ export function ExpenseCategories() {
           incluso dentro de una global (ej. <strong>Insumos y alimentos → Insumos de finca</strong>).
         </p>
         <div className={s.spacer} />
+        <RefreshButton loading={loading} onClick={reload} />
         <Button variant="primary" size="sm" icon="fas fa-plus" onClick={() => openNew()}>
           Nueva categoría
         </Button>

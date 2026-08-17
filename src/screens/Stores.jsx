@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, IconButton, Switch, Spinner, Pagination, Dropdown, Modal } from '../components';
+import { Button, IconButton, RefreshButton, Switch, Spinner, Pagination, Dropdown, Modal } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import s from './screens.module.css';
@@ -59,6 +59,7 @@ export function Stores() {
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar tienda" />
         </div>
         <div className={s.spacer} />
+        <RefreshButton loading={loading} onClick={reload} />
         <Button variant="primary" size="sm" icon="fas fa-plus" onClick={() => navigate('/stores/new')}>
           Añadir tienda
         </Button>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Badge, Button, Card, Checkbox, ConfirmDialog, DataTable, FilterBar, IconButton, Input, Modal, Spinner, Textarea } from '../components';
+import { Badge, Button, Card, Checkbox, ConfirmDialog, DataTable, FilterBar, IconButton, Input, Modal, RefreshButton, Spinner, Textarea } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { usePermissions } from '../lib/permissions/usePermissions.js';
@@ -98,22 +98,17 @@ export function Roles() {
 
   return (
     <div className={s.page}>
-      <div className={a.notice}>
-        <i className="fas fa-triangle-exclamation" />
-        <span>
-          Los roles son de la plataforma: al crear uno o cambiar sus permisos, el cambio aplica a
-          todas las compañías que lo usen. Los roles del sistema no se pueden editar ni eliminar.
-        </span>
-      </div>
-
       <FilterBar
         searchable
         searchValue={q}
         onSearchChange={setQ}
         searchPlaceholder="Buscar rol"
-        actions={canCreate && (
-          <Button variant="primary" size="sm" icon="fas fa-plus" onClick={() => setForm('new')}>Nuevo rol</Button>
-        )}
+        actions={<>
+          <RefreshButton loading={loading} onClick={reload} />
+          {canCreate && (
+            <Button variant="primary" size="sm" icon="fas fa-plus" onClick={() => setForm('new')}>Nuevo rol</Button>
+          )}
+        </>}
       />
 
       <div className={s.desktopList}>

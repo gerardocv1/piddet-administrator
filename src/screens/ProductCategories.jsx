@@ -1,5 +1,5 @@
 import React from 'react';
-import { Spinner, Card, SortableList } from '../components';
+import { Spinner, Card, RefreshButton, SortableList } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import s from './screens.module.css';
@@ -14,7 +14,7 @@ import c from './ProductCategories.module.css';
 // general (una sola lista), independiente del tipo de ítem.
 export function ProductCategories() {
   const fetcher = React.useCallback(() => api.categoryOrdering(), []);
-  const { data, loading, error, setData } = useResource(fetcher, [], []);
+  const { data, loading, error, setData, reload } = useResource(fetcher, [], []);
 
   const cats = React.useMemo(
     () => [...(data || [])].sort((a, b) => a.position - b.position),
@@ -30,11 +30,15 @@ export function ProductCategories() {
 
   return (
     <div className={s.page}>
-      <p className={c.introWide}>
-        Estas son las categorías que usas en tus productos. Arrastra para ordenarlas: ese orden es
-        el que verán tus clientes en el punto de venta. Las categorías son comunes a la plataforma,
-        por eso no se crean ni editan desde aquí.
-      </p>
+      <div className={s.toolbar}>
+        <p className={c.introWide}>
+          Estas son las categorías que usas en tus productos. Arrastra para ordenarlas: ese orden es
+          el que verán tus clientes en el punto de venta. Las categorías son comunes a la plataforma,
+          por eso no se crean ni editan desde aquí.
+        </p>
+        <div className={s.spacer} />
+        <RefreshButton loading={loading} onClick={reload} />
+      </div>
 
       {loading ? (
         <Spinner center label="Cargando categorías…" />

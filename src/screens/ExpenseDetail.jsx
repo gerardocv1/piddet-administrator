@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Card, Badge, Button, Spinner, ConfirmDialog, MultiImageUpload, PageHeader } from '../components';
+import { Card, Badge, Button, RefreshButton, Spinner, ConfirmDialog, MultiImageUpload, PageHeader } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { usePermissions } from '../lib/permissions/usePermissions.js';
@@ -125,6 +125,7 @@ export function ExpenseDetail() {
         backTitle="Volver a gastos"
         subtitle={formatShortDate(data.expense_date)}
         actions={<>
+          <RefreshButton loading={loading} onClick={reload} />
           {active
             ? <Badge variant="success" dot>Activo</Badge>
             : <Badge variant="danger" dot>Anulado</Badge>}

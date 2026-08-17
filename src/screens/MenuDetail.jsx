@@ -1,6 +1,6 @@
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Button, IconButton, Input, MoneyInput, Select, Textarea, Modal, Spinner, SortableList, Autocomplete, Dropdown } from '../components';
+import { Button, IconButton, RefreshButton, Input, MoneyInput, Select, Textarea, Modal, Spinner, SortableList, Autocomplete, Dropdown } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { ADMIN_BASE } from '../lib/adminBase.js';
@@ -194,6 +194,9 @@ export function MenuDetail() {
           <p className={t.headerSub}>{headerInfo}</p>
         </div>
         <div className={s.spacer} />
+        <RefreshButton
+          loading={menuRes.loading || catsRes.loading || itemsRes.loading}
+          onClick={() => { menuRes.reload(); catsRes.reload(); itemsRes.reload(); }} />
         {menu && (
           <Button variant={menu.is_active ? 'secondary' : 'outline-primary'} size="sm"
             icon={menu.is_active ? 'fas fa-toggle-off' : 'fas fa-toggle-on'}

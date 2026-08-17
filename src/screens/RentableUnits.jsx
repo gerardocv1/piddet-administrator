@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Card, DataTable, Badge, Button, FilterBar, Pagination } from '../components';
+import { Card, DataTable, Badge, Button, FilterBar, Pagination, RefreshButton } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { reservationMoney } from '../lib/reservationLabels.js';
@@ -36,7 +36,7 @@ export function RentableUnits() {
     () => api.rentableUnits({ typeId, status, page }),
     [typeId, status, page],
   );
-  const { data, loading, error } = useResource(fetcher, EMPTY, [typeId, status, page]);
+  const { data, loading, error, reload } = useResource(fetcher, EMPTY, [typeId, status, page]);
   const rows = data.items || [];
   const pg = data.pagination;
 
@@ -79,6 +79,7 @@ export function RentableUnits() {
                 {pg.total === 0 ? 'Sin unidades' : `${pg.total} unidad${pg.total === 1 ? '' : 'es'}`}
               </p>
             )}
+            <RefreshButton loading={loading} onClick={reload} />
             <Button variant="primary" size="sm" icon="fas fa-plus" onClick={() => navigate('/rentable-units/new')}>
               Nueva unidad
             </Button>

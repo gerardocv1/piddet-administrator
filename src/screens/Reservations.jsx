@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Card, DataTable, Badge, Button, FilterBar, Pagination } from '../components';
+import { Card, DataTable, Badge, Button, FilterBar, Pagination, RefreshButton } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { formatShortDate } from '../lib/dates.js';
@@ -59,7 +59,7 @@ export function Reservations() {
     () => api.reservations({ dateFrom, dateTo, status, unitId, search, page }),
     [dateFrom, dateTo, status, unitId, search, page],
   );
-  const { data, loading, error } = useResource(fetcher, EMPTY, [dateFrom, dateTo, status, unitId, search, page]);
+  const { data, loading, error, reload } = useResource(fetcher, EMPTY, [dateFrom, dateTo, status, unitId, search, page]);
   const rows = data.items || [];
   const pg = data.pagination;
 
@@ -119,6 +119,7 @@ export function Reservations() {
                 {pg.total === 0 ? 'Sin reservas' : `${pg.total} reserva${pg.total === 1 ? '' : 's'}`}
               </p>
             )}
+            <RefreshButton loading={loading} onClick={reload} />
             <Button variant="secondary" size="sm" icon="fas fa-calendar-days"
               onClick={() => navigate(`/reservations/calendar${params.toString() ? `?${params.toString()}` : ''}`)}>
               Calendario

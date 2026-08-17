@@ -54,7 +54,11 @@ conectar: `cp .env.example .env`, define `VITE_API_URL` y reinicia. Detalle en `
   contraseña temporal. El acceso se da SOLO por roles: el modal de datos no toca accesos y los
   roles se asignan desde su propio modal (`api.updateCompanyUser` con solo `roles`, que el backend
   sincroniza dejando intacto lo demás); los permisos directos ya no se editan desde el panel, los
-  que un usuario tenga guardados se conservan), `api-module-orders` (Facturas: órdenes de la compañía consultables en
+  que un usuario tenga guardados se conservan. Cada vínculo tiene un TIPO
+  (`company_users.user_type_id`: 1 cliente, 2 empleado) que se elige al crear/vincular y se puede
+  cambiar al editar; el listado filtra por tipo —empleados por defecto— y por rol
+  (`user_type_id` y `_role` en `GET /companies/{company}/users`). Los roles de sistema `client` y
+  `employee` no se ofrecen como asignables), `api-module-orders` (Facturas: órdenes de la compañía consultables en
   `/invoices` por rango de fechas —hoy por defecto—, estado y usuario que las registró, con detalle completo en
   `/invoices/:orderId`: ítems con opciones, impuestos, pagos, cliente y creador; el detalle
   reusa el permiso del listado; también gatea el dash de Ventas del Dashboard y el

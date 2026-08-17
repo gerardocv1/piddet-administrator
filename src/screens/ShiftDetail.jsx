@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Card, Badge, Button, Spinner, DataTable, PageHeader } from '../components';
+import { Card, Badge, Button, RefreshButton, Spinner, DataTable, PageHeader } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { usePermissions } from '../lib/permissions/usePermissions.js';
@@ -24,7 +24,7 @@ export function ShiftDetail() {
   const { can, canAny } = usePermissions();
 
   const fetcher = React.useCallback(() => api.shift(shiftId), [shiftId]);
-  const { data, loading, error } = useResource(fetcher, null, [shiftId]);
+  const { data, loading, error, reload } = useResource(fetcher, null, [shiftId]);
 
   useSetPageTitle(data?.id ? `Turno #${data.id}` : null);
 
@@ -94,6 +94,7 @@ export function ShiftDetail() {
         backTitle="Volver a turnos"
         subtitle={`Turno ${SHIFT_TYPE_LABELS[data.type] || data.type} · ${shiftDateTime(data.opened_at)}`}
         actions={<>
+          <RefreshButton loading={loading} onClick={reload} />
           {open
             ? <Badge variant="success" dot>Abierto</Badge>
             : <Badge variant="neutral" dot>Cerrado</Badge>}

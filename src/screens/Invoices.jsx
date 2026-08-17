@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Card, DataTable, Badge, Button, FilterBar, Pagination } from '../components';
+import { Card, DataTable, Badge, Button, FilterBar, Pagination, RefreshButton } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { ORDER_STATUS, orderStatusOf, todayIso, timeOf, firstNameOf, hasDiscount } from '../lib/orderLabels.js';
@@ -41,7 +41,7 @@ export function Invoices() {
     () => api.orders({ dateFrom, dateTo, status, creatorId, page }),
     [dateFrom, dateTo, status, creatorId, page],
   );
-  const { data, loading, error } = useResource(fetcher, EMPTY, [dateFrom, dateTo, status, creatorId, page]);
+  const { data, loading, error, reload } = useResource(fetcher, EMPTY, [dateFrom, dateTo, status, creatorId, page]);
   const rows = data.items || [];
   const pg = data.pagination;
 
@@ -96,6 +96,7 @@ export function Invoices() {
         resultCount={pg?.total}
         actions={
           <>
+            <RefreshButton loading={loading} onClick={reload} />
             {(dateFrom !== todayIso() || dateTo !== todayIso()) && (
               <Button variant="secondary" size="sm" icon="fas fa-rotate-left"
                 onClick={() => setQuery({ date_from: todayIso(), date_to: todayIso() })}>
