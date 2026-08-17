@@ -217,13 +217,17 @@ function UserTypeField({ value, onChange }) {
 
 // ── Selector de roles (multi-selección con checkboxes) ──────────────────────────
 // Solo la etiqueta corta del rol: qué permisos otorga cada uno se consulta en /roles.
+// Los roles del sistema (`is_system`) solo llegan aquí si el usuario tiene `admin-general`.
 function RolesField({ roles, selected, onToggle }) {
   if (!roles.length) return <span className={s.muted}>No hay roles asignables.</span>;
   return (
     <div className={s.formCol}>
       <span className={s.muted}>Roles</span>
       {roles.map((r) => (
-        <Checkbox key={r.name} label={r.label} checked={selected.includes(r.name)} onChange={() => onToggle(r.name)} />
+        <span key={r.name} className={s.actions}>
+          <Checkbox label={r.label} checked={selected.includes(r.name)} onChange={() => onToggle(r.name)} />
+          {r.is_system && <Badge variant="neutral" title="Rol base de la plataforma">Del sistema</Badge>}
+        </span>
       ))}
     </div>
   );

@@ -57,8 +57,11 @@ conectar: `cp .env.example .env`, define `VITE_API_URL` y reinicia. Detalle en `
   que un usuario tenga guardados se conservan. Cada vínculo tiene un TIPO
   (`company_users.user_type_id`: 1 cliente, 2 empleado) que se elige al crear/vincular y se puede
   cambiar al editar; el listado filtra por tipo —empleados por defecto— y por rol
-  (`user_type_id` y `_role` en `GET /companies/{company}/users`). Los roles de sistema `client` y
-  `employee` no se ofrecen como asignables), `api-module-orders` (Facturas: órdenes de la compañía consultables en
+  (`user_type_id` y `_role` en `GET /companies/{company}/users`); los roles del sistema solo
+  aparecen en el selector —marcados «Del sistema»— con `admin-general`), `admin-general`
+  (administración general: único permiso que habilita los roles del sistema —`super-admin`,
+  `client`, `employee`— tanto para asignarlos a un usuario como para editarlos/eliminarlos en
+  `/roles`; lo trae el rol `super-admin` por seeder), `api-module-orders` (Facturas: órdenes de la compañía consultables en
   `/invoices` por rango de fechas —hoy por defecto—, estado y usuario que las registró, con detalle completo en
   `/invoices/:orderId`: ítems con opciones, impuestos, pagos, cliente y creador; el detalle
   reusa el permiso del listado; también gatea el dash de Ventas del Dashboard y el
@@ -117,8 +120,10 @@ conectar: `cp .env.example .env`, define `VITE_API_URL` y reinicia. Detalle en `
   incluido "liberar todas"; una mesa nunca se borra, se desactiva),
   `role-list` (Roles: catálogo de roles en `/roles` — cada rol agrupa permisos y es lo único que se
   asigna a un usuario. OJO: el catálogo es de la PLATAFORMA, no de la compañía; crear un rol o
-  cambiar sus permisos aplica a todas las compañías que lo usen, y los roles del sistema
-  —`super-admin`, `client`, `employee`— los protege el backend. Las acciones se gatean con
+  cambiar sus permisos aplica a todas las compañías que lo usen. Los roles del sistema
+  —`super-admin`, `client`, `employee`— solo se asignan, editan, eliminan o les cambian los
+  permisos con `admin-general`; sin él el backend los oculta del catálogo asignable y rechaza
+  tocarlos. Las acciones se gatean con
   `role-create`, `role-update`, `role-delete` y `role-assign` (este último abre el selector de
   permisos del rol, que además exige `permission-list`); todo cuelga de
   `GET/POST/PUT/DELETE /companies/{company}/permissions/roles[/{id}]` y

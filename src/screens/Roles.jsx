@@ -7,7 +7,7 @@ import { roleLabel } from '../lib/roleLabels.js';
 import s from './screens.module.css';
 import a from './Access.module.css';
 
-// Roles base de la plataforma: el backend rechaza modificarlos o eliminarlos.
+// Roles base de la plataforma: el backend solo deja tocarlos con el permiso `admin-general`.
 const SYSTEM_ROLES = ['super-admin', 'client', 'employee'];
 const isSystemRole = (role) => SYSTEM_ROLES.includes(role.name);
 
@@ -28,6 +28,9 @@ export function Roles() {
   const canUpdate = can('role-update');
   const canDelete = can('role-delete');
   const canAssign = can('role-assign') && can('permission-list');
+  // `admin-general` es lo único que habilita administrar los roles del sistema.
+  const canSystemRoles = can('admin-general');
+  const editable = (role) => !isSystemRole(role) || canSystemRoles;
 
   const { data: roles, loading, error, reload } = useResource(api.roles, [], []);
 
@@ -63,15 +66,15 @@ export function Roles() {
 
   const actionsFor = (role) => (
     <span className={s.actions}>
-      {canAssign && (
+      {canAssign && editable(role) && (
         <IconButton icon="fas fa-key" variant="light" size="sm" title="Permisos del rol"
           onClick={() => setPermsOf(role)} />
       )}
-      {canUpdate && !isSystemRole(role) && (
+      {canUpdate && editable(role) && (
         <IconButton icon="fas fa-pen" variant="light" size="sm" title="Editar rol"
           onClick={() => setForm(role)} />
       )}
-      {canDelete && !isSystemRole(role) && (
+      {canDelete && editable(role) && (
         <IconButton icon="fas fa-trash" variant="danger" size="sm" title="Eliminar rol"
           onClick={() => { setDelError(null); setDel(role); }} />
       )}
@@ -204,6 +207,13 @@ function RoleFormModal({ role, onClose, onSaved }) {
         <Button variant="primary" loading={saving} disabled={!valid} onClick={submit}>Guardar</Button>
       </>}>
       <div className={s.formCol}>
+        {role && isSystemRole(role) && (
+          <div className={s.formError}>
+            <i className="fas fa-triangle-exclamation" /> Es un rol del sistema: cambiar su nombre o
+            sus permisos afecta a toda la plataforma. Solo tú puedes editarlo porque tienes acceso
+            de administración general.
+          </div>
+        )}
         <Input label="Nombre técnico" icon="fas fa-hashtag" placeholder="Ej. supervisor" value={name}
           onChange={(e) => setName(e.target.value)}
           hint="Identificador único del rol, en inglés y sin espacios (así lo guarda el backend)." />

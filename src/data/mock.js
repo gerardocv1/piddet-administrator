@@ -201,18 +201,24 @@ export const mockRoles = [
   { id: 7, name: 'cook', label: 'Cocinero', description: 'Operación de cocina', permissions: [] },
 ];
 
-// Roles asignables a un usuario de la compañía (el backend excluye los de sistema). Se calcula en
-// cada llamada para que los roles creados en la demo aparezcan de inmediato.
-const NON_ASSIGNABLE_ROLES = ['super-admin', 'client', 'employee'];
-export const mockAssignableRoles = () => mockRoles
-  .filter((r) => !NON_ASSIGNABLE_ROLES.includes(r.name))
-  .map(({ name, label, description, permissions }) => ({ name, label, description, permissions }));
+// Roles asignables a un usuario de la compañía. Los del sistema solo se ofrecen a quien tiene
+// `admin-general` (en la demo, el usuario lo tiene). Se calcula en cada llamada para que los roles
+// creados durante la demo aparezcan de inmediato.
+export const mockAssignableRoles = () => {
+  const canSystem = mockPermissions.permissions.includes('admin-general');
+  return mockRoles
+    .filter((r) => canSystem || !r.system)
+    .map(({ name, label, description, permissions, system }) => ({
+      name, label, description, permissions, is_system: !!system,
+    }));
+};
 
 // Catálogo demo de permisos asignables (is_api = true) agrupado por módulo, como lo expone el
 // backend en /users/assignable-permissions.
 export const mockAssignablePermissions = [
   { module_id: 1, module_name: 'Usuarios', permissions: [
     { name: 'user-administrator', description: 'Administrar los usuarios de la compañía' },
+    { name: 'admin-general', description: 'Administrar los roles del sistema (super-admin, client, employee)' },
   ] },
   { module_id: 3, module_name: 'Productos y menús', permissions: [
     { name: 'api-module-products', description: 'Administrar productos y categorías' },
@@ -385,7 +391,7 @@ export const mockMenuItems = [
 // el panel muestra Productos (y sus categorías), Menús y Usuarios; el resto queda oculto.
 const mockPermissions = {
   roles: ['Administrador'],
-  permissions: ['user-administrator', 'role-list', 'role-create', 'role-update', 'role-delete', 'role-assign', 'permission-list', 'permission-update', 'api-module-menus', 'api-module-products', 'api-module-company', 'company-edit-functionalities', 'api-module-stores', 'table-list', 'table-create', 'table-update', 'api-module-orders', 'order-cancel', 'order-sync-failure-admin', 'api-module-expenses', 'expense-annul', 'api-module-shifts', 'shift-global-admin', 'api-module-reservations', 'api-module-rentable-units', 'reservation-checkout', 'reservation-cancel', 'reservation-payment-annul'],
+  permissions: ['user-administrator', 'admin-general', 'role-list', 'role-create', 'role-update', 'role-delete', 'role-assign', 'permission-list', 'permission-update', 'api-module-menus', 'api-module-products', 'api-module-company', 'company-edit-functionalities', 'api-module-stores', 'table-list', 'table-create', 'table-update', 'api-module-orders', 'order-cancel', 'order-sync-failure-admin', 'api-module-expenses', 'expense-annul', 'api-module-shifts', 'shift-global-admin', 'api-module-reservations', 'api-module-rentable-units', 'reservation-checkout', 'reservation-cancel', 'reservation-payment-annul'],
 };
 
 // Empresa (tenant) activa y empresas disponibles para el usuario (SaaS multi-tenant).
