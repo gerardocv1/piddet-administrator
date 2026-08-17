@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Button, Card, DataTable, FilterBar, RefreshButton, SalesByTypeChart, StatStrip } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
+import { usePermissions } from '../lib/permissions/usePermissions.js';
 import { todayIso } from '../lib/orderLabels.js';
 import s from './screens.module.css';
 import t from './SalesReport.module.css';
@@ -47,7 +48,15 @@ export function SalesReport() {
   );
   const { data, loading, error, reload } = useResource(fetcher, null, [dateFrom, dateTo, creatorId, itemId]);
 
-  const { data: creators } = useResource(api.orderCreators, [], []);
+  // Con solo `sales-report-own` el backend limita el reporte a lo que registró el usuario: sin
+  // filtro por creador (y sin poder listar los creadores de la compañía).
+  const { can } = usePermissions();
+  const companyWide = can('sales-report');
+  const creatorsFetcher = React.useCallback(
+    () => (companyWide ? api.orderCreators() : Promise.resolve([])),
+    [companyWide],
+  );
+  const { data: creators } = useResource(creatorsFetcher, [], [companyWide]);
   const creatorOptions = React.useMemo(
     () => (creators || []).map((c) => ({ value: String(c.user_id), label: c.name || c.first_name })),
     [creators],
@@ -87,9 +96,9 @@ export function SalesReport() {
 
   const filterDefs = [
     { key: 'range', type: 'daterange', label: 'Fecha', icon: 'fas fa-calendar', fromKey: 'date_from', toKey: 'date_to', max: todayIso() },
-    { key: 'creator_id', type: 'select', label: 'Registró', icon: 'fas fa-user', options: creatorOptions, placeholder: 'Todos los usuarios' },
+    companyWide && { key: 'creator_id', type: 'select', label: 'Registró', icon: 'fas fa-user', options: creatorOptions, placeholder: 'Todos los usuarios' },
     { key: 'item_id', type: 'select', label: 'Producto', icon: 'fas fa-burger', options: itemOptions, placeholder: 'Todos los productos' },
-  ];
+  ].filter(Boolean);
 
   const onFilters = (next) => {
     let from = next.date_from || dateFrom;

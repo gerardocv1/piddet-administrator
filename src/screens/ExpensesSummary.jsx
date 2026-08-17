@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Card, FilterBar, RefreshButton, Spinner } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
+import { usePermissions } from '../lib/permissions/usePermissions.js';
 import { todayIso } from '../lib/orderLabels.js';
 import { expenseMoney, monthStartIso } from '../lib/expenseLabels.js';
 import { formatShortDate } from '../lib/dates.js';
@@ -56,7 +57,15 @@ export function ExpensesSummary() {
     return out;
   }, [tree]);
 
-  const { data: creators } = useResource(api.expenseCreators, [], []);
+  // Con solo `expenses-report-own` el backend limita el resumen a sus gastos: sin filtro por
+  // usuario (y sin poder listar los que registran gastos en la compañía).
+  const { can } = usePermissions();
+  const companyWide = can('expenses-report');
+  const creatorsFetcher = React.useCallback(
+    () => (companyWide ? api.expenseCreators() : Promise.resolve([])),
+    [companyWide],
+  );
+  const { data: creators } = useResource(creatorsFetcher, [], [companyWide]);
   const creatorOptions = React.useMemo(
     () => (creators || []).map((c) => ({ value: String(c.user_id), label: c.name })),
     [creators],
@@ -81,8 +90,8 @@ export function ExpensesSummary() {
   const filters = [
     { key: 'range', type: 'daterange', label: 'Fecha', icon: 'fas fa-calendar', fromKey: 'date_from', toKey: 'date_to', max: todayIso() },
     { key: 'category_id', type: 'select', label: 'Categoría', icon: 'fas fa-tags', options: categoryOptions, placeholder: 'Todas las categorías' },
-    { key: 'created_by', type: 'select', label: 'Registró', icon: 'fas fa-user', options: creatorOptions, placeholder: 'Todos los usuarios' },
-  ];
+    companyWide && { key: 'created_by', type: 'select', label: 'Registró', icon: 'fas fa-user', options: creatorOptions, placeholder: 'Todos los usuarios' },
+  ].filter(Boolean);
 
   const onFilters = (next) => setQuery({
     date_from: next.date_from,

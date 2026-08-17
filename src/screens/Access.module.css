@@ -81,7 +81,39 @@
   gap: 8px 16px;
 }
 .pickerOption { display: flex; flex-direction: column; gap: 2px; }
-.pickerHidden { font-size: var(--text-xs); color: var(--gray-400); }
+
+/* Cabecera desplegable del módulo dentro del selector */
+.pickerModuleToggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+}
+.pickerChevron { font-size: var(--text-xs); color: var(--gray-500); }
+
+/* Permiso: la key arriba (monoespaciada, con su marca de API) y la descripción debajo */
+.pickerKeyLine { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.pickerApi { padding: 0.15rem 0.4rem; font-size: 0.625rem; letter-spacing: 0.02em; }
+.pickerKey {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--gray-800);
+  overflow-wrap: anywhere;
+}
+.pickerDesc {
+  font-size: var(--text-xs);
+  color: var(--gray-600);
+  padding-left: 28px;
+}
 
 .empty {
   padding: 18px 0;

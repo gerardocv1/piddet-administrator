@@ -73,6 +73,14 @@ export const mockFunctionalities = [
     description: 'Habilita reservas de unidades rentables, check-in, cuenta del huésped y checkout.',
     is_active: true,
   },
+  {
+    id: 5,
+    name: 'functionality_menu_item_price',
+    label: 'Precio por menú',
+    icon: 'fas fa-tags',
+    description: 'Permite asignar a un producto un precio propio dentro de cada menú, distinto de su precio base.',
+    is_active: true,
+  },
 ];
 
 // Categorías de producto: scopeadas por compañía y por tipo de ítem (item_type_id). `position` ordena dentro del tipo.
@@ -225,13 +233,18 @@ export const mockAssignablePermissions = [
     { name: 'api-module-menus', description: 'Administrar menús y sus categorías' },
   ] },
   { module_id: 4, module_name: 'Órdenes', permissions: [
-    { name: 'api-module-orders', description: 'Consultar facturas y ventas' },
+    { name: 'api-module-orders', description: 'Consultar las facturas de toda la compañía' },
+    { name: 'api-module-orders-own', description: 'Consultar solo las facturas que registró el usuario' },
+    { name: 'sales-report', description: 'Ver el reporte de ventas de toda la compañía' },
+    { name: 'sales-report-own', description: 'Ver el reporte de ventas de lo que registró el usuario' },
     { name: 'order-cancel', description: 'Cancelar facturas con motivo' },
     { name: 'order-sync-failure-admin', description: 'Administrar fallos de sincronización del POS' },
   ] },
   { module_id: 5, module_name: 'Gastos', permissions: [
     { name: 'api-module-expenses', description: 'Administrar los gastos de la compañía' },
     { name: 'api-module-expenses-own', description: 'Registrar y ver solo sus propios gastos' },
+    { name: 'expenses-report', description: 'Ver el resumen de gastos de toda la compañía' },
+    { name: 'expenses-report-own', description: 'Ver el resumen de los gastos que registró el usuario' },
     { name: 'expense-annul', description: 'Anular gastos' },
   ] },
   { module_id: 8, module_name: 'Turnos', permissions: [
@@ -263,15 +276,15 @@ export const mockPermissionCatalog = (() => {
     module_id: 2,
     module_name: 'Permisos',
     permissions: withIds(2, [
-      ['role-list', 'Ver el catálogo de roles'],
-      ['role-create', 'Crear roles'],
-      ['role-update', 'Editar roles'],
-      ['role-delete', 'Eliminar roles'],
-      ['role-assign', 'Asignar permisos a un rol'],
-      ['permission-list', 'Ver el catálogo de permisos'],
-      ['permission-update', 'Editar la visibilidad de un permiso'],
-      ['permission-create', 'Crear permisos', false],
-      ['permission-delete', 'Eliminar permisos', false],
+      ['role-list', 'Ver el catálogo de roles de la plataforma.'],
+      ['role-create', 'Crear roles nuevos en el catálogo.'],
+      ['role-update', 'Editar el nombre y la descripción de un rol.'],
+      ['role-delete', 'Eliminar un rol del catálogo (los del sistema exigen además admin-general).'],
+      ['role-assign', 'Cambiar los permisos que otorga un rol (reemplaza su lista de permisos).'],
+      ['permission-list', 'Ver el catálogo de permisos agrupado por módulo.'],
+      ['permission-update', 'Cambiar la visibilidad de un permiso en el panel (is_api).'],
+      ['permission-create', '[no se usa] Creación de permisos; el catálogo se administra por seeders.', false],
+      ['permission-delete', '[no se usa] Eliminación de permisos; el catálogo se administra por seeders.', false],
     ]),
   };
 
@@ -391,7 +404,7 @@ export const mockMenuItems = [
 // el panel muestra Productos (y sus categorías), Menús y Usuarios; el resto queda oculto.
 const mockPermissions = {
   roles: ['Administrador'],
-  permissions: ['user-administrator', 'admin-general', 'role-list', 'role-create', 'role-update', 'role-delete', 'role-assign', 'permission-list', 'permission-update', 'api-module-menus', 'api-module-products', 'api-module-company', 'company-edit-functionalities', 'api-module-stores', 'table-list', 'table-create', 'table-update', 'api-module-orders', 'order-cancel', 'order-sync-failure-admin', 'api-module-expenses', 'expense-annul', 'api-module-shifts', 'shift-global-admin', 'api-module-reservations', 'api-module-rentable-units', 'reservation-checkout', 'reservation-cancel', 'reservation-payment-annul'],
+  permissions: ['user-administrator', 'admin-general', 'role-list', 'role-create', 'role-update', 'role-delete', 'role-assign', 'permission-list', 'permission-update', 'api-module-menus', 'api-module-products', 'api-module-company', 'company-edit-functionalities', 'api-module-stores', 'table-list', 'table-create', 'table-update', 'api-module-orders', 'sales-report', 'order-cancel', 'order-sync-failure-admin', 'api-module-expenses', 'expenses-report', 'expense-annul', 'api-module-shifts', 'shift-global-admin', 'api-module-reservations', 'api-module-rentable-units', 'reservation-checkout', 'reservation-cancel', 'reservation-payment-annul'],
 };
 
 // Empresa (tenant) activa y empresas disponibles para el usuario (SaaS multi-tenant).

@@ -7,7 +7,7 @@ import { roleLabel } from '../lib/roleLabels.js';
 import s from './screens.module.css';
 import a from './Access.module.css';
 
-// Roles base de la plataforma: el backend solo deja tocarlos con el permiso `admin-general`.
+// Roles base de la plataforma: se editan como cualquier otro, pero eliminarlos exige `admin-general`.
 const SYSTEM_ROLES = ['super-admin', 'client', 'employee'];
 const isSystemRole = (role) => SYSTEM_ROLES.includes(role.name);
 
@@ -28,9 +28,9 @@ export function Roles() {
   const canUpdate = can('role-update');
   const canDelete = can('role-delete');
   const canAssign = can('role-assign') && can('permission-list');
-  // `admin-general` es lo único que habilita administrar los roles del sistema.
-  const canSystemRoles = can('admin-general');
-  const editable = (role) => !isSystemRole(role) || canSystemRoles;
+  // Cualquier rol se edita y se le cambian los permisos; eliminar uno del sistema exige además
+  // `admin-general` (es irreversible y afecta a toda la plataforma).
+  const canDeleteRole = (role) => canDelete && (!isSystemRole(role) || can('admin-general'));
 
   const { data: roles, loading, error, reload } = useResource(api.roles, [], []);
 
@@ -66,15 +66,15 @@ export function Roles() {
 
   const actionsFor = (role) => (
     <span className={s.actions}>
-      {canAssign && editable(role) && (
+      {canAssign && (
         <IconButton icon="fas fa-key" variant="light" size="sm" title="Permisos del rol"
           onClick={() => setPermsOf(role)} />
       )}
-      {canUpdate && editable(role) && (
+      {canUpdate && (
         <IconButton icon="fas fa-pen" variant="light" size="sm" title="Editar rol"
           onClick={() => setForm(role)} />
       )}
-      {canDelete && editable(role) && (
+      {canDeleteRole(role) && (
         <IconButton icon="fas fa-trash" variant="danger" size="sm" title="Eliminar rol"
           onClick={() => { setDelError(null); setDel(role); }} />
       )}
@@ -210,8 +210,7 @@ function RoleFormModal({ role, onClose, onSaved }) {
         {role && isSystemRole(role) && (
           <div className={s.formError}>
             <i className="fas fa-triangle-exclamation" /> Es un rol del sistema: cambiar su nombre o
-            sus permisos afecta a toda la plataforma. Solo tú puedes editarlo porque tienes acceso
-            de administración general.
+            sus permisos afecta a toda la plataforma.
           </div>
         )}
         <Input label="Nombre técnico" icon="fas fa-hashtag" placeholder="Ej. supervisor" value={name}
@@ -251,6 +250,17 @@ function RolePermissionsModal({ role, catalog, onClose, onSaved }) {
       .filter((mod) => mod.permissions.length > 0);
   }, [catalog, q]);
 
+  // Módulos colapsados por defecto; con un término de búsqueda se abren todos los que coinciden
+  // para no obligar a expandirlos uno por uno.
+  const [openModules, setOpenModules] = React.useState(() => new Set());
+  const searching = q.trim().length > 0;
+  const isOpen = (mod) => searching || openModules.has(mod.module_id);
+  const toggleOpen = (moduleId) => setOpenModules((prev) => {
+    const next = new Set(prev);
+    if (next.has(moduleId)) next.delete(moduleId); else next.add(moduleId);
+    return next;
+  });
+
   const toggleModule = (mod) => {
     const names = mod.permissions.map((p) => p.name);
     const allOn = names.every((n) => selected.has(n));
@@ -289,34 +299,52 @@ function RolePermissionsModal({ role, catalog, onClose, onSaved }) {
 
         <div className={a.pickerBody}>
           {groups.length === 0 && <div className={a.empty}>No hay permisos que coincidan.</div>}
-          {groups.map((mod) => {
-            const allOn = mod.permissions.every((p) => selected.has(p.name));
-            return (
-              <div key={mod.module_id} className={a.pickerModule}>
-                <div className={a.pickerModuleHead}>
-                  <Checkbox label={mod.module_name || 'Otros'} checked={allOn} onChange={() => toggleModule(mod)} />
-                  <span className={a.spacer} />
-                  <span className={a.pickerCount}>
-                    {mod.permissions.filter((p) => selected.has(p.name)).length}/{mod.permissions.length}
-                  </span>
-                </div>
-                <div className={a.pickerOptions}>
-                  {mod.permissions.map((p) => (
-                    <div key={p.name} className={a.pickerOption}>
-                      <Checkbox label={p.description || p.name} checked={selected.has(p.name)}
-                        onChange={() => toggle(p.name)} />
-                      <span className={a.code}>{p.name}</span>
-                      {!p.is_api && <span className={a.pickerHidden}>No se muestra en el panel</span>}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
+          {groups.map((mod) => (
+            <PermissionModuleGroup key={mod.module_id} module={mod} selected={selected}
+              open={isOpen(mod)} onToggleOpen={() => toggleOpen(mod.module_id)}
+              onToggleAll={() => toggleModule(mod)} onTogglePermission={toggle} />
+          ))}
         </div>
 
         {err && <div className={s.formError}><i className="fas fa-triangle-exclamation" /> {err}</div>}
       </div>
     </Modal>
+  );
+}
+
+// ── Módulo colapsable del selector de permisos ──────────────────────────────────
+// Cada permiso se identifica por su key (el nombre técnico) y muestra la descripción debajo.
+function PermissionModuleGroup({ module, selected, open, onToggleOpen, onToggleAll, onTogglePermission }) {
+  const count = module.permissions.filter((p) => selected.has(p.name)).length;
+  const allOn = count === module.permissions.length;
+
+  return (
+    <div className={a.pickerModule}>
+      <div className={a.pickerModuleHead}>
+        <Checkbox checked={allOn} onChange={onToggleAll} aria-label={`Todos los permisos de ${module.module_name || 'Otros'}`} />
+        <button type="button" className={a.pickerModuleToggle} onClick={onToggleOpen} aria-expanded={open}>
+          <i className={`fas fa-chevron-${open ? 'up' : 'down'} ${a.pickerChevron}`} aria-hidden="true" />
+          <span className={a.moduleName}>{module.module_name || 'Otros'}</span>
+          <span className={a.spacer} />
+          <span className={a.pickerCount}>{count}/{module.permissions.length}</span>
+        </button>
+      </div>
+      {open && (
+        <div className={a.pickerOptions}>
+          {module.permissions.map((p) => (
+            <div key={p.name} className={a.pickerOption}>
+              <Checkbox checked={selected.has(p.name)} onChange={() => onTogglePermission(p.name)}
+                label={<span className={a.pickerKeyLine}>
+                  <span className={a.pickerKey}>{p.name}</span>
+                  {p.is_api && (
+                    <Badge variant="info" className={a.pickerApi} title="El panel lo conoce: llega en /me/permissions">API</Badge>
+                  )}
+                </span>} />
+              <span className={a.pickerDesc}>{p.description || 'Sin descripción'}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }

@@ -55,23 +55,27 @@ export const MODULE_GROUPS = [
     items: [
       // Ventas: facturas (órdenes consultables por fecha; el detalle /invoices/:orderId reusa el
       // permiso) y reporte (resumen, métodos de pago, top productos y ventas por día, con filtros).
+      // Cada uno tiene su par de permisos: el de TODA la compañía (con filtro por usuario) y su
+      // variante `-own`, con la que el usuario solo ve lo que registró él (lo filtra el backend).
       {
         label: 'Ventas', icon: 'fas fa-sack-dollar',
         children: [
-          { to: '/invoices', label: 'Facturas', icon: 'fas fa-file-invoice', perm: 'api-module-orders' },
-          { to: '/sales-report', label: 'Reporte', icon: 'fas fa-chart-line', perm: 'api-module-orders' },
+          { to: '/invoices', label: 'Facturas', icon: 'fas fa-file-invoice', perm: ['api-module-orders', 'api-module-orders-own'] },
+          { to: '/sales-report', label: 'Reporte', icon: 'fas fa-chart-line', perm: ['sales-report', 'sales-report-own'] },
         ],
       },
       // Egresos: registro de gastos (encabezado + líneas + fotos), reporte por categoría y
       // categorías propias. El detalle (/expenses/:expenseId) y la creación (/expenses/new,
       // /expenses/quick) reusan el permiso del listado; anular requiere además `expense-annul`
       // (solo oculta el botón). `api-module-expenses-own` es el acceso de empleado: registra y ve
-      // SOLO sus gastos (el backend aplica el filtro); no ve Reporte ni Categorías.
+      // SOLO sus gastos (el backend aplica el filtro); no ve Categorías. El Reporte tiene su
+      // propio par de permisos: `expenses-report` (toda la compañía, con filtro por usuario) y
+      // `expenses-report-own` (solo los gastos que registró él).
       {
         label: 'Egresos', icon: 'fas fa-receipt',
         children: [
           { to: '/expenses', label: 'Gastos', icon: 'fas fa-receipt', perm: ['api-module-expenses', 'api-module-expenses-own'] },
-          { to: '/expenses/summary', label: 'Reporte', icon: 'fas fa-chart-pie', perm: 'api-module-expenses' },
+          { to: '/expenses/summary', label: 'Reporte', icon: 'fas fa-chart-pie', perm: ['expenses-report', 'expenses-report-own'] },
           { to: '/expense-categories', label: 'Categorías', icon: 'fas fa-tags', perm: 'api-module-expenses' },
         ],
       },
@@ -141,6 +145,8 @@ export const ROUTE_FUNCTIONALITY = Object.fromEntries(
  * ¿Puede el usuario acceder a esta ruta, dados sus permisos y las funcionalidades activas de
  * la compañía? `activeFunctionalities` es la lista de nombres activos; `null` significa "aún
  * no cargadas" y omite ese chequeo (los guards de ruta esperan con `ready` antes de decidir).
+ * El menú, en cambio, pasa `[]` mientras cargan: prefiere no mostrar un módulo a mostrarlo y
+ * quitarlo al resolverse.
  */
 export function canAccess(path, permissions = [], activeFunctionalities = null) {
   const required = ROUTE_PERMISSION[path];

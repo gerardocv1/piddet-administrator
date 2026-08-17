@@ -54,9 +54,10 @@ export function Sidebar({ onLogout, open = false, onClose, company, companies = 
   const { permissions } = usePermissions();
   const { ready, activeNames } = useFunctionalities();
   const { canInstall, install } = useInstallPrompt();
-  // Mientras las funcionalidades cargan (`null`) no se gatea por ellas, para no ocultar
-  // módulos en falso; al resolverse, los que la compañía tenga apagados desaparecen.
-  const activeFunctionalities = ready ? activeNames : null;
+  // Mientras las funcionalidades cargan se asume que NINGUNA está activa: los módulos que
+  // dependen de una (p. ej. Mesas) nacen ocultos y aparecen al confirmarse, en vez de mostrarse
+  // y desaparecer medio segundo después.
+  const activeFunctionalities = ready ? activeNames : [];
 
   const openProfile = () => { onClose && onClose(); onOpenProfile && onOpenProfile(); };
 

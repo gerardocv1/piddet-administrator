@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, DataTable, Badge, Button, FilterBar, Pagination, RefreshButton } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
+import { usePermissions } from '../lib/permissions/usePermissions.js';
 import { ORDER_STATUS, orderStatusOf, todayIso, timeOf, firstNameOf, hasDiscount } from '../lib/orderLabels.js';
 import { formatShortDate } from '../lib/dates.js';
 import s from './screens.module.css';
@@ -45,7 +46,15 @@ export function Invoices() {
   const rows = data.items || [];
   const pg = data.pagination;
 
-  const { data: creators } = useResource(api.orderCreators, [], []);
+  // Alcance propio (solo `api-module-orders-own`): el backend ya filtra por el usuario, así que
+  // el filtro por creador no aplica ni se pueden listar los creadores de la compañía.
+  const { can } = usePermissions();
+  const companyWide = can('api-module-orders');
+  const creatorsFetcher = React.useCallback(
+    () => (companyWide ? api.orderCreators() : Promise.resolve([])),
+    [companyWide],
+  );
+  const { data: creators } = useResource(creatorsFetcher, [], [companyWide]);
   const creatorOptions = React.useMemo(
     () => (creators || []).map((c) => ({ value: String(c.user_id), label: c.name || c.first_name })),
     [creators],
@@ -76,8 +85,8 @@ export function Invoices() {
   const filterDefs = [
     { key: 'range', type: 'daterange', label: 'Fecha', icon: 'fas fa-calendar', fromKey: 'date_from', toKey: 'date_to', max: todayIso() },
     { key: 'status', type: 'select', label: 'Estado', icon: 'fas fa-circle-check', options: STATUS_OPTIONS, placeholder: 'Todos los estados' },
-    { key: 'creator_id', type: 'select', label: 'Registró', icon: 'fas fa-user', options: creatorOptions, placeholder: 'Todos los usuarios' },
-  ];
+    companyWide && { key: 'creator_id', type: 'select', label: 'Registró', icon: 'fas fa-user', options: creatorOptions, placeholder: 'Todos los usuarios' },
+  ].filter(Boolean);
 
   const onFilters = (next) => {
     let from = next.date_from || dateFrom;

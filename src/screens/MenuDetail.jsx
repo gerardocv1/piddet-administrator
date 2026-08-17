@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Button, IconButton, RefreshButton, Input, MoneyInput, Select, Textarea, Modal, Spinner, SortableList, Autocomplete, Dropdown } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
+import { useFunctionalities } from '../lib/permissions/useFunctionalities.js';
 import { ADMIN_BASE } from '../lib/adminBase.js';
 import s from './screens.module.css';
 import t from './MenuDetail.module.css';
@@ -359,6 +360,8 @@ export function MenuDetail() {
 
 // ── Modal: buscar un producto y asignarlo (categoría + precio + disponibilidad) ──
 function AddProductModal({ menuId, categories, defaultCat, onClose, onAdded }) {
+  const { has } = useFunctionalities();
+  const menuPriceOn = has('functionality_menu_item_price');
   const [sel, setSel] = React.useState(null);
   const initialCat = defaultCat != null ? defaultCat : (categories[0] ? categories[0].id : '');
   const [catId, setCatId] = React.useState(String(initialCat));
@@ -380,7 +383,7 @@ function AddProductModal({ menuId, categories, defaultCat, onClose, onAdded }) {
       await api.addMenuItem(menuId, {
         item_id: sel.id,
         menu_category_id: Number(catId),
-        price: price.trim() ? Number(price) : null,
+        ...(menuPriceOn ? { price: price.trim() ? Number(price) : null } : {}),
       });
       onAdded();
     } catch (e) {
@@ -389,7 +392,9 @@ function AddProductModal({ menuId, categories, defaultCat, onClose, onAdded }) {
   };
 
   return (
-    <Modal open title="Agregar producto" subtitle="Busca un producto y asígnale categoría y precio" size="lg" onClose={onClose}
+    <Modal open title="Agregar producto"
+      subtitle={menuPriceOn ? 'Busca un producto y asígnale categoría y precio' : 'Busca un producto y asígnale una categoría'}
+      size="lg" onClose={onClose}
       footer={<>
         <Button variant="secondary" onClick={onClose}>Cancelar</Button>
         <Button variant="primary" loading={saving} disabled={!sel || !catId} onClick={submit}>Agregar</Button>
@@ -415,8 +420,10 @@ function AddProductModal({ menuId, categories, defaultCat, onClose, onAdded }) {
         <div className={s.formGrid}>
           <Select label="Categoría" value={catId} onChange={(e) => setCatId(e.target.value)}
             options={categories.map((c) => ({ value: String(c.id), label: c.name }))} />
-          <MoneyInput label="Precio (opcional)" icon="fas fa-dollar-sign"
-            placeholder="Usar precio del producto" value={price} onChange={setPrice} />
+          {menuPriceOn && (
+            <MoneyInput label="Precio (opcional)" icon="fas fa-dollar-sign"
+              placeholder="Usar precio del producto" value={price} onChange={setPrice} />
+          )}
         </div>
         {err && <div className={t.formError}><i className="fas fa-triangle-exclamation" /> {err}</div>}
       </div>
@@ -427,6 +434,8 @@ function AddProductModal({ menuId, categories, defaultCat, onClose, onAdded }) {
 // ── Modal: editar categoría/precio/disponibilidad de un ítem ya asignado ──
 function EditItemModal({ menuId, item, categories, onClose, onSaved }) {
   const navigate = useNavigate();
+  const { has } = useFunctionalities();
+  const menuPriceOn = has('functionality_menu_item_price');
   const [catId, setCatId] = React.useState(String(item.menu_category_id));
   const [price, setPrice] = React.useState('');
   const [saving, setSaving] = React.useState(false);
@@ -452,7 +461,7 @@ function EditItemModal({ menuId, item, categories, onClose, onSaved }) {
     try {
       await api.updateMenuItem(menuId, item.id, {
         menu_category_id: Number(catId),
-        price: price.trim() ? Number(price) : null,
+        ...(menuPriceOn ? { price: price.trim() ? Number(price) : null } : {}),
       });
       onSaved();
     } catch (e) {
@@ -469,9 +478,11 @@ function EditItemModal({ menuId, item, categories, onClose, onSaved }) {
       <div className={s.formCol}>
         <Select label="Categoría" value={catId} onChange={(e) => setCatId(e.target.value)}
           options={categories.map((c) => ({ value: String(c.id), label: c.name }))} />
-        <MoneyInput label="Precio (opcional)" icon="fas fa-dollar-sign"
-          placeholder={`Actual: ${fmtPrice(item.price)} · vacío = precio del producto`}
-          value={price} onChange={setPrice} />
+        {menuPriceOn && (
+          <MoneyInput label="Precio (opcional)" icon="fas fa-dollar-sign"
+            placeholder={`Actual: ${fmtPrice(item.price)} · vacío = precio del producto`}
+            value={price} onChange={setPrice} />
+        )}
         {err && <div className={t.formError}><i className="fas fa-triangle-exclamation" /> {err}</div>}
       </div>
     </Modal>
