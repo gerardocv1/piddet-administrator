@@ -179,6 +179,24 @@ npm run preview  # sirve /dist localmente
 Entrypoint: `index.html` → `src/main.jsx`. Variable de entorno: `VITE_API_URL`
 (ver `.env.example`).
 
+## PWA (instalable en Android/iOS)
+
+El panel se instala como aplicación desde Chrome ("Instalar app" / "Agregar a pantalla de
+inicio") y se abre sin barra del navegador (`display: standalone`). Piezas:
+
+| Archivo | Rol |
+|---|---|
+| `public/manifest.webmanifest` | Identidad de la app: `id`/`start_url`/`scope` = `/admin/`, iconos 192/384/512 + `maskable`, colores de splash. |
+| `public/sw.js` | Service worker: red primero para el shell del panel, caché para assets con hash e iconos; nunca cachea `/api` ni otros orígenes. Requisito de Chrome para ofrecer la instalación. |
+| `src/lib/pwa.js` | `registerServiceWorker()` (solo en build de producción) y `useInstallPrompt()`, que alimenta el botón "Instalar app" del pie del menú lateral. |
+
+Requisitos de despliegue: **HTTPS** y que `/manifest.webmanifest` y `/sw.js` se sirvan desde la
+raíz del dominio (el scope del worker debe cubrir `/admin/`). Instalada de verdad —no como acceso
+directo—, Android la lista entre las apps y permite desinstalarla desde el propio icono.
+
+El CSS reserva los recortes de pantalla (`env(safe-area-inset-*)` en topbar, cajón lateral y
+contenido) y usa `100dvh`, porque a pantalla completa el sistema dibuja sobre la app.
+
 ## Documentación Existente
 
 - `specs/functional.md` — especificación funcional (módulos y flujos).

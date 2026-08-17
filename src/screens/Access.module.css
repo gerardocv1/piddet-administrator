@@ -1,0 +1,104 @@
+/* Estilos compartidos por la administración de accesos: catálogo de roles y de permisos. */
+
+/* Aviso de alcance: roles y permisos son de la plataforma, no de la compañía activa. */
+.notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 11px 14px;
+  border-radius: var(--radius);
+  background: var(--color-warning-100);
+  color: var(--color-warning-fg);
+  font-size: var(--text-sm);
+  line-height: 1.45;
+}
+
+.code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: var(--text-xs);
+  color: var(--gray-500);
+}
+
+/* Celda/tarjeta de identidad: nombre visible arriba y nombre técnico debajo. */
+.identity { display: flex; flex-direction: column; gap: 2px; }
+.roleCard { display: flex; flex-direction: column; gap: 8px; }
+
+.name { font-weight: 600; color: var(--gray-800); }
+.desc { color: var(--gray-600); font-size: var(--text-sm); }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* Grupos de permisos por módulo (catálogo y selector del rol) */
+.modules { display: flex; flex-direction: column; gap: 14px; }
+
+.moduleHead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.moduleName {
+  margin: 0;
+  font-size: var(--text-base);
+  font-weight: 700;
+  color: var(--gray-800);
+}
+.moduleCount { color: var(--gray-500); font-size: var(--text-sm); }
+.spacer { flex: 1; min-width: 0; }
+
+.permList { display: flex; flex-direction: column; }
+
+.permRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--border-color);
+}
+.permRow:first-child { border-top: 0; }
+.permInfo { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.permRoles { display: flex; flex-wrap: wrap; gap: 6px; max-width: 45%; }
+
+@media (max-width: 720px) {
+  .permRow { align-items: flex-start; flex-wrap: wrap; }
+  .permRoles { max-width: 100%; flex-basis: 100%; }
+}
+
+/* Selector de permisos dentro del modal de un rol */
+.pickerHead {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.pickerCount { color: var(--gray-500); font-size: var(--text-sm); }
+.pickerBody {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-height: 52vh;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.pickerModule { display: flex; flex-direction: column; gap: 8px; }
+.pickerModuleHead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border-color);
+}
+.pickerOptions {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 8px 16px;
+}
+.pickerOption { display: flex; flex-direction: column; gap: 2px; }
+.pickerHidden { font-size: var(--text-xs); color: var(--gray-400); }
+
+.empty {
+  padding: 18px 0;
+  text-align: center;
+  color: var(--gray-500);
+  font-size: var(--text-sm);
+}

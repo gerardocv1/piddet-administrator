@@ -1,0 +1,70 @@
+/* Detalle del turno: los movimientos toman el grueso del ancho y el balance queda como
+   columna lateral compacta en desktop; en pantallas medianas se apilan (balance primero). */
+.mainGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 320px);
+  gap: 16px;
+  align-items: start;
+}
+@media (max-width: 1080px) {
+  .mainGrid { grid-template-columns: 1fr; }
+  /* Apilado, el balance importa más que el historial: va primero. */
+  .sideCol { order: -1; }
+}
+
+.sideCol { display: flex; flex-direction: column; gap: 16px; }
+
+.balance { display: flex; flex-direction: column; gap: 10px; }
+.balanceRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  color: var(--gray-600);
+  font-size: var(--text-sm);
+}
+.balanceRow strong { color: var(--gray-900); }
+.balanceTotal {
+  padding-top: 10px;
+  border-top: 1px solid var(--border-color);
+}
+.balanceTotal strong { font-size: var(--text-lg); }
+
+.income { color: var(--color-success-fg); }
+.outcome { color: var(--color-danger-fg); }
+
+/* Desglose por método, indentado bajo su renglón. */
+.methods {
+  list-style: none;
+  margin: -4px 0 0;
+  padding: 0 0 0 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.methods li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: var(--text-xs);
+  color: var(--gray-500);
+}
+
+/* Enlace al documento contable que respalda el ajuste (factura del sobrante / gasto del faltante). */
+.docLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-primary);
+  font-weight: 600;
+  text-decoration: none;
+}
+.docLink:hover { text-decoration: underline; }
+.docLink i { font-size: 0.68rem; }
+
+/* Movimiento excluido del balance (venta cancelada / gasto anulado con el turno abierto). */
+.excluded {
+  text-decoration: line-through;
+  color: var(--gray-400);
+}
+.excluded * { color: var(--gray-400) !important; }

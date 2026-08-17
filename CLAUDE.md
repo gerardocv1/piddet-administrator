@@ -50,8 +50,11 @@ conectar: `cp .env.example .env`, define `VITE_API_URL` y reinicia. Detalle en `
   detalle con confirmación, vía `api.setMenuActive` → `PUT /companies/{company}/menus/{id}/active` —
   que decide si se publica en la portada pública y si su carta es accesible; apagado se sigue
   administrando con normalidad), `user-administrator` (Usuarios: administración de los usuarios vinculados a la
-  compañía — vincular/desvincular, editar datos básicos, asignar roles y fijar contraseña
-  temporal), `api-module-orders` (Facturas: órdenes de la compañía consultables en
+  compañía en `/users` — vincular/desvincular, editar datos básicos, asignar roles y fijar
+  contraseña temporal. El acceso se da SOLO por roles: el modal de datos no toca accesos y los
+  roles se asignan desde su propio modal (`api.updateCompanyUser` con solo `roles`, que el backend
+  sincroniza dejando intacto lo demás); los permisos directos ya no se editan desde el panel, los
+  que un usuario tenga guardados se conservan), `api-module-orders` (Facturas: órdenes de la compañía consultables en
   `/invoices` por rango de fechas —hoy por defecto—, estado y usuario que las registró, con detalle completo en
   `/invoices/:orderId`: ítems con opciones, impuestos, pagos, cliente y creador; el detalle
   reusa el permiso del listado; también gatea el dash de Ventas del Dashboard y el
@@ -83,11 +86,44 @@ conectar: `cp .env.example .env`, define `VITE_API_URL` y reinicia. Detalle en `
   permisos como alternativas `perm: [a, b]`; ve el dash de Gastos del Dashboard calculado solo
   sobre sus gastos — el backend aplica el mismo filtro en `/metrics/expenses-*`) y `expense-annul` (anular un gasto desde su detalle —
   irreversible, las líneas no se editan; solo gatea el botón),
+  `api-module-shifts` (Turnos: sesiones de caja en `/shifts` — un turno GLOBAL por compañía o
+  de EMPLEADO por cajero, se abre en `/shifts/open` con una base de dinero y el backend le
+  asocia automáticamente las ventas y gastos como movimientos con monto/método denormalizados;
+  detalle con balance en vivo en `/shifts/:shiftId` y cierre paso a paso en
+  `/shifts/:shiftId/close` — contar dinero → balance (base + ventas de todos los métodos −
+  gastos, con desglose informativo) → confirmar, registrando sobrante/faltante como ajuste. La
+  diferencia se respalda con un DOCUMENTO CONTABLE real para que la contabilidad cuadre con la
+  plata contada: el sobrante genera una factura (origen `SHIFT`, ítem de servicio «Sobrante de
+  caja», consecutivo propio `A0000001`) y el faltante un gasto (categoría global «Ajustes de
+  caja → Faltante de caja», proveedor «Ajuste de caja»); ninguno se asocia a un turno abierto —
+  ese dinero ya está contado en el arqueo— y el movimiento de ajuste guarda la referencia
+  (`reference_type`/`reference_id`) para enlazar al documento desde el detalle. Este permiso da
+  visibilidad de todos los turnos y gestión de los de cajero, y también gatea
+  la acción rápida de turnos del Dashboard), `api-module-shifts-own`
+  (Turnos para cajeros: abre/cierra y ve SOLO sus turnos — el backend filtra por
+  `assigned_user_id`; en `modules.js` la ruta `/shifts` declara ambos permisos como
+  alternativas `perm: [a, b]`) y `shift-global-admin` (ÚNICO permiso que abre y cierra el
+  turno GLOBAL — gatea la opción en `/shifts/open` y el botón de cierre; el backend lo exige y
+  además hace visible el global a quien solo tenga el acceso de cajero; el global no se cierra
+  con turnos de cajero abiertos — 409),
   `table-list` (Mesas: rejilla de mesas del local en `/tables` con su estado de ocupación y el
   código QR que escanea el POS —descarga PNG por mesa y hoja imprimible de todas—; requiere
   además la funcionalidad `functionality_tables` de la compañía), `table-create` (crear mesas) y
   `table-update` (editar nombre/capacidad, activar/desactivar y forzar disponible/ocupada,
-  incluido "liberar todas"; una mesa nunca se borra, se desactiva). Las **categorías de menú** pertenecen a un menú concreto
+  incluido "liberar todas"; una mesa nunca se borra, se desactiva),
+  `role-list` (Roles: catálogo de roles en `/roles` — cada rol agrupa permisos y es lo único que se
+  asigna a un usuario. OJO: el catálogo es de la PLATAFORMA, no de la compañía; crear un rol o
+  cambiar sus permisos aplica a todas las compañías que lo usen, y los roles del sistema
+  —`super-admin`, `client`, `employee`— los protege el backend. Las acciones se gatean con
+  `role-create`, `role-update`, `role-delete` y `role-assign` (este último abre el selector de
+  permisos del rol, que además exige `permission-list`); todo cuelga de
+  `GET/POST/PUT/DELETE /companies/{company}/permissions/roles[/{id}]` y
+  `PUT …/roles/{id}/permissions`, que REEMPLAZA la lista de permisos del rol) y
+  `permission-list` (Permisos: catálogo de permisos por módulo en `/permissions`, con buscador,
+  filtro por módulo y los roles que otorgan cada uno; `permission-update` habilita el interruptor
+  `is_api` vía `PATCH /companies/{company}/permissions/{id}/api-visibility` — un permiso con
+  `is_api = false` sigue rigiendo en el backend pero no viaja en `/me/permissions`, así que el panel
+  no lo ve ni puede asignarlo). Las **categorías de menú** pertenecen a un menú concreto
   (`menu_id`) y se administran dentro del detalle del menú (`/menus/:menuId`), que reusa el permiso
   de `/menus`; su `position` define el orden con el que se agrupan los productos dentro de ese menú.
   Las **categorías de producto**
@@ -110,6 +146,7 @@ conectar: `cp .env.example .env`, define `VITE_API_URL` y reinicia. Detalle en `
 | Habilitar/ocultar módulos por permisos (o añadir uno gateado) | [`specs/guides/permissions.md`](specs/guides/permissions.md) |
 | Construir o modificar componentes / pantallas | [`specs/guides/ui-components.md`](specs/guides/ui-components.md) |
 | Tocar estilos, tokens o modo oscuro | [`specs/guides/styling.md`](specs/guides/styling.md) |
+| Tocar la instalación como app (PWA: manifest, service worker, iconos) | [`specs/tech.md`](specs/tech.md) → *PWA* |
 | Entender arquitectura técnica (capas, http, auth, routing, build) | [`specs/tech.md`](specs/tech.md) |
 | Entender módulos de negocio y flujos | [`specs/functional.md`](specs/functional.md) |
 

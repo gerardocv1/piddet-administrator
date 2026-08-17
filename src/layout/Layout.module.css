@@ -1,6 +1,8 @@
 .shell {
   display: flex;
   min-height: 100vh;
+  /* dvh sigue a las barras del navegador móvil: evita el salto de alto al hacer scroll. */
+  min-height: 100dvh;
   background: var(--bg-body);
 }
 
@@ -25,5 +27,15 @@
 }
 
 @media (max-width: 860px) {
-  .main { padding: 1.1rem; }
+  /* Los laterales usan el mayor entre el margen propio y el recorte de la pantalla (notch en
+     horizontal); abajo se suma la barra de gestos de la app instalada. */
+  .main {
+    padding: 0.85rem max(0.85rem, env(safe-area-inset-right)) calc(0.85rem + env(safe-area-inset-bottom)) max(0.85rem, env(safe-area-inset-left));
+  }
+}
+
+@media (max-width: 480px) {
+  .main {
+    padding: 0.7rem max(0.7rem, env(safe-area-inset-right)) calc(0.7rem + env(safe-area-inset-bottom)) max(0.7rem, env(safe-area-inset-left));
+  }
 }

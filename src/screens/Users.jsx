@@ -1,5 +1,5 @@
 import React from 'react';
-import { Avatar, Badge, Button, IconButton, Input, Checkbox, Modal, Card, DataTable, Pagination, FilterBar } from '../components';
+import { Avatar, Badge, Button, IconButton, Input, Checkbox, Modal, Card, DataTable, Pagination, FilterBar, Spinner } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import s from './screens.module.css';
@@ -33,18 +33,21 @@ export function Users() {
     return () => clearTimeout(id);
   }, [q]);
 
-  // Catálogo de roles asignables (una sola vez): [{ name, label, description }].
+  // Catálogo (una sola vez): roles asignables con los permisos que otorga cada uno.
   const [roles, setRoles] = React.useState([]);
-  React.useEffect(() => { api.assignableRoles().then((d) => setRoles(d || [])).catch(() => {}); }, []);
+  React.useEffect(() => {
+    api.assignableRoles().then((d) => setRoles(d || [])).catch(() => {});
+  }, []);
 
   const fetcher = React.useCallback(() => api.users({ page, search }), [page, search]);
   const { data, loading, error, reload } = useResource(fetcher, EMPTY, [page, search]);
   const items = data.items || [];
   const pg = data.pagination;
 
-  const [form, setForm] = React.useState(null); // null | {} (nuevo) | user (editar)
-  const [pwd, setPwd] = React.useState(null);   // usuario al que fijar contraseña
-  const [del, setDel] = React.useState(null);   // usuario a desvincular
+  const [form, setForm] = React.useState(null);   // null | {} (nuevo) | user (editar)
+  const [rolesOf, setRolesOf] = React.useState(null); // usuario al que asignar roles
+  const [pwd, setPwd] = React.useState(null);     // usuario al que fijar contraseña
+  const [del, setDel] = React.useState(null);     // usuario a desvincular
   const [saving, setSaving] = React.useState(false);
 
   const unlink = async () => {
@@ -66,9 +69,10 @@ export function Users() {
         <span className={s.statusDot} />{r.status ? 'Activo' : 'Inactivo'}
       </span>
     ) },
-    { key: 'acc', header: '', width: 130, align: 'right', render: (r) => (
+    { key: 'acc', header: '', width: 165, align: 'right', render: (r) => (
       <span className={s.actions}>
         <IconButton icon="fas fa-pen" variant="light" title="Editar" size="sm" onClick={() => setForm(r)} />
+        <IconButton icon="fas fa-user-shield" variant="light" title="Asignar roles" size="sm" onClick={() => setRolesOf(r)} />
         <IconButton icon="fas fa-key" variant="light" title="Cambiar contraseña" size="sm" onClick={() => setPwd(r)} />
         <IconButton icon="fas fa-link-slash" variant="danger" title="Desvincular" size="sm" onClick={() => setDel(r)} />
       </span>
@@ -85,9 +89,26 @@ export function Users() {
         actions={<Button variant="primary" size="sm" icon="fas fa-plus" onClick={() => setForm({})}>Nuevo usuario</Button>}
       />
 
-      <Card>
-        <DataTable columns={columns} rows={items} loading={loading} error={error} empty="Aún no hay usuarios vinculados a la compañía." />
-      </Card>
+      <div className={s.desktopList}>
+        <Card>
+          <DataTable columns={columns} rows={items} loading={loading} error={error} empty="Aún no hay usuarios vinculados a la compañía." />
+        </Card>
+      </div>
+
+      <div className={s.mobileList}>
+        {loading && <Card><div className={s.mobileState}><Spinner size="sm" label="Cargando…" /></div></Card>}
+        {!loading && error && (
+          <Card><div className={`${s.mobileState} ${s.mobileStateError}`}><i className="fas fa-triangle-exclamation" /> {error}</div></Card>
+        )}
+        {!loading && !error && items.length === 0 && (
+          <Card><div className={s.mobileState}>Aún no hay usuarios vinculados a la compañía.</div></Card>
+        )}
+        {!loading && !error && items.map((r) => (
+          <UserMobileCard key={r.id} user={r}
+            onEdit={() => setForm(r)} onRoles={() => setRolesOf(r)}
+            onPassword={() => setPwd(r)} onUnlink={() => setDel(r)} />
+        ))}
+      </div>
 
       {pg && pg.last_page > 1 && (
         <Pagination page={pg.current_page} lastPage={pg.last_page} total={pg.total} onChange={setPage} disabled={loading} />
@@ -96,6 +117,11 @@ export function Users() {
       {form && (
         <UserFormModal user={form.id ? form : null} roles={roles}
           onClose={() => setForm(null)} onSaved={() => { setForm(null); reload(); }} />
+      )}
+
+      {rolesOf && (
+        <UserRolesModal user={rolesOf} roles={roles}
+          onClose={() => setRolesOf(null)} onSaved={() => { setRolesOf(null); reload(); }} />
       )}
 
       {pwd && (
@@ -114,7 +140,43 @@ export function Users() {
   );
 }
 
+// ── Tarjeta de usuario en móvil (reemplaza la fila de la tabla) ─────────────────
+function UserMobileCard({ user, onEdit, onRoles, onPassword, onUnlink }) {
+  return (
+    <Card>
+      <div className={s.userCardBody}>
+        <div className={s.userCardTop}>
+          <Avatar name={user.name} size="sm" />
+          <div className={s.userCardInfo}>
+            <span className={s.userCardName}>{user.name}</span>
+            <span className={s.userCardPhone}>
+              {user.phone_number ? `+${user.phone_code} ${user.phone_number}` : '—'}
+            </span>
+          </div>
+        </div>
+        {user.roles?.length > 0 && (
+          <div className={s.userCardRoles}>
+            {user.roles.map((r) => <Badge key={r.name} variant="neutral">{r.label}</Badge>)}
+          </div>
+        )}
+        <div className={s.userCardFoot}>
+          <span className={[s.status, user.status ? s.on : s.off].join(' ')}>
+            <span className={s.statusDot} />{user.status ? 'Activo' : 'Inactivo'}
+          </span>
+          <span className={s.actions}>
+            <IconButton icon="fas fa-pen" variant="light" title="Editar" size="sm" onClick={onEdit} />
+            <IconButton icon="fas fa-user-shield" variant="light" title="Asignar roles" size="sm" onClick={onRoles} />
+            <IconButton icon="fas fa-key" variant="light" title="Cambiar contraseña" size="sm" onClick={onPassword} />
+            <IconButton icon="fas fa-link-slash" variant="danger" title="Desvincular" size="sm" onClick={onUnlink} />
+          </span>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
 // ── Selector de roles (multi-selección con checkboxes) ──────────────────────────
+// Solo la etiqueta corta del rol: qué permisos otorga cada uno se consulta en /roles.
 function RolesField({ roles, selected, onToggle }) {
   if (!roles.length) return <span className={s.muted}>No hay roles asignables.</span>;
   return (
@@ -127,7 +189,50 @@ function RolesField({ roles, selected, onToggle }) {
   );
 }
 
+// ── Modal: roles del usuario en la compañía ────────────────────────────────────
+// Sincroniza los roles (reemplaza los que tenía). No toca datos básicos ni permisos directos:
+// el update solo envía `roles`, así que el backend deja el resto intacto.
+function UserRolesModal({ user, roles, onClose, onSaved }) {
+  const [selected, setSelected] = React.useState(() => (user.roles || []).map((r) => r.name));
+  const [saving, setSaving] = React.useState(false);
+  const [err, setErr] = React.useState(null);
+
+  const toggle = (name) => setSelected((xs) => (xs.includes(name) ? xs.filter((x) => x !== name) : [...xs, name]));
+
+  const submit = async () => {
+    setSaving(true);
+    setErr(null);
+    try {
+      await api.updateCompanyUser(user.id, { roles: selected });
+      onSaved();
+    } catch (e) {
+      setErr(e?.message || 'No se pudieron guardar los roles.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Modal open title="Roles del usuario" subtitle={user.name} size="md" onClose={onClose}
+      footer={<>
+        <Button variant="secondary" onClick={onClose}>Cancelar</Button>
+        <Button variant="primary" loading={saving} onClick={submit}>Guardar</Button>
+      </>}>
+      <div className={s.formCol}>
+        <span className={s.muted}>
+          Los roles definen a qué puede acceder el usuario en esta compañía. Se guardan tal cual
+          queden marcados: lo que desmarques se retira.
+        </span>
+        <RolesField roles={roles} selected={selected} onToggle={toggle} />
+        {err && <div className={s.formError}><i className="fas fa-triangle-exclamation" /> {err}</div>}
+      </div>
+    </Modal>
+  );
+}
+
 // ── Modal: crear usuario nuevo / vincular existente / editar ────────────────────
+// Al editar solo se tocan los datos básicos: los roles se asignan desde su propio modal y los
+// permisos se administran a través de los roles (/roles).
 function UserFormModal({ user, roles, onClose, onSaved }) {
   const editing = !!user;
 
@@ -139,7 +244,7 @@ function UserFormModal({ user, roles, onClose, onSaved }) {
     phone_number: user?.phone_number || '',
     password: '',
   }));
-  const [selected, setSelected] = React.useState(() => (user?.roles || []).map((r) => r.name));
+  const [selected, setSelected] = React.useState([]);
   const [saving, setSaving] = React.useState(false);
   const [err, setErr] = React.useState(null);
 
@@ -198,13 +303,14 @@ function UserFormModal({ user, roles, onClose, onSaved }) {
     setErr(null);
     try {
       if (mode === 'edit') {
+        // Sin `roles` ni `permissions`: el backend solo sincroniza lo que recibe, así que los
+        // accesos del usuario quedan intactos al editar sus datos.
         await api.updateCompanyUser(user.id, {
           first_name: form.first_name.trim(),
           last_name: form.last_name.trim(),
           email: form.email.trim() || null,
           phone_code: form.phone_code.trim(),
           phone_number: form.phone_number.trim(),
-          roles: selected,
         });
       } else if (mode === 'link') {
         await api.createCompanyUser({ user_id: result.user.id, roles: selected });
@@ -296,7 +402,9 @@ function UserFormModal({ user, roles, onClose, onSaved }) {
               <Input label="Código" icon="fas fa-globe" value={form.phone_code} onChange={(e) => set('phone_code', e.target.value)} />
               <Input label="Teléfono" icon="fas fa-phone" value={form.phone_number} onChange={(e) => set('phone_number', e.target.value)} />
             </div>
-            <RolesField roles={roles} selected={selected} onToggle={toggleRole} />
+            <span className={s.muted}>
+              Los roles del usuario se asignan desde la acción <i className="fas fa-user-shield" /> del listado.
+            </span>
           </>
         )}
 

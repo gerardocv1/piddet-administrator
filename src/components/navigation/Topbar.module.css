@@ -1,10 +1,12 @@
 .topbar {
-  height: var(--topbar-h);
+  /* Instalada a pantalla completa la barra de estado se dibuja sobre la app: su alto se suma
+     al de la barra superior para no tapar el título. */
+  height: calc(var(--topbar-h) + env(safe-area-inset-top));
   flex: 0 0 auto;
   display: flex;
   align-items: center;
   gap: 0.9rem;
-  padding: 0 2rem;
+  padding: env(safe-area-inset-top) 2rem 0;
   background: var(--surface-card);
   border-bottom: 1px solid var(--border-color);
   font-family: var(--font-sans);
@@ -116,8 +118,20 @@
 .menuItem.danger:hover { background: color-mix(in srgb, var(--color-danger) 10%, transparent); }
 
 @media (max-width: 860px) {
-  .topbar { padding: 0 1rem; gap: 0.6rem; }
+  .topbar {
+    padding: env(safe-area-inset-top) max(0.85rem, env(safe-area-inset-right)) 0 max(0.85rem, env(safe-area-inset-left));
+    gap: 0.5rem;
+  }
   .title { font-size: var(--text-lg); }
   .menuBtn { display: inline-flex; }
   .crumb, .divider, .userText { display: none; }
+  .menuBtn, .themeBtn { width: 34px; height: 34px; font-size: 0.95rem; }
+}
+
+@media (max-width: 480px) {
+  .topbar {
+    padding: env(safe-area-inset-top) max(0.7rem, env(safe-area-inset-right)) 0 max(0.7rem, env(safe-area-inset-left));
+    gap: 0.35rem;
+  }
+  .menuBtn, .themeBtn { width: 32px; height: 32px; }
 }

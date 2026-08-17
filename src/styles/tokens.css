@@ -129,6 +129,7 @@
     --text-lg: 1.125rem;
     --text-xl: 1.375rem;
     --text-2xl: 1.625rem;
+    --topbar-h: 54px;
   }
 }
 
@@ -136,14 +137,23 @@
    escala de títulos para aprovechar el espacio vertical. */
 @media (max-width: 480px) {
   :root {
-    --text-xs: 0.69rem;
+    --text-xs: 0.6875rem;
     --text-sm: 0.75rem;
     --text-base: 0.8125rem;
     --text-md: 0.875rem;
-    --text-lg: 1.0625rem;
-    --text-xl: 1.25rem;
-    --text-2xl: 1.4375rem;
+    --text-lg: 1rem;
+    --text-xl: 1.1875rem;
+    --text-2xl: 1.375rem;
+    --topbar-h: 50px;
   }
+}
+
+/* La app instalada no tiene barra de direcciones ni pestañas: todo el alto es útil, así que se
+   ajusta el interlineado para que quepan más filas sin bajar el tamaño de letra. */
+@media (display-mode: standalone), (display-mode: fullscreen) {
+  body { line-height: 1.45; }
+  /* La app instalada no navega con gestos del navegador: el rebote elástico solo confunde. */
+  html, body { overscroll-behavior-y: none; }
 }
 
 /* ============================================================

@@ -4,14 +4,22 @@ import styles from './Sidebar.module.css';
 import { HOME_ITEM, POS_ITEM, MODULE_GROUPS, canAccess } from '../../lib/permissions/modules.js';
 import { usePermissions } from '../../lib/permissions/usePermissions.js';
 import { useFunctionalities } from '../../lib/permissions/useFunctionalities.js';
+import { useInstallPrompt } from '../../lib/pwa.js';
 
 const initials = (s = '') => s.split(' ').filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
+
+const matchesRoute = (pathname, to) => pathname === to || pathname.startsWith(`${to}/`);
 
 /** Grupo desplegable del menú: el padre expande/colapsa y agrupa rutas hijas. Se abre solo
  * si alguna ruta hija está activa. */
 function NavGroup({ item, onClose }) {
   const { pathname } = useLocation();
-  const childActive = item.children.some((c) => pathname === c.to || pathname.startsWith(`${c.to}/`));
+  // Entre hijos anidados (p. ej. /expenses y /expenses/summary) solo se resalta el más
+  // específico, para que la subruta no marque también a su padre.
+  const activeChild = item.children
+    .filter((c) => matchesRoute(pathname, c.to))
+    .sort((a, b) => b.to.length - a.to.length)[0];
+  const childActive = Boolean(activeChild);
   const [open, setOpen] = React.useState(childActive);
   React.useEffect(() => { if (childActive) setOpen(true); }, [childActive]);
 
@@ -27,7 +35,7 @@ function NavGroup({ item, onClose }) {
         <div className={styles.subnav}>
           {item.children.map((c) => (
             <NavLink key={c.to} to={c.to} onClick={onClose}
-              className={({ isActive }) => [styles.sublink, isActive ? styles.active : ''].filter(Boolean).join(' ')}>
+              className={[styles.sublink, c === activeChild ? styles.active : ''].filter(Boolean).join(' ')}>
               <i className={`${c.icon} ${styles.icon}`} />
               <span className={styles.label}>{c.label}</span>
             </NavLink>
@@ -45,6 +53,7 @@ export function Sidebar({ onLogout, open = false, onClose, company, companies = 
   const multi = companies.length > 1;
   const { permissions } = usePermissions();
   const { ready, activeNames } = useFunctionalities();
+  const { canInstall, install } = useInstallPrompt();
   // Mientras las funcionalidades cargan (`null`) no se gatea por ellas, para no ocultar
   // módulos en falso; al resolverse, los que la compañía tenga apagados desaparecen.
   const activeFunctionalities = ready ? activeNames : null;
@@ -150,6 +159,11 @@ export function Sidebar({ onLogout, open = false, onClose, company, companies = 
       </div>
 
       <div className={styles.foot}>
+        {canInstall && (
+          <button onClick={install} className={[styles.logout, styles.install].join(' ')}>
+            <i className="fas fa-mobile-screen-button" /> Instalar app
+          </button>
+        )}
         <button onClick={onLogout} className={styles.logout}>
           <i className="fas fa-arrow-right-from-bracket" /> Salir
         </button>

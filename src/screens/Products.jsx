@@ -100,7 +100,13 @@ export function Products() {
         values={filters}
         onChange={onFilters}
         inlineThreshold={0}
-        actions={<Button variant="primary" size="sm" icon="fas fa-plus" onClick={() => setForm({})}>Nuevo producto</Button>}
+        actions={<>
+          <Dropdown
+            trigger={<IconButton icon="fas fa-ellipsis-vertical" variant="light" size="sm" title="Más acciones" />}
+            items={[{ label: 'Categorías', icon: 'fas fa-tags', onClick: () => navigate('/product-categories') }]}
+          />
+          <Button variant="primary" size="sm" icon="fas fa-plus" onClick={() => setForm({})}>Nuevo producto</Button>
+        </>}
       />
 
       {loading ? (

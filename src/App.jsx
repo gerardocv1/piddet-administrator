@@ -31,9 +31,15 @@ import { ExpenseWizard } from './screens/ExpenseWizard/ExpenseWizard.jsx';
 import { ExpenseDetail } from './screens/ExpenseDetail.jsx';
 import { ExpensesSummary } from './screens/ExpensesSummary.jsx';
 import { ExpenseCategories } from './screens/ExpenseCategories.jsx';
+import { Shifts } from './screens/Shifts.jsx';
+import { ShiftDetail } from './screens/ShiftDetail.jsx';
+import { ShiftOpen } from './screens/ShiftOpen.jsx';
+import { ShiftCloseWizard } from './screens/ShiftCloseWizard/ShiftCloseWizard.jsx';
 import { Stores } from './screens/Stores.jsx';
 import { StoreDetail } from './screens/StoreDetail.jsx';
 import { Users } from './screens/Users.jsx';
+import { Roles } from './screens/Roles.jsx';
+import { Permissions } from './screens/Permissions.jsx';
 import { SyncFailures } from './screens/SyncFailures.jsx';
 import { SyncFailureDetail } from './screens/SyncFailureDetail.jsx';
 import { CompanyProfile } from './screens/CompanyProfile.jsx';
@@ -64,6 +70,14 @@ const PUBLIC_COMPANY_RE = /^\/([^/]+)\/?$/;
 // español a propósito: es la URL que ve y comparte el visitante.
 const PUBLIC_LODGING_RE = /^\/([^/]+)\/hospedaje\/?$/;
 const PUBLIC_LODGING_UNIT_RE = /^\/([^/]+)\/hospedaje\/(\d+)\/?$/;
+
+// Color de la barra de estado en la app instalada: debe seguir al tema activo (el fondo de la
+// barra superior), no a la preferencia del sistema.
+const THEME_COLORS = { light: '#ffffff', dark: '#11161f' };
+function applyThemeColor(theme) {
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute('content', THEME_COLORS[theme] || THEME_COLORS.light);
+}
 
 // Landing de la raíz: muestra el Inicio si está habilitado; si no, redirige al primer módulo
 // accesible; si no hay ninguno, muestra el estado "sin módulos".
@@ -137,6 +151,7 @@ function AdminApp() {
   React.useEffect(() => {
     document.documentElement.dataset.theme = theme;
     localStorage.setItem('piddet_theme', theme);
+    applyThemeColor(theme);
   }, [theme]);
   const toggleTheme = () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'));
 
@@ -177,6 +192,10 @@ function AdminApp() {
             <Route path="expenses/summary" element={<RequirePermission path="/expenses/summary"><ExpensesSummary /></RequirePermission>} />
             <Route path="expenses/:expenseId" element={<RequirePermission path="/expenses"><ExpenseDetail /></RequirePermission>} />
             <Route path="expense-categories" element={<RequirePermission path="/expense-categories"><ExpenseCategories /></RequirePermission>} />
+            <Route path="shifts" element={<RequirePermission path="/shifts"><Shifts /></RequirePermission>} />
+            <Route path="shifts/open" element={<RequirePermission path="/shifts"><ShiftOpen /></RequirePermission>} />
+            <Route path="shifts/:shiftId/close" element={<RequirePermission path="/shifts"><ShiftCloseWizard /></RequirePermission>} />
+            <Route path="shifts/:shiftId" element={<RequirePermission path="/shifts"><ShiftDetail /></RequirePermission>} />
             <Route path="rentable-units" element={<RequirePermission path="/rentable-units"><RentableUnits /></RequirePermission>} />
             <Route path="rentable-units/new" element={<RequirePermission path="/rentable-units"><RentableUnitDetail /></RequirePermission>} />
             <Route path="rentable-units/:unitId" element={<RequirePermission path="/rentable-units"><RentableUnitDetail /></RequirePermission>} />
@@ -192,7 +211,8 @@ function AdminApp() {
             <Route path="sync-failures" element={<RequirePermission path="/sync-failures"><SyncFailures /></RequirePermission>} />
             <Route path="sync-failures/:reportId" element={<RequirePermission path="/sync-failures"><SyncFailureDetail /></RequirePermission>} />
             <Route path="company" element={<CompanyProfile />} />
-            <Route path="roles" element={<RequirePermission path="/roles"><Placeholder name="Roles" /></RequirePermission>} />
+            <Route path="roles" element={<RequirePermission path="/roles"><Roles /></RequirePermission>} />
+            <Route path="permissions" element={<RequirePermission path="/permissions"><Permissions /></RequirePermission>} />
             <Route path="*" element={<Placeholder name="No encontrado" />} />
           </Route>
         </Route>

@@ -5,6 +5,7 @@ import { useResource } from '../lib/useResource.js';
 import { usePermissions } from '../lib/permissions/usePermissions.js';
 import { useFunctionalities } from '../lib/permissions/useFunctionalities.js';
 import { api } from '../lib/api.js';
+import { shiftMoney } from '../lib/shiftLabels.js';
 import s from './Dashboard.module.css';
 
 const PERIOD_OPTIONS = [
@@ -95,6 +96,17 @@ export function Dashboard() {
   const canExpenses = canAny(['api-module-expenses', 'api-module-expenses-own']);
   const { has } = useFunctionalities();
   const canReservations = can('api-module-reservations') && has('functionality_reservations');
+  const canShifts = canAny(['api-module-shifts', 'api-module-shifts-own']);
+
+  // Turnos abiertos relevantes: alimentan la acción rápida de abrir/cerrar turno. El backend
+  // ya decide quién ve el global (admin del módulo o shift-global-admin).
+  const shiftsFetcher = React.useCallback(
+    () => (canShifts ? api.currentShifts() : Promise.resolve(null)),
+    [canShifts],
+  );
+  const { data: currentShifts } = useResource(shiftsFetcher, null, [canShifts]);
+  const myShift = currentShifts?.mine || null;
+  const globalShift = currentShifts?.global || null;
 
   // ── Filtros compartidos: una sola fecha fin + rango + refresh para todos los reportes ──
   const [endDate, setEndDate] = React.useState(todayStr);
@@ -177,15 +189,54 @@ export function Dashboard() {
     <div className={s.page}>
       {/* Acción rápida: registrar gasto desde el celular (asistente paso a paso).
           Visible también para el empleado con acceso solo a sus gastos. */}
-      {canExpenses && (
-        <button type="button" className={s.quickExpense} onClick={() => navigate('/expenses/quick')}>
-          <span className={s.quickIcon}><i className="fas fa-receipt" /></span>
-          <span className={s.quickText}>
-            <strong>Registrar gasto</strong>
-            <span>Paso a paso, con foto de la factura</span>
-          </span>
-          <i className={`fas fa-chevron-right ${s.quickChevron}`} />
-        </button>
+      {(canExpenses || canShifts) && (
+        <div className={s.quickRow}>
+          {canExpenses && (
+            <button type="button" className={s.quickExpense} onClick={() => navigate('/expenses/quick')}>
+              <span className={s.quickIcon}><i className="fas fa-receipt" /></span>
+              <span className={s.quickText}>
+                <strong>Registrar gasto</strong>
+                <span>Paso a paso, con foto de la factura</span>
+              </span>
+              <i className={`fas fa-chevron-right ${s.quickChevron}`} />
+            </button>
+          )}
+
+          {/* Acción rápida de turnos: cerrar el propio si está abierto; si no, el global
+              (según permiso); si no hay ninguno abierto, abrir uno. */}
+          {canShifts && (
+            myShift ? (
+              <button type="button" className={s.quickExpense} onClick={() => navigate(`/shifts/${myShift.id}/close`)}>
+                <span className={s.quickIcon}><i className="fas fa-cash-register" /></span>
+                <span className={s.quickText}>
+                  <strong>Cerrar mi turno</strong>
+                  <span>Abierto con base de {shiftMoney(myShift.base_amount)}</span>
+                </span>
+                <i className={`fas fa-chevron-right ${s.quickChevron}`} />
+              </button>
+            ) : globalShift ? (
+              <button type="button" className={s.quickExpense} onClick={() => navigate(`/shifts/${globalShift.id}`)}>
+                <span className={s.quickIcon}><i className="fas fa-cash-register" /></span>
+                <span className={s.quickText}>
+                  <strong>Turno global abierto</strong>
+                  <span>{currentShifts?.open_employee_count
+                    ? `${currentShifts.open_employee_count} turno${currentShifts.open_employee_count === 1 ? '' : 's'} de cajero abiertos`
+                    : 'Ver balance y cerrar'}</span>
+                </span>
+                <i className={`fas fa-chevron-right ${s.quickChevron}`} />
+              </button>
+            ) : (
+              <button type="button" className={s.quickExpense} onClick={() => navigate('/shifts/open')}>
+                <span className={s.quickIcon}><i className="fas fa-cash-register" /></span>
+                <span className={s.quickText}>
+                  <strong>Abrir turno</strong>
+                  <span>Entrega la base y controla la caja</span>
+                </span>
+                <i className={`fas fa-chevron-right ${s.quickChevron}`} />
+              </button>
+            )
+          )}
+        </div>
       )}
 
       {(canSales || canExpenses || canReservations) && (

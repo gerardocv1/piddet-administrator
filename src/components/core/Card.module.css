@@ -21,3 +21,9 @@
 }
 
 .body { padding: 1.5rem; }
+
+/* En pantallas de teléfono el marco de la tarjeta se estrecha: el contenido manda. */
+@media (max-width: 860px) {
+  .header { padding: 0.8rem 0.9rem; }
+  .body { padding: 0.9rem; }
+}

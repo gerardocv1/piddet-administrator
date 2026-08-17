@@ -27,18 +27,27 @@ export const MODULE_GROUPS = [
     section: 'Oferta',
     items: [
       // Grupo desplegable: el padre solo expande/colapsa; las rutas reales viven en `children`.
-      // Productos cubre items, sus categorías y sus opciones (las opciones se editan dentro del
-      // detalle de cada producto, /products/:itemId).
+      // Las categorías de producto salieron del menú: se entra a ellas desde el listado de
+      // productos (ver HIDDEN_MODULES). Las categorías de menú se administran dentro del detalle
+      // de cada menú (/menus/:menuId).
       {
-        label: 'Productos', icon: 'fas fa-burger',
+        label: 'Menús', icon: 'fas fa-utensils',
         children: [
-          { to: '/products', label: 'Listado', icon: 'fas fa-list', perm: 'api-module-products' },
-          { to: '/product-categories', label: 'Categorías', icon: 'fas fa-tags', perm: 'api-module-products' },
+          { to: '/products', label: 'Productos', icon: 'fas fa-burger', perm: 'api-module-products' },
+          { to: '/menus', label: 'Carta', icon: 'fas fa-book-open', perm: 'api-module-menus' },
         ],
       },
-      // Las categorías de menú ahora se administran dentro del detalle de cada menú (/menus/:menuId),
-      // así que el módulo es una entrada plana, sin submenú de "Categorías".
-      { to: '/menus', label: 'Menús', icon: 'fas fa-book-open', perm: 'api-module-menus' },
+      // Hospedaje: reservas de cabañas/habitaciones/lugares. `api-module-reservations` opera las
+      // reservas; `api-module-rentable-units` configura unidades (los servicios adicionales salen
+      // de los items tipo servicio del catálogo de productos). Además del permiso del usuario,
+      // la compañía debe tener activa la funcionalidad de reservas (`func`).
+      {
+        label: 'Hospedaje', icon: 'fas fa-bed',
+        children: [
+          { to: '/reservations', label: 'Reservas', icon: 'fas fa-calendar-check', perm: 'api-module-reservations', func: 'functionality_reservations' },
+          { to: '/rentable-units', label: 'Unidades', icon: 'fas fa-house-chimney', perm: 'api-module-rentable-units', func: 'functionality_reservations' },
+        ],
+      },
     ],
   },
   {
@@ -53,61 +62,72 @@ export const MODULE_GROUPS = [
           { to: '/sales-report', label: 'Reporte', icon: 'fas fa-chart-line', perm: 'api-module-orders' },
         ],
       },
-      // Gastos: registro (encabezado + líneas + fotos), resumen por categoría y categorías propias.
-      // El detalle (/expenses/:expenseId) y la creación (/expenses/new, /expenses/quick) reusan el
-      // permiso del listado; anular requiere además `expense-annul` (solo oculta el botón).
-      // `api-module-expenses-own` es el acceso de empleado: registra y ve SOLO sus gastos (el
-      // backend aplica el filtro); no ve Resumen ni Categorías.
+      // Egresos: registro de gastos (encabezado + líneas + fotos), reporte por categoría y
+      // categorías propias. El detalle (/expenses/:expenseId) y la creación (/expenses/new,
+      // /expenses/quick) reusan el permiso del listado; anular requiere además `expense-annul`
+      // (solo oculta el botón). `api-module-expenses-own` es el acceso de empleado: registra y ve
+      // SOLO sus gastos (el backend aplica el filtro); no ve Reporte ni Categorías.
       {
-        label: 'Gastos', icon: 'fas fa-receipt',
+        label: 'Egresos', icon: 'fas fa-receipt',
         children: [
-          { to: '/expenses', label: 'Listado', icon: 'fas fa-list', perm: ['api-module-expenses', 'api-module-expenses-own'] },
-          { to: '/expenses/summary', label: 'Resumen', icon: 'fas fa-chart-pie', perm: 'api-module-expenses' },
+          { to: '/expenses', label: 'Gastos', icon: 'fas fa-receipt', perm: ['api-module-expenses', 'api-module-expenses-own'] },
+          { to: '/expenses/summary', label: 'Reporte', icon: 'fas fa-chart-pie', perm: 'api-module-expenses' },
           { to: '/expense-categories', label: 'Categorías', icon: 'fas fa-tags', perm: 'api-module-expenses' },
-        ],
-      },
-      // Hospedaje: reservas de cabañas/habitaciones/lugares. `api-module-reservations` opera las
-      // reservas; `api-module-rentable-units` configura unidades (los servicios adicionales salen
-      // de los items tipo servicio del catálogo de productos). Además del permiso del usuario,
-      // la compañía debe tener activa la funcionalidad de reservas (`func`).
-      {
-        label: 'Hospedaje', icon: 'fas fa-bed',
-        children: [
-          { to: '/reservations', label: 'Reservas', icon: 'fas fa-calendar-check', perm: 'api-module-reservations', func: 'functionality_reservations' },
-          { to: '/rentable-units', label: 'Unidades', icon: 'fas fa-house-chimney', perm: 'api-module-rentable-units', func: 'functionality_reservations' },
         ],
       },
       // Mesas: configuración (nombre, capacidad), estado de ocupación y códigos QR para el POS.
       // `table-list` deja ver; crear/editar/liberar exigen además table-create / table-update.
       // Requiere la funcionalidad de mesas activa en la compañía.
       { to: '/tables', label: 'Mesas', icon: 'fas fa-chair', perm: 'table-list', func: 'functionality_tables' },
-      { to: '/roles', label: 'Roles', icon: 'fas fa-user-shield' }, // sin permiso aún → oculto
+      // Turnos de caja: apertura con base, movimientos automáticos (ventas y gastos) y cierre
+      // con arqueo. Abrir (/shifts/open), el detalle (/shifts/:shiftId) y el cierre paso a paso
+      // (/shifts/:shiftId/close) reusan el permiso del listado. `api-module-shifts-own` es el
+      // acceso de cajero: abre/cierra y ve SOLO sus turnos (el backend aplica el filtro). El
+      // turno GLOBAL solo lo abre/cierra `shift-global-admin` (gatea la opción en la UI, el
+      // backend lo exige) — `api-module-shifts` da visibilidad de todos, no gestión del global.
+      { to: '/shifts', label: 'Turnos', icon: 'fas fa-cash-register', perm: ['api-module-shifts', 'api-module-shifts-own'] },
     ],
   },
   {
-    // Configuración de la compañía agrupada en un único menú desplegable. Incluye tiendas,
-    // usuarios y el catálogo global de categorías (taxonomía "elite" común a todas las
-    // compañías, gateado por item-category-master).
+    // Configuración de la compañía: los ajustes generales en un desplegable y todo lo de accesos
+    // (usuarios de la compañía, catálogo de roles y catálogo de permisos) en otro.
     section: 'Configuración',
     items: [
       {
         label: 'Configuraciones', icon: 'fas fa-gear',
         children: [
           { to: '/stores', label: 'Tiendas', icon: 'fas fa-store', perm: 'api-module-stores' },
-          { to: '/users', label: 'Usuarios', icon: 'fas fa-user', perm: 'user-administrator' },
           { to: '/admin/product-categories', label: 'Categorías globales', icon: 'fas fa-tags', perm: 'item-category-master' },
           // Soporte: fallos del POS al sincronizar órdenes; el detalle (/sync-failures/:reportId) reusa este permiso.
           { to: '/sync-failures', label: 'Fallos de órdenes', icon: 'fas fa-triangle-exclamation', perm: 'order-sync-failure-admin' },
+        ],
+      },
+      // Accesos: el listado administra a los usuarios de la compañía (y les asigna roles); Roles y
+      // Permisos administran el catálogo de la PLATAFORMA (compartido por todas las compañías).
+      {
+        label: 'Usuarios', icon: 'fas fa-user',
+        children: [
+          { to: '/users', label: 'Listado', icon: 'fas fa-list', perm: 'user-administrator' },
+          { to: '/roles', label: 'Roles', icon: 'fas fa-user-shield', perm: 'role-list' },
+          { to: '/permissions', label: 'Permisos', icon: 'fas fa-key', perm: 'permission-list' },
         ],
       },
     ],
   },
 ];
 
-// Lista plana de módulos en orden (Inicio primero, luego los gateados por grupo). Los grupos
-// desplegables (`children`) se aplanan a sus rutas reales para gatear rutas y elegir landing.
+// Rutas gateadas que NO aparecen en el menú lateral: se llega a ellas desde otra pantalla.
+// Declaran su permiso aquí para que `canAccess` (y por tanto `RequirePermission`) las autorice.
+export const HIDDEN_MODULES = [
+  // Categorías de producto: se abren desde el menú de acciones del listado de productos.
+  { to: '/product-categories', label: 'Categorías de producto', icon: 'fas fa-tags', perm: 'api-module-products' },
+];
+
+// Lista plana de módulos en orden (Inicio primero, luego los gateados por grupo, y al final las
+// rutas ocultas — nunca deben ganar como landing). Los grupos desplegables (`children`) se
+// aplanan a sus rutas reales para gatear rutas y elegir landing.
 const flattenItems = (items) => items.flatMap((m) => (m.children ? m.children : [m]));
-export const MODULES = [HOME_ITEM, ...MODULE_GROUPS.flatMap((g) => flattenItems(g.items))];
+export const MODULES = [HOME_ITEM, ...MODULE_GROUPS.flatMap((g) => flattenItems(g.items)), ...HIDDEN_MODULES];
 
 // Mapa ruta → permiso requerido (undefined si la ruta no declara permiso).
 export const ROUTE_PERMISSION = Object.fromEntries(MODULES.map((m) => [m.to, m.perm]));

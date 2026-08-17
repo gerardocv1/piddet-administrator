@@ -27,6 +27,7 @@ import { taxesService } from './services/taxes.js';
 import { filesService } from './services/files.js';
 import { ordersService } from './services/orders.js';
 import { expensesService } from './services/expenses.js';
+import { shiftsService } from './services/shifts.js';
 import { reservationsService } from './services/reservations.js';
 import { orderSyncFailuresService } from './services/orderSyncFailures.js';
 import { storesService } from './services/stores.js';
@@ -34,6 +35,8 @@ import { usersService } from './services/users.js';
 import { tablesService } from './services/tables.js';
 import { notificationsService } from './services/notifications.js';
 import { permissionsService } from './services/permissions.js';
+import { permissionCatalogService } from './services/permissionCatalog.js';
+import { rolesService } from './services/roles.js';
 import { menusService } from './services/menus.js';
 import { menuCategoriesService } from './services/menuCategories.js';
 
@@ -54,6 +57,7 @@ export const api = {
   ...filesService,
   ...ordersService,
   ...expensesService,
+  ...shiftsService,
   ...reservationsService,
   ...orderSyncFailuresService,
   ...storesService,
@@ -61,6 +65,8 @@ export const api = {
   ...tablesService,
   ...notificationsService,
   ...permissionsService,
+  ...permissionCatalogService,
+  ...rolesService,
   ...menusService,
   ...menuCategoriesService,
 };

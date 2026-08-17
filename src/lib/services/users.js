@@ -27,12 +27,16 @@ export const usersService = {
     http.get(`${base()}/users${qs({ page, _search: search, _row: row })}`, { paginated: true }),
   // Búsqueda global por teléfono → { exists, linked, user }.
   searchUserByPhone: (phone) => http.get(`${base()}/users/search${qs({ phone })}`),
-  // Roles asignables (sin super-admin), con etiqueta amigable: [{ name, label, description }].
+  // Roles asignables (sin super-admin), con etiqueta amigable y sus permisos:
+  // [{ name, label, description, permissions: string[] }].
   assignableRoles: () => http.get(`${base()}/users/assignable-roles`),
+  // Permisos asignables (is_api = true) agrupados por módulo:
+  // [{ module_id, module_name, permissions: [{ name, description }] }].
+  assignablePermissions: () => http.get(`${base()}/users/assignable-permissions`),
   companyUser: (id) => http.get(`${base()}/users/${id}`),
-  // Crea un usuario nuevo o vincula uno existente (con `user_id`), con sus roles.
+  // Crea un usuario nuevo o vincula uno existente (con `user_id`), con sus roles y permisos directos.
   createCompanyUser: (data) => http.post(`${base()}/users`, data),
-  // Actualiza datos básicos y/o sincroniza roles.
+  // Actualiza datos básicos y/o sincroniza roles y permisos directos.
   updateCompanyUser: (id, data) => http.put(`${base()}/users/${id}`, data),
   // Fija una contraseña temporal al usuario (admin).
   setUserPassword: (id, password) => http.put(`${base()}/users/${id}/password`, { password }),

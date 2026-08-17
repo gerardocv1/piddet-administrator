@@ -46,6 +46,8 @@ operable dentro de ella.
 | **Facturas** | Órdenes de la compañía consultables por fecha, con detalle completo (solo lectura). |
 | **Tiendas** | Listado detallado de tiendas. |
 | **Usuarios** | Usuarios de la empresa con sus roles. |
+| **Roles** | Catálogo de roles de la plataforma y los permisos que otorga cada uno. |
+| **Permisos** | Catálogo de permisos por módulo y cuáles se exponen al panel. |
 | **Mesas** | Mesas de los locales (operación). |
 | **Avisos** | Notificaciones del panel. |
 | **Cuenta** | Perfil, historial de sesiones y cambio de contraseña del usuario. |
@@ -103,6 +105,24 @@ operable dentro de ella.
 - **Descripción:** gestión de locales, equipo y mesas.
 - **Flujo principal:** listado en `DataTable` con acciones de crear/editar.
 
+### Accesos (Usuarios / Roles / Permisos)
+
+- **Descripción:** quién entra a la compañía y qué puede hacer. Se administra en el grupo
+  *Usuarios* del menú: **Listado** (usuarios de la compañía), **Roles** y **Permisos**.
+- **Modelo:** el acceso se concede SOLO por roles. Un rol agrupa permisos; un usuario tiene uno o
+  más roles en la compañía. Los permisos directos por usuario existen en el backend, pero ya no se
+  editan desde el panel.
+- **Flujo principal:**
+  1. En `/roles` se crea el rol (nombre técnico + descripción) y se le marcan sus permisos.
+  2. En `/users`, la acción *Asignar roles* del usuario sincroniza sus roles en la compañía.
+  3. El modal de datos del usuario ya no toca accesos: solo nombre, correo y teléfono.
+- **Alcance:** el catálogo de roles y permisos es de la **plataforma**, no de la compañía activa:
+  crear un rol o cambiar sus permisos afecta a todas las compañías que lo usen. Los roles del
+  sistema (`super-admin`, `client`, `employee`) no se editan ni se eliminan.
+- **Visibilidad de un permiso (`is_api`):** en `/permissions` se decide qué permisos llegan al
+  panel. Uno oculto sigue rigiendo en el backend, pero no viaja en `/me/permissions`, así que no
+  puede mostrarse ni asignarse desde aquí.
+
 ## Roles y Permisos
 
 El backend controla qué módulos y funcionalidades ve cada usuario mediante **permisos por
@@ -115,10 +135,12 @@ mostrar/ocultar módulos.
 - **Excepción:** Inicio (Dashboard) es siempre visible y es la landing por defecto.
 - **Permisos actuales:** `api-module-products` (Productos), `api-module-menus` (Menús; sus
   categorías se administran dentro del detalle de cada menú), `user-administrator` (Usuarios),
-  `api-module-orders` (Facturas).
+  `api-module-orders` (Facturas), `role-list` (Roles, con `role-create` / `role-update` /
+  `role-delete` / `role-assign` para sus acciones) y `permission-list` (Permisos, con
+  `permission-update` para cambiar la visibilidad).
 
-Detalle técnico y cómo añadir un módulo gateado en `specs/guides/permissions.md`. La ruta
-`roles` (gestión de roles desde el panel) sigue siendo un placeholder.
+Detalle técnico y cómo añadir un módulo gateado en `specs/guides/permissions.md`. El catálogo
+completo vive en `CLAUDE.md`.
 
 ## Integraciones Externas
 

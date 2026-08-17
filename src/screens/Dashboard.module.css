@@ -81,13 +81,24 @@
   .cardBody { padding: 1.5rem; }
 }
 
-/* Acción rápida "Registrar gasto": tarjeta tappable ancha en móvil, botón contenido en desktop */
+/* Fila de acciones rápidas: tarjetas lado a lado en desktop, apiladas a lo ancho en móvil. */
+.quickRow {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+@media (min-width: 861px) {
+  .quickRow { flex-direction: row; }
+  .quickRow > * { flex: 1; min-width: 0; max-width: 360px; }
+}
+
+/* Acción rápida: tarjeta tappable ancha en móvil, compartiendo la fila en desktop */
 .quickExpense {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   width: 100%;
-  padding: 14px 16px;
+  padding: 10px 14px;
   border: 1px solid color-mix(in srgb, var(--calendar-accent) 35%, var(--border-color));
   border-radius: var(--radius-lg);
   background: var(--surface-card);
@@ -101,21 +112,18 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 34px;
+  height: 34px;
   flex: 0 0 auto;
   border-radius: 50%;
   background: var(--calendar-accent-soft);
   color: var(--calendar-accent);
-  font-size: 1rem;
+  font-size: 0.85rem;
 }
 .quickText { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.quickText strong { color: var(--gray-900); font-size: var(--text-base); }
+.quickText strong { color: var(--gray-900); font-size: var(--text-sm); }
 .quickText span { color: var(--gray-500); font-size: var(--text-xs); }
 .quickChevron { color: var(--gray-400); font-size: 0.72rem; }
-@media (min-width: 861px) {
-  .quickExpense { width: auto; align-self: flex-start; }
-}
 
 /* Estado vacío: el usuario no tiene permiso para ver ningún dash */
 .emptyDash {

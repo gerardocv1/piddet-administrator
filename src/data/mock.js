@@ -3,6 +3,7 @@
 // devolver la API real de Piddet.
 
 import { slugifyUsername } from '../lib/slug.js';
+import { roleLabel } from '../lib/roleLabels.js';
 
 export const mockStats = [
   { label: 'Pedidos hoy', value: '128', delta: '+3.48%', up: true },
@@ -188,21 +189,102 @@ export const mockStoresList = [
 
 const storeStatusObj = (id) => mockStoreStatuses.find((x) => x.id === id) || null;
 
-// Roles asignables demo (sin super-admin), con etiqueta amigable.
-export const mockCompanyRoles = [
-  { name: 'admin', label: 'Administrador', description: 'Acceso total a la compañía' },
-  { name: 'cashier', label: 'Cajero', description: 'Gestión de pagos y caja' },
-  { name: 'waiter', label: 'Mesero', description: 'Toma de pedidos en sala' },
-  { name: 'cook', label: 'Cocinero', description: 'Operación de cocina' },
+// Catálogo demo de roles de la plataforma (fuente única: de aquí salen también los roles
+// asignables del módulo de usuarios). `system` marca los que el backend protege.
+export const mockRoles = [
+  { id: 1, name: 'super-admin', label: 'Superadministrador', description: 'Acceso total a la plataforma', system: true, permissions: [] },
+  { id: 2, name: 'client', label: 'Cliente', description: 'Cliente final de la app', system: true, permissions: [] },
+  { id: 3, name: 'employee', label: 'Empleado', description: 'Empleado sin módulos asignados', system: true, permissions: [] },
+  { id: 4, name: 'admin', label: 'Administrador', description: 'Acceso total a la compañía', permissions: ['user-administrator', 'role-list', 'role-create', 'role-update', 'role-delete', 'role-assign', 'permission-list', 'permission-update', 'api-module-products', 'api-module-menus', 'api-module-orders', 'order-cancel', 'api-module-expenses', 'expense-annul', 'table-list', 'table-create', 'table-update'] },
+  { id: 5, name: 'cashier', label: 'Cajero', description: 'Gestión de pagos y caja', permissions: ['api-module-orders', 'api-module-shifts-own'] },
+  { id: 6, name: 'waiter', label: 'Mesero', description: 'Toma de pedidos en sala', permissions: ['table-list'] },
+  { id: 7, name: 'cook', label: 'Cocinero', description: 'Operación de cocina', permissions: [] },
 ];
 
-// Usuarios vinculados a la compañía activa (forma del backend: datos básicos + roles).
+// Roles asignables a un usuario de la compañía (el backend excluye super-admin). Se calcula en
+// cada llamada para que los roles creados en la demo aparezcan de inmediato.
+export const mockAssignableRoles = () => mockRoles
+  .filter((r) => r.name !== 'super-admin')
+  .map(({ name, label, description, permissions }) => ({ name, label, description, permissions }));
+
+// Catálogo demo de permisos asignables (is_api = true) agrupado por módulo, como lo expone el
+// backend en /users/assignable-permissions.
+export const mockAssignablePermissions = [
+  { module_id: 1, module_name: 'Usuarios', permissions: [
+    { name: 'user-administrator', description: 'Administrar los usuarios de la compañía' },
+  ] },
+  { module_id: 3, module_name: 'Productos y menús', permissions: [
+    { name: 'api-module-products', description: 'Administrar productos y categorías' },
+    { name: 'api-module-menus', description: 'Administrar menús y sus categorías' },
+  ] },
+  { module_id: 4, module_name: 'Órdenes', permissions: [
+    { name: 'api-module-orders', description: 'Consultar facturas y ventas' },
+    { name: 'order-cancel', description: 'Cancelar facturas con motivo' },
+    { name: 'order-sync-failure-admin', description: 'Administrar fallos de sincronización del POS' },
+  ] },
+  { module_id: 5, module_name: 'Gastos', permissions: [
+    { name: 'api-module-expenses', description: 'Administrar los gastos de la compañía' },
+    { name: 'api-module-expenses-own', description: 'Registrar y ver solo sus propios gastos' },
+    { name: 'expense-annul', description: 'Anular gastos' },
+  ] },
+  { module_id: 8, module_name: 'Turnos', permissions: [
+    { name: 'api-module-shifts', description: 'Administrar los turnos de caja de la compañía' },
+    { name: 'api-module-shifts-own', description: 'Abrir y cerrar solo sus propios turnos' },
+    { name: 'shift-global-admin', description: 'Abrir y cerrar el turno global' },
+  ] },
+  { module_id: 6, module_name: 'Mesas', permissions: [
+    { name: 'table-list', description: 'Ver las mesas del local' },
+    { name: 'table-create', description: 'Crear mesas' },
+    { name: 'table-update', description: 'Editar y cambiar el estado de las mesas' },
+  ] },
+  { module_id: 7, module_name: 'Compañía', permissions: [
+    { name: 'api-module-company', description: 'Editar el perfil de la compañía' },
+    { name: 'company-edit-functionalities', description: 'Administrar las funcionalidades de la compañía' },
+  ] },
+];
+
+// Catálogo demo COMPLETO de permisos (el que administra la pantalla /permissions): a los
+// asignables les añade id y el flag is_api, y suma el módulo de administración de accesos con
+// algunos permisos ocultos al panel (is_api = false) para poder probar el interruptor.
+export const mockPermissionCatalog = (() => {
+  let seq = 0;
+  const withIds = (moduleId, permissions) => permissions.map(([name, description, isApi = true]) => ({
+    id: ++seq, name, description, module_id: moduleId, is_api: isApi,
+  }));
+
+  const accessModule = {
+    module_id: 2,
+    module_name: 'Permisos',
+    permissions: withIds(2, [
+      ['role-list', 'Ver el catálogo de roles'],
+      ['role-create', 'Crear roles'],
+      ['role-update', 'Editar roles'],
+      ['role-delete', 'Eliminar roles'],
+      ['role-assign', 'Asignar permisos a un rol'],
+      ['permission-list', 'Ver el catálogo de permisos'],
+      ['permission-update', 'Editar la visibilidad de un permiso'],
+      ['permission-create', 'Crear permisos', false],
+      ['permission-delete', 'Eliminar permisos', false],
+    ]),
+  };
+
+  const rest = mockAssignablePermissions.map((mod) => ({
+    module_id: mod.module_id,
+    module_name: mod.module_name,
+    permissions: withIds(mod.module_id, mod.permissions.map((p) => [p.name, p.description])),
+  }));
+
+  return [...rest, accessModule].sort((a, b) => a.module_id - b.module_id);
+})();
+
+// Usuarios vinculados a la compañía activa (forma del backend: datos básicos + roles + permisos
+// directos, adicionales a los heredados por rol).
 export const mockUsers = [
-  { id: 1, name: 'Gerardo Cruz', first_name: 'Gerardo', last_name: 'Cruz', phone_code: '57', phone_number: '3001234567', email: 'gerardo@piddet.com', status: true, roles: [{ name: 'admin', label: 'Administrador' }] },
-  { id: 2, name: 'María López', first_name: 'María', last_name: 'López', phone_code: '57', phone_number: '3112223344', email: 'maria@piddet.com', status: true, roles: [{ name: 'cashier', label: 'Cajero' }] },
-  { id: 3, name: 'Carlos Mejía', first_name: 'Carlos', last_name: 'Mejía', phone_code: '57', phone_number: '3205556677', email: null, status: true, roles: [{ name: 'waiter', label: 'Mesero' }] },
-  { id: 4, name: 'Ana Ruiz', first_name: 'Ana', last_name: 'Ruiz', phone_code: '57', phone_number: '3158889900', email: null, status: false, roles: [{ name: 'cook', label: 'Cocinero' }] },
-  { id: 5, name: 'Jorge Díaz', first_name: 'Jorge', last_name: 'Díaz', phone_code: '57', phone_number: '3014441122', email: null, status: true, roles: [{ name: 'waiter', label: 'Mesero' }] },
+  { id: 1, name: 'Gerardo Cruz', first_name: 'Gerardo', last_name: 'Cruz', phone_code: '57', phone_number: '3001234567', email: 'gerardo@piddet.com', status: true, roles: [{ name: 'admin', label: 'Administrador' }], direct_permissions: [] },
+  { id: 2, name: 'María López', first_name: 'María', last_name: 'López', phone_code: '57', phone_number: '3112223344', email: 'maria@piddet.com', status: true, roles: [{ name: 'cashier', label: 'Cajero' }], direct_permissions: ['order-cancel'] },
+  { id: 3, name: 'Carlos Mejía', first_name: 'Carlos', last_name: 'Mejía', phone_code: '57', phone_number: '3205556677', email: null, status: true, roles: [{ name: 'waiter', label: 'Mesero' }], direct_permissions: [] },
+  { id: 4, name: 'Ana Ruiz', first_name: 'Ana', last_name: 'Ruiz', phone_code: '57', phone_number: '3158889900', email: null, status: false, roles: [{ name: 'cook', label: 'Cocinero' }], direct_permissions: [] },
+  { id: 5, name: 'Jorge Díaz', first_name: 'Jorge', last_name: 'Díaz', phone_code: '57', phone_number: '3014441122', email: null, status: true, roles: [{ name: 'waiter', label: 'Mesero' }], direct_permissions: ['api-module-expenses-own'] },
 ];
 
 export const mockUser = { name: 'Gerardo Cruz', role: 'Administrador' };
@@ -302,7 +384,7 @@ export const mockMenuItems = [
 // el panel muestra Productos (y sus categorías), Menús y Usuarios; el resto queda oculto.
 const mockPermissions = {
   roles: ['Administrador'],
-  permissions: ['user-administrator', 'api-module-menus', 'api-module-products', 'api-module-company', 'company-edit-functionalities', 'api-module-stores', 'table-list', 'table-create', 'table-update', 'api-module-orders', 'order-cancel', 'order-sync-failure-admin', 'api-module-expenses', 'expense-annul', 'api-module-reservations', 'api-module-rentable-units', 'reservation-checkout', 'reservation-cancel', 'reservation-payment-annul'],
+  permissions: ['user-administrator', 'role-list', 'role-create', 'role-update', 'role-delete', 'role-assign', 'permission-list', 'permission-update', 'api-module-menus', 'api-module-products', 'api-module-company', 'company-edit-functionalities', 'api-module-stores', 'table-list', 'table-create', 'table-update', 'api-module-orders', 'order-cancel', 'order-sync-failure-admin', 'api-module-expenses', 'expense-annul', 'api-module-shifts', 'shift-global-admin', 'api-module-reservations', 'api-module-rentable-units', 'reservation-checkout', 'reservation-cancel', 'reservation-payment-annul'],
 };
 
 // Empresa (tenant) activa y empresas disponibles para el usuario (SaaS multi-tenant).
@@ -1376,17 +1458,96 @@ function resolveStoresMock(path, query, { method = 'GET', body } = {}) {
   return undefined;
 }
 
+// ── Administración de accesos (company-scoped en la ruta, global en los datos) ─────────
+// CONTRATO BACKEND: /companies/{company}/permissions (catálogo), .../permissions/{id}/api-visibility,
+// y .../permissions/roles[/{id}[/permissions]] para el CRUD de roles.
+function resolvePermissionsAdminMock(path, query, { method = 'GET', body } = {}) {
+  const m = path.match(/^\/companies\/[^/]+\/permissions(\/.*)?$/);
+  if (!m) return undefined;
+  const sub = m[1] || '';
+
+  const allPermissions = () => mockPermissionCatalog.flatMap((mod) => mod.permissions);
+  // El rol guarda nombres de permiso; el backend los devuelve como objetos del catálogo.
+  const roleOut = (role) => ({
+    id: role.id,
+    name: role.name,
+    description: role.description,
+    permissions: allPermissions().filter((p) => role.permissions.includes(p.name)),
+  });
+
+  if (sub === '') {
+    const search = (query.get('search') || '').toLowerCase();
+    const moduleId = query.get('module_id');
+    return mockPermissionCatalog
+      .filter((mod) => !moduleId || String(mod.module_id) === String(moduleId))
+      .map((mod) => ({
+        ...mod,
+        permissions: mod.permissions.filter((p) =>
+          !search || `${p.name} ${p.description || ''}`.toLowerCase().includes(search)),
+      }))
+      .filter((mod) => mod.permissions.length > 0);
+  }
+
+  const visibilityMatch = sub.match(/^\/(\d+)\/api-visibility$/);
+  if (visibilityMatch) {
+    const permission = allPermissions().find((p) => p.id === Number(visibilityMatch[1]));
+    if (permission) permission.is_api = !!body?.is_api;
+    return permission || null;
+  }
+
+  if (sub === '/roles') {
+    if (method === 'POST') {
+      const role = {
+        id: nextId(mockRoles),
+        name: body?.name || 'nuevo-rol',
+        label: roleLabel(body?.name || 'nuevo-rol'),
+        description: body?.description ?? null,
+        permissions: [],
+      };
+      mockRoles.push(role);
+      return roleOut(role);
+    }
+    return mockRoles.map(roleOut);
+  }
+
+  const roleMatch = sub.match(/^\/roles\/(\d+)(\/permissions)?$/);
+  if (roleMatch) {
+    const id = Number(roleMatch[1]);
+    const idx = mockRoles.findIndex((r) => r.id === id);
+    if (idx < 0) return null;
+    const role = mockRoles[idx];
+
+    if (roleMatch[2]) {
+      role.permissions = Array.isArray(body?.permissions) ? body.permissions : [];
+      return roleOut(role);
+    }
+    if (method === 'PUT') {
+      if (body?.name != null) role.name = body.name;
+      if (body?.description !== undefined) { role.description = body.description; role.label = body.description || role.name; }
+      return roleOut(role);
+    }
+    if (method === 'DELETE') {
+      mockRoles.splice(idx, 1);
+      return { status: 'success', message: 'Rol eliminado (demo)' };
+    }
+    return roleOut(role);
+  }
+
+  return undefined;
+}
+
 function resolveUsersMock(path, query, { method = 'GET', body } = {}) {
   const m = path.match(/^\/companies\/[^/]+\/users(\/.*)?$/);
   if (!m) return undefined;
   const sub = m[1] || '';
 
   const toRoles = (names = []) => names
-    .map((n) => mockCompanyRoles.find((r) => r.name === n))
+    .map((n) => mockRoles.find((r) => r.name === n))
     .filter(Boolean)
     .map((r) => ({ name: r.name, label: r.label }));
 
-  if (sub === '/assignable-roles') return mockCompanyRoles;
+  if (sub === '/assignable-roles') return mockAssignableRoles();
+  if (sub === '/assignable-permissions') return mockAssignablePermissions;
 
   if (sub === '/search') {
     const phone = query.get('phone') || '';
@@ -1415,6 +1576,7 @@ function resolveUsersMock(path, query, { method = 'GET', body } = {}) {
         email: body?.email ?? null,
         status: true,
         roles: toRoles(body?.roles),
+        direct_permissions: Array.isArray(body?.permissions) ? body.permissions : [],
       };
       u.name = `${u.first_name} ${u.last_name}`.trim();
       mockUsers.push(u);
@@ -1440,6 +1602,7 @@ function resolveUsersMock(path, query, { method = 'GET', body } = {}) {
         if (body?.phone_code != null) u.phone_code = body.phone_code;
         if (body?.phone_number != null) u.phone_number = body.phone_number;
         if (Array.isArray(body?.roles)) u.roles = toRoles(body.roles);
+        if (Array.isArray(body?.permissions)) u.direct_permissions = body.permissions;
         u.name = `${u.first_name} ${u.last_name}`.trim();
         return u;
       }
@@ -2375,6 +2538,229 @@ function resolveExpensesMock(path, query, { method = 'GET', body } = {}) {
   return undefined;
 }
 
+// ── Módulo de turnos de caja (datos en memoria; las mutaciones persisten durante la sesión) ──
+// Replican la forma del backend: turno GLOBAL o EMPLOYEE con base de dinero, movimientos con
+// monto/método denormalizados (una venta con pago mixto genera una fila por pago) y cierre con
+// arqueo (counted/expected/difference + ajuste). El usuario demo (id 1) es admin del módulo.
+const shiftDateIso = (dayOffset = 0, time = '09:00:00') =>
+  `${new Date(Date.now() - dayOffset * 864e5).toISOString().slice(0, 10)} ${time}`;
+
+export const mockShifts = [
+  {
+    id: 1, type: 'GLOBAL', status: 'OPEN', base_amount: '200000.00',
+    assigned_user_id: null, assigned_user_name: null,
+    opened_by: 1, opened_by_name: 'Gerardo Cruz', opened_at: shiftDateIso(0, '08:00:00'),
+    counted_amount: null, expected_amount: null, difference: null, closing_notes: null,
+    closed_by: null, closed_by_name: null, closed_at: null,
+  },
+  {
+    id: 2, type: 'EMPLOYEE', status: 'OPEN', base_amount: '100000.00',
+    assigned_user_id: 2, assigned_user_name: 'María López',
+    opened_by: 1, opened_by_name: 'Gerardo Cruz', opened_at: shiftDateIso(0, '08:15:00'),
+    counted_amount: null, expected_amount: null, difference: null, closing_notes: null,
+    closed_by: null, closed_by_name: null, closed_at: null,
+  },
+  {
+    id: 3, type: 'EMPLOYEE', status: 'CLOSED', base_amount: '100000.00',
+    assigned_user_id: 2, assigned_user_name: 'María López',
+    opened_by: 1, opened_by_name: 'Gerardo Cruz', opened_at: shiftDateIso(1, '08:00:00'),
+    counted_amount: '575000.00', expected_amount: '580000.00', difference: '-5000.00',
+    closing_notes: 'Faltó cambio de un billete.', closed_by: 2, closed_by_name: 'María López',
+    closed_at: shiftDateIso(1, '18:00:00'),
+  },
+  {
+    id: 4, type: 'GLOBAL', status: 'CLOSED', base_amount: '200000.00',
+    assigned_user_id: null, assigned_user_name: null,
+    opened_by: 1, opened_by_name: 'Gerardo Cruz', opened_at: shiftDateIso(1, '07:30:00'),
+    counted_amount: '1240000.00', expected_amount: '1225000.00', difference: '15000.00',
+    closing_notes: null, closed_by: 1, closed_by_name: 'Gerardo Cruz',
+    closed_at: shiftDateIso(1, '20:00:00'),
+  },
+];
+
+export const mockShiftMovements = [
+  // Turno GLOBAL abierto (1): ventas de hoy (una con pago mixto) + un gasto.
+  { id: 1, shift_id: 1, resource_type: 'order', resource_id: 'ord-9001', resource_label: 'F-0091', payment_method: 'cash', amount: '85000.00', status: 1, annulled_at: null, occurred_at: shiftDateIso(0, '10:05:00') },
+  { id: 2, shift_id: 1, resource_type: 'order', resource_id: 'ord-9002', resource_label: 'F-0092', payment_method: 'cash', amount: '40000.00', status: 1, annulled_at: null, occurred_at: shiftDateIso(0, '11:20:00') },
+  { id: 3, shift_id: 1, resource_type: 'order', resource_id: 'ord-9002', resource_label: 'F-0092', payment_method: 'datafono', amount: '32000.00', status: 1, annulled_at: null, occurred_at: shiftDateIso(0, '11:20:00') },
+  { id: 4, shift_id: 1, resource_type: 'order', resource_id: 'ord-9003', resource_label: 'F-0093', payment_method: 'nequi', amount: '56000.00', status: 1, annulled_at: null, occurred_at: shiftDateIso(0, '12:40:00') },
+  { id: 5, shift_id: 1, resource_type: 'expense', resource_id: '1', resource_label: 'Distribuidora La Cosecha', payment_method: 'cash', amount: '60000.00', status: 1, annulled_at: null, occurred_at: shiftDateIso(0, '12:00:00') },
+  // Venta cancelada con el turno abierto: queda excluida del balance (status 0).
+  { id: 6, shift_id: 1, resource_type: 'order', resource_id: 'ord-9004', resource_label: 'F-0094', payment_method: 'cash', amount: '25000.00', status: 0, annulled_at: shiftDateIso(0, '13:00:00'), occurred_at: shiftDateIso(0, '12:50:00') },
+  // Turno EMPLOYEE abierto (2): las ventas del cajero también cuentan en el global.
+  { id: 7, shift_id: 2, resource_type: 'order', resource_id: 'ord-9001', resource_label: 'F-0091', payment_method: 'cash', amount: '85000.00', status: 1, annulled_at: null, occurred_at: shiftDateIso(0, '10:05:00') },
+  { id: 8, shift_id: 2, resource_type: 'order', resource_id: 'ord-9003', resource_label: 'F-0093', payment_method: 'nequi', amount: '56000.00', status: 1, annulled_at: null, occurred_at: shiftDateIso(0, '12:40:00') },
+  // Turno EMPLOYEE cerrado (3): con ajuste de faltante.
+  { id: 9, shift_id: 3, resource_type: 'order', resource_id: 'ord-8001', resource_label: 'F-0081', payment_method: 'cash', amount: '300000.00', status: 1, annulled_at: null, occurred_at: shiftDateIso(1, '11:00:00') },
+  { id: 10, shift_id: 3, resource_type: 'order', resource_id: 'ord-8002', resource_label: 'F-0082', payment_method: 'datafono', amount: '180000.00', status: 1, annulled_at: null, occurred_at: shiftDateIso(1, '13:30:00') },
+  { id: 11, shift_id: 3, resource_type: 'adjustment', resource_id: null, resource_label: 'Faltante de caja · Gasto #2', reference_type: 'expense', reference_id: '2', payment_method: 'cash', amount: '-5000.00', status: 1, annulled_at: null, occurred_at: shiftDateIso(1, '18:00:00') },
+  // Turno GLOBAL cerrado (4): con ajuste de sobrante.
+  { id: 12, shift_id: 4, resource_type: 'order', resource_id: 'ord-8001', resource_label: 'F-0081', payment_method: 'cash', amount: '300000.00', status: 1, annulled_at: null, occurred_at: shiftDateIso(1, '11:00:00') },
+  { id: 13, shift_id: 4, resource_type: 'order', resource_id: 'ord-8002', resource_label: 'F-0082', payment_method: 'datafono', amount: '180000.00', status: 1, annulled_at: null, occurred_at: shiftDateIso(1, '13:30:00') },
+  { id: 14, shift_id: 4, resource_type: 'order', resource_id: 'ord-8003', resource_label: 'F-0083', payment_method: 'cash', amount: '605000.00', status: 1, annulled_at: null, occurred_at: shiftDateIso(1, '16:10:00') },
+  { id: 15, shift_id: 4, resource_type: 'expense', resource_id: '2', resource_label: 'Ferretería El Tornillo', payment_method: 'cash', amount: '60000.00', status: 1, annulled_at: null, occurred_at: shiftDateIso(1, '15:00:00') },
+  { id: 16, shift_id: 4, resource_type: 'adjustment', resource_id: null, resource_label: 'Sobrante de caja · A0000001', reference_type: 'order', reference_id: 'ord-8001', payment_method: 'cash', amount: '15000.00', status: 1, annulled_at: null, occurred_at: shiftDateIso(1, '20:00:00') },
+];
+
+const shiftMovementRow = (mv) => ({ ...mv, payment_method_name: paymentMethodName(mv.payment_method) });
+
+// Balance del turno replicando el backend: SUM por tipo y método sobre movimientos activos;
+// expected = base + ventas (todos los métodos) − gastos. Los ajustes nunca entran en expected.
+function buildShiftBalance(shift) {
+  const active = mockShiftMovements.filter((mv) => mv.shift_id === shift.id && mv.status === 1);
+  const money = (n) => n.toFixed(2);
+
+  const section = (type) => {
+    const rows = active.filter((mv) => mv.resource_type === type);
+    const byMethod = new Map();
+    rows.forEach((mv) => {
+      const key = mv.payment_method || '';
+      byMethod.set(key, (byMethod.get(key) || 0) + Number(mv.amount));
+    });
+    return {
+      total: money(rows.reduce((s, mv) => s + Number(mv.amount), 0)),
+      count: new Set(rows.map((mv) => mv.resource_id ?? `mv-${mv.id}`)).size,
+      by_method: [...byMethod.entries()].map(([id, total]) => ({
+        payment_method: id || null,
+        payment_method_name: paymentMethodName(id),
+        total: money(total),
+      })),
+    };
+  };
+
+  const sales = section('order');
+  const expenses = section('expense');
+  return {
+    base_amount: shift.base_amount,
+    sales,
+    expenses,
+    adjustments: section('adjustment'),
+    expected_amount: money(Number(shift.base_amount) + Number(sales.total) - Number(expenses.total)),
+  };
+}
+
+const decorateShiftDetail = (shift) => ({
+  ...shift,
+  balance: buildShiftBalance(shift),
+  movements: mockShiftMovements
+    .filter((mv) => mv.shift_id === shift.id)
+    .map(shiftMovementRow),
+});
+
+// Simula los códigos de conflicto del backend: el HttpClient del modo demo propaga el throw y
+// las pantallas muestran err.message, igual que con un 409 real.
+const shiftConflict = (message) => { throw Object.assign(new Error(message), { status: 409 }); };
+
+function resolveShiftsMock(path, query, { method = 'GET', body } = {}) {
+  const scoped = path.match(/^\/companies\/[^/]+\/(.+)$/);
+  if (!scoped) return undefined;
+  const sub = scoped[1];
+  let m;
+
+  // Los turnos GLOBAL solo son visibles con shift-global-admin (el backend aplica la misma
+  // regla: sin el permiso ni siquiera el admin del módulo los lista ni abre su detalle).
+  const canGlobal = mockPermissions.permissions.includes('shift-global-admin');
+  const visible = (sh) => sh.type !== 'GLOBAL' || canGlobal;
+
+  if (sub === 'shifts/current') {
+    return {
+      global: (canGlobal && mockShifts.find((sh) => sh.type === 'GLOBAL' && sh.status === 'OPEN')) || null,
+      mine: mockShifts.find((sh) => sh.type === 'EMPLOYEE' && sh.status === 'OPEN' && sh.assigned_user_id === 1) || null,
+      open_employee_count: mockShifts.filter((sh) => sh.type === 'EMPLOYEE' && sh.status === 'OPEN').length,
+    };
+  }
+
+  if (sub === 'shifts' && method === 'POST') {
+    const type = body?.type;
+    if (type === 'GLOBAL' && mockShifts.some((sh) => sh.type === 'GLOBAL' && sh.status === 'OPEN')) {
+      shiftConflict('Ya hay un turno global abierto');
+    }
+    const assignedId = type === 'EMPLOYEE' ? Number(body?.assigned_user_id || 1) : null;
+    if (type === 'EMPLOYEE'
+      && mockShifts.some((sh) => sh.type === 'EMPLOYEE' && sh.status === 'OPEN' && sh.assigned_user_id === assignedId)) {
+      shiftConflict('El empleado ya tiene un turno abierto');
+    }
+    const assigned = assignedId ? mockUsers.find((u) => u.id === assignedId) : null;
+    const row = {
+      id: nextId(mockShifts), type, status: 'OPEN',
+      base_amount: Number(body?.base_amount || 0).toFixed(2),
+      assigned_user_id: assignedId, assigned_user_name: assigned?.name ?? (assignedId ? `Usuario ${assignedId}` : null),
+      opened_by: 1, opened_by_name: 'Gerardo Cruz',
+      opened_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
+      counted_amount: null, expected_amount: null, difference: null, closing_notes: null,
+      closed_by: null, closed_by_name: null, closed_at: null,
+    };
+    mockShifts.unshift(row);
+    return decorateShiftDetail(row);
+  }
+
+  if (sub === 'shifts') {
+    let rows = mockShifts.filter(visible);
+    const status = query.get('status');
+    const type = query.get('type');
+    const from = query.get('date_from');
+    const to = query.get('date_to');
+    if (status) rows = rows.filter((sh) => sh.status === status);
+    if (type) rows = rows.filter((sh) => sh.type === type);
+    if (from) rows = rows.filter((sh) => sh.opened_at >= `${from} 00:00:00`);
+    if (to) rows = rows.filter((sh) => sh.opened_at <= `${to} 23:59:59`);
+    rows.sort((a, b) => (a.status === b.status ? b.opened_at.localeCompare(a.opened_at) : (a.status === 'OPEN' ? -1 : 1)));
+    return mockPaginate(rows, query);
+  }
+
+  m = sub.match(/^shifts\/(\d+)\/balance$/);
+  if (m) {
+    const sh = mockShifts.find((x) => x.id === Number(m[1]) && visible(x));
+    return sh ? buildShiftBalance(sh) : null;
+  }
+
+  m = sub.match(/^shifts\/(\d+)\/close$/);
+  if (m && method === 'POST') {
+    const sh = mockShifts.find((x) => x.id === Number(m[1]));
+    if (!sh) return null;
+    if (sh.status !== 'OPEN') shiftConflict('El turno ya está cerrado');
+    if (sh.type === 'GLOBAL'
+      && mockShifts.some((x) => x.type === 'EMPLOYEE' && x.status === 'OPEN')) {
+      shiftConflict('No se puede cerrar el turno global con turnos de empleado abiertos');
+    }
+    const balance = buildShiftBalance(sh);
+    const counted = Number(body?.counted_amount || 0);
+    const difference = counted - Number(balance.expected_amount);
+    if (difference !== 0) {
+      // Como en el backend: el sobrante se factura y el faltante se registra como gasto, y el
+      // ajuste guarda la referencia al documento (sin sumarlo al balance del turno).
+      const doc = difference > 0
+        ? { reference_type: 'order', reference_id: `ord-adj-${sh.id}`, label: `A${String(sh.id).padStart(7, '0')}` }
+        : { reference_type: 'expense', reference_id: String(nextId(mockExpenses)), label: `Gasto #${nextId(mockExpenses)}` };
+      mockShiftMovements.push({
+        id: nextId(mockShiftMovements), shift_id: sh.id, resource_type: 'adjustment', resource_id: null,
+        resource_label: `${difference > 0 ? 'Sobrante de caja' : 'Faltante de caja'} · ${doc.label}`,
+        reference_type: doc.reference_type, reference_id: doc.reference_id,
+        payment_method: 'cash',
+        amount: difference.toFixed(2), status: 1, annulled_at: null,
+        occurred_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
+      });
+    }
+    sh.status = 'CLOSED';
+    sh.counted_amount = counted.toFixed(2);
+    sh.expected_amount = balance.expected_amount;
+    sh.difference = difference.toFixed(2);
+    sh.closing_notes = body?.notes || null;
+    sh.closed_by = 1;
+    sh.closed_by_name = 'Gerardo Cruz';
+    sh.closed_at = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    return decorateShiftDetail(sh);
+  }
+
+  m = sub.match(/^shifts\/(\d+)$/);
+  if (m) {
+    const sh = mockShifts.find((x) => x.id === Number(m[1]) && visible(x));
+    return sh ? decorateShiftDetail(sh) : null;
+  }
+
+  return undefined;
+}
+
 // Tokens de agentes de IA (company-scoped: /companies/{company}/ai-agent-tokens[/{id}]).
 // POST imita al backend: devuelve el token plano una única vez junto al registro creado.
 function resolveAiTokensMock(path, { method = 'GET', body } = {}) {
@@ -3101,6 +3487,10 @@ export function resolveMock(rawPath, opts = {}) {
   const expenses = resolveExpensesMock(path, query, opts);
   if (expenses !== undefined) return expenses;
 
+  // Módulo de turnos de caja (company-scoped: /companies/{company}/shifts…)
+  const shifts = resolveShiftsMock(path, query, opts);
+  if (shifts !== undefined) return shifts;
+
   // Métrica de hospedaje (demo): /companies/{company}/metrics/reservations-report
   if (/\/metrics\/reservations-report$/.test(path)) {
     const active = mockReservations.filter((r) => r.status !== 0);
@@ -3119,6 +3509,11 @@ export function resolveMock(rawPath, opts = {}) {
   // Módulo de reservas de hospedaje (company-scoped: /companies/{company}/rentable-units|rentable-unit-types…)
   const reservations = resolveReservationsMock(path, query, opts);
   if (reservations !== undefined) return reservations;
+
+  // Administración de accesos: catálogo de permisos y CRUD de roles
+  // (/companies/{company}/permissions…). No colisiona con /me/permissions, resuelto arriba.
+  const permissionsAdmin = resolvePermissionsAdminMock(path, query, opts);
+  if (permissionsAdmin !== undefined) return permissionsAdmin;
 
   // Módulo de usuarios de la compañía (company-scoped: /companies/{company}/users…)
   const users = resolveUsersMock(path, query, opts);
