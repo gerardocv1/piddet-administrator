@@ -66,8 +66,13 @@ export function Invoices() {
     { key: 'time', header: 'Hora', width: 80, render: (r) => timeOf(r.created_date) },
     { key: 'customer_name', header: 'Cliente', ellipsis: true, render: (r) => r.customer_name?.trim() || <span className={s.faint}>—</span> },
     {
-      key: 'creator_first_name', header: 'Facturó', width: 120, ellipsis: true,
+      key: 'creator_first_name', header: 'Registró', width: 120, ellipsis: true,
       render: (r) => firstNameOf(r.creator_first_name || r.creator_name) || <span className={s.faint}>—</span>,
+    },
+    {
+      // Las facturas anteriores al envío de `biller` no lo traen: ahí cobró quien registró.
+      key: 'biller_first_name', header: 'Facturó', width: 120, ellipsis: true,
+      render: (r) => firstNameOf(r.biller_first_name || r.creator_first_name || r.creator_name) || <span className={s.faint}>—</span>,
     },
     {
       key: 'status', header: 'Estado', width: 130,

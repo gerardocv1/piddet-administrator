@@ -55,7 +55,7 @@ export function InvoiceDetail() {
     );
   }
 
-  const { order, customer, creator, items = [], taxes = [], status, payments = [] } = data;
+  const { order, customer, creator, biller, items = [], taxes = [], status, payments = [] } = data;
   const st = orderStatusOf(order.status);
   const pay = paymentStatusOf(order.status_payment);
 
@@ -195,6 +195,7 @@ export function InvoiceDetail() {
       <div className={t.sideGrid}>
         {personCard('Cliente (solicitó)', customer, customer?.customer_name, 'Sin datos del cliente.')}
         {personCard('Creada por', creator, creator?.creator_name, 'Sin datos del creador.')}
+        {personCard('Facturada por', biller || creator, biller?.biller_name || creator?.creator_name, 'Sin datos de quien facturó.')}
       </div>
 
       <ConfirmDialog open={cancelOpen} title="Cancelar factura"

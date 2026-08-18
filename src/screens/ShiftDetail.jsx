@@ -10,13 +10,15 @@ import s from './screens.module.css';
 import t from './ShiftDetail.module.css';
 
 const MOVEMENT_BADGE = { order: 'success', expense: 'danger', adjustment: 'warning' };
+const DOCUMENT_PATHS = { order: '/invoices', expense: '/expenses' };
 
 // Detalle de un turno de caja: datos de apertura, balance en vivo (base + ventas − gastos,
 // con desglose por método de pago) y el historial de movimientos que el backend asoció
 // automáticamente (ventas, gastos y el ajuste del cierre). Los movimientos de recursos
 // cancelados/anulados con el turno abierto aparecen tachados y no cuentan en el balance.
-// El ajuste del cierre enlaza a su documento contable: el sobrante se factura y el faltante
-// se registra como gasto, para que la contabilidad cuadre con la plata contada.
+// Cada movimiento enlaza a su documento: la venta a su factura, el gasto a su detalle y el
+// ajuste del cierre al documento contable que lo respalda (el sobrante se factura y el
+// faltante se registra como gasto, para que la contabilidad cuadre con la plata contada).
 export function ShiftDetail() {
   const { shiftId } = useParams();
   const navigate = useNavigate();
@@ -48,14 +50,16 @@ export function ShiftDetail() {
     );
   }
 
-  const documentPath = (movement) => {
-    if (!movement.reference_id) return null;
-    return movement.reference_type === 'order'
-      ? `/invoices/${movement.reference_id}`
-      : `/expenses/${movement.reference_id}`;
+  // El movimiento enlaza al documento que lo originó (la factura o el gasto); el ajuste del
+  // cierre no tiene recurso propio, así que enlaza al documento contable que lo respalda.
+  const documentTarget = (movement) => {
+    const type = movement.reference_id ? movement.reference_type : movement.resource_type;
+    const id = movement.reference_id || movement.resource_id;
+    const base = DOCUMENT_PATHS[type];
+    return base && id ? { type, to: `${base}/${id}` } : null;
   };
-  const canOpenDocument = (movement) => (movement.reference_type === 'order'
-    ? can('api-module-orders')
+  const canOpenDocument = (type) => (type === 'order'
+    ? canAny(['api-module-orders', 'api-module-orders-own'])
     : canAny(['api-module-expenses', 'api-module-expenses-own']));
 
   const open = data.status === 'OPEN';
@@ -116,14 +120,14 @@ export function ShiftDetail() {
       key: 'resource_label', header: 'Detalle', width: 180, ellipsis: true,
       render: (r) => {
         const label = r.resource_label || r.resource_id || '—';
-        const to = documentPath(r);
-        // El ajuste enlaza al documento contable que lo respalda (factura del sobrante o gasto
-        // del faltante), si el usuario tiene acceso a ese módulo.
-        return to && canOpenDocument(r) ? (
-          <Link className={t.docLink} to={to} onClick={(e) => e.stopPropagation()}>
-            {label} <i className="fas fa-up-right-from-square" />
-          </Link>
-        ) : withStrike(r, label);
+        const target = documentTarget(r);
+        return target && canOpenDocument(target.type)
+          ? withStrike(r, (
+            <Link className={t.docLink} to={target.to} onClick={(e) => e.stopPropagation()}>
+              {label} <i className="fas fa-up-right-from-square" />
+            </Link>
+          ))
+          : withStrike(r, label);
       },
     },
     { key: 'payment_method', header: 'Método', width: 140, ellipsis: true, render: (r) => withStrike(r, r.payment_method_name || r.payment_method || '—') },
