@@ -50,6 +50,10 @@
   color: var(--gray-500);
 }
 
+/* El enlace al documento usa el color del texto de la tabla, no el de marca. */
+.docLink { color: inherit; }
+.docLink:hover { text-decoration: underline; }
+
 /* Movimiento excluido del balance (venta cancelada / gasto anulado con el turno abierto). */
 .excluded {
   text-decoration: line-through;
