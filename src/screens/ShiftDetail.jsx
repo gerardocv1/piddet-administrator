@@ -122,11 +122,7 @@ export function ShiftDetail() {
         const label = r.resource_label || r.resource_id || '—';
         const target = documentTarget(r);
         return target && canOpenDocument(target.type)
-          ? withStrike(r, (
-            <Link className={t.docLink} to={target.to} onClick={(e) => e.stopPropagation()}>
-              {label} <i className="fas fa-up-right-from-square" />
-            </Link>
-          ))
+          ? withStrike(r, <Link to={target.to} onClick={(e) => e.stopPropagation()}>{label}</Link>)
           : withStrike(r, label);
       },
     },

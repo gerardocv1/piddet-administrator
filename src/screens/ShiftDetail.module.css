@@ -50,18 +50,6 @@
   color: var(--gray-500);
 }
 
-/* Enlace al documento contable que respalda el ajuste (factura del sobrante / gasto del faltante). */
-.docLink {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--color-primary);
-  font-weight: 600;
-  text-decoration: none;
-}
-.docLink:hover { text-decoration: underline; }
-.docLink i { font-size: 0.68rem; }
-
 /* Movimiento excluido del balance (venta cancelada / gasto anulado con el turno abierto). */
 .excluded {
   text-decoration: line-through;
