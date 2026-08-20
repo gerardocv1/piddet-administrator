@@ -1,6 +1,6 @@
 # Especificación Técnica del Proyecto
 
-> Generado: 2026-06-19
+> Actualizado: 2026-08-20 (rutas y notas alineadas con el código).
 
 ## Stack Tecnológico
 
@@ -15,9 +15,10 @@
 
 ## Arquitectura
 
-SPA de panel de administración multi-tenant (Piddet: pedidos, menús, productos, tiendas,
-mesas). Una empresa (`COMPANY`) agrupa tiendas/productos; el sidebar permite cambiar la
-empresa activa.
+SPA de panel de administración multi-compañía (Piddet: productos y menús, facturas, gastos,
+turnos de caja, mesas, reservas, reportes y accesos). Una compañía (`COMPANY`) agrupa todo lo
+demás; el sidebar permite cambiar la compañía activa, lo que fuerza una recarga completa del
+navegador. El panel es cliente de `backend-piddet`; los pedidos se toman en `piddet-pos`.
 
 **Capas (de afuera hacia adentro):**
 
@@ -109,9 +110,14 @@ El token viaja como `Authorization: Bearer <token>`.
 ## Rutas (frontend)
 
 `react-router-dom` v6 en `src/App.jsx`. `/login` es público; `/` monta `Layout` (Sidebar +
-Topbar + `<Outlet>`) con rutas hijas (`products`, `categories`, `toppings`, `tables`,
-`stores`, `users`, `roles`). Sin token, todo redirige a `/login`. Rutas en **inglés**;
-texto visible al usuario en **español**.
+Topbar + `<Outlet>`) con las rutas hijas de cada módulo: `products`, `product-categories`,
+`menus`, `reservations`, `rentable-units`, `invoices`, `sales-report`, `expenses`,
+`expense-categories`, `tables`, `shifts`, `stores`, `sync-failures`, `users`, `roles`,
+`permissions`, `company`. Sin token, todo redirige a `/login`. Rutas en **inglés**; texto
+visible al usuario en **español**.
+
+El mapa ruta → permiso (y ruta → funcionalidad) es único y vive en
+`src/lib/permissions/modules.js`; el catálogo explicado está en `specs/permissions-catalog.md`.
 
 Cada ruta de módulo se envuelve en `RequirePermission` (gateo por permiso, whitelist estricta).
 El índice `/` (Inicio/Dashboard) es siempre accesible y es la landing por defecto; entrar a un
@@ -166,7 +172,6 @@ const { data, setData, loading, error, reload } = useResource(api.products, []);
 - Para adaptar a otro backend: ajustar rutas en `services/` o headers en `http/`, nunca en
   las pantallas.
 - No copiar el patrón `api.x().then(set)` manualmente: usar `useResource`.
-- Los modales de crear/eliminar son ejemplos de UI; aún no llaman a los `api.create*`/`delete*`.
 
 ## Sistema de Compilación / Assets
 
@@ -200,9 +205,11 @@ contenido) y usa `100dvh`, porque a pantalla completa el sistema dibuja sobre la
 ## Documentación Existente
 
 - `specs/functional.md` — especificación funcional (módulos y flujos).
+- `specs/permissions-catalog.md` — qué habilita cada permiso y cada funcionalidad.
 - `specs/guides/backend-service.md` — guía paso a paso para añadir un servicio de backend.
 - `specs/guides/permissions.md` — guía de permisos y visibilidad de módulos.
 - `specs/guides/ui-components.md` — guía de componentes de UI.
 - `specs/guides/styling.md` — guía de estilos, tokens y modo oscuro.
 - `CLAUDE.md` — hoja de ruta: comandos, reglas innegociables y tabla de referencias a `specs/`.
+- Repos hermanos: `backend-piddet` (API, fuente de verdad) y `piddet-pos` (POS/KDS).
 - `README.md` — pendientes de marca conocidos.

@@ -1,12 +1,16 @@
 # Especificación Funcional del Proyecto
 
-> Generado: 2026-06-19
+> Actualizado: 2026-08-20 (catálogo de módulos alineado con `src/lib/permissions/modules.js`).
 
 ## Propósito del Proyecto
 
-Piddet es un panel de administración SaaS **multi-compañía** para restaurantes. Permite
-gestionar la oferta (productos, categorías, toppings), las tiendas, las mesas y los usuarios
-de una empresa, y consultar la operación (pedidos, estadísticas).
+Piddet es un panel de administración SaaS **multi-compañía** para negocios de atención al
+público (restaurantes, gimnasios y hospedaje). Permite gestionar la oferta (productos, menús,
+unidades rentables), la operación (facturas, gastos, turnos de caja, mesas, reservas) y los
+accesos (usuarios, roles y permisos), además de consultar reportes.
+
+Es cliente de `backend-piddet` (única fuente de verdad); el POS `piddet-pos` es la otra
+aplicación de la plataforma y toma los pedidos.
 
 ## Modelo multi-compañía (concepto central)
 
@@ -35,22 +39,31 @@ operable dentro de ella.
 
 ## Módulos Principales
 
-| Módulo | Descripción (una línea) |
-|---|---|
-| **Autenticación** | Login por teléfono + contraseña, sesión persistente y "recordarme". |
-| **Empresa (tenant)** | Consultar y cambiar la empresa activa entre las disponibles. |
-| **Dashboard** | Estadísticas, pedidos recientes y resumen de tiendas. |
-| **Productos** | Catálogo de productos con CRUD y filtros. |
-| **Categorías** | Categorías de la oferta. |
-| **Toppings** | Complementos de la oferta. |
-| **Facturas** | Órdenes de la compañía consultables por fecha, con detalle completo (solo lectura). |
-| **Tiendas** | Listado detallado de tiendas. |
-| **Usuarios** | Usuarios de la empresa con sus roles. |
-| **Roles** | Catálogo de roles de la plataforma y los permisos que otorga cada uno. |
-| **Permisos** | Catálogo de permisos por módulo y cuáles se exponen al panel. |
-| **Mesas** | Mesas de los locales (operación). |
-| **Avisos** | Notificaciones del panel. |
-| **Cuenta** | Perfil, historial de sesiones y cambio de contraseña del usuario. |
+Cada módulo se habilita por **permiso** y, cuando se indica, además por una **funcionalidad**
+contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](permissions-catalog.md).
+
+| Grupo | Módulo | Ruta | Permiso |
+|---|---|---|---|
+| — | **Inicio / Dashboard** | `/` | siempre visible |
+| Oferta | **Productos** (con categorías y opciones) | `/products` | `api-module-products` |
+| Oferta | **Carta / Menús** | `/menus` | `api-module-menus` |
+| Oferta | **Reservas** (hospedaje) | `/reservations` | `api-module-reservations` + `functionality_reservations` |
+| Oferta | **Unidades rentables** | `/rentable-units` | `api-module-rentable-units` + `functionality_reservations` |
+| Operación | **Facturas** | `/invoices` | `api-module-orders` · `api-module-orders-own` |
+| Operación | **Reporte de ventas** | `/sales-report` | `sales-report` · `sales-report-own` |
+| Operación | **Gastos** | `/expenses` | `api-module-expenses` · `api-module-expenses-own` |
+| Operación | **Reporte de gastos** | `/expenses/summary` | `expenses-report` · `expenses-report-own` |
+| Operación | **Categorías de gasto** | `/expense-categories` | `api-module-expenses` |
+| Operación | **Mesas** | `/tables` | `table-list` + `functionality_tables` |
+| Operación | **Turnos de caja** | `/shifts` | `api-module-shifts` · `api-module-shifts-own` |
+| Configuración | **Tiendas** | `/stores` | `api-module-stores` |
+| Configuración | **Categorías globales de producto** | `/admin/product-categories` | `item-category-master` |
+| Configuración | **Fallos de órdenes** (soporte del POS) | `/sync-failures` | `order-sync-failure-admin` |
+| Accesos | **Usuarios de la compañía** | `/users` | `user-administrator` |
+| Accesos | **Roles** | `/roles` | `role-list` |
+| Accesos | **Permisos** | `/permissions` | `permission-list` |
+| Cuenta | **Perfil de empresa** | `/company` | funcionalidades con `company-edit-functionalities` |
+| Cuenta | **Cuenta del usuario** | perfil, historial de sesiones, cambio de contraseña | — |
 
 ## Flujos por Módulo
 
@@ -123,6 +136,59 @@ operable dentro de ella.
   panel. Uno oculto sigue rigiendo en el backend, pero no viaja en `/me/permissions`, así que no
   puede mostrarse ni asignarse desde aquí.
 
+### Gastos
+
+- **Descripción:** registro de egresos de la compañía como encabezado + líneas.
+- **Flujo principal:** `/expenses` lista por rango de fechas; `/expenses/new` (o el asistente
+  móvil `/expenses/quick`, accesible desde el Dashboard) crea el gasto con proveedor —creable al
+  vuelo—, método de pago y líneas (categoría, descripción libre, valor), adjuntando fotos de la
+  factura. `/expenses/:expenseId` es de solo lectura salvo las fotos, que se agregan y quitan
+  mientras el gasto esté activo.
+- **Reglas:** las fotos viven en **S3 privado** (URL firmada). Un gasto no se borra: se **anula**
+  (`expense-annul`), y sus líneas no se editan. Las categorías combinan un árbol global de la
+  plataforma con las propias de la compañía. Con `api-module-expenses-own` el empleado registra y
+  ve solo lo suyo: el filtro lo aplica el backend.
+
+### Turnos de caja
+
+- **Descripción:** sesiones de caja con base, movimientos y arqueo de cierre.
+- **Flujo principal:** `/shifts/open` abre un turno **global** (compañía) o **de empleado**
+  (cajero) con una base de dinero; el backend le asocia automáticamente ventas y gastos como
+  movimientos. `/shifts/:shiftId` muestra el balance en vivo; `/shifts/:shiftId/close` guía el
+  cierre: contar dinero → balance (base + ventas − gastos) → confirmar.
+- **Reglas:** la diferencia se respalda con un documento contable real (sobrante → factura de
+  origen `SHIFT`; faltante → gasto en «Ajustes de caja»), que no se asocia a un turno abierto. El
+  turno global solo lo abre y cierra `shift-global-admin`, y no cierra con turnos de cajero
+  abiertos. Cancelar un turno es irreversible y conserva sus movimientos como historial.
+
+### Reservas y hospedaje
+
+- **Descripción:** operación de cabañas, habitaciones o lugares reservables.
+- **Flujo principal:** `/rentable-units` configura las unidades (espacios, inclusiones, fotos);
+  `/reservations` opera calendario, creación asistida, confirmación, check-in, consumos y
+  cargos, abonos y checkout.
+- **Reglas:** requiere la funcionalidad `functionality_reservations` activa además del permiso.
+  El pre-check-in del huésped ocurre fuera del panel, en la superficie pública del backend.
+
+### Reportes
+
+- **Descripción:** ventas y gastos del rango seleccionado.
+- **Flujo principal:** `/sales-report` resume subtotal, descuentos, impuestos, total, ticket
+  promedio, métodos de pago, top de productos y ventas por día, con filtros de rango, creador y
+  producto. `/expenses/summary` hace lo propio con los gastos (total, conteo, promedio, gasto más
+  alto, métodos de pago, usuarios y top de categorías con drill-down).
+- **Reglas:** las variantes `-own` limitan el reporte a lo que registró el usuario y ocultan el
+  filtro por creador. Las órdenes canceladas salen de las métricas.
+
+### Fallos de órdenes (soporte del POS)
+
+- **Descripción:** cuando el POS no logra facturar contra la API, envía un reporte de fallo.
+- **Flujo principal:** `/sync-failures` lista los reportes por estado de soporte (pendiente,
+  resuelto, no recuperable); el detalle permite editar el JSON de la orden, reintentar la
+  creación y cambiar el estado.
+- **Reglas:** el estado `resolved` es terminal. Es el mecanismo de rescate del modelo
+  offline-first del POS: ninguna venta debería quedarse sin registrar.
+
 ## Roles y Permisos
 
 El backend controla qué módulos y funcionalidades ve cada usuario mediante **permisos por
@@ -133,14 +199,13 @@ mostrar/ocultar módulos.
 - **Política:** whitelist estricta — un módulo solo se muestra si el usuario tiene su permiso;
   lo no autorizado se oculta del menú y su ruta se bloquea (redirige a Inicio).
 - **Excepción:** Inicio (Dashboard) es siempre visible y es la landing por defecto.
-- **Permisos actuales:** `api-module-products` (Productos), `api-module-menus` (Menús; sus
-  categorías se administran dentro del detalle de cada menú), `user-administrator` (Usuarios),
-  `api-module-orders` (Facturas), `role-list` (Roles, con `role-create` / `role-update` /
-  `role-delete` / `role-assign` para sus acciones) y `permission-list` (Permisos, con
-  `permission-update` para cambiar la visibilidad).
+- **Alcance `-own`:** varios módulos tienen el par `X` (toda la compañía) y `X-own` (solo lo que
+  registró el usuario). El filtro **lo aplica el backend**; un recurso ajeno responde 404.
+- **Funcionalidades:** eje independiente de los permisos. Un módulo con `func` declarado exige
+  además que la compañía tenga esa funcionalidad activa.
 
-Detalle técnico y cómo añadir un módulo gateado en `specs/guides/permissions.md`. El catálogo
-completo vive en `CLAUDE.md`.
+Catálogo completo de permisos: [`permissions-catalog.md`](permissions-catalog.md).
+Cómo añadir un módulo gateado: [`guides/permissions.md`](guides/permissions.md).
 
 ## Integraciones Externas
 
@@ -150,7 +215,7 @@ completo vive en `CLAUDE.md`.
 
 ## Glosario
 
-- **Compañía / Company / empresa:** eje del dominio. Cliente del sistema (cada restaurante);
+- **Compañía / Company / empresa:** eje del dominio. Cliente del sistema (restaurante, gimnasio u hospedaje);
   agrupa y "es dueña" de productos, tiendas, mesas, pedidos y usuarios. Todo se scopea por ella.
 - **Compañía activa:** la compañía bajo la que opera el usuario en cada momento
   (`company_default_id`). Cambiarla recarga todo el contexto del panel.
