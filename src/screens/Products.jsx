@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, IconButton, RefreshButton, Badge, Switch, Modal, Spinner, Pagination, Dropdown, FilterBar } from '../components';
+import { Button, IconButton, RefreshButton, Badge, Switch, Modal, Spinner, Pagination, Dropdown, FilterBar, Alert, useToast } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { ItemFormModal } from './ItemFormModal.jsx';
@@ -22,6 +22,7 @@ function ProductThumb({ src, alt }) {
 
 export function Products() {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [page, setPage] = React.useState(1);
   const [q, setQ] = React.useState('');
   const [search, setSearch] = React.useState('');
@@ -74,20 +75,43 @@ export function Products() {
   const [form, setForm] = React.useState(null); // null | {} (nuevo) | item (editar)
   const [del, setDel] = React.useState(null);
   const [saving, setSaving] = React.useState(false);
+  const [actionError, setActionError] = React.useState('');
 
   // Alterna activo/borrador con actualización optimista; revierte si el backend falla.
   const toggleStatus = async (it) => {
     const next = it.item_status_id === STATUS_ACTIVE ? STATUS_DRAFT : STATUS_ACTIVE;
+    setActionError('');
     setData({ ...data, items: items.map((x) => (x.id === it.id ? { ...x, item_status_id: next } : x)) });
-    try { await api.setItemStatus(it.id, next); }
-    catch { setData({ ...data, items: items.map((x) => (x.id === it.id ? { ...x, item_status_id: it.item_status_id } : x)) }); }
+    try {
+      await api.setItemStatus(it.id, next);
+      toast(next === STATUS_ACTIVE
+        ? { tone: 'success', title: 'Producto activado' }
+        : { tone: 'neutral', title: 'Producto desactivado' });
+    } catch (e) {
+      setData({ ...data, items: items.map((x) => (x.id === it.id ? { ...x, item_status_id: it.item_status_id } : x)) });
+      setActionError(e?.message || 'No se pudo cambiar el estado del producto.');
+    }
   };
 
   const remove = async () => {
     setSaving(true);
-    try { await api.deleteItem(del.id); setDel(null); reload(); }
-    finally { setSaving(false); }
+    setActionError('');
+    try {
+      await api.deleteItem(del.id);
+      setDel(null);
+      reload();
+      toast({ tone: 'neutral', title: 'Producto eliminado' });
+    } catch (e) {
+      setActionError(e?.message || 'No se pudo eliminar el producto.');
+    } finally { setSaving(false); }
   };
+
+  // Un error del servidor se queda en pantalla junto a la acción que falló (nunca es un toast).
+  // El banner vive fuera del modal y queda tapado cuando este se abre, así que el mismo Alert se
+  // repite dentro del modal de eliminar.
+  const errorBlock = actionError
+    ? <Alert tone="danger" title="No se pudo completar la acción" onClose={() => setActionError('')}>{actionError}</Alert>
+    : null;
 
   return (
     <div className={s.page}>
@@ -110,10 +134,12 @@ export function Products() {
         </>}
       />
 
+      {errorBlock}
+
       {loading ? (
         <Spinner center label="Cargando productos…" />
       ) : error ? (
-        <div className={s.stateError}><i className="fas fa-triangle-exclamation" /> {error}</div>
+        <Alert tone="danger" title="No se pudieron cargar los productos">{error}</Alert>
       ) : items.length === 0 ? (
         <div className={t.empty}>
           <i className="fas fa-burger" />
@@ -175,7 +201,10 @@ export function Products() {
           <Button variant="secondary" onClick={() => setDel(null)}>Cancelar</Button>
           <Button variant="danger" icon="fas fa-trash" loading={saving} onClick={remove}>Eliminar</Button>
         </>}>
-        ¿Seguro que deseas eliminar <strong>{del?.name}</strong>? Esta acción no se puede deshacer.
+        <div className={s.formCol}>
+          {errorBlock}
+          <p>¿Seguro que deseas eliminar <strong>{del?.name}</strong>? Esta acción no se puede deshacer.</p>
+        </div>
       </Modal>
     </div>
   );

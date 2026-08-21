@@ -1,6 +1,6 @@
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Button, IconButton, RefreshButton, Input, MoneyInput, Select, Textarea, Modal, Spinner, SortableList, Autocomplete, Dropdown } from '../components';
+import { Button, IconButton, RefreshButton, Input, MoneyInput, Select, Textarea, Modal, Spinner, SortableList, Autocomplete, Dropdown, Alert, useToast } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { useFunctionalities } from '../lib/permissions/useFunctionalities.js';
@@ -16,6 +16,7 @@ const plural = (n, sing, plur) => `${n} ${n === 1 ? sing : plur}`;
 export function MenuDetail() {
   const { menuId } = useParams();
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const menuRes = useResource(React.useCallback(() => api.menu(menuId), [menuId]), null, [menuId]);
   const catsRes = useResource(React.useCallback(() => api.menuCategories(menuId), [menuId]), EMPTY_PAGE, [menuId]);
@@ -38,6 +39,9 @@ export function MenuDetail() {
   const [del, setDel] = React.useState(null);
   const [toggle, setToggle] = React.useState(false); // confirmación de activar/desactivar el menú
   const [saving, setSaving] = React.useState(false);
+  // Error de la última mutación. Se pinta dentro de cada modal: los tres fallan con el overlay
+  // puesto, así que un banner de pantalla quedaría tapado.
+  const [actionError, setActionError] = React.useState('');
 
   // Conteo de productos por categoría (dentro de este menú).
   const countByCat = React.useMemo(() => {
@@ -91,28 +95,44 @@ export function MenuDetail() {
   };
 
   const removeItem = async () => {
-    setSaving(true);
-    try { await api.deleteMenuItem(menuId, del.id); setDel(null); itemsRes.reload(); }
-    finally { setSaving(false); }
+    setSaving(true); setActionError('');
+    try {
+      await api.deleteMenuItem(menuId, del.id);
+      setDel(null);
+      itemsRes.reload();
+      toast({ tone: 'neutral', title: 'Producto quitado del menú' });
+    } catch (e) {
+      setActionError(e?.message || 'No se pudo quitar el producto del menú.');
+    } finally { setSaving(false); }
   };
 
   const confirmToggle = async () => {
-    setSaving(true);
+    setSaving(true); setActionError('');
+    const activating = !menuRes.data.is_active;
     try {
-      await api.setMenuActive(menuId, !menuRes.data.is_active);
+      await api.setMenuActive(menuId, activating);
       setToggle(false);
       menuRes.reload();
+      toast({
+        tone: activating ? 'success' : 'neutral',
+        title: activating ? 'Menú activado' : 'Menú desactivado',
+      });
+    } catch (e) {
+      setActionError(e?.message || 'No se pudo cambiar el estado del menú.');
     } finally { setSaving(false); }
   };
 
   const removeCat = async () => {
-    setSaving(true);
+    setSaving(true); setActionError('');
     try {
       await api.deleteMenuCategory(menuId, delCat.id);
       if (selectedCat === delCat.id) setSelectedCat(null);
       setDelCat(null);
       catsRes.reload();
       itemsRes.reload();
+      toast({ tone: 'neutral', title: 'Categoría del menú eliminada' });
+    } catch (e) {
+      setActionError(e?.message || 'No se pudo eliminar la categoría.');
     } finally { setSaving(false); }
   };
 
@@ -268,7 +288,7 @@ export function MenuDetail() {
               {loading ? (
                 <Spinner center label="Cargando productos…" />
               ) : itemsRes.error ? (
-                <div className={s.stateError}><i className="fas fa-triangle-exclamation" /> {itemsRes.error}</div>
+                <Alert tone="danger" title="No se pudo cargar los productos del menú">{itemsRes.error}</Alert>
               ) : groups.every((g) => g.rows.length === 0) ? (
                 <div className={t.cardEmpty}>
                   <i className="fas fa-utensils" />
@@ -331,6 +351,7 @@ export function MenuDetail() {
             {menu?.is_active ? 'Desactivar' : 'Activar'}
           </Button>
         </>}>
+        {actionError && <Alert tone="danger" onClose={() => setActionError('')}>{actionError}</Alert>}
         {menu?.is_active
           ? <>Al desactivar <strong>{menu?.name}</strong> dejará de mostrarse en la página pública de la empresa y su carta no podrá abrirse, ni siquiera con el enlace directo. Podrás volver a activarlo cuando quieras.</>
           : <>Al activar <strong>{menu?.name}</strong> volverá a mostrarse en la página pública de la empresa y su carta será accesible.</>}
@@ -341,6 +362,7 @@ export function MenuDetail() {
           <Button variant="secondary" onClick={() => setDel(null)}>Cancelar</Button>
           <Button variant="danger" icon="fas fa-trash" loading={saving} onClick={removeItem}>Quitar</Button>
         </>}>
+        {actionError && <Alert tone="danger" onClose={() => setActionError('')}>{actionError}</Alert>}
         ¿Quitar <strong>{del?.name}</strong> de este menú?
       </Modal>
 
@@ -349,6 +371,7 @@ export function MenuDetail() {
           <Button variant="secondary" onClick={() => setDelCat(null)}>Cancelar</Button>
           <Button variant="danger" icon="fas fa-trash" loading={saving} onClick={removeCat}>Eliminar</Button>
         </>}>
+        {actionError && <Alert tone="danger" onClose={() => setActionError('')}>{actionError}</Alert>}
         ¿Eliminar la categoría <strong>{delCat?.name}</strong> de este menú?
         {(countByCat.get(delCat?.id) || 0) > 0 && (
           <> Sus {countByCat.get(delCat?.id)} producto(s) dejarán de mostrarse en el menú.</>
@@ -361,6 +384,7 @@ export function MenuDetail() {
 // ── Modal: buscar un producto y asignarlo (categoría + precio + disponibilidad) ──
 function AddProductModal({ menuId, categories, defaultCat, onClose, onAdded }) {
   const { has } = useFunctionalities();
+  const { toast } = useToast();
   const menuPriceOn = has('functionality_menu_item_price');
   const [sel, setSel] = React.useState(null);
   const initialCat = defaultCat != null ? defaultCat : (categories[0] ? categories[0].id : '');
@@ -386,6 +410,7 @@ function AddProductModal({ menuId, categories, defaultCat, onClose, onAdded }) {
         ...(menuPriceOn ? { price: price.trim() ? Number(price) : null } : {}),
       });
       onAdded();
+      toast({ tone: 'success', title: 'Producto agregado al menú' });
     } catch (e) {
       setErr(e?.message || 'No se pudo agregar el producto al menú.');
     } finally { setSaving(false); }
@@ -425,7 +450,7 @@ function AddProductModal({ menuId, categories, defaultCat, onClose, onAdded }) {
               placeholder="Usar precio del producto" value={price} onChange={setPrice} />
           )}
         </div>
-        {err && <div className={t.formError}><i className="fas fa-triangle-exclamation" /> {err}</div>}
+        {err && <Alert tone="danger" onClose={() => setErr(null)}>{err}</Alert>}
       </div>
     </Modal>
   );
@@ -435,6 +460,7 @@ function AddProductModal({ menuId, categories, defaultCat, onClose, onAdded }) {
 function EditItemModal({ menuId, item, categories, onClose, onSaved }) {
   const navigate = useNavigate();
   const { has } = useFunctionalities();
+  const { toast } = useToast();
   const menuPriceOn = has('functionality_menu_item_price');
   const [catId, setCatId] = React.useState(String(item.menu_category_id));
   const [price, setPrice] = React.useState('');
@@ -464,6 +490,7 @@ function EditItemModal({ menuId, item, categories, onClose, onSaved }) {
         ...(menuPriceOn ? { price: price.trim() ? Number(price) : null } : {}),
       });
       onSaved();
+      toast({ tone: 'success', title: 'Producto actualizado' });
     } catch (e) {
       setErr(e?.message || 'No se pudo actualizar el producto.');
     } finally { setSaving(false); }
@@ -483,7 +510,7 @@ function EditItemModal({ menuId, item, categories, onClose, onSaved }) {
             placeholder={`Actual: ${fmtPrice(item.price)} · vacío = precio del producto`}
             value={price} onChange={setPrice} />
         )}
-        {err && <div className={t.formError}><i className="fas fa-triangle-exclamation" /> {err}</div>}
+        {err && <Alert tone="danger" onClose={() => setErr(null)}>{err}</Alert>}
       </div>
     </Modal>
   );
@@ -492,6 +519,7 @@ function EditItemModal({ menuId, item, categories, onClose, onSaved }) {
 // ── Modal: crear o editar una categoría del menú ──
 function CategoryModal({ menuId, category, onClose, onSaved }) {
   const editing = !!category;
+  const { toast } = useToast();
   const [name, setName] = React.useState(category?.name || '');
   const [description, setDescription] = React.useState(category?.description || '');
   const [saving, setSaving] = React.useState(false);
@@ -506,6 +534,7 @@ function CategoryModal({ menuId, category, onClose, onSaved }) {
       if (editing) await api.updateMenuCategory(menuId, category.id, { name: n, description });
       else await api.createMenuCategory(menuId, { name: n, description });
       onSaved();
+      toast({ tone: 'success', title: editing ? 'Categoría del menú actualizada' : 'Categoría del menú creada' });
     } catch (e) {
       setErr(e?.message || 'No se pudo guardar la categoría.');
     } finally { setSaving(false); }
@@ -523,7 +552,7 @@ function CategoryModal({ menuId, category, onClose, onSaved }) {
           value={name} onChange={(e) => setName(e.target.value)} />
         <Textarea label="Descripción" placeholder="Opcional"
           value={description} onChange={(e) => setDescription(e.target.value)} />
-        {err && <div className={t.formError}><i className="fas fa-triangle-exclamation" /> {err}</div>}
+        {err && <Alert tone="danger" onClose={() => setErr(null)}>{err}</Alert>}
       </div>
     </Modal>
   );

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Avatar, Badge, Button, IconButton, RefreshButton, Input, Select, Checkbox, Modal, Card, DataTable, Pagination, FilterBar, Spinner } from '../components';
+import { Avatar, Badge, Button, IconButton, RefreshButton, Input, Select, Checkbox, Modal, Card, DataTable, Pagination, FilterBar, Spinner, Alert, useToast } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import s from './screens.module.css';
@@ -64,11 +64,20 @@ export function Users() {
   const [pwd, setPwd] = React.useState(null);     // usuario al que fijar contraseña
   const [del, setDel] = React.useState(null);     // usuario a desvincular
   const [saving, setSaving] = React.useState(false);
+  const [delError, setDelError] = React.useState(null);
+  const { toast } = useToast();
 
   const unlink = async () => {
     setSaving(true);
-    try { await api.unlinkUser(del.id); setDel(null); reload(); }
-    finally { setSaving(false); }
+    setDelError(null);
+    try {
+      await api.unlinkUser(del.id);
+      setDel(null);
+      reload();
+      toast({ tone: 'neutral', title: 'Usuario desvinculado' });
+    } catch (e) {
+      setDelError(e?.message || 'No se pudo desvincular al usuario.');
+    } finally { setSaving(false); }
   };
 
   const columns = [
@@ -126,7 +135,7 @@ export function Users() {
       <div className={s.mobileList}>
         {loading && <Card><div className={s.mobileState}><Spinner size="sm" label="Cargando…" /></div></Card>}
         {!loading && error && (
-          <Card><div className={`${s.mobileState} ${s.mobileStateError}`}><i className="fas fa-triangle-exclamation" /> {error}</div></Card>
+          <Card><Alert tone="danger" title="No se pudieron cargar los usuarios">{error}</Alert></Card>
         )}
         {!loading && !error && items.length === 0 && (
           <Card><div className={s.mobileState}>Aún no hay usuarios vinculados a la compañía.</div></Card>
@@ -156,13 +165,15 @@ export function Users() {
         <PasswordModal user={pwd} onClose={() => setPwd(null)} onSaved={() => setPwd(null)} />
       )}
 
-      <Modal open={!!del} size="sm" title="Desvincular usuario" onClose={() => setDel(null)}
+      <Modal open={!!del} size="sm" title="Desvincular usuario"
+        onClose={() => { setDelError(null); setDel(null); }}
         footer={<>
-          <Button variant="secondary" onClick={() => setDel(null)}>Cancelar</Button>
+          <Button variant="secondary" onClick={() => { setDelError(null); setDel(null); }}>Cancelar</Button>
           <Button variant="danger" icon="fas fa-link-slash" loading={saving} onClick={unlink}>Desvincular</Button>
         </>}>
         ¿Seguro que deseas retirar el acceso de <strong>{del?.name}</strong> a esta compañía? El usuario
         no se elimina; solo deja de pertenecer a la compañía.
+        {delError && <Alert tone="danger" onClose={() => setDelError(null)}>{delError}</Alert>}
       </Modal>
     </div>
   );
@@ -240,6 +251,7 @@ function UserRolesModal({ user, roles, onClose, onSaved }) {
   const [selected, setSelected] = React.useState(() => (user.roles || []).map((r) => r.name));
   const [saving, setSaving] = React.useState(false);
   const [err, setErr] = React.useState(null);
+  const { toast } = useToast();
 
   const toggle = (name) => setSelected((xs) => (xs.includes(name) ? xs.filter((x) => x !== name) : [...xs, name]));
 
@@ -248,6 +260,7 @@ function UserRolesModal({ user, roles, onClose, onSaved }) {
     setErr(null);
     try {
       await api.updateCompanyUser(user.id, { roles: selected });
+      toast({ tone: 'success', title: 'Roles actualizados' });
       onSaved();
     } catch (e) {
       setErr(e?.message || 'No se pudieron guardar los roles.');
@@ -268,7 +281,7 @@ function UserRolesModal({ user, roles, onClose, onSaved }) {
           queden marcados: lo que desmarques se retira.
         </span>
         <RolesField roles={roles} selected={selected} onToggle={toggle} />
-        {err && <div className={s.formError}><i className="fas fa-triangle-exclamation" /> {err}</div>}
+        {err && <Alert tone="danger" onClose={() => setErr(null)}>{err}</Alert>}
       </div>
     </Modal>
   );
@@ -292,6 +305,7 @@ function UserFormModal({ user, roles, onClose, onSaved }) {
   const [selected, setSelected] = React.useState([]);
   const [saving, setSaving] = React.useState(false);
   const [err, setErr] = React.useState(null);
+  const { toast } = useToast();
 
   // Estado de la búsqueda por teléfono (solo al crear).
   const [searching, setSearching] = React.useState(false);
@@ -372,6 +386,12 @@ function UserFormModal({ user, roles, onClose, onSaved }) {
           user_type_id: Number(form.user_type_id),
         });
       }
+      toast({
+        tone: 'success',
+        title: mode === 'edit' ? 'Usuario actualizado'
+          : mode === 'link' ? 'Usuario vinculado'
+          : 'Usuario creado',
+      });
       onSaved();
     } catch (e) {
       setErr(e?.message || 'No se pudo guardar el usuario.');
@@ -412,9 +432,9 @@ function UserFormModal({ user, roles, onClose, onSaved }) {
         )}
 
         {mode === 'linked' && (
-          <div className={s.formError}>
-            <i className="fas fa-circle-info" /> <strong>{result.user.name}</strong> ya pertenece a esta compañía.
-          </div>
+          <Alert tone="info" variant="tint">
+            <strong>{result.user.name}</strong> ya pertenece a esta compañía.
+          </Alert>
         )}
 
         {mode === 'link' && (
@@ -458,7 +478,7 @@ function UserFormModal({ user, roles, onClose, onSaved }) {
           </>
         )}
 
-        {err && <div className={s.formError}><i className="fas fa-triangle-exclamation" /> {err}</div>}
+        {err && <Alert tone="danger" onClose={() => setErr(null)}>{err}</Alert>}
       </div>
     </Modal>
   );
@@ -470,6 +490,7 @@ function PasswordModal({ user, onClose, onSaved }) {
   const [confirm, setConfirm] = React.useState('');
   const [saving, setSaving] = React.useState(false);
   const [err, setErr] = React.useState(null);
+  const { toast } = useToast();
 
   const valid = password.length >= 8 && password === confirm;
 
@@ -479,6 +500,7 @@ function PasswordModal({ user, onClose, onSaved }) {
     setErr(null);
     try {
       await api.setUserPassword(user.id, password);
+      toast({ tone: 'success', title: 'Contraseña actualizada' });
       onSaved();
     } catch (e) {
       setErr(e?.message || 'No se pudo cambiar la contraseña.');
@@ -500,7 +522,7 @@ function PasswordModal({ user, onClose, onSaved }) {
         <Input label="Confirmar contraseña" icon="fas fa-lock" type="password"
           error={confirm && confirm !== password ? 'No coincide' : undefined}
           value={confirm} onChange={(e) => setConfirm(e.target.value)} />
-        {err && <div className={s.formError}><i className="fas fa-triangle-exclamation" /> {err}</div>}
+        {err && <Alert tone="danger" onClose={() => setErr(null)}>{err}</Alert>}
       </div>
     </Modal>
   );

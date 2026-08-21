@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Card, DataTable, Badge, FilterBar, Pagination, RefreshButton } from '../components';
+import { Card, DataTable, Badge, FilterBar, Pagination, RefreshButton, Alert } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { supportStatusOf, SUPPORT_STATUS_OPTIONS, formatDateTime } from '../lib/syncFailureLabels.js';
@@ -65,16 +65,19 @@ export function SyncFailures() {
         }
       />
 
-      <Card>
-        <DataTable
-          columns={columns}
-          rows={rows}
-          loading={loading}
-          error={error}
-          empty="No hay fallos de sincronización con el filtro actual."
-          onRowClick={(r) => navigate(`/sync-failures/${r.id}?${params.toString()}`)}
-        />
-      </Card>
+      {error ? (
+        <Alert tone="danger" title="No se pudieron cargar los fallos de sincronización">{error}</Alert>
+      ) : (
+        <Card>
+          <DataTable
+            columns={columns}
+            rows={rows}
+            loading={loading}
+            empty="No hay fallos de sincronización con el filtro actual."
+            onRowClick={(r) => navigate(`/sync-failures/${r.id}?${params.toString()}`)}
+          />
+        </Card>
+      )}
 
       {pg && pg.last_page > 1 && (
         <Pagination page={pg.current_page} lastPage={pg.last_page} total={pg.total}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, IconButton, RefreshButton, Card, Badge, Modal, Input, Textarea, Spinner, ConfirmDialog } from '../components';
+import { Button, IconButton, RefreshButton, Card, Badge, Modal, Input, Textarea, Spinner, ConfirmDialog, Alert, useToast } from '../components';
 import { api } from '../lib/api.js';
 import { auth as authLib } from '../lib/auth/index.js';
 import { useResource } from '../lib/useResource.js';
@@ -21,6 +21,7 @@ const isActive = (table) => table.is_active === true || table.is_active === 1;
  */
 export function Tables() {
   const { data: tables, loading, error, reload } = useResource(api.tables, [], []);
+  const { toast } = useToast();
   const { can } = usePermissions();
   const canCreate = can('table-create');
   const canEdit = can('table-update');
@@ -31,6 +32,7 @@ export function Tables() {
   const [releasingAll, setReleasingAll] = React.useState(false);
   const [busyId, setBusyId] = React.useState(null);
   const [actionError, setActionError] = React.useState(null);
+  const [releaseError, setReleaseError] = React.useState(null);
 
   const rows = tables || [];
   const activeTables = rows.filter(isActive);
@@ -40,31 +42,37 @@ export function Tables() {
     inactive: rows.length - activeTables.length,
   };
 
-  const run = async (table, action) => {
+  const run = async (table, action, done) => {
     setBusyId(table.id);
     setActionError(null);
     try {
       await action();
       reload();
+      if (done) toast(done);
     } catch (e) {
       setActionError(e?.message || 'No se pudo completar la acción.');
     } finally { setBusyId(null); }
   };
 
   const toggleOccupation = (table) =>
-    run(table, () => api.setTableStatus(table.id, isOccupied(table) ? 'available' : 'occupied'));
+    run(table, () => api.setTableStatus(table.id, isOccupied(table) ? 'available' : 'occupied'),
+      { tone: 'success', title: isOccupied(table) ? 'Mesa liberada' : 'Mesa ocupada' });
 
   const toggleActive = (table) =>
-    run(table, () => api.setTableActive(table.id, !isActive(table)));
+    run(table, () => api.setTableActive(table.id, !isActive(table)),
+      isActive(table)
+        ? { tone: 'neutral', title: 'Mesa desactivada' }
+        : { tone: 'success', title: 'Mesa activada' });
 
   const releaseAll = async () => {
-    setActionError(null);
+    setReleaseError(null);
     try {
       await api.makeAllTablesAvailable();
       setReleasingAll(false);
       reload();
+      toast({ tone: 'success', title: 'Mesas liberadas' });
     } catch (e) {
-      setActionError(e?.message || 'No se pudieron liberar las mesas.');
+      setReleaseError(e?.message || 'No se pudieron liberar las mesas.');
     }
   };
 
@@ -104,12 +112,12 @@ export function Tables() {
         </div>
       </div>
 
-      {actionError && <div className={s.stateError}><i className="fas fa-triangle-exclamation" /> {actionError}</div>}
+      {actionError && <Alert tone="danger" onClose={() => setActionError(null)}>{actionError}</Alert>}
 
       {loading ? (
         <Spinner center label="Cargando mesas…" />
       ) : error ? (
-        <div className={s.stateError}><i className="fas fa-triangle-exclamation" /> No se pudieron cargar las mesas.</div>
+        <Alert tone="danger" title="No se pudieron cargar las mesas">{error}</Alert>
       ) : rows.length === 0 ? (
         <Card><Card.Body><p className={t.empty}>Aún no hay mesas registradas.</p></Card.Body></Card>
       ) : (
@@ -172,9 +180,10 @@ export function Tables() {
         variant="primary"
         icon="fas fa-broom"
         onConfirm={releaseAll}
-        onClose={() => setReleasingAll(false)}>
+        onClose={() => { setReleasingAll(false); setReleaseError(null); }}>
         Las {counters.occupied} mesas ocupadas quedarán disponibles. Úsalo al cerrar el turno: no
         modifica las órdenes, solo el estado de las mesas.
+        {releaseError && <Alert tone="danger" onClose={() => setReleaseError(null)}>{releaseError}</Alert>}
       </ConfirmDialog>
     </div>
   );
@@ -182,6 +191,7 @@ export function Tables() {
 
 // ── Modal: crear / editar mesa ──
 function TableFormModal({ table, onClose, onSaved }) {
+  const { toast } = useToast();
   const [form, setForm] = React.useState(() => ({
     name: table?.name || '',
     description: table?.description || '',
@@ -204,6 +214,7 @@ function TableFormModal({ table, onClose, onSaved }) {
       const payload = { name, description: form.description.trim(), capacity };
       if (table) await api.updateTable(table.id, payload);
       else await api.createTable(payload);
+      toast({ tone: 'success', title: table ? 'Mesa guardada' : 'Mesa creada' });
       onSaved();
     } catch (e) {
       setErr(e?.message || 'No se pudo guardar la mesa.');
@@ -225,7 +236,7 @@ function TableFormModal({ table, onClose, onSaved }) {
         <Textarea label="Descripción" rows={2} value={form.description}
           onChange={(e) => set('description', e.target.value)}
           hint="Opcional: ubicación o detalle que ayude a identificarla." />
-        {err && <div className={s.formError}><i className="fas fa-triangle-exclamation" /> {err}</div>}
+        {err && <Alert tone="danger" onClose={() => setErr(null)}>{err}</Alert>}
       </div>
     </Modal>
   );
@@ -255,7 +266,7 @@ function TableQrModal({ table, company, onClose }) {
         </Button>
       </>}>
       <div className={t.qrBox}>
-        {err ? <div className={s.formError}><i className="fas fa-triangle-exclamation" /> {err}</div>
+        {err ? <Alert tone="danger">{err}</Alert>
           : src ? <img className={t.qrImage} src={src} alt={`Código QR de ${table.name}`} />
             : <Spinner />}
         <p className={t.qrHint}>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, IconButton, RefreshButton, Input, Textarea, Select, Modal, Spinner, Badge, Card } from '../components';
+import { Button, IconButton, RefreshButton, Input, Textarea, Select, Modal, Spinner, Badge, Card, Alert, useToast } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import s from './screens.module.css';
@@ -13,6 +13,7 @@ const EMPTY = { types: [], roots: [] };
 // límite (Bebidas → Bebidas calientes → Café): el backend expone el árbol ya anidado (children[])
 // y soporta crear subcategorías (parent_id) y mover ramas. Las compañías solo las ordenan.
 export function AdminProductCategories() {
+  const { toast } = useToast();
   const fetcher = React.useCallback(
     () => Promise.all([api.itemTypes(), api.masterItemCategoriesTree({})])
       .then(([ty, tree]) => ({ types: ty.items || [], roots: tree || [] })),
@@ -42,6 +43,10 @@ export function AdminProductCategories() {
   const [form, setForm] = React.useState(null);
   const [del, setDel] = React.useState(null);
   const [saving, setSaving] = React.useState(false);
+  // Los errores del servidor se quedan DENTRO del modal que falló (el banner de pantalla queda
+  // tapado por el overlay); por eso hay uno por modal.
+  const [saveError, setSaveError] = React.useState('');
+  const [delError, setDelError] = React.useState('');
 
   // Aperturas del modal según contexto (raíz nueva, subcategoría, edición).
   const openNewRoot = (type) =>
@@ -73,22 +78,34 @@ export function AdminProductCategories() {
     const name = form.name.trim();
     if (!name) return;
     const parentId = form.parentId === '' || form.parentId == null ? null : Number(form.parentId);
+    const editing = !!form.id;
     setSaving(true);
+    setSaveError('');
     try {
-      if (form.id) {
+      if (editing) {
         await api.updateMasterItemCategory(form.id, { name, description: form.description, parent_id: parentId });
       } else {
         await api.createMasterItemCategory({ item_type_id: form.typeId, parent_id: parentId, name, description: form.description });
       }
       setForm(null);
       reload();
+      toast({ tone: 'success', title: editing ? 'Categoría guardada' : 'Categoría creada' });
+    } catch (e) {
+      setSaveError(e?.message || 'No se pudo guardar la categoría.');
     } finally { setSaving(false); }
   };
 
   const remove = async () => {
     setSaving(true);
-    try { await api.deleteMasterItemCategory(del.id); setDel(null); reload(); }
-    finally { setSaving(false); }
+    setDelError('');
+    try {
+      await api.deleteMasterItemCategory(del.id);
+      setDel(null);
+      reload();
+      toast({ tone: 'neutral', title: 'Categoría eliminada' });
+    } catch (e) {
+      setDelError(e?.message || 'No se pudo eliminar la categoría.');
+    } finally { setSaving(false); }
   };
 
   const modalTitle = !form ? '' : form.id
@@ -111,7 +128,7 @@ export function AdminProductCategories() {
       {loading ? (
         <Spinner center label="Cargando categorías…" />
       ) : error ? (
-        <div className={s.stateError}><i className="fas fa-triangle-exclamation" /> {error}</div>
+        <Alert tone="danger" title="No se pudieron cargar las categorías">{error}</Alert>
       ) : groups.length === 0 ? (
         <div className={t.empty}>
           <i className="fas fa-tags" />
@@ -164,6 +181,9 @@ export function AdminProductCategories() {
         </>}>
         {form && (
           <div className={s.formCol}>
+            {saveError && (
+              <Alert tone="danger" onClose={() => setSaveError('')}>{saveError}</Alert>
+            )}
             <Select
               label="Categoría padre"
               icon="fas fa-sitemap"
@@ -188,10 +208,15 @@ export function AdminProductCategories() {
           <Button variant="secondary" onClick={() => setDel(null)}>Cancelar</Button>
           <Button variant="danger" icon="fas fa-trash" loading={saving} onClick={remove}>Eliminar</Button>
         </>}>
-        ¿Seguro que deseas eliminar <strong>{del?.name}</strong>?
-        {del?.children?.length > 0 && (
-          <> Incluye <strong>{del.children.length}</strong> subcategoría(s).</>
-        )} Dejará de estar disponible para todas las compañías de la plataforma.
+        <div className={s.formCol}>
+          {delError && <Alert tone="danger" onClose={() => setDelError('')}>{delError}</Alert>}
+          <p>
+            ¿Seguro que deseas eliminar <strong>{del?.name}</strong>?
+            {del?.children?.length > 0 && (
+              <> Incluye <strong>{del.children.length}</strong> subcategoría(s).</>
+            )} Dejará de estar disponible para todas las compañías de la plataforma.
+          </p>
+        </div>
       </Modal>
     </div>
   );

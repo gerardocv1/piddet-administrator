@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Button, MoneyInput, Textarea, Spinner } from '../../components';
+import { Button, MoneyInput, Textarea, Spinner, Alert } from '../../components';
 import { api } from '../../lib/api.js';
 import { useResource } from '../../lib/useResource.js';
 import { shiftMoney, SHIFT_TYPE_LABELS } from '../../lib/shiftLabels.js';
@@ -70,7 +70,7 @@ export function ShiftCloseWizard() {
   if (error || !shift) {
     return (
       <div className={t.wizard}>
-        <div className={t.error}><i className="fas fa-triangle-exclamation" /> {error || 'No se encontró el turno.'}</div>
+        <Alert tone="danger" title="No se pudo cargar el turno">{error || 'No se encontró el turno.'}</Alert>
       </div>
     );
   }
@@ -78,7 +78,9 @@ export function ShiftCloseWizard() {
   if (shift.status !== 'OPEN' && !closed) {
     return (
       <div className={t.wizard}>
-        <div className={t.error}><i className="fas fa-lock" /> Este turno ya está cerrado.</div>
+        <Alert tone="warning" variant="tint" title="Este turno ya está cerrado">
+          No se puede volver a cerrar: el cierre es definitivo.
+        </Alert>
         <Button variant="secondary" icon="fas fa-arrow-left" onClick={() => navigate(`/shifts/${shiftId}`)}>
           Ver turno
         </Button>
@@ -189,7 +191,7 @@ export function ShiftCloseWizard() {
             <Textarea label="Nota de cierre" placeholder="Comentario del arqueo (opcional)"
               value={notes} onChange={(e) => setNotes(e.target.value)} />
             <p className={t.helper}><i className="fas fa-lock" /> El cierre es definitivo: el turno queda como foto contable y no se puede reabrir.</p>
-            {err && <div className={t.error}><i className="fas fa-triangle-exclamation" /> {err}</div>}
+            {err && <Alert tone="danger" title="No se pudo cerrar el turno" onClose={() => setErr(null)}>{err}</Alert>}
           </div>
         )}
       </div>
@@ -238,18 +240,10 @@ function MethodRows({ rows }) {
 function DifferenceBanner({ difference }) {
   if (difference == null) return null;
   if (difference === 0) {
-    return <div className={`${t.banner} ${t.bannerOk}`}><i className="fas fa-circle-check" /> La caja cuadra exacta.</div>;
+    return <Alert tone="success">La caja cuadra exacta.</Alert>;
   }
   if (difference > 0) {
-    return (
-      <div className={`${t.banner} ${t.bannerUp}`}>
-        <i className="fas fa-arrow-trend-up" /> Sobrante de <strong>{shiftMoney(difference)}</strong>
-      </div>
-    );
+    return <Alert tone="info">Sobrante de <strong>{shiftMoney(difference)}</strong></Alert>;
   }
-  return (
-    <div className={`${t.banner} ${t.bannerDown}`}>
-      <i className="fas fa-arrow-trend-down" /> Faltante de <strong>{shiftMoney(Math.abs(difference))}</strong>
-    </div>
-  );
+  return <Alert tone="warning">Faltante de <strong>{shiftMoney(Math.abs(difference))}</strong></Alert>;
 }

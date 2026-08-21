@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
-  Card, Badge, Button, IconButton, RefreshButton, Input, Select, Textarea, MoneyInput, Switch, Spinner, Modal, Alert, MultiImageUpload, PageHeader,
+  Card, Badge, Button, IconButton, RefreshButton, Input, Select, Textarea, MoneyInput, Switch, Spinner, Modal, Alert, useToast, MultiImageUpload, PageHeader,
 } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
@@ -23,6 +23,7 @@ export function RentableUnitDetail() {
   const { unitId } = useParams();
   const navigate = useNavigate();
   const [params] = useSearchParams();
+  const { toast } = useToast();
   const isEdit = !!unitId;
 
   const unitFetcher = React.useCallback(
@@ -103,6 +104,7 @@ export function RentableUnitDetail() {
           .map((inc) => ({ name: inc.name.trim(), description: inc.description.trim() || null })),
       };
       const created = await api.createRentableUnit(payload);
+      toast({ tone: 'success', title: 'Unidad creada' });
       navigate(`/rentable-units/${created.id}`);
     } catch (e) {
       setFormError(e?.message || 'No se pudo crear la unidad.');
@@ -133,6 +135,7 @@ export function RentableUnitDetail() {
         item_id: Number(form.item_id),
         description: form.description.trim() || null,
       }));
+      toast({ tone: 'success', title: 'Unidad guardada' });
     } catch (e) {
       setFormError(e?.message || 'No se pudo guardar la unidad.');
     } finally {
@@ -143,6 +146,10 @@ export function RentableUnitDetail() {
   const toggleStatus = async () => {
     const next = Number(data.status) === 1 ? 0 : 1;
     setData(await api.setRentableUnitStatus(unitId, next));
+    // Desactivar es lo que quita la unidad de la operación: va en tono neutro.
+    toast(next === 1
+      ? { tone: 'success', title: 'Unidad activada' }
+      : { tone: 'neutral', title: 'Unidad desactivada' });
   };
 
   if (isEdit && loading) return <Spinner center label="Cargando unidad…" />;
@@ -260,6 +267,7 @@ export function RentableUnitDetail() {
 
 // ── Galería reutilizable: fotos existentes (con quitar) + MultiImageUpload para agregar ──
 function PhotoGallery({ files, folder, onAdd, onRemove }) {
+  const { toast } = useToast();
   const ref = React.useRef(null);
   const [count, setCount] = React.useState(0);
   const [uploadKey, setUploadKey] = React.useState(0);
@@ -277,6 +285,7 @@ function PhotoGallery({ files, folder, onAdd, onRemove }) {
       if (names.length) await onAdd(names);
       setCount(0);
       setUploadKey((k) => k + 1);
+      if (names.length) toast({ tone: 'success', title: names.length === 1 ? 'Foto guardada' : 'Fotos guardadas' });
     } catch (e) {
       setErr(e?.message || 'No se pudieron guardar las fotos.');
     } finally {
@@ -290,6 +299,7 @@ function PhotoGallery({ files, folder, onAdd, onRemove }) {
     try {
       await onRemove(delName);
       setDelName(null);
+      toast({ tone: 'neutral', title: 'Foto eliminada' });
     } catch (e) {
       setErr(e?.message || 'No se pudo eliminar la foto.');
     } finally {
@@ -371,6 +381,7 @@ function NewInclusions({ inclusions, onChange }) {
 
 // ── Inclusiones administradas vía API (modo edición) ──────────────────────
 function InclusionsEditor({ unit, onChange }) {
+  const { toast } = useToast();
   const [editing, setEditing] = React.useState(null); // { id?, name, description }
   const [saving, setSaving] = React.useState(false);
   const [err, setErr] = React.useState(null);
@@ -383,10 +394,12 @@ function InclusionsEditor({ unit, onChange }) {
     setSaving(true); setErr(null);
     try {
       const payload = { name: editing.name.trim(), description: editing.description.trim() || null };
+      const isNew = !editing.id;
       onChange(editing.id
         ? await api.updateRentableUnitInclusion(unit.id, editing.id, payload)
         : await api.createRentableUnitInclusion(unit.id, payload));
       setEditing(null);
+      toast({ tone: 'success', title: isNew ? 'Inclusión agregada' : 'Inclusión guardada' });
     } catch (e) {
       setErr(e?.message || 'No se pudo guardar.');
     } finally {
@@ -399,6 +412,7 @@ function InclusionsEditor({ unit, onChange }) {
     try {
       onChange(await api.deleteRentableUnitInclusion(unit.id, delInclusion.id));
       setDelInclusion(null);
+      toast({ tone: 'neutral', title: 'Inclusión eliminada' });
     } catch (e) {
       setErr(e?.message || 'No se pudo eliminar.');
     } finally {
@@ -503,6 +517,7 @@ function NewSpaces({ spaces, onChange }) {
 
 // ── Espacios administrados vía API (modo edición) ─────────────────────────
 function SpacesEditor({ unit, onChange }) {
+  const { toast } = useToast();
   const [editing, setEditing] = React.useState(null); // { id?, name, description }
   const [saving, setSaving] = React.useState(false);
   const [err, setErr] = React.useState(null);
@@ -515,11 +530,13 @@ function SpacesEditor({ unit, onChange }) {
     setSaving(true); setErr(null);
     try {
       const payload = { name: editing.name.trim(), description: editing.description.trim() || null };
+      const isNew = !editing.id;
       const updated = editing.id
         ? await api.updateRentableUnitSpace(unit.id, editing.id, payload)
         : await api.createRentableUnitSpace(unit.id, payload);
       onChange(updated);
       setEditing(null);
+      toast({ tone: 'success', title: isNew ? 'Espacio agregado' : 'Espacio guardado' });
     } catch (e) {
       setErr(e?.message || 'No se pudo guardar el espacio.');
     } finally {
@@ -532,6 +549,7 @@ function SpacesEditor({ unit, onChange }) {
     try {
       onChange(await api.deleteRentableUnitSpace(unit.id, delSpace.id));
       setDelSpace(null);
+      toast({ tone: 'neutral', title: 'Espacio eliminado' });
     } catch (e) {
       setErr(e?.message || 'No se pudo eliminar el espacio.');
     } finally {

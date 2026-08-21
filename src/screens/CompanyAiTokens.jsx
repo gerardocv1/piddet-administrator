@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, IconButton, RefreshButton, Card, Badge, Input, Select, Modal, DataTable } from '../components';
+import { Button, IconButton, RefreshButton, Card, Badge, Input, Select, Modal, DataTable, Alert, useToast } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import s from './screens.module.css';
@@ -82,6 +82,7 @@ function CreateTokenModal({ onClose, onCreated }) {
   const [err, setErr] = React.useState(null);
   const [created, setCreated] = React.useState(null);
   const [copied, setCopied] = React.useState(false);
+  const { toast } = useToast();
 
   const submit = async () => {
     const trimmed = name.trim();
@@ -91,6 +92,7 @@ function CreateTokenModal({ onClose, onCreated }) {
     try {
       const result = await api.createAiToken({ name: trimmed, expires_in_days: Number(days) });
       setCreated(result);
+      toast({ tone: 'success', title: 'Token creado' });
       onCreated();
     } catch (e) {
       setErr(e?.message || 'No se pudo generar el token.');
@@ -121,10 +123,10 @@ function CreateTokenModal({ onClose, onCreated }) {
               )}
             </div>
           </div>
-          <p className={t.tokenWarn}>
-            <i className="fas fa-triangle-exclamation" /> Copia el token ahora: por seguridad no se
-            volverá a mostrar. Expira el {fmtDate(created.agent_token?.expires_at)}.
-          </p>
+          <Alert tone="warning">
+            Copia el token ahora: por seguridad no se volverá a mostrar.
+            Expira el {fmtDate(created.agent_token?.expires_at)}.
+          </Alert>
         </div>
       </Modal>
     );
@@ -143,7 +145,7 @@ function CreateTokenModal({ onClose, onCreated }) {
         <Select label="Expira en" value={days} options={EXPIRATION_OPTIONS}
           onChange={(e) => setDays(e.target.value)}
           hint="Al vencer, el agente pierde acceso y deberás generar un token nuevo." />
-        {err && <div className={s.formError}><i className="fas fa-triangle-exclamation" /> {err}</div>}
+        {err && <Alert tone="danger" onClose={() => setErr(null)}>{err}</Alert>}
       </div>
     </Modal>
   );
@@ -153,12 +155,14 @@ function CreateTokenModal({ onClose, onCreated }) {
 function RevokeTokenModal({ token, onClose, onRevoked }) {
   const [saving, setSaving] = React.useState(false);
   const [err, setErr] = React.useState(null);
+  const { toast } = useToast();
 
   const revoke = async () => {
     setSaving(true);
     setErr(null);
     try {
       await api.revokeAiToken(token.id);
+      toast({ tone: 'neutral', title: 'Token revocado' });
       onRevoked();
     } catch (e) {
       setErr(e?.message || 'No se pudo revocar el token.');
@@ -177,7 +181,7 @@ function RevokeTokenModal({ token, onClose, onRevoked }) {
           El agente que use <span className={t.tokenPrefix}>{token.token_prefix}…</span> perderá el
           acceso de inmediato. Esta acción no se puede deshacer.
         </p>
-        {err && <div className={s.formError}><i className="fas fa-triangle-exclamation" /> {err}</div>}
+        {err && <Alert tone="danger" onClose={() => setErr(null)}>{err}</Alert>}
       </div>
     </Modal>
   );

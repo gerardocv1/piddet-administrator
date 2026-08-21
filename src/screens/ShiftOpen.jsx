@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, Button, Select, MoneyInput, PageHeader } from '../components';
+import { Card, Button, Select, MoneyInput, PageHeader, Alert, useToast } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { usePermissions } from '../lib/permissions/usePermissions.js';
@@ -19,6 +19,7 @@ const TYPE_OPTIONS = [
 export function ShiftOpen() {
   const navigate = useNavigate();
   const { can } = usePermissions();
+  const { toast } = useToast();
   const isAdmin = can('api-module-shifts');
   const canGlobal = can('shift-global-admin');
 
@@ -56,6 +57,7 @@ export function ShiftOpen() {
         base_amount: Number(baseAmount),
         ...(isAdmin && type === 'EMPLOYEE' && assignedUserId ? { assigned_user_id: Number(assignedUserId) } : {}),
       });
+      toast({ tone: 'success', title: 'Turno abierto' });
       navigate(`/shifts/${shift.id}`, { replace: true });
     } catch (e) {
       setErr(e?.message || 'No se pudo abrir el turno.');
@@ -100,9 +102,7 @@ export function ShiftOpen() {
               value={baseAmount} onChange={setBaseAmount}
               hint="Dinero en efectivo con el que arranca la caja." />
 
-            {err && (
-              <div className={s.formError}><i className="fas fa-triangle-exclamation" /> {err}</div>
-            )}
+            {err && <Alert tone="danger" onClose={() => setErr(null)}>{err}</Alert>}
 
             <Button variant="primary" icon="fas fa-unlock" size="lg" disabled={!valid} loading={saving} onClick={submit}>
               Abrir turno

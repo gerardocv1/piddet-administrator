@@ -1,6 +1,6 @@
 import React from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { Button, IconButton, RefreshButton, Badge, Input, MoneyInput, Textarea, Switch, Modal, Spinner } from '../components';
+import { Button, IconButton, RefreshButton, Badge, Input, MoneyInput, Textarea, Switch, Modal, Spinner, Alert, useToast } from '../components';
 import { SortableList, FileUpload } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
@@ -24,6 +24,7 @@ export function ProductDetail() {
   const { itemId } = useParams();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const { toast } = useToast();
 
   const itemRes = useResource(React.useCallback(() => api.item(itemId), [itemId]), null, [itemId]);
   const groupsRes = useResource(React.useCallback(() => api.optionGroups(itemId), [itemId]), [], [itemId]);
@@ -61,6 +62,7 @@ export function ProductDetail() {
   const [optForm, setOptForm] = React.useState(null); // { groupId, option? }
   const [delOpt, setDelOpt] = React.useState(null);
   const [saving, setSaving] = React.useState(false);
+  const [actionError, setActionError] = React.useState('');
 
   // Reorden de grupos: optimista + un sort en lote.
   const reorderGroups = (next) => {
@@ -78,17 +80,34 @@ export function ProductDetail() {
 
   const removeGroup = async () => {
     setSaving(true);
-    try { await api.deleteOptionGroup(itemId, delGroup.id); setDelGroup(null); groupsRes.reload(); optsRes.reload(); }
-    finally { setSaving(false); }
+    setActionError('');
+    try {
+      await api.deleteOptionGroup(itemId, delGroup.id);
+      setDelGroup(null); groupsRes.reload(); optsRes.reload();
+      toast({ tone: 'neutral', title: 'Grupo eliminado' });
+    } catch (e) {
+      setActionError(e?.message || 'No se pudo eliminar el grupo.');
+    } finally { setSaving(false); }
   };
   const removeOpt = async () => {
     setSaving(true);
-    try { await api.deleteOption(itemId, delOpt.id); setDelOpt(null); optsRes.reload(); }
-    finally { setSaving(false); }
+    setActionError('');
+    try {
+      await api.deleteOption(itemId, delOpt.id);
+      setDelOpt(null); optsRes.reload();
+      toast({ tone: 'neutral', title: 'Opción eliminada' });
+    } catch (e) {
+      setActionError(e?.message || 'No se pudo eliminar la opción.');
+    } finally { setSaving(false); }
   };
 
   const loading = itemRes.loading || groupsRes.loading || optsRes.loading;
   const itemImage = item && (item.thumbnail_file || item.file);
+  // Un error del servidor se queda junto a la acción que falló (nunca es un toast). Como estas
+  // acciones se confirman en un modal, el Alert se pinta DENTRO del cuerpo de cada modal.
+  const errorBlock = actionError
+    ? <Alert tone="danger" title="No se pudo completar la acción" onClose={() => setActionError('')}>{actionError}</Alert>
+    : null;
 
   return (
     <div className={s.page}>
@@ -123,6 +142,8 @@ export function ProductDetail() {
         </div>
       ) : itemRes.loading ? (
         <div className={t.hero}><Spinner label="Cargando producto…" /></div>
+      ) : itemRes.error ? (
+        <Alert tone="danger" title="No se pudo cargar el producto">{itemRes.error}</Alert>
       ) : null}
 
       <div className={t.card}>
@@ -138,7 +159,7 @@ export function ProductDetail() {
           {loading ? (
             <Spinner center label="Cargando opciones…" />
           ) : groupsRes.error ? (
-            <div className={s.stateError}><i className="fas fa-triangle-exclamation" /> {groupsRes.error}</div>
+            <Alert tone="danger" title="No se pudieron cargar las opciones">{groupsRes.error}</Alert>
           ) : groups.length === 0 ? (
             <div className={t.empty}>
               <i className="fas fa-list-check" />
@@ -215,14 +236,20 @@ export function ProductDetail() {
           <Button variant="secondary" onClick={() => setDelGroup(null)}>Cancelar</Button>
           <Button variant="danger" icon="fas fa-trash" loading={saving} onClick={removeGroup}>Eliminar</Button>
         </>}>
-        ¿Eliminar el grupo <strong>{delGroup?.name}</strong> y todas sus opciones?
+        <div className={s.formCol}>
+          {errorBlock}
+          <p>¿Eliminar el grupo <strong>{delGroup?.name}</strong> y todas sus opciones?</p>
+        </div>
       </Modal>
       <Modal open={!!delOpt} size="sm" title="Eliminar opción" onClose={() => setDelOpt(null)}
         footer={<>
           <Button variant="secondary" onClick={() => setDelOpt(null)}>Cancelar</Button>
           <Button variant="danger" icon="fas fa-trash" loading={saving} onClick={removeOpt}>Eliminar</Button>
         </>}>
-        ¿Eliminar la opción <strong>{delOpt?.name}</strong>?
+        <div className={s.formCol}>
+          {errorBlock}
+          <p>¿Eliminar la opción <strong>{delOpt?.name}</strong>?</p>
+        </div>
       </Modal>
     </div>
   );
@@ -232,6 +259,7 @@ export function ProductDetail() {
 // La imagen se edita (recorte/giro) y solo al Guardar se sube a S3 (pública, para renderizarla por
 // URL); luego se guarda su `name` en el producto.
 function ProductImageModal({ item, onClose, onSaved }) {
+  const { toast } = useToast();
   const uploaderRef = React.useRef(null);
   const [hasImage, setHasImage] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
@@ -244,6 +272,7 @@ function ProductImageModal({ item, onClose, onSaved }) {
       const res = await uploaderRef.current?.upload(); // sube la imagen editada a S3
       if (res?.name) await api.setItemImage(item.id, res.name);
       onSaved();
+      toast({ tone: 'success', title: 'Imagen actualizada' });
     } catch (e) {
       setErr(e?.message || 'No se pudo guardar la imagen del producto.');
     } finally { setSaving(false); }
@@ -260,7 +289,7 @@ function ProductImageModal({ item, onClose, onSaved }) {
           value={item.standard_file || item.file}
           hint="JPG, PNG o WEBP · máx. 10 MB. Recorta o gira la imagen; se subirá al guardar."
           onChange={setHasImage} />
-        {err && <div className={s.formError}><i className="fas fa-triangle-exclamation" /> {err}</div>}
+        {err && <Alert tone="danger" onClose={() => setErr(null)}>{err}</Alert>}
       </div>
     </Modal>
   );
@@ -268,6 +297,7 @@ function ProductImageModal({ item, onClose, onSaved }) {
 
 // ── Modal: crear/editar un grupo de opciones (reglas de selección) ──
 function GroupModal({ itemId, group, onClose, onSaved }) {
+  const { toast } = useToast();
   const editing = !!group;
   const [form, setForm] = React.useState(() => ({
     name: group?.name || '',
@@ -300,6 +330,7 @@ function GroupModal({ itemId, group, onClose, onSaved }) {
       if (editing) await api.updateOptionGroup(itemId, group.id, payload);
       else await api.createOptionGroup(itemId, payload);
       onSaved();
+      toast({ tone: 'success', title: editing ? 'Grupo guardado' : 'Grupo creado' });
     } catch (e) {
       setErr(e?.message || 'No se pudo guardar el grupo.');
     } finally { setSaving(false); }
@@ -326,7 +357,7 @@ function GroupModal({ itemId, group, onClose, onSaved }) {
         <Switch label="Selección múltiple (permite elegir varias opciones)"
           checked={form.multiple} onChange={(e) => set('multiple', e.target.checked)} />
         <Switch label="Grupo activo" checked={form.status} onChange={(e) => set('status', e.target.checked)} />
-        {err && <div className={s.formError}><i className="fas fa-triangle-exclamation" /> {err}</div>}
+        {err && <Alert tone="danger" onClose={() => setErr(null)}>{err}</Alert>}
       </div>
     </Modal>
   );
@@ -334,6 +365,7 @@ function GroupModal({ itemId, group, onClose, onSaved }) {
 
 // ── Modal: crear/editar una opción (precio extra) ──
 function OptionModal({ itemId, groupId, option, onClose, onSaved }) {
+  const { toast } = useToast();
   const editing = !!option;
   const [name, setName] = React.useState(option?.name || '');
   const [value, setValue] = React.useState(option?.value != null ? String(option.value) : '');
@@ -351,6 +383,7 @@ function OptionModal({ itemId, groupId, option, onClose, onSaved }) {
       if (editing) await api.updateOption(itemId, option.id, payload);
       else await api.createOption(itemId, payload);
       onSaved();
+      toast({ tone: 'success', title: editing ? 'Opción guardada' : 'Opción creada' });
     } catch (e) {
       setErr(e?.message || 'No se pudo guardar la opción.');
     } finally { setSaving(false); }
@@ -368,7 +401,7 @@ function OptionModal({ itemId, groupId, option, onClose, onSaved }) {
         <MoneyInput label="Precio extra" icon="fas fa-dollar-sign" placeholder="0 (sin costo)"
           value={value} onChange={setValue} />
         <Switch label="Opción activa" checked={status} onChange={(e) => setStatus(e.target.checked)} />
-        {err && <div className={s.formError}><i className="fas fa-triangle-exclamation" /> {err}</div>}
+        {err && <Alert tone="danger" onClose={() => setErr(null)}>{err}</Alert>}
       </div>
     </Modal>
   );

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Card, Badge, Button, IconButton, RefreshButton, Spinner, DataTable, PageHeader, Dropdown, Modal, MoneyInput, ConfirmDialog } from '../components';
+import { Card, Badge, Button, IconButton, RefreshButton, Spinner, DataTable, PageHeader, Dropdown, Modal, MoneyInput, ConfirmDialog, Alert, useToast } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { usePermissions } from '../lib/permissions/usePermissions.js';
@@ -24,6 +24,7 @@ export function ShiftDetail() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const { can, canAny } = usePermissions();
+  const { toast } = useToast();
 
   const fetcher = React.useCallback(() => api.shift(shiftId), [shiftId]);
   const { data, loading, error, reload } = useResource(fetcher, null, [shiftId]);
@@ -43,9 +44,7 @@ export function ShiftDetail() {
   if (error || !data) {
     return (
       <div className={s.page}>
-        <div className={s.stateError}>
-          <i className="fas fa-triangle-exclamation" /> {error || 'No se encontró el turno.'}
-        </div>
+        <Alert tone="danger" title="No se pudo cargar el turno">{error || 'No se encontró el turno.'}</Alert>
       </div>
     );
   }
@@ -90,6 +89,7 @@ export function ShiftDetail() {
       await api.updateShiftBase(data.id, Number(baseValue));
       setEditBaseOpen(false);
       reload();
+      toast({ tone: 'success', title: 'Base actualizada' });
     } catch (e) {
       setActionError(e?.message || 'No se pudo actualizar la base.');
     } finally {
@@ -104,6 +104,7 @@ export function ShiftDetail() {
       await api.cancelShift(data.id, reason);
       setCancelOpen(false);
       reload();
+      toast({ tone: 'neutral', title: 'Turno cancelado' });
     } catch (e) {
       setActionError(e?.message || 'No se pudo cancelar el turno.');
     } finally {
@@ -248,9 +249,7 @@ export function ShiftDetail() {
           <MoneyInput label="Base en caja" icon="fas fa-dollar-sign" placeholder="0"
             value={baseValue} onChange={setBaseValue}
             hint="El esperado en caja se recalcula con la nueva base." />
-          {actionError && (
-            <div className={s.formError}><i className="fas fa-triangle-exclamation" /> {actionError}</div>
-          )}
+          {actionError && <Alert tone="danger" onClose={() => setActionError(null)}>{actionError}</Alert>}
         </div>
       </Modal>
 

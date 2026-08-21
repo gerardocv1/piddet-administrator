@@ -1,5 +1,5 @@
 import React from 'react';
-import { Spinner, Card, RefreshButton, SortableList } from '../components';
+import { Spinner, Card, RefreshButton, SortableList, Alert } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import s from './screens.module.css';
@@ -21,11 +21,16 @@ export function ProductCategories() {
     [data],
   );
 
-  // Reorden general: optimista local + un sort en lote (posiciones por compañía).
+  const [orderError, setOrderError] = React.useState('');
+
+  // Reorden general: optimista local + un sort en lote (posiciones por compañía). Si el backend
+  // rechaza el orden, el error se queda en pantalla y se recarga para no mostrar un orden falso.
   const onReorder = (next) => {
     const reordered = next.map((cat, i) => ({ ...cat, position: i }));
     setData(reordered);
-    api.sortItemCategories(reordered.map((cat, i) => ({ id: cat.id, position: i })));
+    setOrderError('');
+    api.sortItemCategories(reordered.map((cat, i) => ({ id: cat.id, position: i })))
+      .catch((e) => { setOrderError(e?.message || 'No se pudo guardar el nuevo orden.'); reload(); });
   };
 
   return (
@@ -40,10 +45,14 @@ export function ProductCategories() {
         <RefreshButton loading={loading} onClick={reload} />
       </div>
 
+      {orderError && (
+        <Alert tone="danger" title="No se pudo guardar el orden" onClose={() => setOrderError('')}>{orderError}</Alert>
+      )}
+
       {loading ? (
         <Spinner center label="Cargando categorías…" />
       ) : error ? (
-        <div className={s.stateError}><i className="fas fa-triangle-exclamation" /> {error}</div>
+        <Alert tone="danger" title="No se pudieron cargar las categorías">{error}</Alert>
       ) : cats.length === 0 ? (
         <div className={t.empty}>
           <i className="fas fa-tags" />

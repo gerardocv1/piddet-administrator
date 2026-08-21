@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Card, Badge, Button, IconButton, RefreshButton, Spinner, Modal, Textarea } from '../components';
+import { Card, Badge, Button, IconButton, RefreshButton, Spinner, Modal, Textarea, Alert, useToast } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { supportStatusOf, formatDateTime } from '../lib/syncFailureLabels.js';
@@ -14,11 +14,18 @@ function prettyPayload(raw) {
   try { return JSON.stringify(JSON.parse(raw), null, 2); } catch { return raw || ''; }
 }
 
+const STATUS_TOAST = {
+  resolved: { tone: 'success', title: 'Reporte cerrado' },
+  unrecoverable: { tone: 'neutral', title: 'Reporte marcado no recuperable' },
+  pending: { tone: 'success', title: 'Reporte reabierto' },
+};
+
 // Detalle de un fallo de sincronización: diagnóstico, editor del JSON de la orden, reintento
 // de creación y administración del estado de soporte. `resolved` es terminal (todo se bloquea).
 export function SyncFailureDetail() {
   const { reportId } = useParams();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [params] = useSearchParams();
 
   const fetcher = React.useCallback(() => api.getSyncFailureReport(reportId), [reportId]);
@@ -44,9 +51,9 @@ export function SyncFailureDetail() {
   if (error || !report) {
     return (
       <div className={s.page}>
-        <div className={s.stateError}>
-          <i className="fas fa-triangle-exclamation" /> {error || 'No se encontró el reporte.'}
-        </div>
+        <Alert tone="danger" title="No se pudo cargar el reporte">
+          {error || 'No se encontró el reporte.'}
+        </Alert>
       </div>
     );
   }
@@ -84,6 +91,7 @@ export function SyncFailureDetail() {
       const res = await api.retrySyncFailureReport(report.id);
       applyReport(res?.report);
       setRetryResult({ ok: true, message: 'Orden creada correctamente.', order: res?.order || null });
+      toast({ tone: 'success', title: 'Orden reenviada' });
     } catch (e) {
       // El backend devuelve el reporte actualizado (attempts, last_retry_error) junto al fallo.
       applyReport(e.data?.report);
@@ -104,6 +112,7 @@ export function SyncFailureDetail() {
       });
       applyReport(updated);
       setNotice({ ok: true, text: 'Estado actualizado.' });
+      if (STATUS_TOAST[support_status]) toast(STATUS_TOAST[support_status]);
     } catch (e) {
       setNotice({ ok: false, text: e.message });
     } finally {
@@ -181,9 +190,9 @@ export function SyncFailureDetail() {
           />
           {jsonError && <p className={t.jsonError}><i className="fas fa-triangle-exclamation" /> {jsonError}</p>}
           {notice && (
-            <p className={notice.ok ? t.noticeOk : t.noticeError}>
-              <i className={notice.ok ? 'fas fa-circle-check' : 'fas fa-triangle-exclamation'} /> {notice.text}
-            </p>
+            <Alert tone={notice.ok ? 'success' : 'danger'} onClose={() => setNotice(null)}>
+              {notice.text}
+            </Alert>
           )}
         </Card.Body>
       </Card>
@@ -218,13 +227,13 @@ export function SyncFailureDetail() {
           <Card.Header title="Resultado del reintento" />
           <Card.Body>
             {retryResult.ok ? (
-              <p className={t.noticeOk}>
-                <i className="fas fa-circle-check" /> {retryResult.message}
+              <Alert tone="success">
+                {retryResult.message}
                 {retryResult.order && <> Orden <strong>{retryResult.order.order_number || retryResult.order.id}</strong>.</>}
-              </p>
+              </Alert>
             ) : (
               <>
-                <p className={t.noticeError}><i className="fas fa-triangle-exclamation" /> {retryResult.message}</p>
+                <Alert tone="danger" title="No se pudo reenviar la orden">{retryResult.message}</Alert>
                 {retryResult.errors && (
                   <ul className={t.errorList}>
                     {Object.entries(retryResult.errors).map(([field, msgs]) => (

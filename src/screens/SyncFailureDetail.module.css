@@ -94,16 +94,9 @@
   cursor: not-allowed;
 }
 
-.jsonError,
-.noticeError {
+.jsonError {
   margin: 10px 0 0;
   color: var(--color-danger);
-  font-size: var(--text-sm);
-}
-
-.noticeOk {
-  margin: 10px 0 0;
-  color: var(--color-success-fg);
   font-size: var(--text-sm);
 }
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, IconButton, RefreshButton, Switch, Spinner, Pagination, Dropdown, Modal } from '../components';
+import { Button, IconButton, RefreshButton, Switch, Spinner, Pagination, Dropdown, Modal, Alert, useToast } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import s from './screens.module.css';
@@ -10,6 +10,7 @@ const EMPTY = { items: [], pagination: null };
 
 export function Stores() {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [page, setPage] = React.useState(1);
   const [q, setQ] = React.useState('');
   const [search, setSearch] = React.useState('');
@@ -25,7 +26,11 @@ export function Stores() {
   const pg = data.pagination;
 
   const [del, setDel] = React.useState(null);
+  const [delError, setDelError] = React.useState('');
   const [busy, setBusy] = React.useState(false);
+  const [actionError, setActionError] = React.useState('');
+
+  const closeDelete = () => { setDel(null); setDelError(''); };
 
   const ACTIVE = 1;
   const INACTIVE = 2;
@@ -38,17 +43,26 @@ export function Stores() {
     const prev = { store_status_id: store.store_status_id, status: store.status };
     const next = isActive(store) ? INACTIVE : ACTIVE;
     patchStore(store.id, { store_status_id: next, status: { id: next, name: next === ACTIVE ? 'Activo' : 'Inactiva' } });
+    setActionError('');
     try {
       await api.setStoreStatus(store.id, next);
-    } catch {
+    } catch (e) {
       patchStore(store.id, prev); // revertir si falla
+      setActionError(e?.message || 'No se pudo cambiar el estado de la tienda.');
     }
   };
 
   const remove = async () => {
     setBusy(true);
-    try { await api.deleteStore(del.id); setDel(null); reload(); }
-    finally { setBusy(false); }
+    setDelError('');
+    try {
+      await api.deleteStore(del.id);
+      closeDelete();
+      reload();
+      toast({ tone: 'neutral', title: 'Tienda eliminada' });
+    } catch (e) {
+      setDelError(e?.message || 'No se pudo eliminar la tienda.');
+    } finally { setBusy(false); }
   };
 
   return (
@@ -65,10 +79,14 @@ export function Stores() {
         </Button>
       </div>
 
+      {actionError && (
+        <Alert tone="danger" onClose={() => setActionError('')}>{actionError}</Alert>
+      )}
+
       {loading ? (
         <Spinner center label="Cargando tiendas…" />
       ) : error ? (
-        <div className={s.stateError}><i className="fas fa-triangle-exclamation" /> {error}</div>
+        <Alert tone="danger" title="No se pudieron cargar las tiendas">{error}</Alert>
       ) : stores.length === 0 ? (
         <div className={t.empty}>
           <i className="fas fa-store" />
@@ -123,12 +141,13 @@ export function Stores() {
         <Pagination page={pg.current_page} lastPage={pg.last_page} total={pg.total} onChange={setPage} disabled={loading} />
       )}
 
-      <Modal open={!!del} size="sm" title="Eliminar tienda" onClose={() => setDel(null)}
+      <Modal open={!!del} size="sm" title="Eliminar tienda" onClose={closeDelete}
         footer={<>
-          <Button variant="secondary" onClick={() => setDel(null)}>Cancelar</Button>
+          <Button variant="secondary" onClick={closeDelete}>Cancelar</Button>
           <Button variant="danger" icon="fas fa-trash" loading={busy} onClick={remove}>Eliminar</Button>
         </>}>
         ¿Seguro que deseas eliminar <strong>{del?.name}</strong>? La tienda dejará de estar disponible.
+        {delError && <Alert tone="danger" onClose={() => setDelError('')}>{delError}</Alert>}
       </Modal>
     </div>
   );

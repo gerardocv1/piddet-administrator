@@ -1,6 +1,6 @@
 import React from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Button, Card, DataTable, FilterBar, RefreshButton, SalesByTypeChart, StatStrip } from '../components';
+import { Alert, Button, Card, DataTable, FilterBar, RefreshButton, SalesByTypeChart, StatStrip } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { usePermissions } from '../lib/permissions/usePermissions.js';
@@ -133,7 +133,7 @@ export function SalesReport() {
       />
 
       {error ? (
-        <div className={s.stateError}><i className="fas fa-triangle-exclamation" /> {error}</div>
+        <Alert tone="danger" title="No se pudo cargar el reporte">{error}</Alert>
       ) : (
         <>
           <Card>

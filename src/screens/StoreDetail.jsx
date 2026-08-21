@@ -1,6 +1,6 @@
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Button, IconButton, RefreshButton, Input, Select, Switch, Spinner, MapPickerModal } from '../components';
+import { Button, IconButton, RefreshButton, Input, Select, Switch, Spinner, MapPickerModal, Alert, useToast } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import s from './screens.module.css';
@@ -25,6 +25,7 @@ function schedulesToByDay(schedules = []) {
 export function StoreDetail() {
   const { storeId } = useParams();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const isEdit = !!storeId;
 
   const storeFetcher = React.useCallback(() => (isEdit ? api.store(storeId) : Promise.resolve(null)), [storeId, isEdit]);
@@ -124,6 +125,7 @@ export function StoreDetail() {
     try {
       if (isEdit) await api.updateStore(storeId, payload);
       else await api.createStore(payload);
+      toast({ tone: 'success', title: isEdit ? 'Tienda guardada' : 'Tienda creada' });
       navigate('/stores');
     } catch (err) {
       setFormError(err?.message || 'No se pudo guardar la tienda.');
@@ -133,7 +135,7 @@ export function StoreDetail() {
   };
 
   if (isEdit && loading) return <Spinner center label="Cargando tienda…" />;
-  if (isEdit && error) return <div className={s.stateError}><i className="fas fa-triangle-exclamation" /> {error}</div>;
+  if (isEdit && error) return <Alert tone="danger" title="No se pudo cargar la tienda">{error}</Alert>;
 
   const hasLocation = form.latitude != null && form.longitude != null;
 
@@ -150,7 +152,7 @@ export function StoreDetail() {
         <Button variant="primary" icon="fas fa-check" loading={saving} onClick={save}>Guardar</Button>
       </div>
 
-      {formError && <div className={s.stateError}><i className="fas fa-triangle-exclamation" /> {formError}</div>}
+      {formError && <Alert tone="danger" onClose={() => setFormError('')}>{formError}</Alert>}
 
       <div className={t.layout}>
         <section className={t.card}>

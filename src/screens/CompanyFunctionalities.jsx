@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, Card, Badge, Modal, Switch, Spinner } from '../components';
+import { Button, Card, Badge, Modal, Switch, Spinner, Alert, useToast } from '../components';
 import { auth as authLib } from '../lib/auth/index.js';
 import { useFunctionalities } from '../lib/permissions/useFunctionalities.js';
 import { usePermissions } from '../lib/permissions/usePermissions.js';
@@ -75,6 +75,7 @@ function FunctionalitiesModal({ functionalities, onClose }) {
   );
   const [saving, setSaving] = React.useState(false);
   const [err, setErr] = React.useState(null);
+  const { toast } = useToast();
 
   const toggle = (id) => setDraft((d) => ({ ...d, [id]: !d[id] }));
 
@@ -88,6 +89,7 @@ function FunctionalitiesModal({ functionalities, onClose }) {
     setErr(null);
     try {
       await authLib.saveFunctionalities(changes);
+      toast({ tone: 'success', title: 'Funcionalidades actualizadas' });
       onClose();
     } catch (e) {
       setErr(e?.message || 'No se pudieron guardar las funcionalidades.');
@@ -119,7 +121,7 @@ function FunctionalitiesModal({ functionalities, onClose }) {
             </li>
           ))}
         </ul>
-        {err && <div className={s.formError}><i className="fas fa-triangle-exclamation" /> {err}</div>}
+        {err && <Alert tone="danger" onClose={() => setErr(null)}>{err}</Alert>}
       </div>
     </Modal>
   );

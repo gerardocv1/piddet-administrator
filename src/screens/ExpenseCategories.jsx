@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, IconButton, RefreshButton, Input, Textarea, Select, Modal, Spinner, Badge, Card } from '../components';
+import { Button, IconButton, RefreshButton, Input, Textarea, Select, Modal, Spinner, Badge, Card, Alert, useToast } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import s from './screens.module.css';
@@ -11,6 +11,7 @@ import c from './ProductCategories.module.css';
 // catálogo común mantiene los resúmenes comparables; las propias cubren lo específico
 // (ej. "Insumos de finca").
 export function ExpenseCategories() {
+  const { toast } = useToast();
   const fetcher = React.useCallback(() => api.expenseCategoriesTree(), []);
   const { data: roots, loading, error, reload } = useResource(fetcher, [], []);
 
@@ -55,6 +56,7 @@ export function ExpenseCategories() {
       if (form.parentId) setExpanded((prev) => new Set(prev).add(Number(form.parentId)));
       setForm(null);
       reload();
+      toast({ tone: 'success', title: 'Categoría de gasto creada' });
     } catch (e) {
       setErr(e?.message || 'No se pudo crear la categoría.');
     } finally {
@@ -80,7 +82,7 @@ export function ExpenseCategories() {
       {loading ? (
         <Spinner center label="Cargando categorías…" />
       ) : error ? (
-        <div className={s.stateError}><i className="fas fa-triangle-exclamation" /> {error}</div>
+        <Alert tone="danger" title="No se pudo cargar las categorías de gasto">{error}</Alert>
       ) : (
         <Card padding="0">
           <div className={c.tree}>
@@ -114,7 +116,7 @@ export function ExpenseCategories() {
               value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
             <Textarea label="Descripción" placeholder="Opcional"
               value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-            {err && <div className={s.formError}><i className="fas fa-triangle-exclamation" /> {err}</div>}
+            {err && <Alert tone="danger" onClose={() => setErr(null)}>{err}</Alert>}
           </div>
         )}
       </Modal>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, Input, MoneyInput, Select, Switch, Textarea, Modal, CategoryCascader } from '../components';
+import { Button, Input, MoneyInput, Select, Switch, Textarea, Modal, CategoryCascader, Alert, useToast } from '../components';
 import { api } from '../lib/api.js';
 import { SERVICE_ITEM_TYPE_ID } from '../lib/services/itemTypes.js';
 import { useFunctionalities } from '../lib/permissions/useFunctionalities.js';
@@ -11,6 +11,7 @@ import s from './screens.module.css';
 export function ItemFormModal({ item, onClose, onSaved }) {
   const editing = !!item;
   const { has } = useFunctionalities();
+  const { toast } = useToast();
   const taxesOn = has('functionality_taxes');
   const reservationsOn = has('functionality_reservations');
 
@@ -80,6 +81,7 @@ export function ItemFormModal({ item, onClose, onSaved }) {
       if (editing) await api.updateItem(item.id, payload);
       else await api.createItem(payload);
       onSaved();
+      toast({ tone: 'success', title: editing ? 'Producto guardado' : 'Producto creado' });
     } catch (e) {
       setErr(e?.message || 'No se pudo guardar el producto.');
     } finally { setSaving(false); }
@@ -124,7 +126,7 @@ export function ItemFormModal({ item, onClose, onSaved }) {
         )}
         <Textarea label="Descripción" placeholder="Describe el producto"
           value={form.description} onChange={(e) => set('description', e.target.value)} />
-        {err && <div className={s.formError}><i className="fas fa-triangle-exclamation" /> {err}</div>}
+        {err && <Alert tone="danger" onClose={() => setErr(null)}>{err}</Alert>}
       </div>
     </Modal>
   );

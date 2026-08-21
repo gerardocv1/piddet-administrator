@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Input, Select, Textarea, Autocomplete, MoneyInput, MultiImageUpload, DatePicker, Spinner } from '../../components';
+import { Button, Input, Select, Textarea, Autocomplete, MoneyInput, MultiImageUpload, DatePicker, Spinner, Alert } from '../../components';
 import { api } from '../../lib/api.js';
 import { useResource } from '../../lib/useResource.js';
 import { todayIso } from '../../lib/orderLabels.js';
@@ -276,7 +276,7 @@ export function ExpenseWizard() {
               <div><span>Fecha</span><strong>{form.expense_date}</strong></div>
               <div className={t.summaryTotal}><span>Total</span><strong>{expenseMoney(total)}</strong></div>
             </div>
-            {err && <div className={t.error}><i className="fas fa-triangle-exclamation" /> {err}</div>}
+            {err && <Alert tone="danger" onClose={() => setErr(null)}>{err}</Alert>}
           </div>
         )}
       </div>

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, IconButton, RefreshButton, Input, Textarea, Modal, Spinner, Pagination, Dropdown } from '../components';
+import { Button, IconButton, RefreshButton, Input, Textarea, Modal, Spinner, Pagination, Dropdown, Alert, useToast } from '../components';
 import { api } from '../lib/api.js';
 import { auth } from '../lib/auth/index.js';
 import { useResource } from '../lib/useResource.js';
@@ -13,6 +13,7 @@ const EMPTY = { items: [], pagination: null };
 
 export function Menus() {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [page, setPage] = React.useState(1);
   const [q, setQ] = React.useState('');
   const [search, setSearch] = React.useState('');
@@ -33,6 +34,12 @@ export function Menus() {
   const [del, setDel] = React.useState(null);
   const [toggle, setToggle] = React.useState(null); // menú pendiente de confirmar activación/desactivación
   const [saving, setSaving] = React.useState(false);
+  // Error de la última mutación. Vive aquí y se pinta DENTRO de cada modal: los tres fallan con
+  // el overlay puesto, así que un banner de pantalla quedaría tapado.
+  const [actionError, setActionError] = React.useState('');
+  const errorBlock = actionError
+    ? <Alert tone="danger" title="No se pudo completar la acción" onClose={() => setActionError('')}>{actionError}</Alert>
+    : null;
 
   // Identificador de la compañía activa para construir la URL pública de la carta.
   const companyUsername = React.useMemo(() => {
@@ -62,25 +69,44 @@ export function Menus() {
     const name = form.name.trim();
     if (!name) return;
     const username = form.username.trim() || slugifyUsername(name);
-    setSaving(true);
+    setSaving(true); setActionError('');
     try {
       if (form.id) await api.updateMenu(form.id, { name, username, description: form.description });
       else await api.createMenu({ name, username, description: form.description });
       setForm(null);
       reload();
+      toast({ tone: 'success', title: form.id ? 'Menú actualizado' : 'Menú creado' });
+    } catch (e) {
+      setActionError(e?.message || 'No se pudo guardar el menú.');
     } finally { setSaving(false); }
   };
 
   const remove = async () => {
-    setSaving(true);
-    try { await api.deleteMenu(del.id); setDel(null); reload(); }
-    finally { setSaving(false); }
+    setSaving(true); setActionError('');
+    try {
+      await api.deleteMenu(del.id);
+      setDel(null);
+      reload();
+      toast({ tone: 'neutral', title: 'Menú eliminado' });
+    } catch (e) {
+      setActionError(e?.message || 'No se pudo eliminar el menú.');
+    } finally { setSaving(false); }
   };
 
   const confirmToggle = async () => {
-    setSaving(true);
-    try { await api.setMenuActive(toggle.id, !toggle.is_active); setToggle(null); reload(); }
-    finally { setSaving(false); }
+    setSaving(true); setActionError('');
+    const activating = !toggle.is_active;
+    try {
+      await api.setMenuActive(toggle.id, activating);
+      setToggle(null);
+      reload();
+      toast({
+        tone: activating ? 'success' : 'neutral',
+        title: activating ? 'Menú activado' : 'Menú desactivado',
+      });
+    } catch (e) {
+      setActionError(e?.message || 'No se pudo cambiar el estado del menú.');
+    } finally { setSaving(false); }
   };
 
   return (
@@ -98,7 +124,7 @@ export function Menus() {
       {loading ? (
         <Spinner center label="Cargando menús…" />
       ) : error ? (
-        <div className={s.stateError}><i className="fas fa-triangle-exclamation" /> {error}</div>
+        <Alert tone="danger" title="No se pudo cargar los menús">{error}</Alert>
       ) : menus.length === 0 ? (
         <div className={t.empty}>
           <i className="fas fa-book-open" />
@@ -172,6 +198,7 @@ export function Menus() {
         </>}>
         {form && (
           <div className={s.formCol}>
+            {errorBlock}
             <Input label="Nombre del menú" icon="fas fa-book-open" placeholder="Ej. Carta principal"
               value={form.name} onChange={onNameChange} />
             <Input label="Identificador (URL)" icon="fas fa-link" placeholder="Ej. carta_principal"
@@ -198,6 +225,7 @@ export function Menus() {
             {toggle?.is_active ? 'Desactivar' : 'Activar'}
           </Button>
         </>}>
+        {errorBlock}
         {toggle?.is_active
           ? <>Al desactivar <strong>{toggle?.name}</strong> dejará de mostrarse en la página pública de la empresa y su carta no podrá abrirse, ni siquiera con el enlace directo. Podrás volver a activarlo cuando quieras.</>
           : <>Al activar <strong>{toggle?.name}</strong> volverá a mostrarse en la página pública de la empresa y su carta será accesible.</>}
@@ -209,6 +237,7 @@ export function Menus() {
           <Button variant="secondary" onClick={() => setDel(null)}>Cancelar</Button>
           <Button variant="danger" icon="fas fa-trash" loading={saving} onClick={remove}>Eliminar</Button>
         </>}>
+        {errorBlock}
         ¿Seguro que deseas eliminar <strong>{del?.name}</strong>? Esta acción no se puede deshacer.
       </Modal>
     </div>

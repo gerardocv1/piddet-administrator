@@ -1,5 +1,5 @@
 import React from 'react';
-import { Badge, Card, FilterBar, RefreshButton, Spinner, Switch } from '../components';
+import { Alert, Badge, Card, FilterBar, RefreshButton, Spinner, Switch, useToast } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { usePermissions } from '../lib/permissions/usePermissions.js';
@@ -37,6 +37,7 @@ export function Permissions() {
   const [filters, setFilters] = React.useState({ module: undefined });
   const [busyId, setBusyId] = React.useState(null);
   const [actionError, setActionError] = React.useState(null);
+  const { toast } = useToast();
 
   // Permiso → roles que lo otorgan (para saber a quién afecta antes de tocarlo).
   const rolesByPermission = React.useMemo(() => {
@@ -62,11 +63,15 @@ export function Permissions() {
   }, { total: 0, visible: 0 });
 
   const toggleVisibility = async (permission) => {
+    const next = !permission.is_api;
     setBusyId(permission.id);
     setActionError(null);
     try {
-      await api.setPermissionApiVisibility(permission.id, !permission.is_api);
+      await api.setPermissionApiVisibility(permission.id, next);
       reload();
+      toast(next
+        ? { tone: 'success', title: 'Permiso visible en el panel' }
+        : { tone: 'neutral', title: 'Permiso oculto del panel' });
     } catch (e) {
       setActionError(e?.message || 'No se pudo cambiar la visibilidad del permiso.');
     } finally {
@@ -95,12 +100,16 @@ export function Permissions() {
         </>}
       />
 
-      {actionError && <div className={s.stateError}><i className="fas fa-triangle-exclamation" /> {actionError}</div>}
+      {actionError && (
+        <Alert tone="danger" title="No se pudo completar la acción" onClose={() => setActionError(null)}>
+          {actionError}
+        </Alert>
+      )}
 
       {loading ? (
         <Spinner center label="Cargando permisos…" />
       ) : error ? (
-        <div className={s.stateError}><i className="fas fa-triangle-exclamation" /> No se pudo cargar el catálogo de permisos.</div>
+        <Alert tone="danger" title="No se pudo cargar el catálogo de permisos">{error}</Alert>
       ) : groups.length === 0 ? (
         <Card><Card.Body><div className={a.empty}>No hay permisos que coincidan.</div></Card.Body></Card>
       ) : (

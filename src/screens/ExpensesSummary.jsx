@@ -1,6 +1,6 @@
 import React from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Card, FilterBar, RefreshButton, Spinner } from '../components';
+import { Card, FilterBar, RefreshButton, Spinner, Alert } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { usePermissions } from '../lib/permissions/usePermissions.js';
@@ -156,7 +156,7 @@ export function ExpensesSummary() {
       {loading ? (
         <Spinner center label="Calculando resumen…" />
       ) : error ? (
-        <div className={s.stateError}><i className="fas fa-triangle-exclamation" /> {error}</div>
+        <Alert tone="danger" title="No se pudo cargar el resumen de gastos">{error}</Alert>
       ) : count === 0 && roots.length === 0 ? (
         <Card>
           <Card.Body>

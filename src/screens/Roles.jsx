@@ -1,5 +1,5 @@
 import React from 'react';
-import { Badge, Button, Card, Checkbox, ConfirmDialog, DataTable, FilterBar, IconButton, Input, Modal, RefreshButton, Spinner, Textarea } from '../components';
+import { Alert, Badge, Button, Card, Checkbox, ConfirmDialog, DataTable, FilterBar, IconButton, Input, Modal, RefreshButton, Spinner, Textarea, useToast } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { usePermissions } from '../lib/permissions/usePermissions.js';
@@ -47,6 +47,7 @@ export function Roles() {
   const [del, setDel] = React.useState(null);
   const [deleting, setDeleting] = React.useState(false);
   const [delError, setDelError] = React.useState(null);
+  const { toast } = useToast();
 
   const rows = (roles || []).filter((r) => matches(r, q));
 
@@ -57,6 +58,7 @@ export function Roles() {
       await api.deleteRole(del.id);
       setDel(null);
       reload();
+      toast({ tone: 'neutral', title: 'Rol eliminado' });
     } catch (e) {
       setDelError(e?.message || 'No se pudo eliminar el rol.');
     } finally {
@@ -124,7 +126,7 @@ export function Roles() {
       <div className={s.mobileList}>
         {loading && <Card><div className={s.mobileState}><Spinner size="sm" label="Cargando…" /></div></Card>}
         {!loading && error && (
-          <Card><div className={`${s.mobileState} ${s.mobileStateError}`}><i className="fas fa-triangle-exclamation" /> {error}</div></Card>
+          <Card><Alert tone="danger" title="No se pudieron cargar los roles">{error}</Alert></Card>
         )}
         {!loading && !error && rows.length === 0 && (
           <Card><div className={s.mobileState}>No hay roles que coincidan.</div></Card>
@@ -181,6 +183,7 @@ function RoleFormModal({ role, onClose, onSaved }) {
   const [description, setDescription] = React.useState(role?.description || '');
   const [saving, setSaving] = React.useState(false);
   const [err, setErr] = React.useState(null);
+  const { toast } = useToast();
 
   const valid = name.trim().length >= 3;
 
@@ -192,6 +195,7 @@ function RoleFormModal({ role, onClose, onSaved }) {
       const payload = { name: name.trim(), description: description.trim() || null };
       if (role) await api.updateRole(role.id, payload);
       else await api.createRole(payload);
+      toast({ tone: 'success', title: role ? 'Rol actualizado' : 'Rol creado' });
       onSaved();
     } catch (e) {
       setErr(e?.message || 'No se pudo guardar el rol.');
@@ -208,10 +212,9 @@ function RoleFormModal({ role, onClose, onSaved }) {
       </>}>
       <div className={s.formCol}>
         {role && isSystemRole(role) && (
-          <div className={s.formError}>
-            <i className="fas fa-triangle-exclamation" /> Es un rol del sistema: cambiar su nombre o
-            sus permisos afecta a toda la plataforma.
-          </div>
+          <Alert tone="warning">
+            Es un rol del sistema: cambiar su nombre o sus permisos afecta a toda la plataforma.
+          </Alert>
         )}
         <Input label="Nombre técnico" icon="fas fa-hashtag" placeholder="Ej. supervisor" value={name}
           onChange={(e) => setName(e.target.value)}
@@ -219,7 +222,7 @@ function RoleFormModal({ role, onClose, onSaved }) {
         <Textarea label="Descripción" rows={2} value={description}
           onChange={(e) => setDescription(e.target.value)}
           hint="Es lo que se muestra al asignar el rol a un usuario." />
-        {err && <div className={s.formError}><i className="fas fa-triangle-exclamation" /> {err}</div>}
+        {err && <Alert tone="danger" onClose={() => setErr(null)}>{err}</Alert>}
       </div>
     </Modal>
   );
@@ -232,6 +235,7 @@ function RolePermissionsModal({ role, catalog, onClose, onSaved }) {
   const [q, setQ] = React.useState('');
   const [saving, setSaving] = React.useState(false);
   const [err, setErr] = React.useState(null);
+  const { toast } = useToast();
 
   const toggle = (name) => setSelected((prev) => {
     const next = new Set(prev);
@@ -276,6 +280,7 @@ function RolePermissionsModal({ role, catalog, onClose, onSaved }) {
     setErr(null);
     try {
       await api.syncRolePermissions(role.id, [...selected]);
+      toast({ tone: 'success', title: 'Permisos guardados' });
       onSaved();
     } catch (e) {
       setErr(e?.message || 'No se pudieron guardar los permisos.');
@@ -306,7 +311,7 @@ function RolePermissionsModal({ role, catalog, onClose, onSaved }) {
           ))}
         </div>
 
-        {err && <div className={s.formError}><i className="fas fa-triangle-exclamation" /> {err}</div>}
+        {err && <Alert tone="danger" onClose={() => setErr(null)}>{err}</Alert>}
       </div>
     </Modal>
   );

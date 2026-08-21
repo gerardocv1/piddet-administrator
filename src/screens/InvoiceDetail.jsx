@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Card, Badge, Button, RefreshButton, Spinner, ConfirmDialog, PageHeader } from '../components';
+import { Card, Badge, Button, RefreshButton, Spinner, ConfirmDialog, PageHeader, Alert, useToast } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { usePermissions } from '../lib/permissions/usePermissions.js';
@@ -18,6 +18,7 @@ export function InvoiceDetail() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const { can } = usePermissions();
+  const { toast } = useToast();
 
   const fetcher = React.useCallback(() => api.order(orderId), [orderId]);
   const { data, setData, loading, error, reload } = useResource(fetcher, null, [orderId]);
@@ -37,6 +38,7 @@ export function InvoiceDetail() {
     try {
       setData(await api.cancelOrder(orderId, reason));
       setCancelOpen(false);
+      toast({ tone: 'neutral', title: 'Factura cancelada' });
     } catch (e) {
       setActionError(e?.message || 'No se pudo cancelar la factura.');
     } finally {
@@ -48,9 +50,7 @@ export function InvoiceDetail() {
   if (error || !data?.order) {
     return (
       <div className={s.page}>
-        <div className={s.stateError}>
-          <i className="fas fa-triangle-exclamation" /> {error || 'No se encontró la factura.'}
-        </div>
+        <Alert tone="danger" title="No se pudo cargar la factura">{error || 'No se encontró la factura.'}</Alert>
       </div>
     );
   }
@@ -104,7 +104,6 @@ export function InvoiceDetail() {
         ) : null}
       />
 
-      {actionError && <div className={s.formError}><i className="fas fa-triangle-exclamation" /> {actionError}</div>}
 
       <div className={t.mainGrid}>
         <Card>
@@ -204,6 +203,7 @@ export function InvoiceDetail() {
         reasonPlaceholder="Describe por qué se cancela esta factura…"
         onConfirm={doCancel} onClose={() => setCancelOpen(false)}>
         <p>La factura quedará cancelada y saldrá de las métricas de ventas. Esta acción no se puede deshacer.</p>
+        {actionError && <Alert tone="danger" onClose={() => setActionError('')}>{actionError}</Alert>}
       </ConfirmDialog>
     </div>
   );

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, IconButton, RefreshButton, Card, Badge, Input, Textarea, Modal, Spinner, FileUpload } from '../components';
+import { Button, IconButton, RefreshButton, Card, Badge, Input, Textarea, Modal, Spinner, FileUpload, Alert, useToast } from '../components';
 import { api } from '../lib/api.js';
 import { auth as authLib } from '../lib/auth/index.js';
 import { useResource } from '../lib/useResource.js';
@@ -48,7 +48,13 @@ export function CompanyProfile() {
 
   if (loading) return <div className={t.page}><Spinner /></div>;
   if (error || !company) {
-    return <div className={t.page}><div className={s.stateError}><i className="fas fa-triangle-exclamation" /> No se pudo cargar la empresa.</div></div>;
+    return (
+      <div className={t.page}>
+        <Alert tone="danger" title="No se pudo cargar la empresa">
+          {error || 'No se encontró la empresa.'}
+        </Alert>
+      </div>
+    );
   }
 
   const stats = RESUMEN.filter((r) => company[r.key] != null);
@@ -160,6 +166,7 @@ function CompanyEditModal({ company, onClose, onSaved }) {
   }));
   const [saving, setSaving] = React.useState(false);
   const [err, setErr] = React.useState(null);
+  const { toast } = useToast();
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -183,6 +190,7 @@ function CompanyEditModal({ company, onClose, onSaved }) {
       const logo = await uploaderRef.current?.upload();
       if (logo?.name) payload.icon = logo.name;
       const updated = await api.updateCompanyProfile(payload);
+      toast({ tone: 'success', title: 'Perfil actualizado' });
       onSaved(updated || { ...company, ...payload, icon: logo?.url || company.icon });
     } catch (e) {
       setErr(e?.message || 'No se pudieron guardar los cambios.');
@@ -220,7 +228,7 @@ function CompanyEditModal({ company, onClose, onSaved }) {
           <BrandPreview primary={form.brand_primary} secondary={form.brand_secondary} name={form.name} />
         </div>
 
-        {err && <div className={s.formError}><i className="fas fa-triangle-exclamation" /> {err}</div>}
+        {err && <Alert tone="danger" onClose={() => setErr(null)}>{err}</Alert>}
       </div>
     </Modal>
   );

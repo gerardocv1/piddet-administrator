@@ -95,11 +95,24 @@ ratón no lo dispara.
 
 ---
 
-## Migración
+## Estado: migración completa
 
-`Alert` y `Toast` ya están aplicados en el módulo de reservas (`Reservations`,
-`ReservationsCalendar`, `ReservationDetail`, `ReservationWizard`, `RentableUnitDetail`).
+Todo el panel usa `Alert` y `Toast`. Las clases `.formError` y `.stateError` **ya no existen** en
+`screens.module.css`: si escribes una, no pinta nada. Lo mismo con las variantes por pantalla que
+había (`.notice`, `.noticeOk`, `.noticeError`, `.banner*` del cierre de turno).
 
-El resto del panel sigue usando `s.formError` / `s.stateError`, que **funcionan pero están
-descontinuados**: al tocar una pantalla, cambia sus mensajes a `<Alert>` en el mismo cambio.
-Las clases se quitarán de `screens.module.css` cuando no queden usos.
+Al agregar una pantalla nueva, no inventes su propio aviso: usa la escalera de arriba.
+
+### Decisiones que se tomaron al migrar, y conviene repetir
+
+- **Los asistentes que terminan en pantalla de éxito no llevan toast** (crear gasto, cerrar turno,
+  crear reserva): la pantalla ya es la confirmación, y el toast diría lo mismo encima.
+- **Las acciones optimistas tampoco**, cuando la lista ya se mueve delante del usuario (reordenar
+  categorías con arrastre). Un toast por cada arrastre es ruido.
+- **Un valor que hay que copiar nunca va en un toast** (el token de IA se muestra una sola vez):
+  eso se lee con calma, así que es contenido en pantalla con su `<Alert tone="warning">` al lado.
+- **Desactivar, anular, cancelar y eliminar usan `tone: 'neutral'`**, no `success`: terminaron
+  bien, pero no son un logro.
+- Al migrar aparecieron varios `try/finally` **sin `catch`**: la acción fallaba y el modal se
+  quedaba abierto sin decir nada. Donde se encontró, se agregó el estado de error y su `Alert`
+  dentro del modal. Si escribes una mutación nueva, no la dejes sin `catch`.

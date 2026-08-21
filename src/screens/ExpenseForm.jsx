@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Card, Button, IconButton, Input, Select, Textarea, Autocomplete, MoneyInput,
-  CategoryCascader, MultiImageUpload, DatePicker,
+  CategoryCascader, MultiImageUpload, DatePicker, Alert, useToast,
 } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
@@ -20,6 +20,7 @@ const newLine = () => ({ key: ++lineSeq, categoryId: '', description: '', value:
 // Los gastos no se editan después: solo se anulan desde el detalle.
 export function ExpenseForm() {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const photosRef = React.useRef(null);
 
   const [form, setForm] = React.useState({ expense_date: todayIso(), payment_method: '', notes: '' });
@@ -69,6 +70,7 @@ export function ExpenseForm() {
         files,
       };
       const created = await api.createExpense(payload);
+      toast({ tone: 'success', title: 'Gasto registrado' });
       navigate(`/expenses/${created.id}`, { replace: true });
     } catch (e) {
       setErr(e?.message || 'No se pudo registrar el gasto.');
@@ -159,7 +161,7 @@ export function ExpenseForm() {
         </Card.Body>
       </Card>
 
-      {err && <div className={s.formError}><i className="fas fa-triangle-exclamation" /> {err}</div>}
+      {err && <Alert tone="danger" onClose={() => setErr(null)}>{err}</Alert>}
 
       <div className={t.actions}>
         <Button variant="secondary" onClick={() => navigate('/expenses')}>Cancelar</Button>

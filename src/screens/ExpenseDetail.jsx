@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Card, Badge, Button, RefreshButton, Spinner, ConfirmDialog, MultiImageUpload, PageHeader } from '../components';
+import { Card, Badge, Button, RefreshButton, Spinner, ConfirmDialog, MultiImageUpload, PageHeader, Alert, useToast } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { usePermissions } from '../lib/permissions/usePermissions.js';
@@ -19,6 +19,7 @@ export function ExpenseDetail() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const { can } = usePermissions();
+  const { toast } = useToast();
 
   const fetcher = React.useCallback(() => api.expense(expenseId), [expenseId]);
   const { data, setData, loading, error, reload } = useResource(fetcher, null, [expenseId]);
@@ -47,6 +48,7 @@ export function ExpenseDetail() {
       if (names.length) setData(await api.attachExpenseFiles(expenseId, names));
       setPhotoCount(0);
       setUploadKey((k) => k + 1);
+      if (names.length) toast({ tone: 'success', title: names.length === 1 ? 'Foto guardada' : 'Fotos guardadas' });
     } catch (e) {
       setPhotoError(e?.message || 'No se pudieron guardar las fotos.');
     } finally {
@@ -61,6 +63,7 @@ export function ExpenseDetail() {
     try {
       setData(await api.detachExpenseFile(expenseId, delPhoto));
       setDelPhoto(null);
+      toast({ tone: 'neutral', title: 'Foto eliminada' });
     } catch (e) {
       setPhotoError(e?.message || 'No se pudo eliminar la foto.');
     } finally {
@@ -78,6 +81,7 @@ export function ExpenseDetail() {
       await api.annulExpense(expenseId);
       setConfirming(false);
       reload();
+      toast({ tone: 'neutral', title: 'Gasto anulado' });
     } catch (e) {
       setAnnulError(e?.message || 'No se pudo anular el gasto.');
     } finally {
@@ -89,9 +93,7 @@ export function ExpenseDetail() {
   if (error || !data) {
     return (
       <div className={s.page}>
-        <div className={s.stateError}>
-          <i className="fas fa-triangle-exclamation" /> {error || 'No se encontró el gasto.'}
-        </div>
+        <Alert tone="danger" title="No se pudo cargar el gasto">{error || 'No se encontró el gasto.'}</Alert>
       </div>
     );
   }
@@ -194,8 +196,8 @@ export function ExpenseDetail() {
               ) : (
                 <p className={s.faint}>Sin fotos adjuntas.</p>
               )}
-              {photoError && (
-                <div className={s.formError}><i className="fas fa-triangle-exclamation" /> {photoError}</div>
+              {photoError && !delPhoto && (
+                <Alert tone="danger" onClose={() => setPhotoError(null)}>{photoError}</Alert>
               )}
             </Card.Body>
           </Card>
@@ -223,6 +225,8 @@ export function ExpenseDetail() {
         onConfirm={removePhoto} onClose={() => setDelPhoto(null)}>
         ¿Seguro que deseas quitar esta foto de la factura? Se borra definitivamente (también del
         almacenamiento) y no se puede recuperar.
+        {/* El overlay tapa el banner de la card: si falla el borrado, el error se ve aquí dentro. */}
+        {photoError && <Alert tone="danger" onClose={() => setPhotoError(null)}>{photoError}</Alert>}
       </ConfirmDialog>
 
       {viewerIndex != null && files[viewerIndex] && (
