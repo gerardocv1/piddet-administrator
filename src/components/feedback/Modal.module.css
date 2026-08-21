@@ -2,6 +2,7 @@
   position: fixed;
   inset: 0;
   background: var(--overlay-bg);
+  backdrop-filter: blur(2px);
   z-index: 1050;
   display: flex;
   justify-content: center;
@@ -80,6 +81,7 @@
 .footer {
   display: flex;
   justify-content: flex-end;
+  flex-wrap: wrap;
   gap: 0.6rem;
   padding: 1rem 1.5rem;
   border-top: 1px solid var(--border-color);

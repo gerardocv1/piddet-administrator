@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Card, Button, IconButton, RefreshButton, Badge, Modal, Spinner, PageHeader } from '../components';
+import { Card, Button, IconButton, RefreshButton, Badge, Modal, Alert, Spinner, PageHeader } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { formatStayRange } from '../lib/dates.js';
@@ -99,7 +99,7 @@ export function ReservationsCalendar() {
       <Card>
         <Card.Body>
           {error ? (
-            <div className={s.stateError}><i className="fas fa-triangle-exclamation" /> {error}</div>
+            <Alert tone="danger" title="No se pudo cargar el calendario">{error}</Alert>
           ) : (
             <div className={t.calendar}>
               {loading && <div className={t.loadingOverlay}><Spinner label="Cargando reservas…" /></div>}

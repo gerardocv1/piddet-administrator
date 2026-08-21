@@ -109,6 +109,14 @@ export const reservationsService = {
   cancelReservation: (reservationId, reason) => http.patch(`${base()}/reservations/${reservationId}/cancel`, { reason }),
   // Reabre una reserva finalizada conservando pagos y facturas (los consolidados no se anulan).
   reopenReservation: (reservationId) => http.patch(`${base()}/reservations/${reservationId}/reopen`),
+  // ¿La unidad de la reserva está libre en ese rango? Excluye la propia reserva. Devuelve
+  // { check_in_date, check_out_date, nights, available, conflicts: [...] }.
+  reservationAvailability: (reservationId, { checkIn, checkOut }) =>
+    http.get(`${base()}/reservations/${reservationId}/availability${qs({ check_in: checkIn, check_out: checkOut })}`),
+
+  // Modifica la estadía de una reserva abierta: { check_in_date, check_out_date, guests_count? }.
+  // El backend revalida disponibilidad y recalcula noches, hospedaje y total con la tarifa pactada.
+  // Con la reserva en estadía (check-in hecho) solo se puede mover la fecha de salida.
   rescheduleReservation: (reservationId, data) => http.put(`${base()}/reservations/${reservationId}/dates`, data),
   // Cambia la tarifa por noche (solo reserva abierta); el backend recalcula hospedaje y total.
   updateReservationPrice: (reservationId, pricePerNight) => http.put(`${base()}/reservations/${reservationId}/price`, { price_per_night: pricePerNight }),

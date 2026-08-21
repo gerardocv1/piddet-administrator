@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Card, Button, IconButton, Input, Select, Textarea, MoneyInput, DateRangePicker, Badge, Spinner,
+  Alert,
 } from '../../components';
 import { api } from '../../lib/api.js';
 import { useResource } from '../../lib/useResource.js';
@@ -57,7 +58,16 @@ export function ReservationWizard() {
   const pricePerNight = unit ? Number(unit.base_price_per_night) : 0;
   const lodgingSubtotal = pricePerNight * nights;
   const servicesTotal = services.reduce((sum, sv) => sum + Number(sv.price) * sv.quantity, 0);
-  const total = lodgingSubtotal + servicesTotal;
+
+  // Personas por encima de las que cubre la tarifa: se cobran por persona y por noche con el item
+  // que designa la unidad. El backend agrega esa línea solo al crear la reserva; aquí se anticipa
+  // el costo para que nadie venda a un precio y facture otro.
+  const includedGuests = unit ? Math.max(1, Number(unit.included_guests) || 1) : 1;
+  const extraGuestPrice = unit && unit.extra_guest_price != null ? Number(unit.extra_guest_price) : null;
+  const extraGuests = Math.max(0, guestsCount - includedGuests);
+  const extraGuestsTotal = extraGuestPrice ? extraGuests * nights * extraGuestPrice : 0;
+
+  const total = lodgingSubtotal + servicesTotal + extraGuestsTotal;
 
   // Al completar el rango se consulta la disponibilidad automáticamente (sin botón). Un token de
   // petición evita que una respuesta lenta de un rango anterior pise a la del rango vigente.
@@ -237,10 +247,25 @@ export function ReservationWizard() {
               {unit && (
                 <Select label="Número de personas" icon="fas fa-users" value={String(guestsCount)}
                   onChange={(e) => changeGuestsCount(e.target.value)}
-                  hint={`${unit.name} admite hasta ${unit.capacity} ${Number(unit.capacity) === 1 ? 'persona' : 'personas'}. El titular cuenta como una.`}
+                  hint={`${unit.name} admite hasta ${unit.capacity} ${Number(unit.capacity) === 1 ? 'persona' : 'personas'} y su tarifa cubre ${includedGuests}. El titular cuenta como una.`}
                   options={Array.from({ length: Math.max(1, Number(unit.capacity) || 1) }, (_, i) => ({
                     value: String(i + 1), label: `${i + 1} ${i === 0 ? 'persona' : 'personas'}`,
                   }))} />
+              )}
+
+              {unit && extraGuests > 0 && extraGuestPrice > 0 && (
+                <Alert tone="info" title={`${extraGuests} ${extraGuests === 1 ? 'persona adicional' : 'personas adicionales'}`}>
+                  {reservationMoney(extraGuestPrice)} por persona y noche
+                  {nights > 0 && <> · {reservationMoney(extraGuestsTotal)} por {nights} {nights === 1 ? 'noche' : 'noches'}</>}.
+                  Se agrega a la cuenta al crear la reserva.
+                </Alert>
+              )}
+              {unit && extraGuests > 0 && !extraGuestPrice && (
+                <Alert tone="warning" title={`${extraGuests} ${extraGuests === 1 ? 'persona' : 'personas'} por encima de la tarifa`}>
+                  {unit.name} no tiene item de persona adicional configurado: no se cobrará nada por
+                  {extraGuests === 1 ? ' ella' : ' ellas'}. Agrégalo en la unidad, o cóbralo como servicio
+                  adicional en el paso siguiente.
+                </Alert>
               )}
             </div>
           )}
@@ -339,7 +364,6 @@ export function ReservationWizard() {
                 <MoneyInput label="Valor del adelanto" icon="fas fa-dollar-sign" placeholder="0"
                   value={payment.value} onChange={(v) => setPayment((p) => ({ ...p, value: v }))} />
               </div>
-              <Textarea label="Nota de la reserva (opcional)" value={notes} onChange={(e) => setNotes(e.target.value)} />
             </div>
           )}
 
@@ -348,19 +372,31 @@ export function ReservationWizard() {
               <SummaryRow label="Unidad" value={unit?.name} />
               <SummaryRow label="Fechas" value={`${checkIn} → ${checkOut} (${nights}n)`} />
               <SummaryRow label="Titular" value={`${holder.first_name} ${holder.last_name}`} />
-              <SummaryRow label="Personas" value={`${guestsCount} (titular incluido)`} />
+              <SummaryRow label="Personas"
+                value={extraGuests > 0
+                  ? `${guestsCount} · ${includedGuests} en tarifa + ${extraGuests} adicional${extraGuests === 1 ? '' : 'es'}`
+                  : `${guestsCount} (titular incluido)`} />
               <SummaryRow label="Acompañantes registrados" value={`${companions.filter((c) => c.first_name.trim()).length} de ${maxCompanions}`} />
               <div className={t.summaryDivider} />
               <SummaryRow label="Hospedaje" value={reservationMoney(lodgingSubtotal)} />
+              {extraGuestsTotal > 0 && (
+                <SummaryRow label={`Personas adicionales (${extraGuests} × ${nights} ${nights === 1 ? 'noche' : 'noches'})`}
+                  value={reservationMoney(extraGuestsTotal)} />
+              )}
               <SummaryRow label="Servicios" value={reservationMoney(servicesTotal)} />
               <SummaryRow label="Total" value={reservationMoney(total)} strong />
               {payment.payment_method && payment.value && (
                 <SummaryRow label="Adelanto" value={reservationMoney(payment.value)} />
               )}
+              <div className={t.summaryDivider} />
+              <Textarea label="Nota de la reserva (opcional)"
+                placeholder="Algo que el personal deba saber: llega de madrugada, viene con mascota, pidió cuna…"
+                value={notes} onChange={(e) => setNotes(e.target.value)} />
             </div>
           )}
 
-          {error && <div className={s.formError}><i className="fas fa-triangle-exclamation" /> {error}</div>}
+          {/* Rechazo del servidor: se queda junto al formulario, nunca es un toast. */}
+          {error && <Alert tone="danger" title="No se pudo crear la reserva">{error}</Alert>}
         </Card.Body>
       </Card>
 

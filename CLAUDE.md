@@ -80,6 +80,7 @@ Si agregas un endpoint, agrega también su mock. Detalle en `specs/tech.md`.
 | Saber qué habilita un permiso concreto | [`specs/permissions-catalog.md`](specs/permissions-catalog.md) |
 | Construir o modificar componentes / pantallas | [`specs/guides/ui-components.md`](specs/guides/ui-components.md) |
 | Tocar estilos, tokens o modo oscuro | [`specs/guides/styling.md`](specs/guides/styling.md) |
+| Mostrar un error, una confirmación o un aviso al usuario | [`specs/guides/feedback.md`](specs/guides/feedback.md) |
 | Tocar la instalación como app (PWA) | [`specs/tech.md`](specs/tech.md) → *PWA* |
 | Entender arquitectura técnica (capas, http, auth, routing, build) | [`specs/tech.md`](specs/tech.md) |
 | Entender módulos de negocio y flujos | [`specs/functional.md`](specs/functional.md) |

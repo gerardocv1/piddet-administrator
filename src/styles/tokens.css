@@ -92,6 +92,22 @@
   --text-lg: 1.25rem;
   --text-xl: 1.625rem;
   --text-2xl: 2rem;
+  --text-3xl: 2.75rem;
+  --font-mono: 'SFMono-Regular', Menlo, Consolas, monospace;
+
+  /* Pesos, interlineado y tracking — los componentes los consumen por token para que la
+     escala se ajuste en un solo lugar. */
+  --fw-light: 300;
+  --fw-regular: 400;
+  --fw-semibold: 600;
+  --fw-bold: 700;
+  --fw-heavy: 800;
+  --lh-tight: 1.2;
+  --lh-snug: 1.4;
+  --lh-base: 1.5;
+  --lh-relaxed: 1.7;
+  --ls-tight: -0.01em;
+  --ls-wide: 0.04em;   /* eyebrows en mayusculas, encabezados de tabla */
 
   /* ---- Radios ---- */
   --radius-sm: 0.25rem;

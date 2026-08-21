@@ -77,3 +77,11 @@
   margin: 0;
 }
 .panel :global(.rdp-selected) { font-size: inherit; font-weight: 600; }
+
+/* Paso actual del selector de rango: primero la entrada, después la salida. */
+.panelHint {
+  margin: 2px 4px 6px;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--gray-600);
+}

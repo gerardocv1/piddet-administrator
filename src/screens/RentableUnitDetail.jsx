@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
-  Card, Badge, Button, IconButton, RefreshButton, Input, Select, Textarea, MoneyInput, Switch, Spinner, Modal, MultiImageUpload, PageHeader,
+  Card, Badge, Button, IconButton, RefreshButton, Input, Select, Textarea, MoneyInput, Switch, Spinner, Modal, Alert, MultiImageUpload, PageHeader,
 } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
@@ -11,7 +11,7 @@ import s from './screens.module.css';
 import t from './RentableUnitDetail.module.css';
 
 const emptyForm = {
-  name: '', rentable_unit_type_id: '', capacity: 1, included_guests: 1, base_price_per_night: '', item_id: '', description: '',
+  name: '', rentable_unit_type_id: '', capacity: 1, included_guests: 1, extra_guest_item_id: '', base_price_per_night: '', item_id: '', description: '',
   check_in_time: '15:00', check_out_time: '12:00',
 };
 
@@ -61,6 +61,7 @@ export function RentableUnitDetail() {
       rentable_unit_type_id: String(data.rentable_unit_type_id || ''),
       capacity: data.capacity ?? 1,
       included_guests: data.included_guests ?? 1,
+      extra_guest_item_id: String(data.extra_guest_item_id || ''),
       base_price_per_night: data.base_price_per_night ?? '',
       item_id: String(data.item_id || ''),
       description: data.description || '',
@@ -87,6 +88,7 @@ export function RentableUnitDetail() {
         rentable_unit_type_id: Number(form.rentable_unit_type_id),
         capacity: Number(form.capacity) || 1,
         included_guests: Math.min(Number(form.included_guests) || 1, Number(form.capacity) || 1),
+        extra_guest_item_id: form.extra_guest_item_id ? Number(form.extra_guest_item_id) : null,
         base_price_per_night: form.base_price_per_night,
         check_in_time: form.check_in_time,
         check_out_time: form.check_out_time,
@@ -124,6 +126,7 @@ export function RentableUnitDetail() {
         rentable_unit_type_id: Number(form.rentable_unit_type_id),
         capacity: Number(form.capacity) || 1,
         included_guests: Math.min(Number(form.included_guests) || 1, Number(form.capacity) || 1),
+        extra_guest_item_id: form.extra_guest_item_id ? Number(form.extra_guest_item_id) : null,
         base_price_per_night: form.base_price_per_night,
         check_in_time: form.check_in_time,
         check_out_time: form.check_out_time,
@@ -146,9 +149,7 @@ export function RentableUnitDetail() {
   if (isEdit && (error || !data)) {
     return (
       <div className={s.page}>
-        <div className={s.stateError}>
-          <i className="fas fa-triangle-exclamation" /> {error || 'No se encontró la unidad.'}
-        </div>
+        <Alert tone="danger" title="No se pudo abrir la unidad">{error || 'No se encontró la unidad.'}</Alert>
       </div>
     );
   }
@@ -189,6 +190,14 @@ export function RentableUnitDetail() {
                   value={form.included_guests} onChange={(e) => set('included_guests', e.target.value)} />
               </div>
               <p className={s.faint}>Las personas incluidas van en la tarifa base; las que superen (hasta el máximo) se cobran como adicionales.</p>
+              <Select label="Item de persona adicional" icon="fas fa-user-plus"
+                value={form.extra_guest_item_id} onChange={(e) => set('extra_guest_item_id', e.target.value)}
+                options={[{ value: '', label: 'Sin cobro de adicionales' }, ...itemOptions]} />
+              <p className={s.faint}>
+                Se cobra <strong>por cada persona sobre las incluidas y por cada noche</strong>. La reserva
+                agrega y recalcula esta línea sola. Si lo dejas vacío, la unidad no cobra adicionales y la
+                reserva lo advierte al superar las incluidas.
+              </p>
               <MoneyInput label="Tarifa por noche" icon="fas fa-dollar-sign" placeholder="0"
                 value={form.base_price_per_night} onChange={(v) => set('base_price_per_night', v)} />
               <div className={s.formGrid}>
@@ -204,7 +213,7 @@ export function RentableUnitDetail() {
               <p className={s.faint}>El hospedaje se factura en el checkout con este item de servicio del catálogo de productos.</p>
               <Textarea label="Descripción" placeholder="Descripción comercial de la unidad (opcional)"
                 value={form.description} onChange={(e) => set('description', e.target.value)} />
-              {formError && <div className={s.formError}><i className="fas fa-triangle-exclamation" /> {formError}</div>}
+              {formError && <Alert tone="danger" onClose={() => setFormError('')}>{formError}</Alert>}
               <div className={t.formActions}>
                 {isEdit
                   ? <Button variant="primary" icon="fas fa-check" loading={saving} onClick={save}>Guardar cambios</Button>
@@ -310,7 +319,7 @@ function PhotoGallery({ files, folder, onAdd, onRemove }) {
           Guardar foto{count === 1 ? '' : 's'}
         </Button>
       )}
-      {err && <div className={s.formError}><i className="fas fa-triangle-exclamation" /> {err}</div>}
+      {err && <Alert tone="danger">{err}</Alert>}
 
       <Modal open={!!delName} size="sm" title="Quitar foto" onClose={() => setDelName(null)}
         footer={<>
@@ -439,7 +448,7 @@ function InclusionsEditor({ unit, onChange }) {
               value={editing.name} onChange={(e) => setEditing((ed) => ({ ...ed, name: e.target.value }))} />
             <Input label="Detalle" placeholder="Ej. Tipo americano, servido de 7 a 10 a. m."
               value={editing.description} onChange={(e) => setEditing((ed) => ({ ...ed, description: e.target.value }))} />
-            {err && <div className={s.formError}><i className="fas fa-triangle-exclamation" /> {err}</div>}
+            {err && <Alert tone="danger">{err}</Alert>}
           </div>
         )}
       </Modal>
@@ -579,7 +588,7 @@ function SpacesEditor({ unit, onChange }) {
               value={editing.name} onChange={(e) => setEditing((ed) => ({ ...ed, name: e.target.value }))} />
             <Input label="Descripción" placeholder="Ej. Cama queen, A/C, baño privado"
               value={editing.description} onChange={(e) => setEditing((ed) => ({ ...ed, description: e.target.value }))} />
-            {err && <div className={s.formError}><i className="fas fa-triangle-exclamation" /> {err}</div>}
+            {err && <Alert tone="danger">{err}</Alert>}
           </div>
         )}
       </Modal>

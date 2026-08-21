@@ -59,7 +59,31 @@
 .meta dt { color: var(--gray-600); font-size: var(--text-sm); white-space: nowrap; }
 .meta dt i { color: var(--gray-400); margin-right: 6px; }
 .meta dd { margin: 0; color: var(--gray-800); font-weight: 600; text-align: right; }
-.notes { margin: 12px 0 0; color: var(--gray-700); white-space: pre-wrap; }
+/* Saldo en la tarjeta de estadía: rojo si queda algo por cobrar, verde si está saldada.
+   Se cualifican con .meta para ganarle a `.meta dd`, que ya fija el color. */
+.meta dd.metaDue { color: var(--color-danger-fg); font-weight: var(--fw-bold, 700); }
+.meta dd.metaSettled { color: var(--color-success-fg); font-weight: var(--fw-bold, 700); }
+
+/* Nota de la reserva: bloque rotulado, separado de los datos calculados de la estadía. */
+.noteBlock {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.noteLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-xs);
+  font-weight: var(--fw-bold, 700);
+  letter-spacing: var(--ls-wide);
+  text-transform: uppercase;
+  color: var(--gray-500);
+}
+.notes { margin: 0; color: var(--gray-700); white-space: pre-wrap; }
 
 .stayStrip {
   display: flex;
@@ -166,15 +190,7 @@
 .statusPending { font-size: var(--text-sm); font-weight: 600; color: var(--color-warning-fg); }
 
 /* Aviso operativo de la cabecera (p. ej. pre-check-in pendiente antes de la entrada). */
-.notice {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 12px 14px;
-  border: 1px solid var(--color-warning-100);
-  border-radius: var(--radius);
-  background: var(--color-warning-100);
-  color: var(--color-warning-fg);
-  font-size: var(--text-sm);
-}
-.notice i { margin-top: 2px; }
+/* Reservas que chocan con el rango elegido, dentro del Alert de disponibilidad. El envoltorio
+   (tinte, icono, título) lo pone el componente Alert; aquí solo va la lista. */
+.conflicts { margin: 0; padding-left: 1.1rem; list-style: disc; }
+.conflicts li { margin-top: 2px; }

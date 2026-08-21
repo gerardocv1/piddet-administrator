@@ -1,0 +1,100 @@
+/* Toast — confirmación transitoria: tarjeta petróleo de marca, texto blanco, la única sombra
+   permitida de la línea flat. Nunca lleva errores de servidor (eso es un Alert). */
+
+.stack {
+  position: fixed;
+  right: 1.5rem;
+  bottom: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  align-items: flex-end;
+  z-index: 1100;
+  pointer-events: none;
+}
+
+/* En móvil baja desde arriba: abajo compite con el pulgar y con las barras del navegador. */
+@media (max-width: 860px) {
+  .stack {
+    bottom: auto;
+    top: 1rem;
+    right: 1rem;
+    left: 1rem;
+    align-items: stretch;
+  }
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 18rem;
+  max-width: 24rem;
+  padding: 0.8rem 1rem;
+  background: var(--brand-dark);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  font-size: var(--text-base);
+  pointer-events: auto;
+  animation: toastIn 0.2s ease;
+}
+
+@media (max-width: 860px) {
+  .toast { max-width: none; min-width: 0; }
+}
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (max-width: 860px) {
+  @keyframes toastIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: none; }
+  }
+}
+
+.icon { flex-shrink: 0; }
+.icon[data-tone='success'] { color: var(--color-success); }
+.icon[data-tone='info'] { color: var(--color-info); }
+.icon[data-tone='warning'] { color: var(--color-warning); }
+.icon[data-tone='neutral'] { color: rgba(255, 255, 255, 0.75); }
+
+.title {
+  flex: 1;
+  min-width: 0;
+  color: #fff;
+  font-weight: var(--fw-semibold, 600);
+}
+
+.action {
+  flex-shrink: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-primary-300);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: var(--fw-semibold, 600);
+  cursor: pointer;
+}
+
+.close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  flex-shrink: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.55);
+  cursor: pointer;
+}
+.close:hover { color: #fff; }
+
+@media (prefers-reduced-motion: reduce) {
+  .toast { animation: none; }
+}

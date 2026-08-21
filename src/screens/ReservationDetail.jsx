@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Card, Badge, Button, IconButton, RefreshButton, Avatar, Spinner, Modal, ConfirmDialog, Input, Select, MoneyInput, Autocomplete, PageHeader, Dropdown } from '../components';
+import { Card, Badge, Button, IconButton, RefreshButton, Avatar, Spinner, Modal, ConfirmDialog, Alert, useToast, Input, Select, MoneyInput, Autocomplete, PageHeader, Dropdown, DatePicker, DateRangePicker } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { usePermissions } from '../lib/permissions/usePermissions.js';
@@ -20,6 +20,7 @@ export function ReservationDetail() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const { can } = usePermissions();
+  const { toast } = useToast();
 
   const fetcher = React.useCallback(() => api.reservation(reservationId), [reservationId]);
   const { data, setData, loading, error, reload } = useResource(fetcher, null, [reservationId]);
@@ -30,6 +31,10 @@ export function ReservationDetail() {
   const [cancelOpen, setCancelOpen] = React.useState(false);
   const [priceOpen, setPriceOpen] = React.useState(false);
   const [newPrice, setNewPrice] = React.useState('');
+  const [stayOpen, setStayOpen] = React.useState(false);
+  const [stay, setStay] = React.useState({ check_in_date: '', check_out_date: '', guests_count: 1 });
+  const [stayAvail, setStayAvail] = React.useState(null);
+  const [stayAvailLoading, setStayAvailLoading] = React.useState(false);
   const [checkInOpen, setCheckInOpen] = React.useState(false);
   const [reopenOpen, setReopenOpen] = React.useState(false);
   const [payOpen, setPayOpen] = React.useState(false);
@@ -52,6 +57,26 @@ export function ReservationDetail() {
 
   useSetPageTitle(data?.code ? `Reserva ${data.code}` : null);
 
+  // Disponibilidad de la unidad para las fechas del modal de estadía: se consulta mientras se
+  // edita (excluyendo esta reserva) para decir QUIÉN ocupa esas fechas antes de intentar guardar.
+  React.useEffect(() => {
+    const { check_in_date: from, check_out_date: to } = stay;
+    if (!stayOpen || !from || !to || new Date(to) <= new Date(from)) {
+      setStayAvail(null);
+      setStayAvailLoading(false);
+      return undefined;
+    }
+    let cancelled = false;
+    setStayAvailLoading(true);
+    const timer = setTimeout(() => {
+      api.reservationAvailability(reservationId, { checkIn: from, checkOut: to })
+        .then((r) => { if (!cancelled) setStayAvail(r); })
+        .catch(() => { if (!cancelled) setStayAvail(null); })
+        .finally(() => { if (!cancelled) setStayAvailLoading(false); });
+    }, 350);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [stayOpen, stay.check_in_date, stay.check_out_date, reservationId]);
+
   const goBack = () => navigate(`/reservations${params.toString() ? `?${params.toString()}` : ''}`);
 
   const run = async (fn, errMsg) => {
@@ -72,7 +97,7 @@ export function ReservationDetail() {
   if (error || !data) {
     return (
       <div className={s.page}>
-        <div className={s.stateError}><i className="fas fa-triangle-exclamation" /> {error || 'No se encontró la reserva.'}</div>
+        <Alert tone="danger" title="No se pudo abrir la reserva">{error || 'No se encontró la reserva.'}</Alert>
       </div>
     );
   }
@@ -89,6 +114,45 @@ export function ReservationDetail() {
   const precheckinDone = !!data.precheckin_completed_at;
   const guestsCount = Number(data.guests_count) || data.guests.length;
 
+  // Modal "Modificar estadía": el backend recalcula, pero el resumen se previsualiza aquí con la
+  // misma fórmula (tarifa pactada × noches + servicios) para que el cambio sea explícito.
+  const unitCapacity = Number(data.rentable_unit_capacity) || 0;
+  const stayNights = stay.check_in_date && stay.check_out_date
+    ? Math.round((new Date(stay.check_out_date) - new Date(stay.check_in_date)) / 86400000)
+    : 0;
+  const stayLodging = Number(data.price_per_night || 0) * Math.max(0, stayNights);
+  const stayGuests = Number(stay.guests_count) || 0;
+  const stayGuestsInvalid = stayGuests < data.guests.length
+    || stayGuests < 1
+    || (unitCapacity > 0 && stayGuests > unitCapacity);
+
+  // Personas adicionales: las que superan las que cubre la tarifa de la unidad. Se cobran por
+  // persona Y por noche, con el item que designa la unidad. El backend mantiene esa línea de
+  // servicio solo; aquí se previsualiza con la misma fórmula.
+  const extraInfo = data.extra_guests || {};
+  const includedGuests = Number(data.rentable_unit_included_guests) || 1;
+  const extraPrice = Number(extraInfo.item_price || 0);
+  const extraCharges = extraInfo.configured && extraPrice > 0;
+  const stayExtras = Math.max(0, stayGuests - includedGuests);
+  const stayExtraQty = stayExtras * Math.max(0, stayNights);
+  const stayExtraTotal = extraCharges ? stayExtraQty * extraPrice : 0;
+  // Los servicios que NO son el adicional: el adicional se recalcula, el resto se conserva.
+  const otherServices = Number(data.services_total || 0) - Number(extraInfo.total || 0);
+  const stayTotal = stayLodging + otherServices + stayExtraTotal;
+  const stayConflicts = stayAvail?.conflicts || [];
+  const stayUnavailable = stayAvail ? stayAvail.available === false : false;
+  // Un error del servidor se queda en pantalla junto a la acción que falló (nunca es un toast).
+  // El banner vive fuera de los modales y queda tapado cuando uno está abierto, así que el mismo
+  // Alert se repite dentro de cada formulario.
+  const errorBlock = actionError
+    ? <Alert tone="danger" title="No se pudo completar la acción" onClose={() => setActionError('')}>{actionError}</Alert>
+    : null;
+  // Con la entrada ya registrada solo se mueve la salida: el check-in ya ocurrió.
+  const stayCheckInLocked = isCheckedIn;
+  const minCheckOut = stay.check_in_date
+    ? new Date(new Date(stay.check_in_date).getTime() + 86400000).toISOString().slice(0, 10)
+    : undefined;
+
   const summary = data.summary || {};
   const accountTotal = summary.account_total ?? summary.total;
   const chargesTotal = Number(summary.charges_total || 0);
@@ -101,7 +165,10 @@ export function ReservationDetail() {
   const addPayment = async () => {
     if (!payment.payment_method || !payment.value) return;
     const ok = await run(() => api.addReservationPayment(reservationId, payment), 'No se pudo registrar el pago.');
-    if (ok) { setPayOpen(false); setPayment({ payment_method: '', value: '' }); reloadOrders(); }
+    if (ok) {
+      setPayOpen(false); setPayment({ payment_method: '', value: '' }); reloadOrders();
+      toast({ tone: 'success', title: 'Pago registrado' });
+    }
   };
   const annulPayment = async (paymentId) => {
     const ok = await run(() => api.annulReservationPayment(reservationId, paymentId), 'No se pudo anular el pago.');
@@ -111,46 +178,82 @@ export function ReservationDetail() {
   const addService = async () => {
     if (!serviceSel.id) return;
     const ok = await run(() => api.addReservationService(reservationId, { item_id: Number(serviceSel.id), quantity: serviceSel.quantity }), 'No se pudo agregar el servicio.');
-    if (ok) { setServiceOpen(false); setServiceSel({ id: '', quantity: 1 }); }
+    if (ok) {
+      setServiceOpen(false); setServiceSel({ id: '', quantity: 1 });
+      toast({ tone: 'success', title: 'Servicio agregado' });
+    }
   };
   const removeService = (lineId) => run(() => api.removeReservationService(reservationId, lineId), 'No se pudo quitar el servicio.');
 
   const addCharge = async () => {
     if (!chargeSel.item) return;
     const ok = await run(() => api.addReservationCharge(reservationId, { item_id: Number(chargeSel.item.id), quantity: chargeSel.quantity }), 'No se pudo agregar el cargo.');
-    if (ok) { setChargeOpen(false); setChargeSel({ item: null, quantity: 1 }); }
+    if (ok) {
+      setChargeOpen(false); setChargeSel({ item: null, quantity: 1 });
+      toast({ tone: 'success', title: 'Cargo agregado a la cuenta' });
+    }
   };
   const removeCharge = (chargeId) => run(() => api.removeReservationCharge(reservationId, chargeId), 'No se pudo quitar el cargo.');
 
   const doCancel = async (reason) => {
     const ok = await run(() => api.cancelReservation(reservationId, reason), 'No se pudo cancelar la reserva.');
-    if (ok) { setCancelOpen(false); reloadOrders(); }
+    if (ok) { setCancelOpen(false); reloadOrders(); toast({ tone: 'neutral', title: 'Reserva cancelada' }); }
   };
 
   const openPriceModal = () => {
+    setActionError('');
     setNewPrice(String(Number(data.price_per_night) || ''));
     setPriceOpen(true);
   };
   const doUpdatePrice = async () => {
     if (newPrice === '' || Number(newPrice) < 0) return;
     const ok = await run(() => api.updateReservationPrice(reservationId, Number(newPrice)), 'No se pudo modificar el precio.');
-    if (ok) setPriceOpen(false);
+    if (ok) { setPriceOpen(false); toast({ tone: 'success', title: 'Tarifa actualizada' }); }
+  };
+
+  const openStayModal = () => {
+    setActionError('');
+    setStayAvail(null);
+    setStay({
+      check_in_date: data.check_in_date,
+      check_out_date: data.check_out_date,
+      guests_count: guestsCount,
+    });
+    setStayOpen(true);
+  };
+  const doUpdateStay = async () => {
+    if (!stay.check_in_date || !stay.check_out_date || stayNights < 1) return;
+    if (stayGuestsInvalid) return;
+    const ok = await run(() => api.rescheduleReservation(reservationId, {
+      check_in_date: stay.check_in_date,
+      check_out_date: stay.check_out_date,
+      guests_count: Number(stay.guests_count),
+    }), 'No se pudo modificar la estadía.');
+    if (ok) { setStayOpen(false); toast({ tone: 'success', title: 'Estadía actualizada' }); }
   };
 
   const doCheckIn = async () => {
     const ok = await run(() => api.checkInReservation(reservationId), 'No se pudo hacer check-in.');
-    if (ok) setCheckInOpen(false);
+    if (ok) { setCheckInOpen(false); toast({ tone: 'success', title: 'Entrada registrada' }); }
+  };
+
+  const doConfirm = async () => {
+    const ok = await run(() => api.confirmReservation(reservationId), 'No se pudo confirmar.');
+    if (ok) toast({ tone: 'success', title: 'Reserva confirmada' });
   };
 
   const doReopen = async () => {
     const ok = await run(() => api.reopenReservation(reservationId), 'No se pudo reabrir la reserva.');
-    if (ok) { setReopenOpen(false); reloadOrders(); }
+    if (ok) { setReopenOpen(false); reloadOrders(); toast({ tone: 'success', title: 'Reserva reabierta' }); }
   };
 
   const doCheckout = async () => {
     const finalPay = checkoutPay.payment_method && checkoutPay.value ? checkoutPay : null;
     const ok = await run(() => api.checkoutReservation(reservationId, finalPay), 'No se pudo hacer el checkout.');
-    if (ok) { setCheckoutOpen(false); setCheckoutPay({ payment_method: '', value: '' }); reloadOrders(); }
+    if (ok) {
+      setCheckoutOpen(false); setCheckoutPay({ payment_method: '', value: '' }); reloadOrders();
+      toast({ tone: 'success', title: 'Checkout realizado' });
+    }
   };
 
   const openGuest = async (g) => {
@@ -172,7 +275,12 @@ export function ReservationDetail() {
       await navigator.clipboard.writeText(checkinLink);
       setLinkCopied(true);
       setTimeout(() => setLinkCopied(false), 2000);
-    } catch { /* sin permiso de portapapeles: el enlace sigue visible para copiarlo a mano */ }
+      toast({ tone: 'success', title: 'Enlace de pre-check-in copiado' });
+    } catch {
+      // Sin permiso de portapapeles el enlace sigue visible para copiarlo a mano: es un aviso
+      // que el usuario debe leer, no una confirmación.
+      setActionError('No se pudo copiar el enlace. Cópialo a mano desde la pestaña Reserva.');
+    }
   };
 
   return (
@@ -183,7 +291,7 @@ export function ReservationDetail() {
         subtitle={`${formatStayRange(data.check_in_date, data.check_out_date)} · ${data.nights} ${Number(data.nights) === 1 ? 'noche' : 'noches'}`}
         actions={<>
           <RefreshButton loading={loading} onClick={() => { reload(); reloadOrders(); }} />
-          {isPending &&<Button variant="secondary" size="sm" icon="fas fa-circle-check" loading={busy} onClick={() => run(() => api.confirmReservation(reservationId), 'No se pudo confirmar.')}>Confirmar</Button>}
+          {isPending &&<Button variant="secondary" size="sm" icon="fas fa-circle-check" loading={busy} onClick={() => doConfirm()}>Confirmar</Button>}
           {isConfirmed && (
             <Button variant="outline-primary" size="sm" icon="fas fa-door-open" disabled={!precheckinDone}
               title={precheckinDone ? 'Registrar la entrada del huésped' : 'El huésped debe completar su pre-check-in antes de la entrada'}
@@ -199,6 +307,7 @@ export function ReservationDetail() {
             <Dropdown
               trigger={<IconButton icon="fas fa-ellipsis-vertical" variant="light" size="sm" title="Más acciones" />}
               items={[
+                { label: 'Modificar estadía', icon: 'fas fa-calendar-days', disabled: !isOpen, onClick: openStayModal },
                 { label: 'Modificar precio', icon: 'fas fa-tag', disabled: !isOpen, onClick: openPriceModal },
                 ...(can('reservation-cancel') ? [{ label: 'Cancelar esta reserva', icon: 'fas fa-ban', variant: 'danger', onClick: () => setCancelOpen(true) }] : []),
               ]}
@@ -208,7 +317,12 @@ export function ReservationDetail() {
         meta={[
           { label: 'Estado', value: <Badge variant={meta.variant} dot>{meta.label}</Badge> },
           { label: 'Unidad', value: data.rentable_unit_name },
-          { label: 'Personas', value: `${guestsCount} (titular incluido)` },
+          {
+            label: 'Personas',
+            value: Number(extraInfo.count) > 0
+              ? `${guestsCount} · ${includedGuests} en tarifa + ${extraInfo.count} adicional${Number(extraInfo.count) === 1 ? '' : 'es'}`
+              : `${guestsCount} (titular incluido)`,
+          },
           { label: 'Llegada estimada', value: arrivalSlotLabel(data.expected_arrival_time) },
           { label: 'Registró', value: data.created_by_name || '—' },
         ]}
@@ -219,16 +333,23 @@ export function ReservationDetail() {
         ) : null}
       />
 
-      {actionError && <div className={s.formError}><i className="fas fa-triangle-exclamation" /> {actionError}</div>}
+      {errorBlock}
+
+      {isOpen && Number(extraInfo.count) > 0 && !extraInfo.configured && (
+        <Alert tone="warning" title={`${extraInfo.count} ${Number(extraInfo.count) === 1 ? 'persona' : 'personas'} sobre la tarifa sin cobrar`}
+          action={<Button size="sm" variant="secondary" icon="fas fa-gear"
+            onClick={() => navigate(`/rentable-units/${data.rentable_unit_id}`)}>Configurar unidad</Button>}>
+          {data.rentable_unit_name} cubre {includedGuests} {includedGuests === 1 ? 'persona' : 'personas'} en
+          su tarifa y no tiene item de persona adicional, así que el excedente no se está facturando.
+        </Alert>
+      )}
 
       {isConfirmed && !precheckinDone && (
-        <div className={t.notice}>
-          <i className="fas fa-circle-info" />
-          <span>
-            Falta el pre-check-in del huésped. Comparte el enlace de la pestaña Reserva para que registre
-            sus datos y los de sus acompañantes; hasta entonces no se puede registrar la entrada.
-          </span>
-        </div>
+        <Alert tone="warning" title="Pre-check-in pendiente"
+          action={<Button size="sm" variant="secondary" icon="fas fa-link" onClick={copyCheckinLink}>Copiar enlace</Button>}>
+          El huésped debe registrar sus datos y los de sus acompañantes antes de que puedas
+          registrar la entrada.
+        </Alert>
       )}
 
       <div className={t.tabs} role="tablist">
@@ -248,7 +369,9 @@ export function ReservationDetail() {
           <div className={t.mainCol}>
             {/* Datos de la estadía */}
             <Card>
-              <Card.Header title="Estadía" />
+              <Card.Header title="Estadía" action={
+                isOpen ? <Button variant="secondary" size="sm" icon="fas fa-pen" onClick={openStayModal}>Modificar</Button> : null
+              } />
               <Card.Body>
                 <div className={t.stayStrip}>
                   <div className={t.stayDate}>
@@ -268,8 +391,24 @@ export function ReservationDetail() {
                 </div>
                 <dl className={t.meta}>
                   <div><dt><i className="fas fa-moon" /> Tarifa / noche</dt><dd>{reservationMoney(data.price_per_night)}</dd></div>
+                  {/* El dinero también se ve aquí, en moneda: quien mira la estadía quiere saber
+                      qué se abonó sin cambiar de pestaña (y así nadie lo anota en la nota). */}
+                  <div><dt><i className="fas fa-file-invoice-dollar" /> Total de la cuenta</dt><dd>{reservationMoney(accountTotal)}</dd></div>
+                  <div><dt><i className="fas fa-hand-holding-dollar" /> Abonado</dt><dd>{reservationMoney(summary.paid)}</dd></div>
+                  <div>
+                    <dt><i className="fas fa-scale-balanced" /> Por cobrar</dt>
+                    <dd className={pendingTotal > 0 ? t.metaDue : t.metaSettled}>{reservationMoney(pendingTotal)}</dd>
+                  </div>
+                  <div><dt><i className="fas fa-users" /> Personas</dt><dd>{guestsCount} (titular incluido)</dd></div>
                 </dl>
-                {data.notes && <p className={t.notes}>{data.notes}</p>}
+                {/* Texto libre de quien registró la reserva. Va rotulado: suelto se lee como un
+                    dato del sistema (y alguien ya escribió aquí un monto creyendo que era el abono). */}
+                {data.notes && (
+                  <div className={t.noteBlock}>
+                    <span className={t.noteLabel}><i className="fas fa-note-sticky" /> Nota de la reserva</span>
+                    <p className={t.notes}>{data.notes}</p>
+                  </div>
+                )}
               </Card.Body>
             </Card>
 
@@ -305,9 +444,20 @@ export function ReservationDetail() {
                   <ul className={t.lines}>
                     {data.services.map((sv) => (
                       <li key={sv.id} className={t.line}>
-                        <span className={t.lineName}>{sv.name} {sv.quantity > 1 && <span className={s.muted}>×{sv.quantity}</span>}</span>
+                        <span className={t.lineName}>
+                          {sv.name} {sv.quantity > 1 && <span className={s.muted}>×{sv.quantity}</span>}
+                          {sv.is_extra_guest && <span className={s.muted}> · personas adicionales</span>}
+                        </span>
                         <span className={t.linePrice}>{reservationMoney(sv.total)}</span>
-                        {isOpen && <IconButton icon="fas fa-trash" variant="light" title="Quitar" onClick={() => removeService(sv.id)} />}
+                        {/* La línea de adicionales la calcula el sistema: se cambia el número de
+                            personas, no se borra a mano. */}
+                        {isOpen && !sv.is_extra_guest && (
+                          <IconButton icon="fas fa-trash" variant="light" title="Quitar" onClick={() => removeService(sv.id)} />
+                        )}
+                        {isOpen && sv.is_extra_guest && (
+                          <IconButton icon="fas fa-lock" variant="light" disabled
+                            title="La calcula el sistema — cambia el número de personas de la reserva" />
+                        )}
                       </li>
                     ))}
                   </ul>
@@ -498,12 +648,112 @@ export function ReservationDetail() {
         <p>Se liberan las fechas de la unidad y se cancelan también todas las facturas de la reserva (abonos, consumos POS y cierre). Esta acción no se puede deshacer.</p>
       </ConfirmDialog>
 
+      <Modal open={stayOpen} size="sm" title="Modificar estadía" onClose={() => setStayOpen(false)}
+        footer={<>
+          <Button variant="secondary" onClick={() => setStayOpen(false)}>Cancelar</Button>
+          <Button variant="primary" icon="fas fa-check" loading={busy}
+            disabled={stayNights < 1 || stayGuestsInvalid || stayUnavailable || stayAvailLoading}
+            onClick={doUpdateStay}>Guardar estadía</Button>
+        </>}>
+        <div className={s.formCol}>
+          {errorBlock}
+          <p className={s.muted}>Se recalcula con la tarifa pactada: {reservationMoney(data.price_per_night)} / noche.</p>
+
+          {stayCheckInLocked ? (
+            <>
+              <div className={t.summary}>
+                <SummaryRow label="Entrada (ya registrada)" value={data.check_in_date} />
+              </div>
+              <DatePicker label="Salida" icon="fas fa-calendar" min={minCheckOut}
+                value={stay.check_out_date}
+                onChange={(iso) => setStay((x) => ({ ...x, check_out_date: iso }))} />
+            </>
+          ) : (
+            <DateRangePicker label="Fechas de la estadía" icon="fas fa-calendar"
+              value={{ from: stay.check_in_date, to: stay.check_out_date }}
+              onChange={({ from, to }) => setStay((x) => ({ ...x, check_in_date: from, check_out_date: to }))} />
+          )}
+
+          {stayAvailLoading && <p className={s.faint}><i className="fas fa-circle-notch fa-spin" /> Consultando disponibilidad…</p>}
+          {!stayAvailLoading && stayAvail && stayAvail.available && (
+            <Alert tone="success">{data.rentable_unit_name} está libre en esas fechas.</Alert>
+          )}
+          {/* Ocupada: bloquea el guardado, así que va tintado y dice QUIÉN tiene esas fechas. */}
+          {!stayAvailLoading && stayUnavailable && (
+            <Alert tone="warning" variant="tint" title={`${data.rentable_unit_name} ya está reservada`}>
+              <ul className={t.conflicts}>
+                {stayConflicts.map((c) => (
+                  <li key={c.id}>
+                    {formatStayRange(c.check_in_date, c.check_out_date)} · reserva {c.code}
+                    {c.holder_user_name ? ` · ${c.holder_user_name}` : ''}
+                  </li>
+                ))}
+              </ul>
+            </Alert>
+          )}
+
+          <Input label="Personas (titular incluido)" icon="fas fa-users" type="number" min="1"
+            max={unitCapacity || undefined}
+            value={stay.guests_count}
+            onChange={(e) => setStay((x) => ({ ...x, guests_count: e.target.value }))} />
+          {unitCapacity > 0 && (
+            <p className={s.faint}>
+              La unidad admite máximo {unitCapacity} {unitCapacity === 1 ? 'persona' : 'personas'} y su
+              tarifa cubre {includedGuests}.
+            </p>
+          )}
+          {stayGuests < data.guests.length && (
+            <Alert tone="warning">
+              Hay {data.guests.length} huéspedes registrados: quita alguno antes de bajar el número.
+            </Alert>
+          )}
+          {unitCapacity > 0 && stayGuests > unitCapacity && (
+            <Alert tone="warning" variant="tint">
+              La unidad no admite más de {unitCapacity} {unitCapacity === 1 ? 'persona' : 'personas'}.
+            </Alert>
+          )}
+
+          {/* Excedente sobre las personas incluidas en la tarifa. */}
+          {stayExtras > 0 && extraCharges && (
+            <Alert tone="info" title={`${stayExtras} ${stayExtras === 1 ? 'persona adicional' : 'personas adicionales'}`}>
+              {extraInfo.item_name} · {reservationMoney(extraPrice)} por persona y noche.
+              Se agregan a la cuenta como {stayExtraQty} {stayExtraQty === 1 ? 'unidad' : 'unidades'}
+              {' '}({reservationMoney(stayExtraTotal)}).
+            </Alert>
+          )}
+          {stayExtras > 0 && !extraCharges && (
+            <Alert tone="warning" title={`${stayExtras} ${stayExtras === 1 ? 'persona' : 'personas'} por encima de la tarifa`}>
+              {data.rentable_unit_name} no tiene item de persona adicional configurado, así que no se
+              cobrará nada por {stayExtras === 1 ? 'ella' : 'ellas'}. Configúralo en la unidad, o agrega
+              el servicio a mano desde la reserva.
+            </Alert>
+          )}
+
+          <div className={t.summary}>
+            <SummaryRow label="Estadía actual"
+              value={`${data.nights} ${Number(data.nights) === 1 ? 'noche' : 'noches'} · ${reservationMoney(data.lodging_subtotal)}`} />
+            <SummaryRow label={`Hospedaje (${Math.max(0, stayNights)} ${stayNights === 1 ? 'noche' : 'noches'})`}
+              value={reservationMoney(stayLodging)} />
+            {stayExtraTotal > 0 && (
+              <SummaryRow
+                label={`Personas adicionales (${stayExtras} × ${Math.max(0, stayNights)} ${stayNights === 1 ? 'noche' : 'noches'})`}
+                value={reservationMoney(stayExtraTotal)} />
+            )}
+            {otherServices > 0 && (
+              <SummaryRow label="Servicios adicionales" value={reservationMoney(otherServices)} />
+            )}
+            <SummaryRow label="Nuevo total de la reserva" value={reservationMoney(stayTotal)} strong />
+          </div>
+        </div>
+      </Modal>
+
       <Modal open={priceOpen} size="sm" title="Modificar precio de la reserva" onClose={() => setPriceOpen(false)}
         footer={<>
           <Button variant="secondary" onClick={() => setPriceOpen(false)}>Cancelar</Button>
           <Button variant="primary" icon="fas fa-check" loading={busy} onClick={doUpdatePrice}>Guardar precio</Button>
         </>}>
         <div className={s.formCol}>
+          {errorBlock}
           <p className={s.muted}>
             Cambia la tarifa por noche pactada con el huésped (por ejemplo, si la tarifa de la unidad
             subió después de vender la reserva). El hospedaje y el total de la cuenta se recalculan.
@@ -544,6 +794,7 @@ export function ReservationDetail() {
           <Button variant="primary" icon="fas fa-check" loading={busy} onClick={addPayment}>Registrar</Button>
         </>}>
         <div className={s.formCol}>
+          {errorBlock}
           <p className={s.muted}>El abono genera su factura en la fecha del pago y queda aplicado a la cuenta.</p>
           <Select label="Método de pago" icon="fas fa-wallet" value={payment.payment_method}
             onChange={(e) => setPayment((p) => ({ ...p, payment_method: e.target.value }))}
@@ -559,6 +810,7 @@ export function ReservationDetail() {
           <Button variant="primary" icon="fas fa-file-invoice-dollar" loading={busy} onClick={doCheckout}>Cerrar y facturar</Button>
         </>}>
         <div className={s.formCol}>
+          {errorBlock}
           <p>Se factura toda la cuenta (hospedaje, servicios y consumos) aplicando los abonos como anticipo, y se saldan los consumos POS pendientes. El total por cobrar debe quedar en cero.</p>
           <div className={t.summary}>
             <SummaryRow label="Total cuenta" value={reservationMoney(accountTotal)} />
@@ -587,6 +839,7 @@ export function ReservationDetail() {
           <Button variant="primary" icon="fas fa-check" loading={busy} onClick={addService}>Agregar</Button>
         </>}>
         <div className={s.formCol}>
+          {errorBlock}
           <Select label="Servicio" icon="fas fa-champagne-glasses" value={serviceSel.id}
             onChange={(e) => setServiceSel((x) => ({ ...x, id: e.target.value }))}
             options={[{ value: '', label: 'Selecciona…' }, ...(serviceItems || []).map((st) => ({ value: String(st.id), label: `${st.name} · ${reservationMoney(st.price)}` }))]} />
@@ -601,6 +854,7 @@ export function ReservationDetail() {
           <Button variant="primary" icon="fas fa-check" loading={busy} onClick={addCharge}>Agregar</Button>
         </>}>
         <div className={s.formCol}>
+          {errorBlock}
           <Autocomplete label="Producto o servicio" icon="fas fa-burger" minChars={2}
             placeholder="Busca en el catálogo…"
             fetcher={(q) => api.consumableItems(q)}

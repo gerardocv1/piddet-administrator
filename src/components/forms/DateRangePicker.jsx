@@ -35,6 +35,9 @@ const PANEL_HEIGHT = 340;
 export function DateRangePicker({ label, icon, value, onChange, min }) {
   const [open, setOpen] = React.useState(false);
   const [coords, setCoords] = React.useState(null);
+  // ¿El usuario ya empezó a elegir en esta apertura del panel? Mientras sea false el calendario
+  // no muestra nada seleccionado, para que el primer clic no se lea como "mover el final".
+  const [drafting, setDrafting] = React.useState(false);
   const triggerRef = React.useRef(null);
 
   const place = () => {
@@ -49,9 +52,16 @@ export function DateRangePicker({ label, icon, value, onChange, min }) {
     });
   };
 
+  const close = () => {
+    setOpen(false);
+    setDrafting(false);
+  };
+
   const toggle = () => {
-    if (!open) place();
-    setOpen((o) => !o);
+    if (open) { close(); return; }
+    place();
+    setDrafting(false);
+    setOpen(true);
   };
 
   React.useEffect(() => {
@@ -65,15 +75,22 @@ export function DateRangePicker({ label, icon, value, onChange, min }) {
     };
   }, [open]);
 
-  const selected = { from: parseIsoDate(value?.from), to: parseIsoDate(value?.to) };
+  const committed = { from: parseIsoDate(value?.from), to: parseIsoDate(value?.to) };
+  // Sin `drafting` el calendario va sin selección: el primer clic define SIEMPRE la entrada.
+  const selected = drafting ? committed : undefined;
 
   const handleSelect = (range) => {
     const from = range?.from ? toIsoDate(range.from) : '';
     const to = range?.to ? toIsoDate(range.to) : '';
+    setDrafting(true);
     onChange({ from, to });
     // Rango completo (y con al menos una noche): cierra el panel.
-    if (from && to && from !== to) setOpen(false);
+    if (from && to && from !== to) close();
   };
+
+  const stepHint = !drafting || !value?.from
+    ? 'Elige la fecha de entrada'
+    : 'Ahora elige la fecha de salida';
 
   const disabledDays = min ? { before: parseIsoDate(min) } : undefined;
   const hasRange = value?.from && value?.to;
@@ -92,14 +109,15 @@ export function DateRangePicker({ label, icon, value, onChange, min }) {
       </button>
       {open && coords && (
         <>
-          <div onClick={() => setOpen(false)} className={styles.scrim} />
+          <div onClick={close} className={styles.scrim} />
           <div className={styles.panel} style={{ left: coords.left, top: coords.top, bottom: coords.bottom }}>
+            <p className={styles.panelHint}>{stepHint}</p>
             <DayPicker
               mode="range"
               locale={es}
               selected={selected}
               onSelect={handleSelect}
-              defaultMonth={selected.from}
+              defaultMonth={committed.from}
               disabled={disabledDays}
               min={1}
             />

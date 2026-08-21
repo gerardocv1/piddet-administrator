@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Layout } from './layout/Layout.jsx';
+import { ToastProvider } from './components/index.js';
 import { Login } from './screens/Login.jsx';
 import { Dashboard } from './screens/Dashboard.jsx';
 import { Products } from './screens/Products.jsx';
@@ -163,8 +164,10 @@ function AdminApp() {
 
   const logout = () => { authLib.logout(); setAuth(false); };
 
+  // ToastProvider envuelve al router: la pila de confirmaciones sobrevive a los cambios de ruta.
   return (
-    <BrowserRouter basename={ADMIN_BASE}>
+    <ToastProvider>
+      <BrowserRouter basename={ADMIN_BASE}>
       <Routes>
         {/* Única vista pública */}
         <Route path="/login"
@@ -217,6 +220,7 @@ function AdminApp() {
           </Route>
         </Route>
       </Routes>
-    </BrowserRouter>
+      </BrowserRouter>
+    </ToastProvider>
   );
 }
