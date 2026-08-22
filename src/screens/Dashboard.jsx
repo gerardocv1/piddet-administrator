@@ -97,6 +97,7 @@ export function Dashboard() {
   const { has } = useFunctionalities();
   const canReservations = can('api-module-reservations') && has('functionality_reservations');
   const canShifts = canAny(['api-module-shifts', 'api-module-shifts-own']);
+  const canGym = can('api-module-gym') && has('functionality_gym');
 
   // Turnos abiertos relevantes: alimentan la acción rápida de abrir/cerrar turno. El backend
   // ya decide quién ve el global (admin del módulo o shift-global-admin).
@@ -189,8 +190,18 @@ export function Dashboard() {
     <div className={s.page}>
       {/* Acción rápida: registrar gasto desde el celular (asistente paso a paso).
           Visible también para el empleado con acceso solo a sus gastos. */}
-      {(canExpenses || canShifts) && (
+      {(canExpenses || canShifts || canGym) && (
         <div className={s.quickRow}>
+          {canGym && (
+            <button type="button" className={s.quickExpense} onClick={() => navigate('/gym/members')}>
+              <span className={s.quickIcon}><i className="fas fa-dumbbell" /></span>
+              <span className={s.quickText}>
+                <strong>Cobrar / renovar membresía</strong>
+                <span>Busca al miembro y renueva en el sitio</span>
+              </span>
+              <i className={`fas fa-chevron-right ${s.quickChevron}`} />
+            </button>
+          )}
           {canExpenses && (
             <button type="button" className={s.quickExpense} onClick={() => navigate('/expenses/quick')}>
               <span className={s.quickIcon}><i className="fas fa-receipt" /></span>

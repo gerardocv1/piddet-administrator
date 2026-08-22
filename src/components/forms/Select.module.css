@@ -60,6 +60,12 @@
   pointer-events: none;
 }
 
+/* Evita el zoom automático de Safari iOS al enfocar (mínimo 16px). Los `sm` son de filtros
+   compactos y no levantan teclado, así que conservan su tamaño. */
+@media (max-width: 860px) {
+  .wrap:not(.sm) .select { font-size: 16px; }
+}
+
 .hint {
   display: block;
   margin-top: 5px;

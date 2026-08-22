@@ -9,6 +9,10 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 10px;
+  /* Las acciones del header pueden ser varios botones: en pantallas angostas envuelven a una
+     segunda fila en vez de empujar el último botón fuera de la tarjeta. */
+  flex-wrap: wrap;
   padding: 1.1rem 1.5rem;
   border-bottom: 1px solid var(--border-color);
 }

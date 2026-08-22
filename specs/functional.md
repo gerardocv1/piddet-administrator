@@ -49,6 +49,10 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
 | Oferta | **Carta / Menús** | `/menus` | `api-module-menus` |
 | Oferta | **Reservas** (hospedaje) | `/reservations` | `api-module-reservations` + `functionality_reservations` |
 | Oferta | **Unidades rentables** | `/rentable-units` | `api-module-rentable-units` + `functionality_reservations` |
+| Oferta | **Planes de gimnasio** | `/gym/plans` | `api-module-gym-plans` + `functionality_gym` |
+| Oferta | **Miembros de gimnasio** | `/gym/members` | `api-module-gym` + `functionality_gym` |
+| Oferta | **Suscripciones de gimnasio** | `/gym/subscriptions` | `api-module-gym` + `functionality_gym` |
+| Oferta | **Medidas de gimnasio** (configuración) | `/gym/measurements` | `api-module-gym-plans` + `functionality_gym` |
 | Operación | **Facturas** | `/invoices` | `api-module-orders` · `api-module-orders-own` |
 | Operación | **Reporte de ventas** | `/sales-report` | `sales-report` · `sales-report-own` |
 | Operación | **Gastos** | `/expenses` | `api-module-expenses` · `api-module-expenses-own` |
@@ -169,6 +173,73 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
   cargos, abonos y checkout.
 - **Reglas:** requiere la funcionalidad `functionality_reservations` activa además del permiso.
   El pre-check-in del huésped ocurre fuera del panel, en la superficie pública del backend.
+
+### Gimnasio
+
+- **Descripción:** administración de gimnasio: suscripciones mensuales por miembro, con
+  seguimiento periódico de sus medidas físicas. **Diseñado para operarse desde el teléfono**: el
+  Inicio ofrece la acción rápida "Cobrar / renovar membresía", los listados se vuelven tarjetas
+  en móvil (con "Renovar" directo en cada miembro) y las tareas largas son asistentes paso a paso.
+- **Flujo principal:** `/gym/plans` administra los planes (nombre, precio, duración en días,
+  días de gracia tras el vencimiento, si el plan permite pausar la suscripción y el ítem del
+  catálogo de productos con el que se factura cada pago). `/gym/members` registra miembros: el
+  formulario pide nombre, celular y documento, y el backend resuelve a la persona como usuario
+  real de la plataforma —reutilizándola si ya existe por documento o celular— antes de crear su
+  ficha con un código de miembro autogenerado (`M00001`, `M00002`…). **El listado de miembros
+  muestra el estado de la membresía, no el activo/inactivo administrativo**: cada fila trae la
+  suscripción más reciente (badge Activa/En gracia/Vencida/Cancelada/Sin suscripción y su
+  vencimiento "Vence/Venció el …"), y la acción por fila es **Renovar** (membresía vigente) o
+  **Suscribir** (sin membresía al día); tocar la tarjeta abre la ficha. El **objetivo del miembro
+  es cerrado**: se elige de un catálogo (`GET /gym/goals`: bajar de peso, subir de peso, aumentar
+  masa muscular, tonificar…), no es texto libre — la clave estable de cada objetivo permitirá a
+  futuro asociarle recomendaciones. La ficha del miembro (`/gym/members/:memberId`) está ordenada
+  por frecuencia de uso, con tarjetas **plegables**: primero la **suscripción como resumen
+  compacto** (abierta por defecto; renovar en el sitio, el resumen abre el detalle), luego
+  **Medidas** (peso/IMC y la tabla de mediciones — fecha, cuántas medidas, quién las registró;
+  cada fila abre su detalle en un modal) y al final el **perfil** editable (sexo, talla,
+  objetivo del catálogo, notas de salud, estado), plegado por defecto. **"Editar datos"** (en la
+  cabecera de la ficha) corrige los datos personales de la persona —nombres, correo, tipo y
+  número de documento—, actualizando su usuario de plataforma y los snapshots del gimnasio; el
+  **celular no se edita** porque es la credencial con la que inicia sesión. El análisis visual
+  vive en la **vista de progreso** (`/gym/members/:memberId/progress`). El detalle de la suscripción
+  (`/gym/subscriptions/:subscriptionId`) es la vista transaccional: sus pagos (registrar con el
+  precio precargado, anular), renovar y cancelar; el nombre del miembro arriba navega a su
+  perfil. `/gym/subscriptions` es el listado operativo, filtrable por estado y por próximas a
+  vencer. Las medidas se toman con el **asistente paso a paso**
+  (`/gym/members/:memberId/checkin`): una medida por pantalla —solo las que la compañía activó en
+  `/gym/measurements`— con teclado numérico, el valor anterior como referencia y omisión con solo
+  dejar el campo vacío. Ni un plan ni un miembro se borran: se desactivan; una suscripción
+  cancelada, un pago anulado y un chequeo no se borran, quedan en el historial (un chequeo sí se
+  puede corregir, no tiene efecto contable).
+- **Suscripciones:** la verdad son las fechas (inicio, fin, fin de gracia); el estado
+  (`computed_status`: activa / en gracia / vencida / cancelada) se deriva de ellas. Renovar
+  **nunca** muta la suscripción vigente: crea una fila nueva encadenada, que empieza el día
+  siguiente al vencimiento de la anterior. Cancelar es irreversible y pide motivo.
+- **Pagos:** cada pago manual (efectivo, tarjeta…) genera su propia factura en el módulo de
+  Facturas (origen "Gimnasio", numeración propia), compartiendo la misma infraestructura de
+  facturación que el resto de la plataforma. Anular un pago cancela también su factura;
+  irreversible, pide motivo.
+- **Medidas físicas:** un chequeo agrupa varios valores tomados el mismo día. **Cada compañía
+  configura en `/gym/measurements` qué medidas pide** (peso, % de grasa, circunferencias…; sin
+  selección guardada se piden todas); el catálogo distingue las que admiten lado
+  izquierdo/derecho (bíceps, muslo, pantorrilla, antebrazo). La **vista de progreso**
+  (`/gym/members/:memberId/progress`) es interactiva: un **mapa corporal** con las siluetas
+  ilustradas del proyecto (`public/gym/*` — hombre o mujer según el sexo de la ficha; si falta,
+  se pregunta ahí mismo y se guarda) **de frente y de perfil**, con un punto tocable sobre cada
+  músculo de las medidas configuradas por la compañía (el punto muestra el nombre del músculo al
+  pasar o seleccionar, y el glúteo solo aparece de perfil); tocar un punto (pecho, cintura,
+  glúteo…) muestra sus
+  **KPIs** (valor actual con el cambio desde la medición anterior, cambio total con porcentaje y
+  número de mediciones; en medidas bilaterales, por lado), su **antes/después** animado y su
+  gráfica de evolución (área con degradado para una serie; leyenda solo cuando hay
+  izquierdo/derecho). Peso, % de grasa y masa muscular no viven en el cuerpo: se eligen como
+  chips. Al final, el **Resumen de medidas** lista todas las que tienen historia (valor actual +
+  cambio total en tinta neutra) y tocar una fila la selecciona. La ficha del miembro solo
+  conserva el peso actual, el IMC y la tabla de mediciones.
+- **Reglas:** requiere la funcionalidad `functionality_gym` activa además del permiso. Los
+  miembros son usuarios de la plataforma (mismo patrón "pasivo" de Reservas). Un job diario
+  (`gym:transition-subscriptions`, backend) transiciona automáticamente las suscripciones
+  vencidas: activa → en gracia → vencida.
 
 ### Reportes
 

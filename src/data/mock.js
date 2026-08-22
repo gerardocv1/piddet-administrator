@@ -81,6 +81,14 @@ export const mockFunctionalities = [
     description: 'Permite asignar a un producto un precio propio dentro de cada menú, distinto de su precio base.',
     is_active: true,
   },
+  {
+    id: 6,
+    name: 'functionality_gym',
+    label: 'Gimnasio',
+    icon: 'fas fa-dumbbell',
+    description: 'Administración de gimnasio: miembros, planes, suscripciones y medidas físicas.',
+    is_active: true,
+  },
 ];
 
 // Categorías de producto: scopeadas por compañía y por tipo de ítem (item_type_id). `position` ordena dentro del tipo.
@@ -404,7 +412,7 @@ export const mockMenuItems = [
 // el panel muestra Productos (y sus categorías), Menús y Usuarios; el resto queda oculto.
 const mockPermissions = {
   roles: ['Administrador'],
-  permissions: ['user-administrator', 'admin-general', 'role-list', 'role-create', 'role-update', 'role-delete', 'role-assign', 'permission-list', 'permission-update', 'api-module-menus', 'api-module-products', 'api-module-company', 'company-edit-functionalities', 'api-module-stores', 'table-list', 'table-create', 'table-update', 'api-module-orders', 'sales-report', 'order-cancel', 'order-sync-failure-admin', 'api-module-expenses', 'expenses-report', 'expense-annul', 'api-module-shifts', 'shift-global-admin', 'api-module-reservations', 'api-module-rentable-units', 'reservation-checkout', 'reservation-cancel', 'reservation-payment-annul'],
+  permissions: ['user-administrator', 'admin-general', 'role-list', 'role-create', 'role-update', 'role-delete', 'role-assign', 'permission-list', 'permission-update', 'api-module-menus', 'api-module-products', 'api-module-company', 'company-edit-functionalities', 'api-module-stores', 'table-list', 'table-create', 'table-update', 'api-module-orders', 'sales-report', 'order-cancel', 'order-sync-failure-admin', 'api-module-expenses', 'expenses-report', 'expense-annul', 'api-module-shifts', 'shift-global-admin', 'api-module-reservations', 'api-module-rentable-units', 'reservation-checkout', 'reservation-cancel', 'reservation-payment-annul', 'api-module-gym', 'api-module-gym-plans', 'gym-plans-create', 'gym-plans-edit', 'gym-members-create', 'gym-members-edit', 'gym-subscriptions-create', 'gym-subscriptions-cancel', 'gym-payments-create', 'gym-payments-annul', 'gym-checkins-create', 'gym-checkins-edit', 'gym-measurement-config'],
 };
 
 // Empresa (tenant) activa y empresas disponibles para el usuario (SaaS multi-tenant).
@@ -2862,6 +2870,7 @@ const mockServiceItems = [
   { id: 902, name: 'Hospedaje habitación', description: 'Noche de hospedaje en habitación', price: '180000.00', reservable: false },
   { id: 903, name: 'Cena romántica', description: 'Cena para dos con decoración', price: '120000.00', reservable: true },
   { id: 904, name: 'Decoración de aniversario', description: 'Globos, pétalos y velas', price: '80000.00', reservable: true },
+  { id: 905, name: 'Membresía gimnasio', description: 'Pago de suscripción mensual de gimnasio', price: '90000.00', reservable: false },
 ];
 
 const serviceItemName = (id) => mockServiceItems.find((it) => it.id === Number(id))?.name || null;
@@ -3476,6 +3485,537 @@ function resolveCheckinMock(path, query, { method = 'GET', body } = {}) {
   return null;
 }
 
+// ── Gimnasio: catálogo de planes de membresía (miembros/suscripciones llegan en fases
+// posteriores). Mutan en memoria durante la sesión, como el resto de los mocks.
+let mockGymPlans = [
+  { id: 1, name: 'Plan mensual', description: 'Acceso ilimitado al gimnasio, mes a mes', price: '90000.00', duration_days: 30, grace_period_days: 3, allows_pause: false, item_id: 905, status: 1, sort_order: 0 },
+  { id: 2, name: 'Plan trimestral', description: 'Tres meses con un mes de descuento', price: '240000.00', duration_days: 90, grace_period_days: 3, allows_pause: true, item_id: 905, status: 1, sort_order: 1 },
+  { id: 3, name: 'Plan anual', description: 'Doce meses al mejor precio', price: '840000.00', duration_days: 365, grace_period_days: 7, allows_pause: true, item_id: 905, status: 1, sort_order: 2 },
+];
+
+const gymPlanPresent = (p) => ({ ...p, item_name: p.item_id ? serviceItemName(p.item_id) : null });
+
+const todayIso = () => isoDay(0);
+const addDaysIso = (iso, days) => {
+  const [y, m, d] = iso.split('-').map(Number);
+  const dt = new Date(y, m - 1, d);
+  dt.setDate(dt.getDate() + days);
+  const p = (n) => String(n).padStart(2, '0');
+  return `${dt.getFullYear()}-${p(dt.getMonth() + 1)}-${p(dt.getDate())}`;
+};
+// `computed_status` espeja el que calcula el backend en vivo; en el demo es el mismo valor que
+// `status` (aquí no hay cron que lo materialice, así que ambos se fijan igual al crear/mutar).
+const gymSubPresent = (s) => ({ ...s, computed_status: s.status });
+
+// Miembros: personas ya resueltas como usuarios de la plataforma (user_id ficticio en el demo).
+// Catálogo cerrado de objetivos (espejo del seed de gym_goals): el miembro elige uno, no hay
+// texto libre. `goal` en el miembro es el snapshot del label.
+const mockGymGoals = [
+  { id: 1, key: 'lose_weight', label: 'Bajar de peso' },
+  { id: 2, key: 'gain_weight', label: 'Subir de peso' },
+  { id: 3, key: 'gain_muscle', label: 'Aumentar masa muscular' },
+  { id: 4, key: 'tone', label: 'Tonificar' },
+  { id: 5, key: 'improve_endurance', label: 'Mejorar resistencia' },
+  { id: 6, key: 'general_health', label: 'Salud general' },
+];
+
+let mockGymMembers = [
+  { id: 1, user_id: 5001, member_code: 'M00001', member_name: 'Laura Gómez', document_snapshot: '1017234567', sex: 'F', email: 'laura.gomez@example.com', phone_number: '3001234567', id_type_id: 1, height_cm: '165.0', goal_id: 4, goal: 'Tonificar', health_notes: '', status: 1, joined_at: '2026-05-02' },
+  { id: 2, user_id: 5002, member_code: 'M00002', member_name: 'Carlos Restrepo', document_snapshot: '1098765432', sex: 'M', email: 'carlos.restrepo@example.com', phone_number: '3007654321', id_type_id: 1, height_cm: '178.0', goal_id: 3, goal: 'Aumentar masa muscular', health_notes: 'Molestia leve en rodilla derecha', status: 1, joined_at: '2026-05-10' },
+  { id: 3, user_id: 5003, member_code: 'M00003', member_name: 'Daniela Ríos', document_snapshot: '1023456789', sex: 'F', email: null, phone_number: '3012223344', id_type_id: 1, height_cm: '160.0', goal_id: 1, goal: 'Bajar de peso', health_notes: '', status: 1, joined_at: '2026-06-01' },
+  { id: 4, user_id: 5004, member_code: 'M00004', member_name: 'Andrés Mejía', document_snapshot: '1076543210', sex: 'M', email: null, phone_number: '3019876543', id_type_id: 1, height_cm: '182.0', goal_id: null, goal: null, health_notes: '', status: 0, joined_at: '2026-04-15' },
+  { id: 5, user_id: 5005, member_code: 'M00005', member_name: 'Miguel Torres', document_snapshot: '1055443322', sex: null, email: null, phone_number: '3025556677', id_type_id: 1, height_cm: null, goal_id: 6, goal: 'Salud general', health_notes: '', status: 1, joined_at: '2026-08-18' },
+];
+
+// El listado de miembros lleva la suscripción más reciente de cada uno (espejo del backend):
+// en el mostrador el estado que importa es el de la membresía, no el activo/inactivo del miembro.
+const gymMemberPersonal = (m) => {
+  const parts = (m.member_name || '').trim().split(/\s+/);
+  return {
+    first_name: parts[0] || '',
+    last_name: parts.slice(1).join(' '),
+    email: m.email || null,
+    phone_code: '57',
+    phone_number: m.phone_number || null,
+    id_type_id: m.id_type_id || null,
+    id_number: m.document_snapshot || null,
+  };
+};
+
+const gymMemberListPresent = (m) => {
+  const latest = mockGymSubscriptions
+    .filter((sub) => sub.gym_member_id === m.id)
+    .sort((a, b) => (a.start_date < b.start_date ? 1 : -1))[0];
+  return {
+    ...m,
+    subscription: latest ? {
+      id: latest.id,
+      plan_name: latest.plan_name,
+      end_date: latest.end_date,
+      computed_status: latest.status,
+    } : null,
+  };
+};
+
+// Suscripciones: una por miembro salvo Daniela (cadena de 2, para ver el historial). `status`
+// viene ya calculado con las fechas de abajo (equivalente al `computed_status` que expone el
+// backend); en el demo no se recalcula en vivo.
+let mockGymSubscriptions = [
+  {
+    id: 'gsub-1', gym_member_id: 1, member_name: 'Laura Gómez',
+    plan_id: 1, plan_name: 'Plan mensual', price: '90000.00', duration_days: 30, grace_period_days: 3,
+    start_date: isoDay(10), end_date: isoDay(-20), grace_ends_at: isoDay(-23),
+    status: 1, is_renewal: false, previous_subscription_id: null, cancelled_at: null, cancellation_reason: null,
+    payments: [
+      { id: 'gpay-1', value: '90000.00', payment_method: 'nequi', payment_method_name: 'Nequi', payment_date: isoDay(10), notes: null, order_id: 'ord-gym-1', status: 1, created_by_name: 'Gerardo', annulled_at: null, annulment_reason: null },
+    ],
+  },
+  {
+    id: 'gsub-2', gym_member_id: 2, member_name: 'Carlos Restrepo',
+    plan_id: 1, plan_name: 'Plan mensual', price: '90000.00', duration_days: 30, grace_period_days: 3,
+    start_date: isoDay(31), end_date: isoDay(1), grace_ends_at: isoDay(-2),
+    status: 2, is_renewal: false, previous_subscription_id: null, cancelled_at: null, cancellation_reason: null,
+    payments: [
+      { id: 'gpay-2', value: '90000.00', payment_method: 'cash', payment_method_name: 'Efectivo', payment_date: isoDay(31), notes: null, order_id: 'ord-gym-2', status: 1, created_by_name: 'Gerardo', annulled_at: null, annulment_reason: null },
+    ],
+  },
+  {
+    id: 'gsub-3a', gym_member_id: 3, member_name: 'Daniela Ríos',
+    plan_id: 1, plan_name: 'Plan mensual', price: '90000.00', duration_days: 30, grace_period_days: 3,
+    start_date: isoDay(70), end_date: isoDay(40), grace_ends_at: isoDay(37),
+    status: 3, is_renewal: false, previous_subscription_id: null, cancelled_at: null, cancellation_reason: null,
+    payments: [
+      { id: 'gpay-3a', value: '90000.00', payment_method: 'datafono', payment_method_name: 'Datafono', payment_date: isoDay(70), notes: null, order_id: 'ord-gym-3a', status: 1, created_by_name: 'Gerardo', annulled_at: null, annulment_reason: null },
+    ],
+  },
+  {
+    id: 'gsub-3b', gym_member_id: 3, member_name: 'Daniela Ríos',
+    plan_id: 1, plan_name: 'Plan mensual', price: '90000.00', duration_days: 30, grace_period_days: 3,
+    start_date: isoDay(39), end_date: isoDay(9), grace_ends_at: isoDay(6),
+    status: 3, is_renewal: true, previous_subscription_id: 'gsub-3a', cancelled_at: null, cancellation_reason: null,
+    payments: [
+      { id: 'gpay-3b', value: '90000.00', payment_method: 'datafono', payment_method_name: 'Datafono', payment_date: isoDay(39), notes: null, order_id: 'ord-gym-3b', status: 1, created_by_name: 'Gerardo', annulled_at: null, annulment_reason: null },
+    ],
+  },
+  {
+    id: 'gsub-4', gym_member_id: 4, member_name: 'Andrés Mejía',
+    plan_id: 2, plan_name: 'Plan trimestral', price: '240000.00', duration_days: 90, grace_period_days: 3,
+    start_date: isoDay(95), end_date: isoDay(5), grace_ends_at: isoDay(2),
+    status: 4, is_renewal: false, previous_subscription_id: null,
+    cancelled_at: isoDay(50), cancellation_reason: 'El miembro se mudó de ciudad',
+    payments: [
+      { id: 'gpay-4', value: '240000.00', payment_method: 'bancolombia', payment_method_name: 'Ahorro a la mano Bancolombia', payment_date: isoDay(95), notes: null, order_id: 'ord-gym-4', status: 0, created_by_name: 'Gerardo', annulled_at: isoDay(50), annulment_reason: 'Cancelación de la suscripción' },
+    ],
+  },
+];
+
+// Catálogo de medidas físicas (espejo del seed del sistema del backend). `sided` = admite
+// izquierdo/derecho.
+const mockGymMeasurementTypes = [
+  { id: 1, key: 'weight', label: 'Peso', unit: 'kg', sided: false, sort_order: 0 },
+  { id: 2, key: 'body_fat_pct', label: '% de grasa corporal', unit: '%', sided: false, sort_order: 1 },
+  { id: 3, key: 'muscle_mass', label: 'Masa muscular', unit: 'kg', sided: false, sort_order: 2 },
+  { id: 4, key: 'neck', label: 'Cuello', unit: 'cm', sided: false, sort_order: 3 },
+  { id: 5, key: 'shoulders', label: 'Hombros', unit: 'cm', sided: false, sort_order: 4 },
+  { id: 6, key: 'chest', label: 'Pecho', unit: 'cm', sided: false, sort_order: 5 },
+  { id: 7, key: 'abdomen', label: 'Abdomen', unit: 'cm', sided: false, sort_order: 6 },
+  { id: 8, key: 'waist', label: 'Cintura', unit: 'cm', sided: false, sort_order: 7 },
+  { id: 9, key: 'hip', label: 'Cadera', unit: 'cm', sided: false, sort_order: 8 },
+  { id: 10, key: 'glute', label: 'Glúteo', unit: 'cm', sided: false, sort_order: 9 },
+  { id: 11, key: 'thigh', label: 'Muslo', unit: 'cm', sided: true, sort_order: 10 },
+  { id: 12, key: 'calf', label: 'Pantorrilla', unit: 'cm', sided: true, sort_order: 11 },
+  { id: 13, key: 'bicep', label: 'Bíceps', unit: 'cm', sided: true, sort_order: 12 },
+  { id: 14, key: 'forearm', label: 'Antebrazo', unit: 'cm', sided: true, sort_order: 13 },
+];
+
+// Chequeos demo: 6 meses de historial para Laura Gómez (member 1), mostrando progreso real
+// (peso y % de grasa bajando, cintura reduciéndose). Los demás miembros arrancan sin mediciones,
+// para ver también el estado vacío.
+let mockGymCheckins = [0, 1, 2, 3, 4, 5].map((i) => ({
+  id: `gchk-1-${i}`,
+  gym_member_id: 1,
+  member_user_id: 5001,
+  measured_at: isoDay(168 - i * 28),
+  measured_by_name: 'Gerardo',
+  notes: i === 0 ? 'Medición inicial' : '',
+  values: [
+    { measurement_type_id: 1, side: '', value: (68 - i * 0.9).toFixed(1) },
+    { measurement_type_id: 2, side: '', value: (24 - i * 0.8).toFixed(1) },
+    { measurement_type_id: 8, side: '', value: (78 - i * 1.1).toFixed(1) },
+  ],
+}));
+
+// Selección de medidas de la compañía (espejo de gym_company_measurement_types):
+// null = sin selección guardada → se piden todas; array = solo esas.
+let mockGymEnabledTypeIds = [1, 2, 5, 6, 8];
+
+const gymCheckinPresent = (c) => ({
+  ...c,
+  values: c.values.map((v) => {
+    const type = mockGymMeasurementTypes.find((t) => t.id === v.measurement_type_id);
+    return {
+      measurement_type_id: v.measurement_type_id,
+      key: type?.key ?? null,
+      label: type?.label ?? null,
+      unit: type?.unit ?? null,
+      side: v.side || null,
+      value: v.value,
+    };
+  }),
+});
+
+function resolveGymMock(path, query, { method = 'GET', body } = {}) {
+  const scoped = path.match(/^\/companies\/[^/]+\/gym\/(.+)$/);
+  if (!scoped) return undefined;
+  const sub = scoped[1];
+
+  if (sub === 'plans') {
+    if (method === 'POST') {
+      const plan = {
+        id: (mockGymPlans.reduce((max, p) => Math.max(max, p.id), 0) || 0) + 1,
+        name: body.name,
+        description: body.description || null,
+        price: body.price,
+        duration_days: Number(body.duration_days),
+        grace_period_days: Number(body.grace_period_days ?? 3),
+        allows_pause: !!body.allows_pause,
+        item_id: body.item_id ? Number(body.item_id) : null,
+        status: 1,
+        sort_order: Number(body.sort_order ?? mockGymPlans.length),
+      };
+      mockGymPlans.push(plan);
+      return gymPlanPresent(plan);
+    }
+
+    const status = query.get('status');
+    const search = (query.get('_search') || '').toLowerCase();
+    const rows = mockGymPlans
+      .filter((p) => (status === '' || status == null ? true : String(p.status) === status))
+      .filter((p) => !search || p.name.toLowerCase().includes(search))
+      .sort((a, b) => a.sort_order - b.sort_order || a.id - b.id)
+      .map(gymPlanPresent);
+    return mockPaginate(rows, query);
+  }
+
+  const planMatch = sub.match(/^plans\/(\d+)(\/status)?$/);
+  if (planMatch) {
+    const plan = mockGymPlans.find((p) => p.id === Number(planMatch[1]));
+    if (!plan) return null;
+    const isStatus = !!planMatch[2];
+
+    if (method === 'PUT' && isStatus) {
+      plan.status = Number(body.status);
+      return gymPlanPresent(plan);
+    }
+    if (method === 'PUT') {
+      ['name', 'description', 'price', 'duration_days', 'grace_period_days', 'allows_pause', 'item_id', 'sort_order'].forEach((key) => {
+        if (key in body) plan[key] = key === 'duration_days' || key === 'grace_period_days' || key === 'sort_order'
+          ? Number(body[key])
+          : (key === 'item_id' ? (body[key] ? Number(body[key]) : null) : body[key]);
+      });
+      return gymPlanPresent(plan);
+    }
+    return gymPlanPresent(plan);
+  }
+
+  if (sub === 'members') {
+    if (method === 'POST') {
+      const idNumber = (body.id_number || '').trim();
+      const dup = mockGymMembers.find((m) => (idNumber && m.document_snapshot === idNumber));
+      if (dup) throw new Error('Esta persona ya es miembro del gimnasio');
+      const nextNum = mockGymMembers.reduce((max, m) => Math.max(max, Number(m.member_code.slice(1))), 0) + 1;
+      const member = {
+        id: (mockGymMembers.reduce((max, m) => Math.max(max, m.id), 0) || 0) + 1,
+        user_id: 5000 + (mockGymMembers.reduce((max, m) => Math.max(max, m.user_id - 5000), 0) || 0) + 1,
+        member_code: 'M' + String(nextNum).padStart(5, '0'),
+        member_name: `${body.first_name} ${body.last_name}`.trim(),
+        document_snapshot: idNumber || null,
+        sex: body.sex || null,
+        height_cm: body.height_cm || null,
+        goal_id: body.goal_id ? Number(body.goal_id) : null,
+        goal: mockGymGoals.find((gl) => gl.id === Number(body.goal_id))?.label || null,
+        health_notes: body.health_notes || null,
+        status: 1,
+        joined_at: new Date().toISOString().slice(0, 10),
+      };
+      mockGymMembers.push(member);
+      return member;
+    }
+
+    const status = query.get('status');
+    const search = (query.get('_search') || '').toLowerCase();
+    const rows = mockGymMembers
+      .filter((m) => (status === '' || status == null ? true : String(m.status) === status))
+      .filter((m) => !search
+        || m.member_name.toLowerCase().includes(search)
+        || m.member_code.toLowerCase().includes(search)
+        || (m.document_snapshot || '').includes(search))
+      .sort((a, b) => a.member_name.localeCompare(b.member_name))
+      .map(gymMemberListPresent);
+    return mockPaginate(rows, query);
+  }
+
+  const memberPersonalMatch = sub.match(/^members\/(\d+)\/personal$/);
+  if (memberPersonalMatch && method === 'PUT') {
+    const member = mockGymMembers.find((m) => m.id === Number(memberPersonalMatch[1]));
+    if (!member) return null;
+    const idNumber = (body.id_number || '').trim();
+    if (idNumber && mockGymMembers.some((o) => o.id !== member.id && o.document_snapshot === idNumber)) {
+      throw new Error('El documento ya pertenece a otra persona');
+    }
+    const personal = gymMemberPersonal(member);
+    const first = (body.first_name ?? personal.first_name).trim();
+    const last = (body.last_name ?? personal.last_name).trim();
+    member.member_name = `${first} ${last}`.trim();
+    if ('email' in body) member.email = (body.email || '').trim() || null;
+    if (idNumber) {
+      member.document_snapshot = idNumber;
+      if (body.id_type_id) member.id_type_id = Number(body.id_type_id);
+    }
+    mockGymSubscriptions.forEach((sub2) => {
+      if (sub2.gym_member_id === member.id) sub2.member_name = member.member_name;
+    });
+    return { ...member, personal: gymMemberPersonal(member) };
+  }
+
+  const memberMatch = sub.match(/^members\/(\d+)$/);
+  if (memberMatch) {
+    const member = mockGymMembers.find((m) => m.id === Number(memberMatch[1]));
+    if (!member) return null;
+    if (method === 'PUT') {
+      ['sex', 'height_cm', 'health_notes', 'status'].forEach((key) => {
+        if (key in body) member[key] = key === 'status' ? Number(body[key]) : body[key];
+      });
+      if ('goal_id' in body) {
+        const goal = mockGymGoals.find((gl) => gl.id === Number(body.goal_id));
+        member.goal_id = goal ? goal.id : null;
+        member.goal = goal ? goal.label : null;
+      }
+    }
+    return { ...member, personal: gymMemberPersonal(member) };
+  }
+
+  const memberSubsMatch = sub.match(/^members\/(\d+)\/subscriptions$/);
+  if (memberSubsMatch) {
+    const memberId = Number(memberSubsMatch[1]);
+    const member = mockGymMembers.find((m) => m.id === memberId);
+    if (!member) return null;
+
+    if (method === 'POST') {
+      const plan = mockGymPlans.find((p) => p.id === Number(body.plan_id));
+      if (!plan || plan.status !== 1) throw new Error('El plan no existe o no está activo');
+
+      const forMember = mockGymSubscriptions.filter((s) => s.gym_member_id === memberId)
+        .sort((a, b) => (a.start_date < b.start_date ? 1 : -1));
+      const previous = forMember[0] || null;
+      const isRenewal = !!previous && [1, 2].includes(previous.status);
+
+      const startDate = isRenewal ? addDaysIso(previous.end_date, 1) : todayIso();
+      const endDate = addDaysIso(startDate, plan.duration_days - 1);
+      const graceEndsAt = addDaysIso(endDate, plan.grace_period_days);
+
+      const subscription = {
+        id: 'gsub-' + ((mockGymSubscriptions.length || 0) + 1) + '-' + Date.now().toString(36),
+        gym_member_id: memberId,
+        member_name: member.member_name,
+        plan_id: plan.id,
+        plan_name: plan.name,
+        price: plan.price,
+        duration_days: plan.duration_days,
+        grace_period_days: plan.grace_period_days,
+        start_date: startDate,
+        end_date: endDate,
+        grace_ends_at: graceEndsAt,
+        status: 1,
+        is_renewal: isRenewal,
+        previous_subscription_id: isRenewal ? previous.id : null,
+        cancelled_at: null,
+        cancellation_reason: null,
+        payments: [],
+      };
+      if (body.payment && body.payment.value) {
+        subscription.payments.push({
+          id: 'gpay-' + Date.now().toString(36),
+          value: body.payment.value,
+          payment_method: body.payment.payment_method,
+          payment_method_name: paymentMethodName(body.payment.payment_method),
+          payment_date: body.payment.payment_date || todayIso(),
+          notes: body.payment.notes || null,
+          order_id: 'ord-gym-' + Date.now().toString(36),
+          status: 1,
+          created_by_name: 'Gerardo',
+          annulled_at: null,
+          annulment_reason: null,
+        });
+      }
+      mockGymSubscriptions.push(subscription);
+      return gymSubPresent(subscription);
+    }
+
+    return mockGymSubscriptions
+      .filter((s) => s.gym_member_id === memberId)
+      .sort((a, b) => (a.start_date < b.start_date ? 1 : -1))
+      .map(gymSubPresent);
+  }
+
+  if (sub === 'goals') {
+    return mockGymGoals;
+  }
+
+  if (sub === 'measurement-types') {
+    return mockGymEnabledTypeIds == null
+      ? mockGymMeasurementTypes
+      : mockGymMeasurementTypes.filter((t) => mockGymEnabledTypeIds.includes(t.id));
+  }
+
+  if (sub === 'measurement-settings') {
+    if (method === 'PUT') {
+      const ids = (body.type_ids || []).map(Number);
+      if (!ids.length) throw new Error('Selecciona al menos una medida');
+      mockGymEnabledTypeIds = ids.length === mockGymMeasurementTypes.length ? null : ids;
+    }
+    return mockGymMeasurementTypes.map((t) => ({
+      ...t,
+      enabled: mockGymEnabledTypeIds == null || mockGymEnabledTypeIds.includes(t.id),
+    }));
+  }
+
+  const memberCheckinsMatch = sub.match(/^members\/(\d+)\/checkins$/);
+  if (memberCheckinsMatch) {
+    const memberId = Number(memberCheckinsMatch[1]);
+
+    if (method === 'POST') {
+      const member = mockGymMembers.find((m) => m.id === memberId);
+      if (!member) return null;
+      const checkin = {
+        id: 'gchk-' + memberId + '-' + Date.now().toString(36),
+        gym_member_id: memberId,
+        member_user_id: member.user_id,
+        measured_at: body.measured_at || todayIso(),
+        measured_by_name: 'Gerardo',
+        notes: body.notes || null,
+        values: (body.values || []).map((v) => ({ measurement_type_id: v.measurement_type_id, side: v.side || '', value: v.value })),
+      };
+      mockGymCheckins.push(checkin);
+      return gymCheckinPresent(checkin);
+    }
+
+    const rows = mockGymCheckins
+      .filter((c) => c.gym_member_id === memberId)
+      .sort((a, b) => (a.measured_at < b.measured_at ? 1 : -1))
+      .map(gymCheckinPresent);
+    return mockPaginate(rows, query);
+  }
+
+  const memberProgressMatch = sub.match(/^members\/(\d+)\/progress$/);
+  if (memberProgressMatch) {
+    const memberId = Number(memberProgressMatch[1]);
+    const typeIds = query.getAll('types[]').map(Number).filter(Boolean);
+    const from = query.get('from');
+    const to = query.get('to');
+
+    const series = {};
+    mockGymCheckins
+      .filter((c) => c.gym_member_id === memberId)
+      .filter((c) => !from || c.measured_at >= from)
+      .filter((c) => !to || c.measured_at <= to)
+      .sort((a, b) => (a.measured_at < b.measured_at ? -1 : 1))
+      .forEach((c) => {
+        c.values.forEach((v) => {
+          if (typeIds.length && !typeIds.includes(v.measurement_type_id)) return;
+          const type = mockGymMeasurementTypes.find((t) => t.id === v.measurement_type_id);
+          if (!type) return;
+          if (!series[type.key]) series[type.key] = { unit: type.unit, points: [] };
+          series[type.key].points.push({ date: c.measured_at, value: v.value, side: v.side || null });
+        });
+      });
+    return series;
+  }
+
+  const checkinMatch = sub.match(/^checkins\/([\w-]+)$/);
+  if (checkinMatch) {
+    const checkin = mockGymCheckins.find((c) => c.id === checkinMatch[1]);
+    if (!checkin) return null;
+    if (method === 'PUT') {
+      if ('measured_at' in body) checkin.measured_at = body.measured_at;
+      if ('notes' in body) checkin.notes = body.notes;
+      if (body.values) {
+        checkin.values = body.values.map((v) => ({ measurement_type_id: v.measurement_type_id, side: v.side || '', value: v.value }));
+      }
+    }
+    return gymCheckinPresent(checkin);
+  }
+
+  if (sub === 'subscriptions') {
+    const status = query.get('status');
+    const expiringWithin = query.get('expiring_within');
+    let rows = mockGymSubscriptions.slice();
+    if (status) rows = rows.filter((s) => String(s.status) === status);
+    if (expiringWithin) {
+      const limit = addDaysIso(todayIso(), Number(expiringWithin));
+      rows = rows.filter((s) => [1, 2].includes(s.status) && s.end_date >= todayIso() && s.end_date <= limit);
+    }
+    rows = rows.sort((a, b) => (a.end_date < b.end_date ? -1 : 1)).map((s) => ({
+      id: s.id, gym_member_id: s.gym_member_id, member_name: s.member_name,
+      plan_name: s.plan_name, price: s.price, start_date: s.start_date,
+      end_date: s.end_date, grace_ends_at: s.grace_ends_at, status: s.status,
+    }));
+    return mockPaginate(rows, query);
+  }
+
+  const subCancelMatch = sub.match(/^subscriptions\/([\w-]+)\/cancel$/);
+  if (subCancelMatch) {
+    const subscription = mockGymSubscriptions.find((s) => s.id === subCancelMatch[1]);
+    if (!subscription) return null;
+    subscription.status = 4;
+    subscription.cancelled_at = new Date().toISOString();
+    subscription.cancellation_reason = body.reason;
+    return gymSubPresent(subscription);
+  }
+
+  const subPaymentsMatch = sub.match(/^subscriptions\/([\w-]+)\/payments$/);
+  if (subPaymentsMatch) {
+    const subscription = mockGymSubscriptions.find((s) => s.id === subPaymentsMatch[1]);
+    if (!subscription) return null;
+    subscription.payments.push({
+      id: 'gpay-' + Date.now().toString(36),
+      value: body.value,
+      payment_method: body.payment_method,
+      payment_method_name: paymentMethodName(body.payment_method),
+      payment_date: body.payment_date || todayIso(),
+      notes: body.notes || null,
+      order_id: 'ord-gym-' + Date.now().toString(36),
+      status: 1,
+      created_by_name: 'Gerardo',
+      annulled_at: null,
+      annulment_reason: null,
+    });
+    return gymSubPresent(subscription);
+  }
+
+  const subMatch = sub.match(/^subscriptions\/([\w-]+)$/);
+  if (subMatch) {
+    const subscription = mockGymSubscriptions.find((s) => s.id === subMatch[1]);
+    return subscription ? gymSubPresent(subscription) : null;
+  }
+
+  const paymentAnnulMatch = sub.match(/^payments\/([\w-]+)\/annul$/);
+  if (paymentAnnulMatch) {
+    for (const subscription of mockGymSubscriptions) {
+      const payment = (subscription.payments || []).find((p) => p.id === paymentAnnulMatch[1]);
+      if (payment) {
+        payment.status = 0;
+        payment.annulled_at = new Date().toISOString();
+        payment.annulment_reason = body.reason;
+        return gymSubPresent(subscription);
+      }
+    }
+    return null;
+  }
+
+  return null;
+}
+
 export function resolveMock(rawPath, opts = {}) {
   const [path, qs = ''] = rawPath.split('?');
   const query = new URLSearchParams(qs);
@@ -3564,6 +4104,10 @@ export function resolveMock(rawPath, opts = {}) {
   // Módulo de reservas de hospedaje (company-scoped: /companies/{company}/rentable-units|rentable-unit-types…)
   const reservations = resolveReservationsMock(path, query, opts);
   if (reservations !== undefined) return reservations;
+
+  // Módulo de gimnasio (company-scoped: /companies/{company}/gym/plans…)
+  const gym = resolveGymMock(path, query, opts);
+  if (gym !== undefined) return gym;
 
   // Administración de accesos: catálogo de permisos y CRUD de roles
   // (/companies/{company}/permissions…). No colisiona con /me/permissions, resuelto arriba.

@@ -1,0 +1,139 @@
+/* Vista de progreso físico: figura corporal tocable + antes/después de la medida elegida. */
+
+.layout {
+  display: grid;
+  /* Dos vistas (frente y perfil) lado a lado en la columna de la figura. */
+  grid-template-columns: minmax(280px, 380px) 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.figureCol { display: flex; flex-direction: column; gap: 8px; }
+.figureHint {
+  margin: 0;
+  text-align: center;
+  font-size: var(--text-xs);
+  color: var(--gray-400);
+}
+
+.panelCol { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+
+/* Chips de las medidas que no viven en el cuerpo (peso, % de grasa, masa muscular). */
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  min-height: 36px;
+  padding: 6px 14px;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  background: var(--surface-card);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--gray-700);
+  cursor: pointer;
+}
+.chip:active { opacity: 0.7; }
+.chipActive {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.measureTitle {
+  margin: 0;
+  font-size: var(--text-md);
+  font-weight: 700;
+  color: var(--gray-900);
+}
+.measureUnit { font-weight: 600; color: var(--gray-500); }
+
+/* Antes/después: dos barras que crecen al montar (la animación arranca de ancho 0). */
+.compare { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.compareSide {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--gray-500);
+}
+.compareRow {
+  display: grid;
+  grid-template-columns: 58px 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+.compareLabel { font-size: var(--text-sm); color: var(--gray-500); }
+.barTrack {
+  height: 12px;
+  border-radius: 999px;
+  background: var(--gray-100);
+  overflow: hidden;
+}
+.bar {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--gray-400);
+  animation: gymBarGrow 0.7s ease-out;
+}
+.barAfter { background: var(--color-primary); }
+@keyframes gymBarGrow { from { width: 0; } }
+
+.compareValue { font-weight: 700; color: var(--gray-900); white-space: nowrap; }
+.compareDate { font-size: var(--text-xs); color: var(--gray-400); white-space: nowrap; }
+
+/* Resumen de medidas: filas tappables que sincronizan con la figura. El delta va en tinta de
+   texto (la dirección de un cambio corporal no es buena ni mala por sí sola). */
+.summaryList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.summaryList li + li { border-top: 1px solid var(--border-color); }
+.summaryRow {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 46px;
+  padding: 8px 10px;
+  border: none;
+  border-left: 3px solid transparent;
+  background: transparent;
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  cursor: pointer;
+  text-align: left;
+}
+.summaryRow:active { opacity: 0.7; }
+.summaryRowActive { border-left-color: var(--color-primary); background: var(--gray-50); }
+.summaryLabel { color: var(--gray-700); font-weight: 600; min-width: 0; }
+.summaryRowActive .summaryLabel { color: var(--gray-900); }
+.summaryValue { font-weight: 700; color: var(--gray-900); white-space: nowrap; }
+.summaryDelta {
+  font-size: var(--text-sm);
+  color: var(--gray-500);
+  white-space: nowrap;
+  min-width: 76px;
+  text-align: right;
+}
+
+/* Elección de sexo cuando la ficha no lo tiene. */
+.sexPrompt { display: flex; flex-direction: column; gap: 12px; align-items: flex-start; }
+.sexPromptText { margin: 0; color: var(--gray-600); }
+.sexPromptActions { display: flex; gap: 10px; }
+
+@media (max-width: 860px) {
+  .layout { grid-template-columns: 1fr; gap: 16px; }
+  /* En teléfono las dos vistas van centradas a lo ancho. */
+  .figureCol { margin: 0 auto; }
+  .compareRow { grid-template-columns: 52px 1fr auto; }
+  .compareDate { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bar { animation: none; }
+}
