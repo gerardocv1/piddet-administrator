@@ -27,6 +27,7 @@ export { FilterBar } from './data/FilterBar.jsx';
 export { StatStrip } from './data/StatStrip.jsx';
 export { SalesByTypeChart } from './data/SalesByTypeChart.jsx';
 export { SalesComparisonChart } from './data/SalesComparisonChart.jsx';
+export { BodyMeasuresChart } from './data/BodyMeasuresChart.jsx';
 export { Pagination } from './data/Pagination.jsx';
 export { SortableList } from './data/SortableList.jsx';
 // feedback

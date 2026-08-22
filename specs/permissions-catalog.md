@@ -45,6 +45,8 @@ filtro por usuario.
 | `gym-subscriptions-cancel` | (acción) | Cancelar una suscripción vigente (irreversible, motivo obligatorio). |
 | `gym-payments-create` | (acción) | Registrar un pago sobre una suscripción existente; genera su factura en el módulo de Facturas (origen "Gimnasio"). |
 | `gym-payments-annul` | (acción) | Anular un pago de suscripción; cancela su factura (irreversible, motivo obligatorio). |
+| `gym-checkins-create` | (acción) | Registrar un chequeo de medidas físicas de un miembro (peso, % de grasa, circunferencias…), desde su ficha. |
+| `gym-checkins-edit` | (acción) | Corregir fecha, notas o valores de un chequeo ya registrado (sin efecto contable, no hace falta anularlo). |
 
 ## Operación
 

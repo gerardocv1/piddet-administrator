@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   Card, DataTable, Badge, Button, Spinner, Alert, Input, Textarea, Switch, Select, MoneyInput,
-  DatePicker, Modal, ConfirmDialog, PageHeader, useToast,
+  DatePicker, Modal, ConfirmDialog, PageHeader, StatStrip, BodyMeasuresChart, useToast,
 } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
@@ -12,6 +12,8 @@ import { useSetPageTitle } from '../lib/pageTitle.jsx';
 import s from './screens.module.css';
 
 const EMPTY_SUBS = [];
+const EMPTY_TYPES = [];
+const DEFAULT_CHART_KEYS = ['weight'];
 
 // Ficha de un miembro del gimnasio: datos propios del gimnasio (talla, objetivo, notas, estado) y
 // su suscripción vigente (plan, vencimiento, pagos). Renovar crea una suscripción nueva encadenada
@@ -177,6 +179,84 @@ export function GymMemberDetail() {
     }
   };
 
+  // ── Progreso de medidas físicas ───────────────────────────────────────────
+  const { data: measurementTypes } = useResource(api.gymMeasurementTypes, EMPTY_TYPES, []);
+  const typeByKey = React.useMemo(() => Object.fromEntries((measurementTypes || []).map((t) => [t.key, t])), [measurementTypes]);
+  const [chartKeys, setChartKeys] = React.useState(DEFAULT_CHART_KEYS);
+  const toggleChartKey = (key) => setChartKeys((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
+
+  const chartTypeIds = React.useMemo(
+    () => chartKeys.map((k) => typeByKey[k]?.id).filter(Boolean),
+    [chartKeys, typeByKey],
+  );
+  const progressFetcher = React.useCallback(
+    () => api.gymMemberProgress(memberId, { types: chartTypeIds }),
+    [memberId, chartTypeIds],
+  );
+  const { data: progress, loading: progressLoading, reload: reloadProgress } = useResource(progressFetcher, {}, [memberId, chartTypeIds.join(',')]);
+
+  const checkinsFetcher = React.useCallback(() => api.gymMemberCheckins(memberId, { perPage: 10 }), [memberId]);
+  const { data: checkinsPage, reload: reloadCheckins } = useResource(checkinsFetcher, { items: [] }, [memberId]);
+
+  const weightPoints = progress.weight?.points || [];
+  const latestWeight = weightPoints[weightPoints.length - 1];
+  const prevWeight = weightPoints.length > 1 ? weightPoints[weightPoints.length - 2] : null;
+  const heightM = data?.height_cm ? Number(data.height_cm) / 100 : null;
+  const bmi = latestWeight && heightM ? Number(latestWeight.value) / (heightM * heightM) : null;
+  const progressStats = [];
+  if (latestWeight) {
+    const delta = prevWeight ? Number(latestWeight.value) - Number(prevWeight.value) : 0;
+    progressStats.push({
+      label: 'Peso actual', value: `${latestWeight.value} kg`,
+      delta: prevWeight ? `${delta >= 0 ? '+' : ''}${delta.toFixed(1)} kg` : undefined,
+      up: delta >= 0,
+    });
+  }
+  if (bmi) progressStats.push({ label: 'IMC', value: bmi.toFixed(1) });
+
+  const emptyCheckinForm = { measured_at: '', notes: '', values: {} };
+  const [checkinOpen, setCheckinOpen] = React.useState(false);
+  const [checkinForm, setCheckinForm] = React.useState(emptyCheckinForm);
+  const [checkinBusy, setCheckinBusy] = React.useState(false);
+  const [checkinError, setCheckinError] = React.useState('');
+
+  const openCheckin = () => { setCheckinForm(emptyCheckinForm); setCheckinError(''); setCheckinOpen(true); };
+  const setCheckinValue = (field, v) => setCheckinForm((f) => ({ ...f, values: { ...f.values, [field]: v } }));
+
+  const submitCheckin = async () => {
+    if (checkinBusy) return;
+    const values = [];
+    (measurementTypes || []).forEach((t) => {
+      if (t.sided) {
+        if (checkinForm.values[`${t.id}_L`]) values.push({ measurement_type_id: t.id, side: 'L', value: checkinForm.values[`${t.id}_L`] });
+        if (checkinForm.values[`${t.id}_R`]) values.push({ measurement_type_id: t.id, side: 'R', value: checkinForm.values[`${t.id}_R`] });
+      } else if (checkinForm.values[t.id]) {
+        values.push({ measurement_type_id: t.id, value: checkinForm.values[t.id] });
+      }
+    });
+    if (!values.length) {
+      setCheckinError('Registra al menos una medida.');
+      return;
+    }
+    setCheckinBusy(true);
+    setCheckinError('');
+    try {
+      await api.createGymCheckin(memberId, {
+        measured_at: checkinForm.measured_at || undefined,
+        notes: checkinForm.notes.trim() || undefined,
+        values,
+      });
+      toast({ tone: 'success', title: 'Medición registrada' });
+      setCheckinOpen(false);
+      reloadCheckins();
+      reloadProgress();
+    } catch (e) {
+      setCheckinError(e?.message || 'No se pudo registrar la medición.');
+    } finally {
+      setCheckinBusy(false);
+    }
+  };
+
   if (loading) return <Spinner center label="Cargando miembro…" />;
   if (error || !data) {
     return (
@@ -327,6 +407,36 @@ export function GymMemberDetail() {
         </Card>
       )}
 
+      <Card>
+        <Card.Header title="Progreso"
+          action={<Button variant="primary" size="sm" icon="fas fa-plus" onClick={openCheckin}>Nueva medición</Button>} />
+        <Card.Body>
+          <div className={s.formCol}>
+            {progressStats.length > 0 && <StatStrip stats={progressStats} />}
+            <div className={s.actions}>
+              {(measurementTypes || []).map((t) => (
+                <Button key={t.id} size="sm" variant={chartKeys.includes(t.key) ? 'primary' : 'secondary'}
+                  onClick={() => toggleChartKey(t.key)}>
+                  {t.label}
+                </Button>
+              ))}
+            </div>
+            <BodyMeasuresChart series={progress} selectedKeys={chartKeys} loading={progressLoading}
+              labelFor={(key) => typeByKey[key]?.label || key}
+              emptyLabel="Sin mediciones para las medidas seleccionadas." />
+            <DataTable
+              columns={[
+                { key: 'measured_at', header: 'Fecha', width: 120, render: (c) => formatShortDate(c.measured_at) },
+                { key: 'measured_by_name', header: 'Registrado por', ellipsis: true, render: (c) => c.measured_by_name },
+                { key: 'count', header: 'Medidas', width: 100, render: (c) => `${(c.values || []).length}` },
+              ]}
+              rows={checkinsPage.items || []}
+              empty="Este miembro todavía no tiene mediciones."
+            />
+          </div>
+        </Card.Body>
+      </Card>
+
       <Modal open={subscribeOpen} title={currentIsAlive ? 'Renovar suscripción' : 'Nueva suscripción'} onClose={() => setSubscribeOpen(false)}
         footer={<>
           <Button variant="secondary" onClick={() => setSubscribeOpen(false)}>Cancelar</Button>
@@ -387,6 +497,34 @@ export function GymMemberDetail() {
         onConfirm={submitAnnul} onClose={() => setAnnulTarget(null)}>
         Esta acción es irreversible: se cancela también la factura de este pago.
       </ConfirmDialog>
+
+      <Modal open={checkinOpen} title="Nueva medición" onClose={() => setCheckinOpen(false)}
+        footer={<>
+          <Button variant="secondary" onClick={() => setCheckinOpen(false)}>Cancelar</Button>
+          <Button variant="primary" loading={checkinBusy} onClick={submitCheckin}>Registrar</Button>
+        </>}>
+        <div className={s.formCol}>
+          <p className={s.faint}>Deja en blanco las medidas que no vas a tomar hoy.</p>
+          <DatePicker label="Fecha (opcional, hoy por defecto)" value={checkinForm.measured_at}
+            onChange={(iso) => setCheckinForm((f) => ({ ...f, measured_at: iso }))} />
+          {(measurementTypes || []).map((t) => (
+            t.sided ? (
+              <div key={t.id} className={s.formGrid}>
+                <Input label={`${t.label} izq. (${t.unit})`} type="number" min="0" step="0.1"
+                  value={checkinForm.values[`${t.id}_L`] || ''} onChange={(e) => setCheckinValue(`${t.id}_L`, e.target.value)} />
+                <Input label={`${t.label} der. (${t.unit})`} type="number" min="0" step="0.1"
+                  value={checkinForm.values[`${t.id}_R`] || ''} onChange={(e) => setCheckinValue(`${t.id}_R`, e.target.value)} />
+              </div>
+            ) : (
+              <Input key={t.id} label={`${t.label} (${t.unit})`} type="number" min="0" step="0.1"
+                value={checkinForm.values[t.id] || ''} onChange={(e) => setCheckinValue(t.id, e.target.value)} />
+            )
+          ))}
+          <Textarea label="Notas (opcional)" value={checkinForm.notes}
+            onChange={(e) => setCheckinForm((f) => ({ ...f, notes: e.target.value }))} />
+          {checkinError && <Alert tone="danger" onClose={() => setCheckinError('')}>{checkinError}</Alert>}
+        </div>
+      </Modal>
     </div>
   );
 }

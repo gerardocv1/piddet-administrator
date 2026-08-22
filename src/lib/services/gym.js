@@ -26,6 +26,11 @@ const qs = (params = {}) => {
 // endpoints de lista NO paginados siempre resuelvan a un array.
 const list = (promise) => promise.then((d) => (Array.isArray(d) ? d : []));
 
+// Mismo problema que `list`, para endpoints que devuelven un objeto (no un array): un miembro sin
+// chequeos hace que el backend omita `data` y el cliente devuelva el envoltorio {status, message}
+// crudo. Lo distingue de una serie real (que nunca tiene ambas claves a la vez) y lo normaliza a {}.
+const obj = (promise) => promise.then((d) => (d && typeof d === 'object' && !Array.isArray(d) && !('status' in d && 'message' in d) ? d : {}));
+
 export const gymService = {
   // ── Planes de membresía ─────────────────────────────────────────────────
   gymPlans: ({ status = '', search = '', page = 1, perPage = 15 } = {}) =>
@@ -77,4 +82,31 @@ export const gymService = {
 
   // Anula el pago y cancela su factura (irreversible, motivo obligatorio).
   annulGymPayment: (paymentId, reason) => http.put(`${base()}/payments/${paymentId}/annul`, { reason }),
+
+  // ── Medidas físicas ──────────────────────────────────────────────────────
+  // Catálogo de tipos de medida visibles para la compañía (del sistema + propios):
+  // [{ id, key, label, unit, sided, sort_order }].
+  gymMeasurementTypes: () => list(http.get(`${base()}/measurement-types`)),
+
+  // Historial paginado de chequeos del miembro, más reciente primero.
+  gymMemberCheckins: (memberId, { page = 1, perPage = 15 } = {}) =>
+    http.get(`${base()}/members/${memberId}/checkins${qs({ page, per_page: perPage })}`, { paginated: true }),
+
+  // Registra un chequeo: { measured_at?, notes?, values: [{ measurement_type_id, side?, value }] }.
+  createGymCheckin: (memberId, data) => http.post(`${base()}/members/${memberId}/checkins`, data),
+
+  gymCheckin: (checkinId) => http.get(`${base()}/checkins/${checkinId}`),
+
+  // Corrige fecha, notas y/o valores de un chequeo (sin efecto contable).
+  updateGymCheckin: (checkinId, data) => http.put(`${base()}/checkins/${checkinId}`, data),
+
+  // Series de progreso para graficar: { [type_key]: { unit, points: [{date, value, side}] } }.
+  gymMemberProgress: (memberId, { types = [], from = '', to = '' } = {}) => {
+    const sp = new URLSearchParams();
+    if (from) sp.set('from', from);
+    if (to) sp.set('to', to);
+    types.forEach((t) => sp.append('types[]', t));
+    const q = sp.toString();
+    return obj(http.get(`${base()}/members/${memberId}/progress${q ? `?${q}` : ''}`));
+  },
 };

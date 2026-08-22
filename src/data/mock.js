@@ -412,7 +412,7 @@ export const mockMenuItems = [
 // el panel muestra Productos (y sus categorías), Menús y Usuarios; el resto queda oculto.
 const mockPermissions = {
   roles: ['Administrador'],
-  permissions: ['user-administrator', 'admin-general', 'role-list', 'role-create', 'role-update', 'role-delete', 'role-assign', 'permission-list', 'permission-update', 'api-module-menus', 'api-module-products', 'api-module-company', 'company-edit-functionalities', 'api-module-stores', 'table-list', 'table-create', 'table-update', 'api-module-orders', 'sales-report', 'order-cancel', 'order-sync-failure-admin', 'api-module-expenses', 'expenses-report', 'expense-annul', 'api-module-shifts', 'shift-global-admin', 'api-module-reservations', 'api-module-rentable-units', 'reservation-checkout', 'reservation-cancel', 'reservation-payment-annul', 'api-module-gym', 'api-module-gym-plans', 'gym-plans-create', 'gym-plans-edit', 'gym-members-create', 'gym-members-edit', 'gym-subscriptions-create', 'gym-subscriptions-cancel', 'gym-payments-create', 'gym-payments-annul'],
+  permissions: ['user-administrator', 'admin-general', 'role-list', 'role-create', 'role-update', 'role-delete', 'role-assign', 'permission-list', 'permission-update', 'api-module-menus', 'api-module-products', 'api-module-company', 'company-edit-functionalities', 'api-module-stores', 'table-list', 'table-create', 'table-update', 'api-module-orders', 'sales-report', 'order-cancel', 'order-sync-failure-admin', 'api-module-expenses', 'expenses-report', 'expense-annul', 'api-module-shifts', 'shift-global-admin', 'api-module-reservations', 'api-module-rentable-units', 'reservation-checkout', 'reservation-cancel', 'reservation-payment-annul', 'api-module-gym', 'api-module-gym-plans', 'gym-plans-create', 'gym-plans-edit', 'gym-members-create', 'gym-members-edit', 'gym-subscriptions-create', 'gym-subscriptions-cancel', 'gym-payments-create', 'gym-payments-annul', 'gym-checkins-create', 'gym-checkins-edit'],
 };
 
 // Empresa (tenant) activa y empresas disponibles para el usuario (SaaS multi-tenant).
@@ -3567,6 +3567,57 @@ let mockGymSubscriptions = [
   },
 ];
 
+// Catálogo de medidas físicas (espejo del seed del sistema del backend). `sided` = admite
+// izquierdo/derecho.
+const mockGymMeasurementTypes = [
+  { id: 1, key: 'weight', label: 'Peso', unit: 'kg', sided: false, sort_order: 0 },
+  { id: 2, key: 'body_fat_pct', label: '% de grasa corporal', unit: '%', sided: false, sort_order: 1 },
+  { id: 3, key: 'muscle_mass', label: 'Masa muscular', unit: 'kg', sided: false, sort_order: 2 },
+  { id: 4, key: 'neck', label: 'Cuello', unit: 'cm', sided: false, sort_order: 3 },
+  { id: 5, key: 'shoulders', label: 'Hombros', unit: 'cm', sided: false, sort_order: 4 },
+  { id: 6, key: 'chest', label: 'Pecho', unit: 'cm', sided: false, sort_order: 5 },
+  { id: 7, key: 'abdomen', label: 'Abdomen', unit: 'cm', sided: false, sort_order: 6 },
+  { id: 8, key: 'waist', label: 'Cintura', unit: 'cm', sided: false, sort_order: 7 },
+  { id: 9, key: 'hip', label: 'Cadera', unit: 'cm', sided: false, sort_order: 8 },
+  { id: 10, key: 'glute', label: 'Glúteo', unit: 'cm', sided: false, sort_order: 9 },
+  { id: 11, key: 'thigh', label: 'Muslo', unit: 'cm', sided: true, sort_order: 10 },
+  { id: 12, key: 'calf', label: 'Pantorrilla', unit: 'cm', sided: true, sort_order: 11 },
+  { id: 13, key: 'bicep', label: 'Bíceps', unit: 'cm', sided: true, sort_order: 12 },
+  { id: 14, key: 'forearm', label: 'Antebrazo', unit: 'cm', sided: true, sort_order: 13 },
+];
+
+// Chequeos demo: 6 meses de historial para Laura Gómez (member 1), mostrando progreso real
+// (peso y % de grasa bajando, cintura reduciéndose). Los demás miembros arrancan sin mediciones,
+// para ver también el estado vacío.
+let mockGymCheckins = [0, 1, 2, 3, 4, 5].map((i) => ({
+  id: `gchk-1-${i}`,
+  gym_member_id: 1,
+  member_user_id: 5001,
+  measured_at: isoDay(168 - i * 28),
+  measured_by_name: 'Gerardo',
+  notes: i === 0 ? 'Medición inicial' : '',
+  values: [
+    { measurement_type_id: 1, side: '', value: (68 - i * 0.9).toFixed(1) },
+    { measurement_type_id: 2, side: '', value: (24 - i * 0.8).toFixed(1) },
+    { measurement_type_id: 8, side: '', value: (78 - i * 1.1).toFixed(1) },
+  ],
+}));
+
+const gymCheckinPresent = (c) => ({
+  ...c,
+  values: c.values.map((v) => {
+    const type = mockGymMeasurementTypes.find((t) => t.id === v.measurement_type_id);
+    return {
+      measurement_type_id: v.measurement_type_id,
+      key: type?.key ?? null,
+      label: type?.label ?? null,
+      unit: type?.unit ?? null,
+      side: v.side || null,
+      value: v.value,
+    };
+  }),
+});
+
 function resolveGymMock(path, query, { method = 'GET', body } = {}) {
   const scoped = path.match(/^\/companies\/[^/]+\/gym\/(.+)$/);
   if (!scoped) return undefined;
@@ -3728,6 +3779,74 @@ function resolveGymMock(path, query, { method = 'GET', body } = {}) {
       .filter((s) => s.gym_member_id === memberId)
       .sort((a, b) => (a.start_date < b.start_date ? 1 : -1))
       .map(gymSubPresent);
+  }
+
+  if (sub === 'measurement-types') return mockGymMeasurementTypes;
+
+  const memberCheckinsMatch = sub.match(/^members\/(\d+)\/checkins$/);
+  if (memberCheckinsMatch) {
+    const memberId = Number(memberCheckinsMatch[1]);
+
+    if (method === 'POST') {
+      const member = mockGymMembers.find((m) => m.id === memberId);
+      if (!member) return null;
+      const checkin = {
+        id: 'gchk-' + memberId + '-' + Date.now().toString(36),
+        gym_member_id: memberId,
+        member_user_id: member.user_id,
+        measured_at: body.measured_at || todayIso(),
+        measured_by_name: 'Gerardo',
+        notes: body.notes || null,
+        values: (body.values || []).map((v) => ({ measurement_type_id: v.measurement_type_id, side: v.side || '', value: v.value })),
+      };
+      mockGymCheckins.push(checkin);
+      return gymCheckinPresent(checkin);
+    }
+
+    const rows = mockGymCheckins
+      .filter((c) => c.gym_member_id === memberId)
+      .sort((a, b) => (a.measured_at < b.measured_at ? 1 : -1))
+      .map(gymCheckinPresent);
+    return mockPaginate(rows, query);
+  }
+
+  const memberProgressMatch = sub.match(/^members\/(\d+)\/progress$/);
+  if (memberProgressMatch) {
+    const memberId = Number(memberProgressMatch[1]);
+    const typeIds = query.getAll('types[]').map(Number).filter(Boolean);
+    const from = query.get('from');
+    const to = query.get('to');
+
+    const series = {};
+    mockGymCheckins
+      .filter((c) => c.gym_member_id === memberId)
+      .filter((c) => !from || c.measured_at >= from)
+      .filter((c) => !to || c.measured_at <= to)
+      .sort((a, b) => (a.measured_at < b.measured_at ? -1 : 1))
+      .forEach((c) => {
+        c.values.forEach((v) => {
+          if (typeIds.length && !typeIds.includes(v.measurement_type_id)) return;
+          const type = mockGymMeasurementTypes.find((t) => t.id === v.measurement_type_id);
+          if (!type) return;
+          if (!series[type.key]) series[type.key] = { unit: type.unit, points: [] };
+          series[type.key].points.push({ date: c.measured_at, value: v.value, side: v.side || null });
+        });
+      });
+    return series;
+  }
+
+  const checkinMatch = sub.match(/^checkins\/([\w-]+)$/);
+  if (checkinMatch) {
+    const checkin = mockGymCheckins.find((c) => c.id === checkinMatch[1]);
+    if (!checkin) return null;
+    if (method === 'PUT') {
+      if ('measured_at' in body) checkin.measured_at = body.measured_at;
+      if ('notes' in body) checkin.notes = body.notes;
+      if (body.values) {
+        checkin.values = body.values.map((v) => ({ measurement_type_id: v.measurement_type_id, side: v.side || '', value: v.value }));
+      }
+    }
+    return gymCheckinPresent(checkin);
   }
 
   if (sub === 'subscriptions') {
