@@ -63,7 +63,12 @@ export function BodyMap({ sex = 'M', zones = [], selected = '', withData = [], o
       {['front', 'side'].map((view) => (
         <figure key={view} className={styles.figure}>
           <div className={styles.canvas}>
-            <img src={imgs[view]} alt="" className={styles.img} draggable={false} />
+            {/* El perfil de la mujer viene mirando al lado contrario que el del hombre: se
+                espeja para que ambos miren igual y el glúteo quede atrás. Los puntos se
+                posicionan sobre el lienzo (no sobre la imagen), así no se espejan. */}
+            <img src={imgs[view]} alt=""
+              className={[styles.img, sex === 'F' && view === 'side' ? styles.mirror : ''].filter(Boolean).join(' ')}
+              draggable={false} />
             {Object.entries(dots[view])
               .filter(([key]) => zones.includes(key))
               .map(([key, [x, y]]) => {

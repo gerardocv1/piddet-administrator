@@ -22,6 +22,9 @@
 /* Las siluetas son trazo oscuro sobre transparente: en tema oscuro se invierten para verse. */
 :global([data-theme='dark']) .img { filter: invert(0.85); }
 
+/* Perfil femenino espejado para mirar hacia el mismo lado que el masculino. */
+.mirror { transform: scaleX(-1); }
+
 .caption {
   font-size: var(--text-xs);
   font-weight: 600;
@@ -56,6 +59,12 @@
   transition: opacity 0.15s ease, transform 0.15s ease;
 }
 
+/* El punto activo (hover, foco o seleccionado) sube de capa: su etiqueta nunca queda
+   tapada por los demás puntos. */
+.dot:hover,
+.dot:focus-visible,
+.dotSelected { z-index: 5; }
+
 .dot:hover .dotCore,
 .dot:focus-visible .dotCore { opacity: 0.85; transform: scale(1.15); }
 
@@ -74,13 +83,14 @@
   50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--color-primary) 25%, transparent); }
 }
 
-/* Etiqueta del músculo: aparece al pasar por encima o al seleccionar. */
+/* Etiqueta del músculo: aparece al pasar por encima o al seleccionar, SOBRE el punto (no
+   debajo) para que se lea sin tapar lo que se está señalando. */
 .tag {
   position: absolute;
-  top: 100%;
+  bottom: 100%;
   left: 50%;
   transform: translateX(-50%);
-  margin-top: 2px;
+  margin-bottom: 2px;
   padding: 2px 8px;
   border-radius: 999px;
   background: var(--gray-900);
