@@ -38,6 +38,14 @@ function readColors() {
 
 const SIDE_LABEL = { L: 'izq.', R: 'der.' };
 
+// Color del tema con alpha (los tokens llegan como hex #rrggbb; si no, se devuelve tal cual).
+const withAlpha = (color, alpha) => {
+  const m = String(color).trim().match(/^#([0-9a-f]{6})$/i);
+  if (!m) return color;
+  const n = parseInt(m[1], 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
+};
+
 // Arma las líneas a graficar a partir de las series del progreso: una por (tipo, lado) si el tipo
 // admite lado (bíceps, muslo…), una sola si no. Las fechas del eje X son la unión de todas las
 // fechas con dato, para que huecos de una serie no desalineen a las demás (spanGaps las salta).
@@ -80,6 +88,18 @@ export function BodyMeasuresChart({ series, selectedKeys = [], labelFor, loading
   const units = new Set(lines.map((l) => l.unit));
   const singleUnit = units.size === 1 ? [...units][0] : null;
 
+  // Con una sola serie, un área con degradado suave bajo la línea da lectura de tendencia sin
+  // ruido; con varias (p. ej. lado izquierdo/derecho) solo líneas, para que no se tapen.
+  const single = lines.length === 1;
+  const areaFill = (ctx) => {
+    const { chart } = ctx;
+    if (!chart.chartArea) return 'transparent';
+    const gradient = chart.ctx.createLinearGradient(0, chart.chartArea.top, 0, chart.chartArea.bottom);
+    gradient.addColorStop(0, withAlpha(c.accents[0], 0.18));
+    gradient.addColorStop(1, withAlpha(c.accents[0], 0));
+    return gradient;
+  };
+
   const chartData = {
     labels: allDates.map(fmtDayMonth),
     datasets: lines.map((line, i) => {
@@ -91,9 +111,9 @@ export function BodyMeasuresChart({ series, selectedKeys = [], labelFor, loading
         data: allDates.map((d) => (d in byDate ? byDate[d] : null)),
         spanGaps: true,
         borderColor: color,
-        backgroundColor: 'transparent',
+        backgroundColor: single ? areaFill : 'transparent',
         pointBorderColor: color,
-        fill: false,
+        fill: single,
         tension: 0.35,
         borderWidth: 2.5,
         ...point,
@@ -106,7 +126,9 @@ export function BodyMeasuresChart({ series, selectedKeys = [], labelFor, loading
     maintainAspectRatio: false,
     interaction: { mode: 'index', intersect: false },
     plugins: {
+      // Con una sola serie la leyenda es ruido: el título de la tarjeta ya nombra la medida.
       legend: {
+        display: lines.length > 1,
         position: 'top',
         labels: { boxWidth: 22, boxHeight: 12, padding: 18, color: c.tick, font: { size: 13 } },
       },
@@ -125,13 +147,15 @@ export function BodyMeasuresChart({ series, selectedKeys = [], labelFor, loading
     scales: {
       y: {
         border: { display: false },
+        // Aire arriba y abajo: la línea nunca toca el borde del área de dibujo.
+        grace: '12%',
         grid: { color: c.grid, drawTicks: false },
-        ticks: { color: c.tick, padding: 8, font: { size: 12 }, callback: (val) => (singleUnit ? `${val} ${singleUnit}` : val) },
+        ticks: { color: c.tick, padding: 8, font: { size: 12 }, maxTicksLimit: 6, callback: (val) => (singleUnit ? `${val} ${singleUnit}` : val) },
       },
       x: {
         border: { display: false },
         grid: { display: false },
-        ticks: { color: c.tick, font: { size: 12 } },
+        ticks: { color: c.tick, font: { size: 12 }, maxRotation: 0, autoSkipPadding: 16 },
       },
     },
   };

@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
-  Card, Badge, Button, Spinner, Alert, PageHeader, BodyMeasuresChart, BodyFigure, BODY_FIGURE_KEYS, useToast,
+  Card, Badge, Button, Spinner, Alert, PageHeader, StatStrip, BodyMeasuresChart, BodyFigure, BODY_FIGURE_KEYS, useToast,
 } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
@@ -25,8 +25,50 @@ function beforeAfter(serie) {
   return Object.entries(bySide).map(([side, pts]) => ({
     side: side || null,
     first: pts[0],
+    prev: pts.length > 1 ? pts[pts.length - 2] : null,
     last: pts[pts.length - 1],
+    count: pts.length,
   }));
+}
+
+const fmtDelta = (delta, unit) => `${delta > 0 ? '+' : ''}${delta.toFixed(1)}${unit ? ` ${unit}` : ''}`;
+
+const fmtPct = (delta, base) => (base ? ` (${delta > 0 ? '+' : ''}${((delta / base) * 100).toFixed(1)}%)` : '');
+
+// KPIs de la medida seleccionada: valor actual (con su cambio desde la medición anterior),
+// cambio total desde la primera y cuántas mediciones hay. En medidas bilaterales, un KPI por lado.
+function kpisFor(groups, unit) {
+  if (!groups.length) return [];
+  if (groups.length === 1 && !groups[0].side) {
+    const g = groups[0];
+    const last = Number(g.last.value);
+    const total = last - Number(g.first.value);
+    const sincePrev = g.prev ? last - Number(g.prev.value) : null;
+    return [
+      {
+        label: 'Actual', value: `${g.last.value} ${unit}`,
+        delta: sincePrev != null ? fmtDelta(sincePrev, '') : undefined,
+        up: sincePrev != null ? sincePrev >= 0 : undefined,
+      },
+      g.count > 1 && {
+        label: 'Cambio total', value: fmtDelta(total, unit),
+        delta: fmtPct(total, Number(g.first.value)).trim() || undefined,
+        up: total >= 0,
+      },
+      { label: 'Mediciones', value: String(g.count) },
+    ].filter(Boolean);
+  }
+  const stats = groups.map((g) => {
+    const total = Number(g.last.value) - Number(g.first.value);
+    return {
+      label: g.side === 'L' ? 'Izquierdo' : 'Derecho',
+      value: `${g.last.value} ${unit}`,
+      delta: g.count > 1 ? fmtDelta(total, '') : undefined,
+      up: total >= 0,
+    };
+  });
+  stats.push({ label: 'Mediciones', value: String(Math.max(...groups.map((g) => g.count))) });
+  return stats;
 }
 
 // Vista de progreso físico del miembro: figura corporal (hombre/mujer según su ficha) donde se
@@ -90,6 +132,8 @@ export function GymMemberProgress() {
   const unit = serie?.unit || typeByKey[selectedKey]?.unit || '';
   const groups = beforeAfter(serie);
   const label = typeByKey[selectedKey]?.label || selectedKey;
+  const kpis = kpisFor(groups, unit);
+  const typesWithData = (types || []).filter((t) => withData.includes(t.key));
 
   return (
     <div className={s.page}>
@@ -158,6 +202,8 @@ export function GymMemberProgress() {
                   {label}{unit ? <span className={p.measureUnit}> · {unit}</span> : null}
                 </h3>
 
+                {kpis.length > 0 && <StatStrip stats={kpis} />}
+
                 {groups.length === 0 ? (
                   <p className={s.faint}>Aún no hay mediciones de esta medida. Regístrala con "Tomar medidas".</p>
                 ) : groups.map((grp) => {
@@ -187,8 +233,8 @@ export function GymMemberProgress() {
                         <span className={p.compareDate}>{formatShortDate(grp.last.date)}</span>
                       </div>
                       {!single && (
-                        <Badge variant={delta === 0 ? 'neutral' : (delta < 0 ? 'info' : 'success')} dot>
-                          {delta > 0 ? '+' : ''}{delta.toFixed(1)} {unit} desde la primera medición
+                        <Badge variant="neutral" dot>
+                          {fmtDelta(delta, unit)}{fmtPct(delta, first)} desde la primera medición
                         </Badge>
                       )}
                     </div>
@@ -207,6 +253,47 @@ export function GymMemberProgress() {
             <BodyMeasuresChart series={progress} selectedKeys={selectedKey ? [selectedKey] : []} loading={progressLoading}
               labelFor={(k) => typeByKey[k]?.label || k}
               emptyLabel="Aún no hay mediciones de esta medida." />
+          </Card.Body>
+        </Card>
+      )}
+
+      {/* Resumen de todas las medidas con historia: valor actual + cambio total. Tocar una fila
+          la selecciona (misma selección que la figura y los chips). */}
+      {member.sex && typesWithData.length > 0 && (
+        <Card>
+          <Card.Header title="Resumen de medidas" />
+          <Card.Body>
+            <ul className={p.summaryList}>
+              {typesWithData.map((t) => {
+                const grs = beforeAfter(progress[t.key]);
+                const u = progress[t.key]?.unit || t.unit || '';
+                const lastText = grs.map((g) => g.last.value).join(' / ');
+                const deltas = grs
+                  .filter((g) => g.count > 1)
+                  .map((g) => fmtDelta(Number(g.last.value) - Number(g.first.value), ''));
+                const totalDelta = grs.length === 1 && grs[0].count > 1
+                  ? Number(grs[0].last.value) - Number(grs[0].first.value)
+                  : null;
+                return (
+                  <li key={t.key}>
+                    <button type="button"
+                      className={[p.summaryRow, selectedKey === t.key ? p.summaryRowActive : ''].filter(Boolean).join(' ')}
+                      onClick={() => setPicked(t.key)}>
+                      <span className={p.summaryLabel}>{t.label}</span>
+                      <span className={p.summaryValue}>{lastText} {u}</span>
+                      <span className={p.summaryDelta}>
+                        {deltas.length > 0 && (
+                          <>
+                            <i className={totalDelta != null && totalDelta < 0 ? 'fas fa-arrow-trend-down' : 'fas fa-arrow-trend-up'} aria-hidden="true" />
+                            {' '}{deltas.join(' / ')}{grs.length === 1 ? ` ${u}` : ''}
+                          </>
+                        )}
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
           </Card.Body>
         </Card>
       )}

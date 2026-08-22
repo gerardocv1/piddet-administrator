@@ -223,13 +223,17 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
   configura en `/gym/measurements` qué medidas pide** (peso, % de grasa, circunferencias…; sin
   selección guardada se piden todas); el catálogo distingue las que admiten lado
   izquierdo/derecho (bíceps, muslo, pantorrilla, antebrazo). La **vista de progreso**
-  (`/gym/members/:memberId/progress`) es interactiva: una **silueta corporal** — de hombre o de
-  mujer según el sexo de la ficha (si falta, se pregunta ahí mismo y se guarda) — con las zonas
-  tocables de las medidas corporales configuradas por la compañía; tocar una parte (pecho,
-  cintura, glúteo…) muestra su **antes/después** animado (primera vs. última medición, con el
-  delta) y su gráfica de evolución. Peso, % de grasa y masa muscular no viven en el cuerpo: se
-  eligen como chips. La ficha del miembro solo conserva el peso actual, el IMC y la tabla de
-  mediciones.
+  (`/gym/members/:memberId/progress`) es interactiva: una **silueta corporal anatómica** — de
+  hombre o de mujer según el sexo de la ficha (si falta, se pregunta ahí mismo y se guarda),
+  dibujada con contornos suavizados y zonas recortadas al cuerpo — con las zonas tocables de las
+  medidas configuradas por la compañía; tocar una parte (pecho, cintura, glúteo…) muestra sus
+  **KPIs** (valor actual con el cambio desde la medición anterior, cambio total con porcentaje y
+  número de mediciones; en medidas bilaterales, por lado), su **antes/después** animado y su
+  gráfica de evolución (área con degradado para una serie; leyenda solo cuando hay
+  izquierdo/derecho). Peso, % de grasa y masa muscular no viven en el cuerpo: se eligen como
+  chips. Al final, el **Resumen de medidas** lista todas las que tienen historia (valor actual +
+  cambio total en tinta neutra) y tocar una fila la selecciona. La ficha del miembro solo
+  conserva el peso actual, el IMC y la tabla de mediciones.
 - **Reglas:** requiere la funcionalidad `functionality_gym` activa además del permiso. Los
   miembros son usuarios de la plataforma (mismo patrón "pasivo" de Reservas). Un job diario
   (`gym:transition-subscriptions`, backend) transiciona automáticamente las suscripciones
