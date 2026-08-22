@@ -21,12 +21,12 @@ npm run dev
 Abre http://localhost:5173 — funciona de inmediato con **datos de ejemplo**.
 En el login, pulsa **Entrar** (las credenciales vienen rellenadas).
 
-### Guía de diseño viva
+### Sistema de diseño
 
-En http://localhost:5173/styleguide.html corre el **catálogo del sistema de diseño**:
-colores, tipografía, botones, formularios, tablas, modales y demás piezas, montadas con
-los componentes y tokens reales del panel (claro y oscuro). No requiere backend ni login.
-Detalle en [`specs/styleguide.md`](specs/styleguide.md).
+La línea visual (tokens, componentes y patrones, en claro y oscuro) se versiona e itera en
+[`piddet-visual-catalog`](https://github.com/gerardocv1/piddet-visual-catalog), un catálogo
+navegable espejo de los componentes de este panel. Cualquier tema de diseño se basa en ese
+repo; el flujo de porteo está en [`specs/styleguide.md`](specs/styleguide.md).
 
 ## Conectar el backend real
 1. Copia el archivo de entorno:
