@@ -3669,6 +3669,9 @@ function resolveGymMock(path, query, { method = 'GET', body } = {}) {
   if (!scoped) return undefined;
   const sub = scoped[1];
 
+  // Items tipo SERVICE del catálogo, para el item de facturación del plan.
+  if (sub === 'service-items') return mockServiceItems;
+
   if (sub === 'plans') {
     if (method === 'POST') {
       const plan = {

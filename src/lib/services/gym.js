@@ -45,6 +45,10 @@ export const gymService = {
   // Activa/desactiva el plan (nunca se borra: las suscripciones ya creadas mantienen su snapshot).
   setGymPlanStatus: (planId, status) => http.put(`${base()}/plans/${planId}/status`, { status }),
 
+  // Items tipo SERVICE activos del catálogo de productos, para el selector del item de
+  // facturación del plan: [{ id, name, description, price }].
+  gymServiceItems: () => list(http.get(`${base()}/service-items`)),
+
   // ── Miembros ─────────────────────────────────────────────────────────────
   // Los miembros son usuarios reales de la plataforma (resueltos como "pasivos" al registrarlos,
   // mismo patrón que los huéspedes de Reservas): el backend hace find-or-create por documento o
