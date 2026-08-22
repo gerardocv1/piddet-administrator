@@ -49,6 +49,7 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
 | Oferta | **Carta / Menús** | `/menus` | `api-module-menus` |
 | Oferta | **Reservas** (hospedaje) | `/reservations` | `api-module-reservations` + `functionality_reservations` |
 | Oferta | **Unidades rentables** | `/rentable-units` | `api-module-rentable-units` + `functionality_reservations` |
+| Oferta | **Planes de gimnasio** | `/gym/plans` | `api-module-gym-plans` + `functionality_gym` |
 | Operación | **Facturas** | `/invoices` | `api-module-orders` · `api-module-orders-own` |
 | Operación | **Reporte de ventas** | `/sales-report` | `sales-report` · `sales-report-own` |
 | Operación | **Gastos** | `/expenses` | `api-module-expenses` · `api-module-expenses-own` |
@@ -169,6 +170,19 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
   cargos, abonos y checkout.
 - **Reglas:** requiere la funcionalidad `functionality_reservations` activa además del permiso.
   El pre-check-in del huésped ocurre fuera del panel, en la superficie pública del backend.
+
+### Gimnasio
+
+- **Descripción:** administración de gimnasio: suscripciones mensuales por miembro, con
+  seguimiento periódico de sus medidas físicas. En construcción por fases; hoy solo el catálogo
+  de planes de membresía.
+- **Flujo principal:** `/gym/plans` administra los planes (nombre, precio, duración en días,
+  días de gracia tras el vencimiento, si el plan permite pausar la suscripción y el ítem del
+  catálogo de productos con el que se factura cada pago). Un plan nunca se borra: se desactiva.
+- **Reglas:** requiere la funcionalidad `functionality_gym` activa además del permiso. Los
+  miembros son usuarios de la plataforma (mismo patrón "pasivo" de Reservas); las suscripciones,
+  los pagos (facturados contra el módulo de Facturas) y las medidas físicas se agregan en fases
+  posteriores.
 
 ### Reportes
 

@@ -48,6 +48,15 @@ export const MODULE_GROUPS = [
           { to: '/rentable-units', label: 'Unidades', icon: 'fas fa-house-chimney', perm: 'api-module-rentable-units', func: 'functionality_reservations' },
         ],
       },
+      // Gimnasio: miembros, suscripciones y medidas físicas se suman en fases posteriores;
+      // por ahora solo el catálogo de planes de membresía. Requiere la funcionalidad
+      // `functionality_gym` activa en la compañía.
+      {
+        label: 'Gimnasio', icon: 'fas fa-dumbbell',
+        children: [
+          { to: '/gym/plans', label: 'Planes', icon: 'fas fa-id-card', perm: 'api-module-gym-plans', func: 'functionality_gym' },
+        ],
+      },
     ],
   },
   {

@@ -34,6 +34,9 @@ filtro por usuario.
 | `api-module-menus` | `/menus`, `/menus/:menuId` | Cartas publicables. Las **categorías de menú** pertenecen a un menú (`menu_id`) y se administran dentro de su detalle; su `position` ordena los productos. Cada menú tiene el interruptor `is_active` (`api.setMenuActive` → `PUT /companies/{company}/menus/{id}/active`), que decide si se publica en la portada pública y si su carta es accesible; apagado se sigue administrando con normalidad. |
 | `api-module-reservations` + funcionalidad `functionality_reservations` | `/reservations` | Reservas de hospedaje: calendario, detalle, asistente de creación, check-in/checkout y abonos. |
 | `api-module-rentable-units` + funcionalidad `functionality_reservations` | `/rentable-units` | Configuración de unidades rentables (cabañas, habitaciones, lugares), sus espacios, inclusiones y fotos. Los servicios adicionales salen de los ítems tipo servicio del catálogo de productos. |
+| `api-module-gym-plans` + funcionalidad `functionality_gym` | `/gym/plans` | Catálogo de planes de membresía del gimnasio (nombre, precio, duración en días, días de gracia, si permite pausar, ítem de facturación del catálogo de productos). Un plan nunca se borra: se desactiva (las suscripciones ya emitidas conservan su propio snapshot del plan). Miembros y suscripciones se agregan en fases posteriores. |
+| `gym-plans-create` | (acción) | Crear un plan de membresía. |
+| `gym-plans-edit` | (acción) | Editar o activar/desactivar un plan de membresía. |
 
 ## Operación
 

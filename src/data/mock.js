@@ -81,6 +81,14 @@ export const mockFunctionalities = [
     description: 'Permite asignar a un producto un precio propio dentro de cada menú, distinto de su precio base.',
     is_active: true,
   },
+  {
+    id: 6,
+    name: 'functionality_gym',
+    label: 'Gimnasio',
+    icon: 'fas fa-dumbbell',
+    description: 'Administración de gimnasio: miembros, planes, suscripciones y medidas físicas.',
+    is_active: true,
+  },
 ];
 
 // Categorías de producto: scopeadas por compañía y por tipo de ítem (item_type_id). `position` ordena dentro del tipo.
@@ -404,7 +412,7 @@ export const mockMenuItems = [
 // el panel muestra Productos (y sus categorías), Menús y Usuarios; el resto queda oculto.
 const mockPermissions = {
   roles: ['Administrador'],
-  permissions: ['user-administrator', 'admin-general', 'role-list', 'role-create', 'role-update', 'role-delete', 'role-assign', 'permission-list', 'permission-update', 'api-module-menus', 'api-module-products', 'api-module-company', 'company-edit-functionalities', 'api-module-stores', 'table-list', 'table-create', 'table-update', 'api-module-orders', 'sales-report', 'order-cancel', 'order-sync-failure-admin', 'api-module-expenses', 'expenses-report', 'expense-annul', 'api-module-shifts', 'shift-global-admin', 'api-module-reservations', 'api-module-rentable-units', 'reservation-checkout', 'reservation-cancel', 'reservation-payment-annul'],
+  permissions: ['user-administrator', 'admin-general', 'role-list', 'role-create', 'role-update', 'role-delete', 'role-assign', 'permission-list', 'permission-update', 'api-module-menus', 'api-module-products', 'api-module-company', 'company-edit-functionalities', 'api-module-stores', 'table-list', 'table-create', 'table-update', 'api-module-orders', 'sales-report', 'order-cancel', 'order-sync-failure-admin', 'api-module-expenses', 'expenses-report', 'expense-annul', 'api-module-shifts', 'shift-global-admin', 'api-module-reservations', 'api-module-rentable-units', 'reservation-checkout', 'reservation-cancel', 'reservation-payment-annul', 'api-module-gym', 'api-module-gym-plans', 'gym-plans-create', 'gym-plans-edit'],
 };
 
 // Empresa (tenant) activa y empresas disponibles para el usuario (SaaS multi-tenant).
@@ -2862,6 +2870,7 @@ const mockServiceItems = [
   { id: 902, name: 'Hospedaje habitación', description: 'Noche de hospedaje en habitación', price: '180000.00', reservable: false },
   { id: 903, name: 'Cena romántica', description: 'Cena para dos con decoración', price: '120000.00', reservable: true },
   { id: 904, name: 'Decoración de aniversario', description: 'Globos, pétalos y velas', price: '80000.00', reservable: true },
+  { id: 905, name: 'Membresía gimnasio', description: 'Pago de suscripción mensual de gimnasio', price: '90000.00', reservable: false },
 ];
 
 const serviceItemName = (id) => mockServiceItems.find((it) => it.id === Number(id))?.name || null;
@@ -3476,6 +3485,73 @@ function resolveCheckinMock(path, query, { method = 'GET', body } = {}) {
   return null;
 }
 
+// ── Gimnasio: catálogo de planes de membresía (miembros/suscripciones llegan en fases
+// posteriores). Mutan en memoria durante la sesión, como el resto de los mocks.
+let mockGymPlans = [
+  { id: 1, name: 'Plan mensual', description: 'Acceso ilimitado al gimnasio, mes a mes', price: '90000.00', duration_days: 30, grace_period_days: 3, allows_pause: false, item_id: 905, status: 1, sort_order: 0 },
+  { id: 2, name: 'Plan trimestral', description: 'Tres meses con un mes de descuento', price: '240000.00', duration_days: 90, grace_period_days: 3, allows_pause: true, item_id: 905, status: 1, sort_order: 1 },
+  { id: 3, name: 'Plan anual', description: 'Doce meses al mejor precio', price: '840000.00', duration_days: 365, grace_period_days: 7, allows_pause: true, item_id: 905, status: 1, sort_order: 2 },
+];
+
+const gymPlanPresent = (p) => ({ ...p, item_name: p.item_id ? serviceItemName(p.item_id) : null });
+
+function resolveGymMock(path, query, { method = 'GET', body } = {}) {
+  const scoped = path.match(/^\/companies\/[^/]+\/gym\/(.+)$/);
+  if (!scoped) return undefined;
+  const sub = scoped[1];
+
+  if (sub === 'plans') {
+    if (method === 'POST') {
+      const plan = {
+        id: (mockGymPlans.reduce((max, p) => Math.max(max, p.id), 0) || 0) + 1,
+        name: body.name,
+        description: body.description || null,
+        price: body.price,
+        duration_days: Number(body.duration_days),
+        grace_period_days: Number(body.grace_period_days ?? 3),
+        allows_pause: !!body.allows_pause,
+        item_id: body.item_id ? Number(body.item_id) : null,
+        status: 1,
+        sort_order: Number(body.sort_order ?? mockGymPlans.length),
+      };
+      mockGymPlans.push(plan);
+      return gymPlanPresent(plan);
+    }
+
+    const status = query.get('status');
+    const search = (query.get('_search') || '').toLowerCase();
+    const rows = mockGymPlans
+      .filter((p) => (status === '' || status == null ? true : String(p.status) === status))
+      .filter((p) => !search || p.name.toLowerCase().includes(search))
+      .sort((a, b) => a.sort_order - b.sort_order || a.id - b.id)
+      .map(gymPlanPresent);
+    return mockPaginate(rows, query);
+  }
+
+  const planMatch = sub.match(/^plans\/(\d+)(\/status)?$/);
+  if (planMatch) {
+    const plan = mockGymPlans.find((p) => p.id === Number(planMatch[1]));
+    if (!plan) return null;
+    const isStatus = !!planMatch[2];
+
+    if (method === 'PUT' && isStatus) {
+      plan.status = Number(body.status);
+      return gymPlanPresent(plan);
+    }
+    if (method === 'PUT') {
+      ['name', 'description', 'price', 'duration_days', 'grace_period_days', 'allows_pause', 'item_id', 'sort_order'].forEach((key) => {
+        if (key in body) plan[key] = key === 'duration_days' || key === 'grace_period_days' || key === 'sort_order'
+          ? Number(body[key])
+          : (key === 'item_id' ? (body[key] ? Number(body[key]) : null) : body[key]);
+      });
+      return gymPlanPresent(plan);
+    }
+    return gymPlanPresent(plan);
+  }
+
+  return null;
+}
+
 export function resolveMock(rawPath, opts = {}) {
   const [path, qs = ''] = rawPath.split('?');
   const query = new URLSearchParams(qs);
@@ -3564,6 +3640,10 @@ export function resolveMock(rawPath, opts = {}) {
   // Módulo de reservas de hospedaje (company-scoped: /companies/{company}/rentable-units|rentable-unit-types…)
   const reservations = resolveReservationsMock(path, query, opts);
   if (reservations !== undefined) return reservations;
+
+  // Módulo de gimnasio (company-scoped: /companies/{company}/gym/plans…)
+  const gym = resolveGymMock(path, query, opts);
+  if (gym !== undefined) return gym;
 
   // Administración de accesos: catálogo de permisos y CRUD de roles
   // (/companies/{company}/permissions…). No colisiona con /me/permissions, resuelto arriba.
