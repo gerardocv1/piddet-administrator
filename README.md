@@ -21,6 +21,13 @@ npm run dev
 Abre http://localhost:5173 — funciona de inmediato con **datos de ejemplo**.
 En el login, pulsa **Entrar** (las credenciales vienen rellenadas).
 
+### Guía de diseño viva
+
+En http://localhost:5173/styleguide.html corre el **catálogo del sistema de diseño**:
+colores, tipografía, botones, formularios, tablas, modales y demás piezas, montadas con
+los componentes y tokens reales del panel (claro y oscuro). No requiere backend ni login.
+Detalle en [`specs/styleguide.md`](specs/styleguide.md).
+
 ## Conectar el backend real
 1. Copia el archivo de entorno:
    ```bash
