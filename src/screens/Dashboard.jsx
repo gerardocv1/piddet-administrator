@@ -90,13 +90,14 @@ export function Dashboard() {
   const navigate = useNavigate();
   const { can, canAny } = usePermissions();
 
-  // Cada dash se muestra solo con el permiso de su módulo. Con solo
-  // api-module-expenses-own el backend limita las métricas a los gastos del usuario.
-  const canSales = can('api-module-orders');
-  const canExpenses = canAny(['api-module-expenses', 'api-module-expenses-own']);
+  // Cada dash se muestra solo con el permiso de su módulo y, cuando el módulo está gateado, con
+  // la funcionalidad activa en la compañía. Con solo api-module-expenses-own el backend limita
+  // las métricas a los gastos del usuario.
   const { has } = useFunctionalities();
+  const canSales = can('api-module-orders');
+  const canExpenses = canAny(['api-module-expenses', 'api-module-expenses-own']) && has('functionality_expenses');
   const canReservations = can('api-module-reservations') && has('functionality_reservations');
-  const canShifts = canAny(['api-module-shifts', 'api-module-shifts-own']);
+  const canShifts = canAny(['api-module-shifts', 'api-module-shifts-own']) && has('functionality_shifts');
   const canGym = can('api-module-gym') && has('functionality_gym');
 
   // Turnos abiertos relevantes: alimentan la acción rápida de abrir/cerrar turno. El backend

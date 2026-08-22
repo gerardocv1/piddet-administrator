@@ -62,7 +62,8 @@ Si agregas un endpoint, agrega también su mock. Detalle en `specs/tech.md`.
   → **Qué habilita cada permiso: [`specs/permissions-catalog.md`](specs/permissions-catalog.md).**
 - **Funcionalidades:** algunas capacidades dependen además de funcionalidades contratadas por la
   compañía (`functionality_tables`, `functionality_reservations`, `functionality_taxes`,
-  `functionality_menu_item_price`), independientes de los permisos. Se consultan en
+  `functionality_menu_item_price`, `functionality_gym`, `functionality_expenses`,
+  `functionality_shifts`, `functionality_pos`), independientes de los permisos. Se consultan en
   `/companies/{company}/functionalities` y se leen con `useFunctionalities().has(name)`. Se
   administran desde el perfil de empresa (`/company` → *Funcionalidades*), con el permiso
   `company-edit-functionalities`.

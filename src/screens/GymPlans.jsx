@@ -44,7 +44,7 @@ export function GymPlans() {
   const pg = data.pagination;
 
   // Items tipo SERVICE del catálogo de productos, para el item de facturación del plan.
-  const { data: serviceItems } = useResource(React.useCallback(() => api.serviceItems(), []), [], []);
+  const { data: serviceItems } = useResource(React.useCallback(() => api.gymServiceItems(), []), [], []);
   const itemOptions = React.useMemo(
     () => (serviceItems || []).map((it) => ({ value: String(it.id), label: `${it.name} · ${gymMoney(it.price)}` })),
     [serviceItems],

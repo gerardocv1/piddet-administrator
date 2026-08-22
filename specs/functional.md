@@ -55,11 +55,11 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
 | Oferta | **Medidas de gimnasio** (configuración) | `/gym/measurements` | `api-module-gym-plans` + `functionality_gym` |
 | Operación | **Facturas** | `/invoices` | `api-module-orders` · `api-module-orders-own` |
 | Operación | **Reporte de ventas** | `/sales-report` | `sales-report` · `sales-report-own` |
-| Operación | **Gastos** | `/expenses` | `api-module-expenses` · `api-module-expenses-own` |
-| Operación | **Reporte de gastos** | `/expenses/summary` | `expenses-report` · `expenses-report-own` |
-| Operación | **Categorías de gasto** | `/expense-categories` | `api-module-expenses` |
+| Operación | **Gastos** | `/expenses` | (`api-module-expenses` · `api-module-expenses-own`) + `functionality_expenses` |
+| Operación | **Reporte de gastos** | `/expenses/summary` | (`expenses-report` · `expenses-report-own`) + `functionality_expenses` |
+| Operación | **Categorías de gasto** | `/expense-categories` | `api-module-expenses` + `functionality_expenses` |
 | Operación | **Mesas** | `/tables` | `table-list` + `functionality_tables` |
-| Operación | **Turnos de caja** | `/shifts` | `api-module-shifts` · `api-module-shifts-own` |
+| Operación | **Turnos de caja** | `/shifts` | (`api-module-shifts` · `api-module-shifts-own`) + `functionality_shifts` |
 | Configuración | **Tiendas** | `/stores` | `api-module-stores` |
 | Configuración | **Categorías globales de producto** | `/admin/product-categories` | `item-category-master` |
 | Configuración | **Fallos de órdenes** (soporte del POS) | `/sync-failures` | `order-sync-failure-admin` |

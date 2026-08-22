@@ -89,6 +89,30 @@ export const mockFunctionalities = [
     description: 'Administración de gimnasio: afiliados, planes, suscripciones y medidas físicas.',
     is_active: true,
   },
+  {
+    id: 7,
+    name: 'functionality_expenses',
+    label: 'Egresos',
+    icon: 'fas fa-receipt',
+    description: 'Habilita el registro de gastos de la compañía, sus categorías y el reporte de egresos.',
+    is_active: true,
+  },
+  {
+    id: 8,
+    name: 'functionality_shifts',
+    label: 'Turnos de caja',
+    icon: 'fas fa-cash-register',
+    description: 'Habilita la apertura de turnos con base, los movimientos de caja y el cierre con arqueo.',
+    is_active: true,
+  },
+  {
+    id: 9,
+    name: 'functionality_pos',
+    label: 'Punto de venta',
+    icon: 'fas fa-desktop',
+    description: 'Habilita el punto de venta de la compañía y su acceso desde el panel de administración.',
+    is_active: true,
+  },
 ];
 
 // Categorías de producto: scopeadas por compañía y por tipo de ítem (item_type_id). `position` ordena dentro del tipo.
@@ -855,7 +879,10 @@ function resolveItemsMock(path, query, { method = 'GET', body } = {}) {
         if (f) f.is_active = !!change.is_active;
       });
     }
-    return mockFunctionalities;
+    // Copia nueva en cada consulta, como haría el backend: si se devolviera siempre el mismo
+    // arreglo, React descartaría la actualización de estado y las pantallas gateadas (menú
+    // lateral, dashboard) no reaccionarían al activar/desactivar una funcionalidad.
+    return mockFunctionalities.map((f) => ({ ...f }));
   }
   if (sub === 'item-types') return mockPaginate(mockItemTypes.filter((t) => t.status !== 0), query);
 
@@ -3675,6 +3702,9 @@ function resolveGymMock(path, query, { method = 'GET', body } = {}) {
   const scoped = path.match(/^\/companies\/[^/]+\/gym\/(.+)$/);
   if (!scoped) return undefined;
   const sub = scoped[1];
+
+  // Items tipo SERVICE del catálogo, para el item de facturación del plan.
+  if (sub === 'service-items') return mockServiceItems;
 
   if (sub === 'plans') {
     if (method === 'POST') {
