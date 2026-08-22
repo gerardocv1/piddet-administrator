@@ -21,6 +21,13 @@ npm run dev
 Abre http://localhost:5173 — funciona de inmediato con **datos de ejemplo**.
 En el login, pulsa **Entrar** (las credenciales vienen rellenadas).
 
+### Sistema de diseño
+
+La línea visual (tokens, componentes y patrones, en claro y oscuro) se versiona e itera en
+[`piddet-visual-catalog`](https://github.com/gerardocv1/piddet-visual-catalog), un catálogo
+navegable espejo de los componentes de este panel. Cualquier tema de diseño se basa en ese
+repo; el flujo de porteo está en [`specs/styleguide.md`](specs/styleguide.md).
+
 ## Conectar el backend real
 1. Copia el archivo de entorno:
    ```bash

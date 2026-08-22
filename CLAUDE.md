@@ -38,6 +38,10 @@ npm run build      # build de producción en /dist
 npm run preview    # sirve /dist localmente
 ```
 
+La **línea visual** (catálogo de tokens y componentes) se itera en el repo
+[`piddet-visual-catalog`](https://github.com/gerardocv1/piddet-visual-catalog): cualquier tema de
+diseño se basa en él. Regla y flujo de porteo en [`specs/styleguide.md`](specs/styleguide.md).
+
 No inventes comandos de test/lint: no existen.
 
 ## Modo demo vs. backend real
@@ -80,6 +84,7 @@ Si agregas un endpoint, agrega también su mock. Detalle en `specs/tech.md`.
 | Habilitar/ocultar módulos por permisos (o añadir uno gateado) | [`specs/guides/permissions.md`](specs/guides/permissions.md) |
 | Saber qué habilita un permiso concreto | [`specs/permissions-catalog.md`](specs/permissions-catalog.md) |
 | Construir o modificar componentes / pantallas | [`specs/guides/ui-components.md`](specs/guides/ui-components.md) |
+| Hacer cualquier tema de diseño (dónde vive el sistema de diseño) | [`specs/styleguide.md`](specs/styleguide.md) |
 | Tocar estilos, tokens o modo oscuro | [`specs/guides/styling.md`](specs/guides/styling.md) |
 | Mostrar un error, una confirmación o un aviso al usuario | [`specs/guides/feedback.md`](specs/guides/feedback.md) |
 | Tocar la instalación como app (PWA) | [`specs/tech.md`](specs/tech.md) → *PWA* |
