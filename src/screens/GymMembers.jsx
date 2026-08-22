@@ -6,16 +6,19 @@ import {
 } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
-import { gymMemberStatusMeta } from '../lib/gymLabels.js';
+import { gymSubscriptionStatusMeta, GYM_SUBSCRIPTION_STATUS } from '../lib/gymLabels.js';
 import { ID_TYPES } from '../lib/reservationLabels.js';
+import { formatShortDate } from '../lib/dates.js';
 import s from './screens.module.css';
 import gl from './GymLists.module.css';
 
 const EMPTY = { items: [], pagination: null };
 
+// Filtro por el estado administrativo del miembro (el estado que se ve en la fila es el de su
+// membresía, que es lo que importa en el mostrador).
 const STATUS_OPTIONS = [
-  { value: '1', label: 'Activo' },
-  { value: '0', label: 'Inactivo' },
+  { value: '1', label: 'Miembro activo' },
+  { value: '0', label: 'Miembro inactivo' },
 ];
 
 const emptyForm = {
@@ -103,21 +106,41 @@ export function GymMembers() {
     }
   };
 
+  // Resumen de membresía por fila: en el mostrador lo que importa es si el miembro está al día,
+  // no su activo/inactivo administrativo. Sin suscripción, la acción pasa de Renovar a Suscribir.
+  const membership = (r) => {
+    if (!r.subscription) {
+      return { badge: { label: 'Sin suscripción', variant: 'neutral' }, text: null, alive: false };
+    }
+    const st = Number(r.subscription.computed_status ?? r.subscription.status);
+    const alive = st === GYM_SUBSCRIPTION_STATUS.ACTIVE || st === GYM_SUBSCRIPTION_STATUS.GRACE;
+    const text = st === GYM_SUBSCRIPTION_STATUS.CANCELLED
+      ? `Cancelada · ${r.subscription.plan_name}`
+      : `${alive ? 'Vence' : 'Venció'} el ${formatShortDate(r.subscription.end_date)}`;
+    return { badge: gymSubscriptionStatusMeta(st), text, alive };
+  };
+
   const columns = [
     { key: 'member_code', header: 'Código', width: 110, render: (r) => <span className={s.cellStrong}>{r.member_code}</span> },
     { key: 'member_name', header: 'Miembro', ellipsis: true, render: (r) => r.member_name },
-    { key: 'document_snapshot', header: 'Documento', width: 150, render: (r) => r.document_snapshot || <span className={s.faint}>—</span> },
     {
-      key: 'status', header: 'Estado', width: 120,
+      key: 'subscription', header: 'Membresía', width: 140,
       render: (r) => {
-        const m = gymMemberStatusMeta(r.status);
-        return <Badge variant={m.variant} dot>{m.label}</Badge>;
+        const ms = membership(r);
+        return <Badge variant={ms.badge.variant} dot>{ms.badge.label}</Badge>;
+      },
+    },
+    {
+      key: 'end_date', header: 'Vigencia', width: 170,
+      render: (r) => {
+        const ms = membership(r);
+        return ms.text || <span className={s.faint}>—</span>;
       },
     },
   ];
 
   const filterDefs = [
-    { key: 'status', type: 'select', label: 'Estado', icon: 'fas fa-circle-check', options: STATUS_OPTIONS },
+    { key: 'status', type: 'select', label: 'Miembro', icon: 'fas fa-circle-check', options: STATUS_OPTIONS },
   ];
 
   return (
@@ -169,26 +192,26 @@ export function GymMembers() {
           <Card><div className={s.mobileState}>No hay miembros registrados.</div></Card>
         )}
         {!loading && !error && rows.map((r) => {
-          const m = gymMemberStatusMeta(r.status);
+          const ms = membership(r);
           return (
             <Card key={r.id} className={gl.cardPad}>
-              <button type="button" className={gl.tapArea}
-                onClick={() => navigate(`/gym/members/${r.id}?${params.toString()}`)}>
-                <div className={gl.info}>
-                  <span className={gl.name}>{r.member_name}</span>
-                  <span className={gl.meta}>{r.member_code}{r.document_snapshot ? ` · ${r.document_snapshot}` : ''}</span>
-                </div>
-                <Badge variant={m.variant} dot>{m.label}</Badge>
-              </button>
-              <div className={gl.foot}>
-                <Button variant="secondary" size="sm" icon="fas fa-user"
+              <div className={gl.row}>
+                {/* Toda la zona de información navega a la ficha; la única acción aparte es
+                    cobrar (Renovar/Suscribir según tenga o no membresía). */}
+                <button type="button" className={gl.tapArea}
                   onClick={() => navigate(`/gym/members/${r.id}?${params.toString()}`)}>
-                  Ver ficha
-                </Button>
-                <Button variant="primary" size="sm" icon="fas fa-rotate"
-                  onClick={() => navigate(`/gym/members/${r.id}?action=renew`)}>
-                  Renovar
-                </Button>
+                  <div className={gl.info}>
+                    <span className={gl.name}>{r.member_name}</span>
+                    <span className={gl.meta}>{r.member_code}{ms.text ? ` · ${ms.text}` : ''}</span>
+                  </div>
+                </button>
+                <div className={gl.rightCol}>
+                  <Badge variant={ms.badge.variant} dot>{ms.badge.label}</Badge>
+                  <Button variant="secondary" size="sm" icon={ms.alive ? 'fas fa-rotate' : 'fas fa-plus'}
+                    onClick={() => navigate(`/gym/members/${r.id}?action=renew`)}>
+                    {ms.alive ? 'Renovar' : 'Suscribir'}
+                  </Button>
+                </div>
               </div>
             </Card>
           );

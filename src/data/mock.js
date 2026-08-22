@@ -3524,7 +3524,25 @@ let mockGymMembers = [
   { id: 2, user_id: 5002, member_code: 'M00002', member_name: 'Carlos Restrepo', document_snapshot: '1098765432', height_cm: '178.0', goal_id: 3, goal: 'Aumentar masa muscular', health_notes: 'Molestia leve en rodilla derecha', status: 1, joined_at: '2026-05-10' },
   { id: 3, user_id: 5003, member_code: 'M00003', member_name: 'Daniela Ríos', document_snapshot: '1023456789', height_cm: '160.0', goal_id: 1, goal: 'Bajar de peso', health_notes: '', status: 1, joined_at: '2026-06-01' },
   { id: 4, user_id: 5004, member_code: 'M00004', member_name: 'Andrés Mejía', document_snapshot: '1076543210', height_cm: '182.0', goal_id: null, goal: null, health_notes: '', status: 0, joined_at: '2026-04-15' },
+  { id: 5, user_id: 5005, member_code: 'M00005', member_name: 'Miguel Torres', document_snapshot: '1055443322', height_cm: null, goal_id: 6, goal: 'Salud general', health_notes: '', status: 1, joined_at: '2026-08-18' },
 ];
+
+// El listado de miembros lleva la suscripción más reciente de cada uno (espejo del backend):
+// en el mostrador el estado que importa es el de la membresía, no el activo/inactivo del miembro.
+const gymMemberListPresent = (m) => {
+  const latest = mockGymSubscriptions
+    .filter((sub) => sub.gym_member_id === m.id)
+    .sort((a, b) => (a.start_date < b.start_date ? 1 : -1))[0];
+  return {
+    ...m,
+    subscription: latest ? {
+      id: latest.id,
+      plan_name: latest.plan_name,
+      end_date: latest.end_date,
+      computed_status: latest.status,
+    } : null,
+  };
+};
 
 // Suscripciones: una por miembro salvo Daniela (cadena de 2, para ver el historial). `status`
 // viene ya calculado con las fechas de abajo (equivalente al `computed_status` que expone el
@@ -3718,7 +3736,8 @@ function resolveGymMock(path, query, { method = 'GET', body } = {}) {
         || m.member_name.toLowerCase().includes(search)
         || m.member_code.toLowerCase().includes(search)
         || (m.document_snapshot || '').includes(search))
-      .sort((a, b) => a.member_name.localeCompare(b.member_name));
+      .sort((a, b) => a.member_name.localeCompare(b.member_name))
+      .map(gymMemberListPresent);
     return mockPaginate(rows, query);
   }
 

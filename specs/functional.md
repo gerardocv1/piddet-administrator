@@ -185,7 +185,11 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
   catálogo de productos con el que se factura cada pago). `/gym/members` registra miembros: el
   formulario pide nombre, celular y documento, y el backend resuelve a la persona como usuario
   real de la plataforma —reutilizándola si ya existe por documento o celular— antes de crear su
-  ficha con un código de miembro autogenerado (`M00001`, `M00002`…). El **objetivo del miembro
+  ficha con un código de miembro autogenerado (`M00001`, `M00002`…). **El listado de miembros
+  muestra el estado de la membresía, no el activo/inactivo administrativo**: cada fila trae la
+  suscripción más reciente (badge Activa/En gracia/Vencida/Cancelada/Sin suscripción y su
+  vencimiento "Vence/Venció el …"), y la acción por fila es **Renovar** (membresía vigente) o
+  **Suscribir** (sin membresía al día); tocar la tarjeta abre la ficha. El **objetivo del miembro
   es cerrado**: se elige de un catálogo (`GET /gym/goals`: bajar de peso, subir de peso, aumentar
   masa muscular, tonificar…), no es texto libre — la clave estable de cada objetivo permitirá a
   futuro asociarle recomendaciones. La ficha del miembro (`/gym/members/:memberId`) está ordenada

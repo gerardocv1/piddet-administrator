@@ -30,6 +30,17 @@
 }
 .meta { font-size: var(--text-sm); color: var(--gray-600); }
 
+/* Fila de tarjeta compacta: información tappable a la izquierda, estado + acción a la derecha
+   (sin pie de botones a lo ancho: una sola acción pequeña por tarjeta). */
+.row { display: flex; align-items: center; gap: 12px; }
+.rightCol {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
 /* Pie con acciones, separado por hairline (mismo dibujo que la tarjeta de usuarios). */
 .foot {
   display: flex;
