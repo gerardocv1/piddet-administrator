@@ -4,7 +4,7 @@
 export const gymMoney = (value) =>
   '$ ' + Number(value || 0).toLocaleString('es-CO', { maximumFractionDigits: 0 });
 
-// Estado activo/inactivo (0/1), compartido por planes y miembros — misma convención que el resto
+// Estado activo/inactivo (0/1), compartido por planes y afiliados — misma convención que el resto
 // de catálogos del backend (RentableUnit, GymPlan, GymMember: STATUS_ACTIVE=1/STATUS_INACTIVE=0).
 export const GYM_ACTIVE_STATUS = { INACTIVE: 0, ACTIVE: 1 };
 export const gymActiveStatusMeta = (status) =>
@@ -18,7 +18,7 @@ export const gymPlanStatusMeta = gymActiveStatusMeta;
 export const GYM_MEMBER_STATUS = GYM_ACTIVE_STATUS;
 export const gymMemberStatusMeta = gymActiveStatusMeta;
 
-// Sexo del miembro ('M'/'F'): decide la silueta corporal de la vista de progreso.
+// Sexo del afiliado ('M'/'F'): decide la silueta corporal de la vista de progreso.
 export const GYM_SEX_OPTIONS = [
   { value: 'M', label: 'Hombre' },
   { value: 'F', label: 'Mujer' },

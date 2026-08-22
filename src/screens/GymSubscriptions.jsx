@@ -51,7 +51,7 @@ export function GymSubscriptions() {
   const pg = data.pagination;
 
   const columns = [
-    { key: 'member_name', header: 'Miembro', ellipsis: true, render: (r) => <span className={s.cellStrong}>{r.member_name}</span> },
+    { key: 'member_name', header: 'Afiliado', ellipsis: true, render: (r) => <span className={s.cellStrong}>{r.member_name}</span> },
     { key: 'plan_name', header: 'Plan', ellipsis: true, render: (r) => r.plan_name },
     { key: 'end_date', header: 'Vence', width: 130, render: (r) => formatShortDate(r.end_date) },
     { key: 'price', header: 'Precio', width: 120, align: 'right', render: (r) => <span className={s.priceCell}>{gymMoney(r.price)}</span> },

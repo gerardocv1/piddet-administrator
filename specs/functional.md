@@ -50,7 +50,7 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
 | Oferta | **Reservas** (hospedaje) | `/reservations` | `api-module-reservations` + `functionality_reservations` |
 | Oferta | **Unidades rentables** | `/rentable-units` | `api-module-rentable-units` + `functionality_reservations` |
 | Oferta | **Planes de gimnasio** | `/gym/plans` | `api-module-gym-plans` + `functionality_gym` |
-| Oferta | **Miembros de gimnasio** | `/gym/members` | `api-module-gym` + `functionality_gym` |
+| Oferta | **Afiliados de gimnasio** | `/gym/members` | `api-module-gym` + `functionality_gym` |
 | Oferta | **Suscripciones de gimnasio** | `/gym/subscriptions` | `api-module-gym` + `functionality_gym` |
 | Oferta | **Medidas de gimnasio** (configuración) | `/gym/measurements` | `api-module-gym-plans` + `functionality_gym` |
 | Operación | **Facturas** | `/invoices` | `api-module-orders` · `api-module-orders-own` |
@@ -176,23 +176,29 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
 
 ### Gimnasio
 
-- **Descripción:** administración de gimnasio: suscripciones mensuales por miembro, con
+- **Descripción:** administración de gimnasio: suscripciones mensuales por afiliado, con
   seguimiento periódico de sus medidas físicas. **Diseñado para operarse desde el teléfono**: el
   Inicio ofrece la acción rápida "Cobrar / renovar membresía", los listados se vuelven tarjetas
-  en móvil (con "Renovar" directo en cada miembro) y las tareas largas son asistentes paso a paso.
+  en móvil (con "Renovar" directo en cada afiliado) y las tareas largas son asistentes paso a paso.
 - **Flujo principal:** `/gym/plans` administra los planes (nombre, precio, duración en días,
   días de gracia tras el vencimiento, si el plan permite pausar la suscripción y el ítem del
-  catálogo de productos con el que se factura cada pago). `/gym/members` registra miembros: el
-  formulario pide nombre, celular y documento, y el backend resuelve a la persona como usuario
-  real de la plataforma —reutilizándola si ya existe por documento o celular— antes de crear su
-  ficha con un código de miembro autogenerado (`M00001`, `M00002`…). **El listado de miembros
+  catálogo de productos con el que se factura cada pago). `/gym/members` registra afiliados **en
+  dos pasos**: primero se busca a la persona por **celular o correo** (un solo campo: con `@`
+  busca por correo, si no por celular) contra `GET /gym/members/lookup`, y según lo que responda,
+  (a) si ya está afiliada a esta compañía no se duplica nada —se ofrece abrir su ficha—, (b) si ya
+  tiene cuenta en la plataforma (por otra compañía, una reserva o un pedido) **se reutiliza**: sus
+  datos personales los manda su cuenta y el segundo paso solo pide lo del gimnasio (sexo, talla,
+  objetivo, notas; el documento solo si su cuenta aún no lo tiene), o (c) si no existe, el segundo
+  paso pide la ficha completa y el backend crea su usuario. En cualquier caso el backend resuelve
+  a la persona como usuario real de la plataforma —por `user_id`, documento o celular— antes de
+  crear su ficha con un código de afiliado autogenerado (`M00001`, `M00002`…). **El listado de afiliados
   muestra el estado de la membresía, no el activo/inactivo administrativo**: cada fila trae la
   suscripción más reciente (badge Activa/En gracia/Vencida/Cancelada/Sin suscripción y su
   vencimiento "Vence/Venció el …"), y la acción por fila es **Renovar** (membresía vigente) o
-  **Suscribir** (sin membresía al día); tocar la tarjeta abre la ficha. El **objetivo del miembro
+  **Suscribir** (sin membresía al día); tocar la tarjeta abre la ficha. El **objetivo del afiliado
   es cerrado**: se elige de un catálogo (`GET /gym/goals`: bajar de peso, subir de peso, aumentar
   masa muscular, tonificar…), no es texto libre — la clave estable de cada objetivo permitirá a
-  futuro asociarle recomendaciones. La ficha del miembro (`/gym/members/:memberId`) está ordenada
+  futuro asociarle recomendaciones. La ficha del afiliado (`/gym/members/:memberId`) está ordenada
   por frecuencia de uso, con tarjetas **plegables**: primero la **suscripción como resumen
   compacto** (abierta por defecto; renovar en el sitio, el resumen abre el detalle), luego
   **Medidas** (peso/IMC y la tabla de mediciones — fecha, cuántas medidas, quién las registró;
@@ -203,12 +209,12 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
   **celular no se edita** porque es la credencial con la que inicia sesión. El análisis visual
   vive en la **vista de progreso** (`/gym/members/:memberId/progress`). El detalle de la suscripción
   (`/gym/subscriptions/:subscriptionId`) es la vista transaccional: sus pagos (registrar con el
-  precio precargado, anular), renovar y cancelar; el nombre del miembro arriba navega a su
+  precio precargado, anular), renovar y cancelar; el nombre del afiliado arriba navega a su
   perfil. `/gym/subscriptions` es el listado operativo, filtrable por estado y por próximas a
   vencer. Las medidas se toman con el **asistente paso a paso**
   (`/gym/members/:memberId/checkin`): una medida por pantalla —solo las que la compañía activó en
   `/gym/measurements`— con teclado numérico, el valor anterior como referencia y omisión con solo
-  dejar el campo vacío. Ni un plan ni un miembro se borran: se desactivan; una suscripción
+  dejar el campo vacío. Ni un plan ni un afiliado se borran: se desactivan; una suscripción
   cancelada, un pago anulado y un chequeo no se borran, quedan en el historial (un chequeo sí se
   puede corregir, no tiene efecto contable).
 - **Suscripciones:** la verdad son las fechas (inicio, fin, fin de gracia); el estado
@@ -234,10 +240,10 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
   gráfica de evolución (área con degradado para una serie; leyenda solo cuando hay
   izquierdo/derecho). Peso, % de grasa y masa muscular no viven en el cuerpo: se eligen como
   chips. Al final, el **Resumen de medidas** lista todas las que tienen historia (valor actual +
-  cambio total en tinta neutra) y tocar una fila la selecciona. La ficha del miembro solo
+  cambio total en tinta neutra) y tocar una fila la selecciona. La ficha del afiliado solo
   conserva el peso actual, el IMC y la tabla de mediciones.
 - **Reglas:** requiere la funcionalidad `functionality_gym` activa además del permiso. Los
-  miembros son usuarios de la plataforma (mismo patrón "pasivo" de Reservas). Un job diario
+  afiliados son usuarios de la plataforma (mismo patrón "pasivo" de Reservas). Un job diario
   (`gym:transition-subscriptions`, backend) transiciona automáticamente las suscripciones
   vencidas: activa → en gracia → vencida.
 

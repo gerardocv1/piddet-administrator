@@ -1,4 +1,4 @@
-/* Tarjetas móviles de los listados del gimnasio (miembros, suscripciones, planes). */
+/* Tarjetas móviles de los listados del gimnasio (afiliados, suscripciones, planes). */
 
 /* El Card base no trae padding propio: esta clase se lo da a la tarjeta de listado. */
 .cardPad { padding: 12px 14px; }

@@ -37,7 +37,7 @@ const META = {
   '/reservations': { title: 'Reservas', crumb: 'Hospedaje' },
   '/rentable-units': { title: 'Unidades', crumb: 'Hospedaje' },
   '/gym/plans': { title: 'Planes', crumb: 'Gimnasio' },
-  '/gym/members': { title: 'Miembros', crumb: 'Gimnasio' },
+  '/gym/members': { title: 'Afiliados', crumb: 'Gimnasio' },
   '/gym/subscriptions': { title: 'Suscripciones', crumb: 'Gimnasio' },
   '/gym/measurements': { title: 'Medidas', crumb: 'Gimnasio' },
   '/expenses': { title: 'Gastos', crumb: 'Operación' },
