@@ -1,4 +1,4 @@
-// Servicio: administración de gimnasio de la compañía activa (planes de membresía; miembros y
+// Servicio: administración de gimnasio de la compañía activa (planes de membresía; afiliados y
 // suscripciones se agregan en fases posteriores).
 //
 // Company-scoped: las rutas cuelgan de /companies/{company}/gym. Requiere la funcionalidad
@@ -26,7 +26,7 @@ const qs = (params = {}) => {
 // endpoints de lista NO paginados siempre resuelvan a un array.
 const list = (promise) => promise.then((d) => (Array.isArray(d) ? d : []));
 
-// Mismo problema que `list`, para endpoints que devuelven un objeto (no un array): un miembro sin
+// Mismo problema que `list`, para endpoints que devuelven un objeto (no un array): un afiliado sin
 // chequeos hace que el backend omita `data` y el cliente devuelva el envoltorio {status, message}
 // crudo. Lo distingue de una serie real (que nunca tiene ambas claves a la vez) y lo normaliza a {}.
 const obj = (promise) => promise.then((d) => (d && typeof d === 'object' && !Array.isArray(d) && !('status' in d && 'message' in d) ? d : {}));
@@ -45,14 +45,20 @@ export const gymService = {
   // Activa/desactiva el plan (nunca se borra: las suscripciones ya creadas mantienen su snapshot).
   setGymPlanStatus: (planId, status) => http.put(`${base()}/plans/${planId}/status`, { status }),
 
-  // ── Miembros ─────────────────────────────────────────────────────────────
-  // Los miembros son usuarios reales de la plataforma (resueltos como "pasivos" al registrarlos,
+  // ── Afiliados ─────────────────────────────────────────────────────────────
+  // Los afiliados son usuarios reales de la plataforma (resueltos como "pasivos" al registrarlos,
   // mismo patrón que los huéspedes de Reservas): el backend hace find-or-create por documento o
   // celular, así que crear con los datos de alguien ya existente lo reutiliza en vez de duplicarlo.
   gymMembers: ({ status = '', search = '', page = 1, perPage = 15 } = {}) =>
     http.get(`${base()}/members${qs({ status, _search: search, page, per_page: perPage })}`, { paginated: true }),
 
   gymMember: (memberId) => http.get(`${base()}/members/${memberId}`),
+
+  // Búsqueda previa al registro: se manda celular O correo y responde
+  // { found, user: {...} | null, member: {...} | null }. `member` viene lleno si esa persona ya
+  // está afiliada a esta compañía; `user`, si ya tiene cuenta en la plataforma (para reutilizarla).
+  gymMemberLookup: ({ phone_number = '', email = '' } = {}) =>
+    obj(http.get(`${base()}/members/lookup${qs({ phone_number, email })}`)),
 
   createGymMember: (data) => http.post(`${base()}/members`, data),
 
@@ -69,10 +75,10 @@ export const gymService = {
 
   gymSubscription: (subscriptionId) => http.get(`${base()}/subscriptions/${subscriptionId}`),
 
-  // Historial de suscripciones del miembro, más reciente primero.
+  // Historial de suscripciones del afiliado, más reciente primero.
   gymMemberSubscriptions: (memberId) => list(http.get(`${base()}/members/${memberId}/subscriptions`)),
 
-  // Da de alta o renueva (si el miembro tiene una vigente, la nueva se encadena automáticamente
+  // Da de alta o renueva (si el afiliado tiene una vigente, la nueva se encadena automáticamente
   // desde el backend). `payment` es opcional: registra el primer pago en la misma llamada.
   createGymSubscription: (memberId, data) => http.post(`${base()}/members/${memberId}/subscriptions`, data),
 
@@ -86,12 +92,12 @@ export const gymService = {
   // Anula el pago y cancela su factura (irreversible, motivo obligatorio).
   annulGymPayment: (paymentId, reason) => http.put(`${base()}/payments/${paymentId}/annul`, { reason }),
 
-  // Catálogo cerrado de objetivos del miembro (el objetivo se elige, no es texto libre):
+  // Catálogo cerrado de objetivos del afiliado (el objetivo se elige, no es texto libre):
   // [{ id, key, label }].
   gymGoals: () => list(http.get(`${base()}/goals`)),
 
   // ── Medidas físicas ──────────────────────────────────────────────────────
-  // Medidas que la compañía pide a sus miembros (el catálogo filtrado por su selección; sin
+  // Medidas que la compañía pide a sus afiliados (el catálogo filtrado por su selección; sin
   // selección guardada, todas): [{ id, key, label, unit, sided, sort_order }].
   gymMeasurementTypes: () => list(http.get(`${base()}/measurement-types`)),
 
@@ -101,7 +107,7 @@ export const gymService = {
   // Reemplaza la selección de medidas de la compañía (mínimo una).
   updateGymMeasurementSettings: (typeIds) => http.put(`${base()}/measurement-settings`, { type_ids: typeIds }),
 
-  // Historial paginado de chequeos del miembro, más reciente primero.
+  // Historial paginado de chequeos del afiliado, más reciente primero.
   gymMemberCheckins: (memberId, { page = 1, perPage = 15 } = {}) =>
     http.get(`${base()}/members/${memberId}/checkins${qs({ page, per_page: perPage })}`, { paginated: true }),
 

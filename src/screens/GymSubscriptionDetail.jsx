@@ -13,7 +13,7 @@ import s from './screens.module.css';
 import g from './GymSubscriptionDetail.module.css';
 
 // Detalle de UNA suscripción, enfocado en lo transaccional: el plan, su vigencia y sus pagos.
-// El nombre del miembro (arriba) navega a su perfil; las acciones de aquí son las de la
+// El nombre del afiliado (arriba) navega a su perfil; las acciones de aquí son las de la
 // suscripción: registrar pago, anular un pago, renovar y cancelar. Mobile-first: los pagos son
 // filas apiladas, no tabla.
 export function GymSubscriptionDetail() {
@@ -313,7 +313,7 @@ export function GymSubscriptionDetail() {
       <ConfirmDialog open={cancelOpen} title="Cancelar suscripción" reason="required"
         reasonLabel="Motivo de la cancelación" loading={cancelBusy} error={cancelError}
         onConfirm={submitCancel} onClose={() => setCancelOpen(false)}>
-        Esta acción es irreversible: el miembro perderá el acceso vigente. Para que vuelva a tener suscripción habrá que registrar una nueva.
+        Esta acción es irreversible: el afiliado perderá el acceso vigente. Para que vuelva a tener suscripción habrá que registrar una nueva.
       </ConfirmDialog>
 
       <ConfirmDialog open={!!annulTarget} title="Anular pago" reason="required"

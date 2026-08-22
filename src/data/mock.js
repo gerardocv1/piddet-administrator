@@ -86,7 +86,7 @@ export const mockFunctionalities = [
     name: 'functionality_gym',
     label: 'Gimnasio',
     icon: 'fas fa-dumbbell',
-    description: 'Administración de gimnasio: miembros, planes, suscripciones y medidas físicas.',
+    description: 'Administración de gimnasio: afiliados, planes, suscripciones y medidas físicas.',
     is_active: true,
   },
 ];
@@ -3485,7 +3485,7 @@ function resolveCheckinMock(path, query, { method = 'GET', body } = {}) {
   return null;
 }
 
-// ── Gimnasio: catálogo de planes de membresía (miembros/suscripciones llegan en fases
+// ── Gimnasio: catálogo de planes de membresía (afiliados/suscripciones llegan en fases
 // posteriores). Mutan en memoria durante la sesión, como el resto de los mocks.
 let mockGymPlans = [
   { id: 1, name: 'Plan mensual', description: 'Acceso ilimitado al gimnasio, mes a mes', price: '90000.00', duration_days: 30, grace_period_days: 3, allows_pause: false, item_id: 905, status: 1, sort_order: 0 },
@@ -3507,9 +3507,9 @@ const addDaysIso = (iso, days) => {
 // `status` (aquí no hay cron que lo materialice, así que ambos se fijan igual al crear/mutar).
 const gymSubPresent = (s) => ({ ...s, computed_status: s.status });
 
-// Miembros: personas ya resueltas como usuarios de la plataforma (user_id ficticio en el demo).
-// Catálogo cerrado de objetivos (espejo del seed de gym_goals): el miembro elige uno, no hay
-// texto libre. `goal` en el miembro es el snapshot del label.
+// Afiliados: personas ya resueltas como usuarios de la plataforma (user_id ficticio en el demo).
+// Catálogo cerrado de objetivos (espejo del seed de gym_goals): el afiliado elige uno, no hay
+// texto libre. `goal` en el afiliado es el snapshot del label.
 const mockGymGoals = [
   { id: 1, key: 'lose_weight', label: 'Bajar de peso' },
   { id: 2, key: 'gain_weight', label: 'Subir de peso' },
@@ -3527,8 +3527,15 @@ let mockGymMembers = [
   { id: 5, user_id: 5005, member_code: 'M00005', member_name: 'Miguel Torres', document_snapshot: '1055443322', sex: null, email: null, phone_number: '3025556677', id_type_id: 1, height_cm: null, goal_id: 6, goal: 'Salud general', health_notes: '', status: 1, joined_at: '2026-08-18' },
 ];
 
-// El listado de miembros lleva la suscripción más reciente de cada uno (espejo del backend):
-// en el mostrador el estado que importa es el de la membresía, no el activo/inactivo del miembro.
+// Personas que YA tienen cuenta en la plataforma (clientes de reservas, pedidos…) pero que aún no
+// están afiliadas al gimnasio: es lo que hace visible la búsqueda previa por celular o correo.
+const mockPlatformPeople = [
+  { user_id: 4101, first_name: 'Valentina', last_name: 'Ospina', email: 'valentina.ospina@example.com', phone_code: '57', phone_number: '3134445566', id_type_id: 1, id_number: '1032998877' },
+  { user_id: 4102, first_name: 'Julián', last_name: 'Castaño', email: 'julian.castano@example.com', phone_code: '57', phone_number: '3145556677', id_type_id: 1, id_number: null },
+];
+
+// El listado de afiliados lleva la suscripción más reciente de cada uno (espejo del backend):
+// en el mostrador el estado que importa es el de la membresía, no el activo/inactivo del afiliado.
 const gymMemberPersonal = (m) => {
   const parts = (m.member_name || '').trim().split(/\s+/);
   return {
@@ -3557,7 +3564,7 @@ const gymMemberListPresent = (m) => {
   };
 };
 
-// Suscripciones: una por miembro salvo Daniela (cadena de 2, para ver el historial). `status`
+// Suscripciones: una por afiliado salvo Daniela (cadena de 2, para ver el historial). `status`
 // viene ya calculado con las fechas de abajo (equivalente al `computed_status` que expone el
 // backend); en el demo no se recalcula en vivo.
 let mockGymSubscriptions = [
@@ -3602,7 +3609,7 @@ let mockGymSubscriptions = [
     plan_id: 2, plan_name: 'Plan trimestral', price: '240000.00', duration_days: 90, grace_period_days: 3,
     start_date: isoDay(95), end_date: isoDay(5), grace_ends_at: isoDay(2),
     status: 4, is_renewal: false, previous_subscription_id: null,
-    cancelled_at: isoDay(50), cancellation_reason: 'El miembro se mudó de ciudad',
+    cancelled_at: isoDay(50), cancellation_reason: 'El afiliado se mudó de ciudad',
     payments: [
       { id: 'gpay-4', value: '240000.00', payment_method: 'bancolombia', payment_method_name: 'Ahorro a la mano Bancolombia', payment_date: isoDay(95), notes: null, order_id: 'ord-gym-4', status: 0, created_by_name: 'Gerardo', annulled_at: isoDay(50), annulment_reason: 'Cancelación de la suscripción' },
     ],
@@ -3629,7 +3636,7 @@ const mockGymMeasurementTypes = [
 ];
 
 // Chequeos demo: 6 meses de historial para Laura Gómez (member 1), mostrando progreso real
-// (peso y % de grasa bajando, cintura reduciéndose). Los demás miembros arrancan sin mediciones,
+// (peso y % de grasa bajando, cintura reduciéndose). Los demás afiliados arrancan sin mediciones,
 // para ver también el estado vacío.
 let mockGymCheckins = [0, 1, 2, 3, 4, 5].map((i) => ({
   id: `gchk-1-${i}`,
@@ -3718,18 +3725,56 @@ function resolveGymMock(path, query, { method = 'GET', body } = {}) {
     return gymPlanPresent(plan);
   }
 
+  // Búsqueda previa al alta: por celular (único) o por correo. Responde si la persona ya tiene
+  // cuenta en la plataforma y si además ya está afiliada a esta compañía.
+  if (sub === 'members/lookup') {
+    const phone = (query.get('phone_number') || '').trim();
+    const email = (query.get('email') || '').trim().toLowerCase();
+    const matchPerson = (p) => (phone && p.phone_number === phone)
+      || (!!email && (p.email || '').toLowerCase() === email);
+
+    const affiliated = mockGymMembers.find((m) => matchPerson({ phone_number: m.phone_number, email: m.email }));
+    if (affiliated) {
+      const personal = gymMemberPersonal(affiliated);
+      return {
+        found: true,
+        user: { user_id: affiliated.user_id, ...personal },
+        member: {
+          id: affiliated.id,
+          member_code: affiliated.member_code,
+          member_name: affiliated.member_name,
+          status: affiliated.status,
+        },
+      };
+    }
+
+    const person = mockPlatformPeople.find(matchPerson);
+    return person ? { found: true, user: { ...person }, member: null } : { found: false, user: null, member: null };
+  }
+
   if (sub === 'members') {
     if (method === 'POST') {
-      const idNumber = (body.id_number || '').trim();
-      const dup = mockGymMembers.find((m) => (idNumber && m.document_snapshot === idNumber));
-      if (dup) throw new Error('Esta persona ya es miembro del gimnasio');
+      // Con `user_id` la persona viene de la búsqueda previa: manda su cuenta y no se piden de
+      // nuevo sus datos personales (espejo de PassiveUserResolverService).
+      const account = body.user_id ? mockPlatformPeople.find((p) => p.user_id === Number(body.user_id)) : null;
+      const idNumber = (account?.id_number || body.id_number || '').trim();
+      const phone = (account?.phone_number || body.phone_number || '').trim();
+      const dup = mockGymMembers.find((m) => (idNumber && m.document_snapshot === idNumber)
+        || (phone && m.phone_number === phone));
+      if (dup) throw new Error('Esta persona ya está afiliada al gimnasio');
       const nextNum = mockGymMembers.reduce((max, m) => Math.max(max, Number(m.member_code.slice(1))), 0) + 1;
       const member = {
         id: (mockGymMembers.reduce((max, m) => Math.max(max, m.id), 0) || 0) + 1,
-        user_id: 5000 + (mockGymMembers.reduce((max, m) => Math.max(max, m.user_id - 5000), 0) || 0) + 1,
+        user_id: account?.user_id
+          || 5000 + (mockGymMembers.reduce((max, m) => Math.max(max, m.user_id - 5000), 0) || 0) + 1,
         member_code: 'M' + String(nextNum).padStart(5, '0'),
-        member_name: `${body.first_name} ${body.last_name}`.trim(),
+        member_name: account
+          ? `${account.first_name} ${account.last_name}`.trim()
+          : `${body.first_name} ${body.last_name}`.trim(),
         document_snapshot: idNumber || null,
+        email: account?.email || body.email || null,
+        phone_number: phone || null,
+        id_type_id: account?.id_type_id || (body.id_type_id ? Number(body.id_type_id) : null),
         sex: body.sex || null,
         height_cm: body.height_cm || null,
         goal_id: body.goal_id ? Number(body.goal_id) : null,

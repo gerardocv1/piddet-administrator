@@ -197,7 +197,7 @@ export function Dashboard() {
               <span className={s.quickIcon}><i className="fas fa-dumbbell" /></span>
               <span className={s.quickText}>
                 <strong>Cobrar / renovar membresía</strong>
-                <span>Busca al miembro y renueva en el sitio</span>
+                <span>Busca al afiliado y renueva en el sitio</span>
               </span>
               <i className={`fas fa-chevron-right ${s.quickChevron}`} />
             </button>

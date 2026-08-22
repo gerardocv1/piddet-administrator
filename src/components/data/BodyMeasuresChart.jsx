@@ -67,7 +67,7 @@ function buildLines(series, selectedKeys) {
 }
 
 /**
- * Gráfica de progreso de medidas físicas de un miembro. `series`: payload de
+ * Gráfica de progreso de medidas físicas de un afiliado. `series`: payload de
  * api.gymMemberProgress ({ [type_key]: { unit, points: [{date, value, side}] } }).
  * `selectedKeys`: tipos a graficar. `labelFor(key)`: nombre legible del tipo.
  */

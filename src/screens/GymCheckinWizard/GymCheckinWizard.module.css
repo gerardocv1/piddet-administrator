@@ -13,7 +13,7 @@
   .wizard { min-height: calc(100dvh - 90px); }
 }
 
-/* ---- Cabecera: miembro + progreso ---- */
+/* ---- Cabecera: afiliado + progreso ---- */
 .header { display: flex; flex-direction: column; gap: 6px; }
 .memberName { font-size: var(--text-sm); font-weight: 600; color: var(--gray-500); }
 .progressText { font-size: var(--text-lg); font-weight: 700; color: var(--gray-900); }

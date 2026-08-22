@@ -121,7 +121,7 @@ export function GymCheckinWizard() {
           </p>
           <div className={t.successActions}>
             <Button variant="primary" icon="fas fa-user" onClick={() => navigate(`/gym/members/${memberId}`)}>
-              Ver miembro
+              Ver afiliado
             </Button>
             <Button variant="secondary" icon="fas fa-plus" onClick={reset}>
               Tomar otras medidas

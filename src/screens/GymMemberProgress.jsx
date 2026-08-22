@@ -71,7 +71,7 @@ function kpisFor(groups, unit) {
   return stats;
 }
 
-// Vista de progreso físico del miembro: figura corporal (hombre/mujer según su ficha) donde se
+// Vista de progreso físico del afiliado: figura corporal (hombre/mujer según su ficha) donde se
 // toca la parte del cuerpo a revisar — solo las medidas configuradas por la compañía —, con el
 // antes/después animado de esa medida y su gráfica. Las medidas que no viven en el cuerpo
 // (peso, % de grasa, masa muscular) se eligen como chips.
@@ -101,7 +101,7 @@ export function GymMemberProgress() {
 
   useSetPageTitle(member?.member_name ? `Progreso · ${member.member_name}` : null);
 
-  // Sexo: define la silueta. Si el miembro no lo tiene, se elige aquí y se guarda en su ficha.
+  // Sexo: define la silueta. Si el afiliado no lo tiene, se elige aquí y se guarda en su ficha.
   const [savingSex, setSavingSex] = React.useState(false);
   const [sexError, setSexError] = React.useState('');
   const pickSex = async (sex) => {
@@ -123,7 +123,7 @@ export function GymMemberProgress() {
   if (error || !member) {
     return (
       <div className={s.page}>
-        <Alert tone="danger" title="No se pudo abrir el progreso">{error || 'No se encontró el miembro.'}</Alert>
+        <Alert tone="danger" title="No se pudo abrir el progreso">{error || 'No se encontró el afiliado.'}</Alert>
       </div>
     );
   }
@@ -158,7 +158,7 @@ export function GymMemberProgress() {
           {!member.sex ? (
             <div className={p.sexPrompt}>
               <p className={p.sexPromptText}>
-                ¿El miembro es hombre o mujer? Define la silueta de esta vista y queda guardado en su ficha.
+                ¿El afiliado es hombre o mujer? Define la silueta de esta vista y queda guardado en su ficha.
               </p>
               <div className={p.sexPromptActions}>
                 {GYM_SEX_OPTIONS.map((o) => (

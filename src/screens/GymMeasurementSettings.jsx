@@ -6,7 +6,7 @@ import { usePermissions } from '../lib/permissions/usePermissions.js';
 import s from './screens.module.css';
 import g from './GymMeasurementSettings.module.css';
 
-// Qué medidas pide el gimnasio a sus miembros al tomar medidas. Cada compañía activa su propio
+// Qué medidas pide el gimnasio a sus afiliados al tomar medidas. Cada compañía activa su propio
 // subconjunto del catálogo (peso, % de grasa, circunferencias…); el asistente de medición solo
 // recorre las activas. Guardar exige el permiso gym-measurement-config.
 export function GymMeasurementSettings() {
@@ -56,7 +56,7 @@ export function GymMeasurementSettings() {
     <div className={s.page}>
       <div className={s.toolbar}>
         <p className={g.intro}>
-          Estas son las medidas que se piden al tomar medidas a un miembro. Activa solo las que tu
+          Estas son las medidas que se piden al tomar medidas a un afiliado. Activa solo las que tu
           gimnasio registra: el asistente de medición será igual de corto.
         </p>
       </div>

@@ -33,7 +33,7 @@ function CollapsibleCard({ title, action, defaultOpen = true, children }) {
   );
 }
 
-// Ficha del miembro, en orden de uso móvil: primero su suscripción (resumen compacto — el
+// Ficha del afiliado, en orden de uso móvil: primero su suscripción (resumen compacto — el
 // detalle transaccional con los pagos vive en /gym/subscriptions/:id), luego su progreso
 // físico (todas las medidas configuradas en una gráfica, ocultables desde la leyenda, con el
 // historial de mediciones debajo) y al final el perfil, plegado por defecto. Suscripción y
@@ -64,7 +64,7 @@ export function GymMemberDetail() {
     [paymentMethods],
   );
 
-  useSetPageTitle(data?.member_name ? `Miembro · ${data.member_name}` : null);
+  useSetPageTitle(data?.member_name ? `Afiliado · ${data.member_name}` : null);
 
   const goBack = () => navigate(`/gym/members${params.toString() ? `?${params.toString()}` : ''}`);
 
@@ -257,7 +257,7 @@ export function GymMemberDetail() {
         status: form.active ? GYM_MEMBER_STATUS.ACTIVE : GYM_MEMBER_STATUS.INACTIVE,
       });
       setData(updated);
-      toast({ tone: 'success', title: 'Miembro actualizado' });
+      toast({ tone: 'success', title: 'Afiliado actualizado' });
     } catch (e) {
       setSaveError(e?.message || 'No se pudo guardar los cambios.');
     } finally {
@@ -265,11 +265,11 @@ export function GymMemberDetail() {
     }
   };
 
-  if (loading) return <Spinner center label="Cargando miembro…" />;
+  if (loading) return <Spinner center label="Cargando afiliado…" />;
   if (error || !data) {
     return (
       <div className={s.page}>
-        <Alert tone="danger" title="No se pudo abrir el miembro">{error || 'No se encontró el miembro.'}</Alert>
+        <Alert tone="danger" title="No se pudo abrir el afiliado">{error || 'No se encontró el afiliado.'}</Alert>
       </div>
     );
   }
@@ -303,7 +303,7 @@ export function GymMemberDetail() {
           </Button>
         }>
         {!current ? (
-          <p className={s.faint}>Este miembro todavía no tiene una suscripción.</p>
+          <p className={s.faint}>Este afiliado todavía no tiene una suscripción.</p>
         ) : (
           <button type="button" className={g.subSummary}
             onClick={() => navigate(`/gym/subscriptions/${current.id}`)}>
@@ -376,7 +376,7 @@ export function GymMemberDetail() {
               onChange={(e) => setForm({ ...form, goal_id: e.target.value })} options={goalOptions} />
             <Textarea label="Notas de salud" placeholder="Lesiones, condiciones a tener en cuenta…"
               value={form.health_notes} onChange={(e) => setForm({ ...form, health_notes: e.target.value })} />
-            <Switch label="Miembro activo" checked={form.active}
+            <Switch label="Afiliado activo" checked={form.active}
               onChange={(e) => setForm({ ...form, active: e.target.checked })} />
             <div className={s.actions}>
               <Button variant="primary" loading={saving} disabled={!dirty} onClick={save}>Guardar cambios</Button>
