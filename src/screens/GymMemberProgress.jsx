@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
-  Card, Badge, Button, Spinner, Alert, PageHeader, StatStrip, BodyMeasuresChart, BodyFigure, BODY_FIGURE_KEYS, useToast,
+  Card, Badge, Button, Spinner, Alert, PageHeader, StatStrip, BodyMeasuresChart, BodyMap, BODY_MAP_KEYS, useToast,
 } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
@@ -85,8 +85,8 @@ export function GymMemberProgress() {
 
   const { data: types } = useResource(api.gymMeasurementTypes, EMPTY_TYPES, []);
   const typeByKey = React.useMemo(() => Object.fromEntries((types || []).map((t) => [t.key, t])), [types]);
-  const bodyKeys = React.useMemo(() => (types || []).map((t) => t.key).filter((k) => BODY_FIGURE_KEYS.includes(k)), [types]);
-  const generalKeys = React.useMemo(() => (types || []).map((t) => t.key).filter((k) => !BODY_FIGURE_KEYS.includes(k)), [types]);
+  const bodyKeys = React.useMemo(() => (types || []).map((t) => t.key).filter((k) => BODY_MAP_KEYS.includes(k)), [types]);
+  const generalKeys = React.useMemo(() => (types || []).map((t) => t.key).filter((k) => !BODY_MAP_KEYS.includes(k)), [types]);
 
   const progressFetcher = React.useCallback(() => api.gymMemberProgress(memberId), [memberId]);
   const { data: progress, loading: progressLoading } = useResource(progressFetcher, {}, [memberId]);
@@ -174,7 +174,7 @@ export function GymMemberProgress() {
           ) : (
             <div className={p.layout}>
               <div className={p.figureCol}>
-                <BodyFigure
+                <BodyMap
                   sex={member.sex}
                   zones={bodyKeys}
                   selected={selectedKey}
@@ -182,7 +182,7 @@ export function GymMemberProgress() {
                   onSelect={setPicked}
                   labelFor={(k) => typeByKey[k]?.label || k}
                 />
-                <p className={p.figureHint}>Toca la parte del cuerpo que quieres revisar.</p>
+                <p className={p.figureHint}>Toca el punto del músculo que quieres revisar.</p>
               </div>
 
               <div className={p.panelCol}>

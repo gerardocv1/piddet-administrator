@@ -2,7 +2,8 @@
 
 .layout {
   display: grid;
-  grid-template-columns: 240px 1fr;
+  /* Dos vistas (frente y perfil) lado a lado en la columna de la figura. */
+  grid-template-columns: minmax(280px, 380px) 1fr;
   gap: 24px;
   align-items: start;
 }
@@ -127,8 +128,8 @@
 
 @media (max-width: 860px) {
   .layout { grid-template-columns: 1fr; gap: 16px; }
-  /* En teléfono la figura no debe comerse la pantalla: compacta y centrada. */
-  .figureCol { max-width: 170px; margin: 0 auto; }
+  /* En teléfono las dos vistas van centradas a lo ancho. */
+  .figureCol { margin: 0 auto; }
   .compareRow { grid-template-columns: 52px 1fr auto; }
   .compareDate { display: none; }
 }

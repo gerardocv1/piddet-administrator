@@ -223,10 +223,12 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
   configura en `/gym/measurements` qué medidas pide** (peso, % de grasa, circunferencias…; sin
   selección guardada se piden todas); el catálogo distingue las que admiten lado
   izquierdo/derecho (bíceps, muslo, pantorrilla, antebrazo). La **vista de progreso**
-  (`/gym/members/:memberId/progress`) es interactiva: una **silueta corporal anatómica** — de
-  hombre o de mujer según el sexo de la ficha (si falta, se pregunta ahí mismo y se guarda),
-  dibujada con contornos suavizados y zonas recortadas al cuerpo — con las zonas tocables de las
-  medidas configuradas por la compañía; tocar una parte (pecho, cintura, glúteo…) muestra sus
+  (`/gym/members/:memberId/progress`) es interactiva: un **mapa corporal** con las siluetas
+  ilustradas del proyecto (`public/gym/*` — hombre o mujer según el sexo de la ficha; si falta,
+  se pregunta ahí mismo y se guarda) **de frente y de perfil**, con un punto tocable sobre cada
+  músculo de las medidas configuradas por la compañía (el punto muestra el nombre del músculo al
+  pasar o seleccionar, y el glúteo solo aparece de perfil); tocar un punto (pecho, cintura,
+  glúteo…) muestra sus
   **KPIs** (valor actual con el cambio desde la medición anterior, cambio total con porcentaje y
   número de mediciones; en medidas bilaterales, por lado), su **antes/después** animado y su
   gráfica de evolución (área con degradado para una serie; leyenda solo cuando hay
