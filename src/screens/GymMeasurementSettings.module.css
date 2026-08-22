@@ -1,0 +1,29 @@
+/* Configuración de medidas del gimnasio: lista de filas con interruptor, cómoda al pulgar. */
+
+.intro {
+  margin: 0;
+  color: var(--gray-500);
+  font-size: var(--text-base);
+  max-width: 560px;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.list li + li { border-top: 1px solid var(--border-color); }
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 56px;
+  padding: 8px 16px;
+}
+.rowInfo { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.rowLabel { font-weight: 600; color: var(--gray-800); }
+.rowMeta { font-size: var(--text-xs); color: var(--gray-400); }

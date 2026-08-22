@@ -412,7 +412,7 @@ export const mockMenuItems = [
 // el panel muestra Productos (y sus categorías), Menús y Usuarios; el resto queda oculto.
 const mockPermissions = {
   roles: ['Administrador'],
-  permissions: ['user-administrator', 'admin-general', 'role-list', 'role-create', 'role-update', 'role-delete', 'role-assign', 'permission-list', 'permission-update', 'api-module-menus', 'api-module-products', 'api-module-company', 'company-edit-functionalities', 'api-module-stores', 'table-list', 'table-create', 'table-update', 'api-module-orders', 'sales-report', 'order-cancel', 'order-sync-failure-admin', 'api-module-expenses', 'expenses-report', 'expense-annul', 'api-module-shifts', 'shift-global-admin', 'api-module-reservations', 'api-module-rentable-units', 'reservation-checkout', 'reservation-cancel', 'reservation-payment-annul', 'api-module-gym', 'api-module-gym-plans', 'gym-plans-create', 'gym-plans-edit', 'gym-members-create', 'gym-members-edit', 'gym-subscriptions-create', 'gym-subscriptions-cancel', 'gym-payments-create', 'gym-payments-annul', 'gym-checkins-create', 'gym-checkins-edit'],
+  permissions: ['user-administrator', 'admin-general', 'role-list', 'role-create', 'role-update', 'role-delete', 'role-assign', 'permission-list', 'permission-update', 'api-module-menus', 'api-module-products', 'api-module-company', 'company-edit-functionalities', 'api-module-stores', 'table-list', 'table-create', 'table-update', 'api-module-orders', 'sales-report', 'order-cancel', 'order-sync-failure-admin', 'api-module-expenses', 'expenses-report', 'expense-annul', 'api-module-shifts', 'shift-global-admin', 'api-module-reservations', 'api-module-rentable-units', 'reservation-checkout', 'reservation-cancel', 'reservation-payment-annul', 'api-module-gym', 'api-module-gym-plans', 'gym-plans-create', 'gym-plans-edit', 'gym-members-create', 'gym-members-edit', 'gym-subscriptions-create', 'gym-subscriptions-cancel', 'gym-payments-create', 'gym-payments-annul', 'gym-checkins-create', 'gym-checkins-edit', 'gym-measurement-config'],
 };
 
 // Empresa (tenant) activa y empresas disponibles para el usuario (SaaS multi-tenant).
@@ -3603,6 +3603,10 @@ let mockGymCheckins = [0, 1, 2, 3, 4, 5].map((i) => ({
   ],
 }));
 
+// Selección de medidas de la compañía (espejo de gym_company_measurement_types):
+// null = sin selección guardada → se piden todas; array = solo esas.
+let mockGymEnabledTypeIds = [1, 2, 5, 6, 8];
+
 const gymCheckinPresent = (c) => ({
   ...c,
   values: c.values.map((v) => {
@@ -3781,7 +3785,23 @@ function resolveGymMock(path, query, { method = 'GET', body } = {}) {
       .map(gymSubPresent);
   }
 
-  if (sub === 'measurement-types') return mockGymMeasurementTypes;
+  if (sub === 'measurement-types') {
+    return mockGymEnabledTypeIds == null
+      ? mockGymMeasurementTypes
+      : mockGymMeasurementTypes.filter((t) => mockGymEnabledTypeIds.includes(t.id));
+  }
+
+  if (sub === 'measurement-settings') {
+    if (method === 'PUT') {
+      const ids = (body.type_ids || []).map(Number);
+      if (!ids.length) throw new Error('Selecciona al menos una medida');
+      mockGymEnabledTypeIds = ids.length === mockGymMeasurementTypes.length ? null : ids;
+    }
+    return mockGymMeasurementTypes.map((t) => ({
+      ...t,
+      enabled: mockGymEnabledTypeIds == null || mockGymEnabledTypeIds.includes(t.id),
+    }));
+  }
 
   const memberCheckinsMatch = sub.match(/^members\/(\d+)\/checkins$/);
   if (memberCheckinsMatch) {

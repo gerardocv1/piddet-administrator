@@ -2,12 +2,13 @@ import React from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   Card, DataTable, Badge, Button, FilterBar, Pagination, RefreshButton,
-  Modal, Input, Textarea, Select, MoneyInput, Switch, Alert, useToast,
+  Modal, Input, Textarea, Select, MoneyInput, Switch, Alert, Spinner, useToast,
 } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { gymMoney, gymPlanStatusMeta, gymPlanDurationLabel, GYM_PLAN_DURATION_PRESETS, GYM_PLAN_STATUS } from '../lib/gymLabels.js';
 import s from './screens.module.css';
+import gl from './GymLists.module.css';
 
 const EMPTY = { items: [], pagination: null };
 
@@ -178,16 +179,51 @@ export function GymPlans() {
 
       {statusError && <Alert tone="danger" title="No se pudo cambiar el estado" onClose={() => setStatusError('')}>{statusError}</Alert>}
 
-      <Card>
-        <DataTable
-          columns={columns}
-          rows={rows}
-          loading={loading}
-          error={error}
-          empty="No hay planes registrados."
-          onRowClick={openEdit}
-        />
-      </Card>
+      <div className={s.desktopList}>
+        <Card>
+          <DataTable
+            columns={columns}
+            rows={rows}
+            loading={loading}
+            error={error}
+            empty="No hay planes registrados."
+            onRowClick={openEdit}
+          />
+        </Card>
+      </div>
+
+      <div className={s.mobileList}>
+        {loading && <Card><div className={s.mobileState}><Spinner size="sm" label="Cargando…" /></div></Card>}
+        {!loading && error && (
+          <Card><Alert tone="danger" title="No se pudieron cargar los planes">{error}</Alert></Card>
+        )}
+        {!loading && !error && rows.length === 0 && (
+          <Card><div className={s.mobileState}>No hay planes registrados.</div></Card>
+        )}
+        {!loading && !error && rows.map((r) => {
+          const m = gymPlanStatusMeta(r.status);
+          return (
+            <Card key={r.id} className={gl.cardPad}>
+              <button type="button" className={gl.tapArea} onClick={() => openEdit(r)}>
+                <div className={gl.info}>
+                  <span className={gl.name}>{r.name}</span>
+                  <span className={gl.meta}>{gymPlanDurationLabel(r.duration_days)} · {gymMoney(r.price)}</span>
+                </div>
+                <Badge variant={m.variant} dot>{m.label}</Badge>
+              </button>
+              <div className={gl.foot}>
+                <Button variant="secondary" size="sm" icon="fas fa-pen" onClick={() => openEdit(r)}>
+                  Editar
+                </Button>
+                <Button variant="outline-primary" size="sm" loading={statusBusyId === r.id}
+                  onClick={() => toggleStatus(r)}>
+                  {Number(r.status) === GYM_PLAN_STATUS.ACTIVE ? 'Desactivar' : 'Activar'}
+                </Button>
+              </div>
+            </Card>
+          );
+        })}
+      </div>
 
       {pg && pg.last_page > 1 && (
         <Pagination page={pg.current_page} lastPage={pg.last_page} total={pg.total}

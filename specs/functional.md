@@ -52,6 +52,7 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
 | Oferta | **Planes de gimnasio** | `/gym/plans` | `api-module-gym-plans` + `functionality_gym` |
 | Oferta | **Miembros de gimnasio** | `/gym/members` | `api-module-gym` + `functionality_gym` |
 | Oferta | **Suscripciones de gimnasio** | `/gym/subscriptions` | `api-module-gym` + `functionality_gym` |
+| Oferta | **Medidas de gimnasio** (configuración) | `/gym/measurements` | `api-module-gym-plans` + `functionality_gym` |
 | Operación | **Facturas** | `/invoices` | `api-module-orders` · `api-module-orders-own` |
 | Operación | **Reporte de ventas** | `/sales-report` | `sales-report` · `sales-report-own` |
 | Operación | **Gastos** | `/expenses` | `api-module-expenses` · `api-module-expenses-own` |
@@ -176,20 +177,28 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
 ### Gimnasio
 
 - **Descripción:** administración de gimnasio: suscripciones mensuales por miembro, con
-  seguimiento periódico de sus medidas físicas.
+  seguimiento periódico de sus medidas físicas. **Diseñado para operarse desde el teléfono**: el
+  Inicio ofrece la acción rápida "Cobrar / renovar membresía", los listados se vuelven tarjetas
+  en móvil (con "Renovar" directo en cada miembro) y las tareas largas son asistentes paso a paso.
 - **Flujo principal:** `/gym/plans` administra los planes (nombre, precio, duración en días,
   días de gracia tras el vencimiento, si el plan permite pausar la suscripción y el ítem del
   catálogo de productos con el que se factura cada pago). `/gym/members` registra miembros: el
   formulario pide nombre, celular y documento, y el backend resuelve a la persona como usuario
   real de la plataforma —reutilizándola si ya existe por documento o celular— antes de crear su
   ficha con un código de miembro autogenerado (`M00001`, `M00002`…). La ficha del miembro
-  (`/gym/members/:memberId`) edita talla (para el IMC), objetivo y notas de salud, activa o
-  desactiva al miembro, administra su suscripción (alta/renovación con pago inicial opcional,
-  pagos adicionales, anular un pago, cancelar) y su progreso físico (registrar un chequeo de
-  medidas, graficarlo, ver el historial). `/gym/subscriptions` es el listado operativo de todas
-  las suscripciones de la compañía, filtrable por estado y por próximas a vencer. Ni un plan ni
-  un miembro se borran: se desactivan; una suscripción cancelada, un pago anulado y un chequeo no
-  se borran, quedan en el historial (un chequeo sí se puede corregir, no tiene efecto contable).
+  (`/gym/members/:memberId`) está ordenada por frecuencia de uso: primero la **suscripción como
+  resumen compacto** (renovar en el sitio; el resumen abre el detalle), luego el **progreso
+  físico** (peso/IMC, una medida graficada a la vez y el historial de chequeos) y al final el
+  **perfil** editable (talla, objetivo, notas de salud, estado). El detalle de la suscripción
+  (`/gym/subscriptions/:subscriptionId`) es la vista transaccional: sus pagos (registrar con el
+  precio precargado, anular), renovar y cancelar; el nombre del miembro arriba navega a su
+  perfil. `/gym/subscriptions` es el listado operativo, filtrable por estado y por próximas a
+  vencer. Las medidas se toman con el **asistente paso a paso**
+  (`/gym/members/:memberId/checkin`): una medida por pantalla —solo las que la compañía activó en
+  `/gym/measurements`— con teclado numérico, el valor anterior como referencia y omisión con solo
+  dejar el campo vacío. Ni un plan ni un miembro se borran: se desactivan; una suscripción
+  cancelada, un pago anulado y un chequeo no se borran, quedan en el historial (un chequeo sí se
+  puede corregir, no tiene efecto contable).
 - **Suscripciones:** la verdad son las fechas (inicio, fin, fin de gracia); el estado
   (`computed_status`: activa / en gracia / vencida / cancelada) se deriva de ellas. Renovar
   **nunca** muta la suscripción vigente: crea una fila nueva encadenada, que empieza el día
@@ -198,12 +207,12 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
   Facturas (origen "Gimnasio", numeración propia), compartiendo la misma infraestructura de
   facturación que el resto de la plataforma. Anular un pago cancela también su factura;
   irreversible, pide motivo.
-- **Medidas físicas:** un chequeo agrupa varios valores (peso, % de grasa, circunferencias…)
-  tomados el mismo día; el catálogo de medidas (`functionality`-independiente, siempre visible)
-  distingue las que admiten lado izquierdo/derecho (bíceps, muslo, pantorrilla, antebrazo) de las
-  que no. La ficha del miembro grafica el progreso de las medidas que se seleccionen y muestra el
-  peso actual (con su variación desde la medición anterior) y el IMC calculado con la talla del
-  miembro.
+- **Medidas físicas:** un chequeo agrupa varios valores tomados el mismo día. **Cada compañía
+  configura en `/gym/measurements` qué medidas pide** (peso, % de grasa, circunferencias…; sin
+  selección guardada se piden todas); el catálogo distingue las que admiten lado
+  izquierdo/derecho (bíceps, muslo, pantorrilla, antebrazo). La ficha del miembro grafica el
+  progreso de la medida seleccionada y muestra el peso actual (con su variación desde la medición
+  anterior) y el IMC calculado con la talla del miembro.
 - **Reglas:** requiere la funcionalidad `functionality_gym` activa además del permiso. Los
   miembros son usuarios de la plataforma (mismo patrón "pasivo" de Reservas). Un job diario
   (`gym:transition-subscriptions`, backend) transiciona automáticamente las suscripciones

@@ -84,9 +84,15 @@ export const gymService = {
   annulGymPayment: (paymentId, reason) => http.put(`${base()}/payments/${paymentId}/annul`, { reason }),
 
   // ── Medidas físicas ──────────────────────────────────────────────────────
-  // Catálogo de tipos de medida visibles para la compañía (del sistema + propios):
-  // [{ id, key, label, unit, sided, sort_order }].
+  // Medidas que la compañía pide a sus miembros (el catálogo filtrado por su selección; sin
+  // selección guardada, todas): [{ id, key, label, unit, sided, sort_order }].
   gymMeasurementTypes: () => list(http.get(`${base()}/measurement-types`)),
+
+  // Configuración de medidas: TODO el catálogo, cada tipo con `enabled`.
+  gymMeasurementSettings: () => list(http.get(`${base()}/measurement-settings`)),
+
+  // Reemplaza la selección de medidas de la compañía (mínimo una).
+  updateGymMeasurementSettings: (typeIds) => http.put(`${base()}/measurement-settings`, { type_ids: typeIds }),
 
   // Historial paginado de chequeos del miembro, más reciente primero.
   gymMemberCheckins: (memberId, { page = 1, perPage = 15 } = {}) =>

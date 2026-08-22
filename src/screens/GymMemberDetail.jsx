@@ -1,37 +1,36 @@
 import React from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
-  Card, DataTable, Badge, Button, Spinner, Alert, Input, Textarea, Switch, Select, MoneyInput,
-  DatePicker, Modal, ConfirmDialog, PageHeader, StatStrip, BodyMeasuresChart, useToast,
+  Card, Badge, Button, Spinner, Alert, Input, Textarea, Switch, Select, MoneyInput,
+  Modal, PageHeader, StatStrip, BodyMeasuresChart, useToast,
 } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
-import { gymMemberStatusMeta, GYM_MEMBER_STATUS, gymMoney, gymSubscriptionStatusMeta, gymPaymentStatusMeta, GYM_SUBSCRIPTION_STATUS } from '../lib/gymLabels.js';
+import { gymMemberStatusMeta, GYM_MEMBER_STATUS, gymMoney, gymSubscriptionStatusMeta, GYM_SUBSCRIPTION_STATUS } from '../lib/gymLabels.js';
 import { formatShortDate } from '../lib/dates.js';
 import { useSetPageTitle } from '../lib/pageTitle.jsx';
 import s from './screens.module.css';
+import g from './GymMemberDetail.module.css';
 
 const EMPTY_SUBS = [];
 const EMPTY_TYPES = [];
-const DEFAULT_CHART_KEYS = ['weight'];
 
-// Ficha de un miembro del gimnasio: datos propios del gimnasio (talla, objetivo, notas, estado) y
-// su suscripción vigente (plan, vencimiento, pagos). Renovar crea una suscripción nueva encadenada
-// a la anterior (nunca se mutan sus fechas); cancelar y anular pago son irreversibles y piden
-// motivo. El progreso de medidas físicas se agrega en una fase posterior.
+// Ficha del miembro, en orden de uso móvil: primero su suscripción (resumen compacto — el
+// detalle transaccional con los pagos vive en /gym/subscriptions/:id), luego su progreso
+// físico (una medida a la vez, elegida con un selector) y al final el perfil editable.
+// Registrar medidas abre el asistente paso a paso (/gym/members/:id/checkin).
 export function GymMemberDetail() {
   const { memberId } = useParams();
   const navigate = useNavigate();
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
   const { toast } = useToast();
 
   const fetcher = React.useCallback(() => api.gymMember(memberId), [memberId]);
   const { data, setData, loading, error } = useResource(fetcher, null, [memberId]);
 
   const subsFetcher = React.useCallback(() => api.gymMemberSubscriptions(memberId), [memberId]);
-  const { data: subscriptions, setData: setSubscriptions, reload: reloadSubs } = useResource(subsFetcher, EMPTY_SUBS, [memberId]);
+  const { data: subscriptions, reload: reloadSubs } = useResource(subsFetcher, EMPTY_SUBS, [memberId]);
   const current = subscriptions[0] || null;
-  const history = subscriptions.slice(1);
   const currentStatus = current ? Number(current.computed_status ?? current.status) : null;
   const currentIsAlive = currentStatus === GYM_SUBSCRIPTION_STATUS.ACTIVE || currentStatus === GYM_SUBSCRIPTION_STATUS.GRACE;
 
@@ -46,60 +45,69 @@ export function GymMemberDetail() {
     [paymentMethods],
   );
 
-  const [form, setForm] = React.useState(null);
-  const [saving, setSaving] = React.useState(false);
-  const [saveError, setSaveError] = React.useState('');
-
-  React.useEffect(() => {
-    if (data) {
-      setForm({
-        height_cm: data.height_cm ?? '',
-        goal: data.goal || '',
-        health_notes: data.health_notes || '',
-        active: Number(data.status) === GYM_MEMBER_STATUS.ACTIVE,
-      });
-    }
-  }, [data]);
-
   useSetPageTitle(data?.member_name ? `Miembro · ${data.member_name}` : null);
 
   const goBack = () => navigate(`/gym/members${params.toString() ? `?${params.toString()}` : ''}`);
 
-  // ── Suscripción: alta/renovación ────────────────────────────────────────
-  const emptySubscribeForm = { plan_id: '', addPayment: false, payment_method: '', value: '', payment_date: '', notes: '' };
+  // ── Suscripción: alta/renovación (con pago si se elige método) ───────────
+  const emptySubscribeForm = { plan_id: '', payment_method: '', value: '' };
   const [subscribeOpen, setSubscribeOpen] = React.useState(false);
   const [subscribeForm, setSubscribeForm] = React.useState(emptySubscribeForm);
   const [subscribeBusy, setSubscribeBusy] = React.useState(false);
   const [subscribeError, setSubscribeError] = React.useState('');
 
-  const openSubscribe = () => { setSubscribeForm(emptySubscribeForm); setSubscribeError(''); setSubscribeOpen(true); };
+  const openSubscribe = React.useCallback(() => {
+    // Preselecciona el plan de la suscripción vigente y precarga su precio: el caso típico es
+    // renovar lo mismo y cobrar completo.
+    const samePlan = current ? (plansPage.items || []).find((p) => p.id === current.plan_id) : null;
+    setSubscribeForm({
+      plan_id: samePlan ? String(samePlan.id) : '',
+      payment_method: '',
+      value: samePlan ? samePlan.price : '',
+    });
+    setSubscribeError('');
+    setSubscribeOpen(true);
+  }, [current, plansPage]);
+
+  // ?action=renew (acción rápida desde el listado): abre el formulario apenas hay datos.
+  const wantsRenew = params.get('action') === 'renew';
+  React.useEffect(() => {
+    if (wantsRenew && data && !subscribeOpen) {
+      openSubscribe();
+      const q = new URLSearchParams(params);
+      q.delete('action');
+      setParams(q, { replace: true });
+    }
+  }, [wantsRenew, data]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const pickSubscribePlan = (planId) => {
     const plan = (plansPage.items || []).find((p) => String(p.id) === planId);
-    setSubscribeForm((f) => ({ ...f, plan_id: planId, value: f.addPayment && plan ? plan.price : f.value }));
+    // El precio del plan siempre precarga el valor (antes solo lo hacía con el pago ya activado,
+    // así que en el orden natural del formulario nunca se autocompletaba).
+    setSubscribeForm((f) => ({ ...f, plan_id: planId, value: plan ? plan.price : f.value }));
   };
 
   const submitSubscribe = async () => {
     if (subscribeBusy || !subscribeForm.plan_id) return;
-    if (subscribeForm.addPayment && (!subscribeForm.payment_method || !subscribeForm.value)) {
-      setSubscribeError('Completa el método y el valor del pago, o desactívalo.');
+    const withPayment = !!subscribeForm.payment_method;
+    if (withPayment && !subscribeForm.value) {
+      setSubscribeError('Indica el valor del pago, o quita el método para registrar sin cobro.');
       return;
     }
     setSubscribeBusy(true);
     setSubscribeError('');
     try {
-      await api.createGymSubscription(memberId, {
+      const created = await api.createGymSubscription(memberId, {
         plan_id: Number(subscribeForm.plan_id),
-        payment: subscribeForm.addPayment ? {
+        payment: withPayment ? {
           payment_method: subscribeForm.payment_method,
           value: subscribeForm.value,
-          payment_date: subscribeForm.payment_date || undefined,
-          notes: subscribeForm.notes.trim() || undefined,
         } : undefined,
       });
       toast({ tone: 'success', title: currentIsAlive ? 'Suscripción renovada' : 'Suscripción registrada' });
       setSubscribeOpen(false);
       reloadSubs();
+      if (created?.id) navigate(`/gym/subscriptions/${created.id}`);
     } catch (e) {
       setSubscribeError(e?.message || 'No se pudo registrar la suscripción.');
     } finally {
@@ -107,96 +115,17 @@ export function GymMemberDetail() {
     }
   };
 
-  // ── Suscripción: cancelar ────────────────────────────────────────────────
-  const [cancelOpen, setCancelOpen] = React.useState(false);
-  const [cancelBusy, setCancelBusy] = React.useState(false);
-  const [cancelError, setCancelError] = React.useState('');
-
-  const submitCancel = async (reason) => {
-    if (cancelBusy || !current) return;
-    setCancelBusy(true);
-    setCancelError('');
-    try {
-      await api.cancelGymSubscription(current.id, reason);
-      toast({ tone: 'neutral', title: 'Suscripción cancelada' });
-      setCancelOpen(false);
-      reloadSubs();
-    } catch (e) {
-      setCancelError(e?.message || 'No se pudo cancelar la suscripción.');
-    } finally {
-      setCancelBusy(false);
-    }
-  };
-
-  // ── Pago sobre la suscripción vigente ────────────────────────────────────
-  const emptyPayForm = { payment_method: '', value: '', payment_date: '', notes: '' };
-  const [payOpen, setPayOpen] = React.useState(false);
-  const [payForm, setPayForm] = React.useState(emptyPayForm);
-  const [payBusy, setPayBusy] = React.useState(false);
-  const [payError, setPayError] = React.useState('');
-
-  const openPay = () => { setPayForm(emptyPayForm); setPayError(''); setPayOpen(true); };
-
-  const submitPay = async () => {
-    if (payBusy || !current || !payForm.payment_method || !payForm.value) return;
-    setPayBusy(true);
-    setPayError('');
-    try {
-      await api.addGymSubscriptionPayment(current.id, {
-        payment_method: payForm.payment_method,
-        value: payForm.value,
-        payment_date: payForm.payment_date || undefined,
-        notes: payForm.notes.trim() || undefined,
-      });
-      toast({ tone: 'success', title: 'Pago registrado' });
-      setPayOpen(false);
-      reloadSubs();
-    } catch (e) {
-      setPayError(e?.message || 'No se pudo registrar el pago.');
-    } finally {
-      setPayBusy(false);
-    }
-  };
-
-  // ── Anular pago ──────────────────────────────────────────────────────────
-  const [annulTarget, setAnnulTarget] = React.useState(null);
-  const [annulBusy, setAnnulBusy] = React.useState(false);
-  const [annulError, setAnnulError] = React.useState('');
-
-  const submitAnnul = async (reason) => {
-    if (annulBusy || !annulTarget) return;
-    setAnnulBusy(true);
-    setAnnulError('');
-    try {
-      await api.annulGymPayment(annulTarget.id, reason);
-      toast({ tone: 'neutral', title: 'Pago anulado' });
-      setAnnulTarget(null);
-      reloadSubs();
-    } catch (e) {
-      setAnnulError(e?.message || 'No se pudo anular el pago.');
-    } finally {
-      setAnnulBusy(false);
-    }
-  };
-
-  // ── Progreso de medidas físicas ───────────────────────────────────────────
+  // ── Progreso: una medida a la vez, elegida con un selector ───────────────
   const { data: measurementTypes } = useResource(api.gymMeasurementTypes, EMPTY_TYPES, []);
   const typeByKey = React.useMemo(() => Object.fromEntries((measurementTypes || []).map((t) => [t.key, t])), [measurementTypes]);
-  const [chartKeys, setChartKeys] = React.useState(DEFAULT_CHART_KEYS);
-  const toggleChartKey = (key) => setChartKeys((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
+  const [chartKey, setChartKey] = React.useState('');
+  const selectedKey = chartKey || (typeByKey.weight ? 'weight' : (measurementTypes[0]?.key || ''));
 
-  const chartTypeIds = React.useMemo(
-    () => chartKeys.map((k) => typeByKey[k]?.id).filter(Boolean),
-    [chartKeys, typeByKey],
-  );
-  const progressFetcher = React.useCallback(
-    () => api.gymMemberProgress(memberId, { types: chartTypeIds }),
-    [memberId, chartTypeIds],
-  );
-  const { data: progress, loading: progressLoading, reload: reloadProgress } = useResource(progressFetcher, {}, [memberId, chartTypeIds.join(',')]);
+  const progressFetcher = React.useCallback(() => api.gymMemberProgress(memberId), [memberId]);
+  const { data: progress, loading: progressLoading } = useResource(progressFetcher, {}, [memberId]);
 
-  const checkinsFetcher = React.useCallback(() => api.gymMemberCheckins(memberId, { perPage: 10 }), [memberId]);
-  const { data: checkinsPage, reload: reloadCheckins } = useResource(checkinsFetcher, { items: [] }, [memberId]);
+  const checkinsFetcher = React.useCallback(() => api.gymMemberCheckins(memberId, { perPage: 5 }), [memberId]);
+  const { data: checkinsPage } = useResource(checkinsFetcher, { items: [] }, [memberId]);
 
   const weightPoints = progress.weight?.points || [];
   const latestWeight = weightPoints[weightPoints.length - 1];
@@ -214,60 +143,28 @@ export function GymMemberDetail() {
   }
   if (bmi) progressStats.push({ label: 'IMC', value: bmi.toFixed(1) });
 
-  const emptyCheckinForm = { measured_at: '', notes: '', values: {} };
-  const [checkinOpen, setCheckinOpen] = React.useState(false);
-  const [checkinForm, setCheckinForm] = React.useState(emptyCheckinForm);
-  const [checkinBusy, setCheckinBusy] = React.useState(false);
-  const [checkinError, setCheckinError] = React.useState('');
+  const measureOptions = React.useMemo(
+    () => (measurementTypes || []).map((t) => ({ value: t.key, label: t.label })),
+    [measurementTypes],
+  );
 
-  const openCheckin = () => { setCheckinForm(emptyCheckinForm); setCheckinError(''); setCheckinOpen(true); };
-  const setCheckinValue = (field, v) => setCheckinForm((f) => ({ ...f, values: { ...f.values, [field]: v } }));
+  // ── Perfil editable ──────────────────────────────────────────────────────
+  const [form, setForm] = React.useState(null);
+  const [saving, setSaving] = React.useState(false);
+  const [saveError, setSaveError] = React.useState('');
 
-  const submitCheckin = async () => {
-    if (checkinBusy) return;
-    const values = [];
-    (measurementTypes || []).forEach((t) => {
-      if (t.sided) {
-        if (checkinForm.values[`${t.id}_L`]) values.push({ measurement_type_id: t.id, side: 'L', value: checkinForm.values[`${t.id}_L`] });
-        if (checkinForm.values[`${t.id}_R`]) values.push({ measurement_type_id: t.id, side: 'R', value: checkinForm.values[`${t.id}_R`] });
-      } else if (checkinForm.values[t.id]) {
-        values.push({ measurement_type_id: t.id, value: checkinForm.values[t.id] });
-      }
-    });
-    if (!values.length) {
-      setCheckinError('Registra al menos una medida.');
-      return;
-    }
-    setCheckinBusy(true);
-    setCheckinError('');
-    try {
-      await api.createGymCheckin(memberId, {
-        measured_at: checkinForm.measured_at || undefined,
-        notes: checkinForm.notes.trim() || undefined,
-        values,
+  React.useEffect(() => {
+    if (data) {
+      setForm({
+        height_cm: data.height_cm ?? '',
+        goal: data.goal || '',
+        health_notes: data.health_notes || '',
+        active: Number(data.status) === GYM_MEMBER_STATUS.ACTIVE,
       });
-      toast({ tone: 'success', title: 'Medición registrada' });
-      setCheckinOpen(false);
-      reloadCheckins();
-      reloadProgress();
-    } catch (e) {
-      setCheckinError(e?.message || 'No se pudo registrar la medición.');
-    } finally {
-      setCheckinBusy(false);
     }
-  };
+  }, [data]);
 
-  if (loading) return <Spinner center label="Cargando miembro…" />;
-  if (error || !data) {
-    return (
-      <div className={s.page}>
-        <Alert tone="danger" title="No se pudo abrir el miembro">{error || 'No se encontró el miembro.'}</Alert>
-      </div>
-    );
-  }
-
-  const meta = gymMemberStatusMeta(data.status);
-  const dirty = form && (
+  const dirty = form && data && (
     (form.height_cm || '') !== (data.height_cm ?? '') ||
     form.goal !== (data.goal || '') ||
     form.health_notes !== (data.health_notes || '') ||
@@ -294,31 +191,17 @@ export function GymMemberDetail() {
     }
   };
 
-  const paymentColumns = [
-    { key: 'payment_date', header: 'Fecha', width: 120, render: (p) => formatShortDate(p.payment_date) },
-    { key: 'payment_method_name', header: 'Método', ellipsis: true, render: (p) => p.payment_method_name || '—' },
-    { key: 'value', header: 'Valor', width: 120, align: 'right', render: (p) => <span className={s.priceCell}>{gymMoney(p.value)}</span> },
-    {
-      key: 'status', header: 'Estado', width: 110,
-      render: (p) => { const m = gymPaymentStatusMeta(p.status); return <Badge variant={m.variant} dot>{m.label}</Badge>; },
-    },
-    {
-      key: 'actions', header: '', width: 90,
-      render: (p) => (Number(p.status) === 1 ? (
-        <Button variant="outline-primary" size="sm" onClick={() => setAnnulTarget(p)}>Anular</Button>
-      ) : null),
-    },
-  ];
+  if (loading) return <Spinner center label="Cargando miembro…" />;
+  if (error || !data) {
+    return (
+      <div className={s.page}>
+        <Alert tone="danger" title="No se pudo abrir el miembro">{error || 'No se encontró el miembro.'}</Alert>
+      </div>
+    );
+  }
 
-  const historyColumns = [
-    { key: 'plan_name', header: 'Plan', ellipsis: true, render: (r) => r.plan_name },
-    { key: 'start_date', header: 'Inicio', width: 120, render: (r) => formatShortDate(r.start_date) },
-    { key: 'end_date', header: 'Fin', width: 120, render: (r) => formatShortDate(r.end_date) },
-    {
-      key: 'status', header: 'Estado', width: 130,
-      render: (r) => { const m = gymSubscriptionStatusMeta(r.computed_status ?? r.status); return <Badge variant={m.variant} dot>{m.label}</Badge>; },
-    },
-  ];
+  const meta = gymMemberStatusMeta(data.status);
+  const subMeta = current ? gymSubscriptionStatusMeta(currentStatus) : null;
 
   return (
     <div className={s.page}>
@@ -333,15 +216,88 @@ export function GymMemberDetail() {
         ]}
       />
 
-      {saveError && <Alert tone="danger" title="No se pudo completar la acción" onClose={() => setSaveError('')}>{saveError}</Alert>}
-
+      {/* ── Suscripción: resumen compacto; el detalle (pagos) vive en su propia vista ── */}
       <Card>
-        <Card.Header title="Datos del gimnasio" />
+        <Card.Header title="Suscripción"
+          action={
+            <Button variant="primary" size="sm" icon={currentIsAlive ? 'fas fa-rotate' : 'fas fa-plus'} onClick={openSubscribe}>
+              {currentIsAlive ? 'Renovar' : 'Nueva suscripción'}
+            </Button>
+          } />
+        <Card.Body>
+          {!current ? (
+            <p className={s.faint}>Este miembro todavía no tiene una suscripción.</p>
+          ) : (
+            <button type="button" className={g.subSummary}
+              onClick={() => navigate(`/gym/subscriptions/${current.id}`)}>
+              <div className={g.subInfo}>
+                <span className={g.subPlan}>{current.plan_name}</span>
+                <span className={g.subDates}>
+                  {currentStatus === GYM_SUBSCRIPTION_STATUS.EXPIRED || currentStatus === GYM_SUBSCRIPTION_STATUS.CANCELLED
+                    ? `Venció el ${formatShortDate(current.end_date)}`
+                    : `Vence el ${formatShortDate(current.end_date)}`}
+                  {' · '}{gymMoney(current.price)}
+                </span>
+              </div>
+              <span className={g.subRight}>
+                <Badge variant={subMeta.variant} dot>{subMeta.label}</Badge>
+                <i className={`fas fa-chevron-right ${g.subChevron}`} aria-hidden="true" />
+              </span>
+            </button>
+          )}
+          {subscriptions.length > 1 && (
+            <p className={g.subHistoryNote}>
+              {subscriptions.length - 1} suscripción{subscriptions.length - 1 === 1 ? '' : 'es'} anterior{subscriptions.length - 1 === 1 ? '' : 'es'} — se abren desde el listado de suscripciones.
+            </p>
+          )}
+        </Card.Body>
+      </Card>
+
+      {/* ── Progreso físico ── */}
+      <Card>
+        <Card.Header title="Progreso"
+          action={
+            <Button variant="primary" size="sm" icon="fas fa-plus"
+              onClick={() => navigate(`/gym/members/${memberId}/checkin`)}>
+              Tomar medidas
+            </Button>
+          } />
+        <Card.Body>
+          <div className={s.formCol}>
+            {progressStats.length > 0 && <StatStrip stats={progressStats} />}
+            {measureOptions.length > 0 && (
+              <Select label="Medida a graficar" icon="fas fa-chart-line" value={selectedKey}
+                onChange={(e) => setChartKey(e.target.value)} options={measureOptions} />
+            )}
+            <BodyMeasuresChart series={progress} selectedKeys={selectedKey ? [selectedKey] : []} loading={progressLoading}
+              labelFor={(key) => typeByKey[key]?.label || key}
+              emptyLabel="Aún no hay mediciones de esta medida." />
+            {(checkinsPage.items || []).length > 0 && (
+              <ul className={g.checkinList}>
+                {checkinsPage.items.map((c) => (
+                  <li key={c.id} className={g.checkinRow}>
+                    <span className={g.checkinDate}>{formatShortDate(c.measured_at)}</span>
+                    <span className={g.checkinMeta}>
+                      {(c.values || []).length} medida{(c.values || []).length === 1 ? '' : 's'} · {c.measured_by_name}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </Card.Body>
+      </Card>
+
+      {/* ── Perfil ── */}
+      {saveError && <Alert tone="danger" title="No se pudo completar la acción" onClose={() => setSaveError('')}>{saveError}</Alert>}
+      <Card>
+        <Card.Header title="Perfil" />
         <Card.Body>
           {form && (
             <div className={s.formCol}>
               <div className={s.formGrid}>
-                <Input label="Talla (cm)" type="number" min="0" icon="fas fa-ruler-vertical"
+                <Input label="Talla (cm)" type="number" inputMode="decimal" min="0" icon="fas fa-ruler-vertical"
+                  hint="Se usa para calcular el IMC."
                   value={form.height_cm} onChange={(e) => setForm({ ...form, height_cm: e.target.value })} />
                 <Input label="Objetivo" icon="fas fa-bullseye" placeholder="Ej. Pérdida de grasa"
                   value={form.goal} onChange={(e) => setForm({ ...form, goal: e.target.value })} />
@@ -358,171 +314,27 @@ export function GymMemberDetail() {
         </Card.Body>
       </Card>
 
-      <Card>
-        <Card.Header title="Suscripción"
-          action={
-            <div className={s.actions}>
-              {currentIsAlive && (
-                <Button variant="outline-primary" size="sm" icon="fas fa-dollar-sign" onClick={openPay}>Registrar pago</Button>
-              )}
-              {currentIsAlive && (
-                <Button variant="neutral" size="sm" icon="fas fa-ban" onClick={() => setCancelOpen(true)}>Cancelar</Button>
-              )}
-              <Button variant="primary" size="sm" icon="fas fa-plus" onClick={openSubscribe}>
-                {currentIsAlive ? 'Renovar' : 'Nueva suscripción'}
-              </Button>
-            </div>
-          } />
-        <Card.Body>
-          {!current ? (
-            <p className={s.faint}>Este miembro todavía no tiene una suscripción.</p>
-          ) : (
-            <div className={s.formCol}>
-              <div className={s.formGrid}>
-                <div><span className={s.muted}>Plan</span><br /><strong>{current.plan_name}</strong></div>
-                <div><span className={s.muted}>Precio</span><br /><strong>{gymMoney(current.price)}</strong></div>
-              </div>
-              <div className={s.formGrid}>
-                <div><span className={s.muted}>Vigencia</span><br />{formatShortDate(current.start_date)} – {formatShortDate(current.end_date)}</div>
-                <div>
-                  <span className={s.muted}>Estado</span><br />
-                  {(() => { const m = gymSubscriptionStatusMeta(current.computed_status ?? current.status); return <Badge variant={m.variant} dot>{m.label}</Badge>; })()}
-                </div>
-              </div>
-              {current.cancellation_reason && (
-                <Alert tone="neutral">Cancelada: {current.cancellation_reason}</Alert>
-              )}
-              <DataTable columns={paymentColumns} rows={current.payments || []} empty="Sin pagos registrados." />
-            </div>
-          )}
-        </Card.Body>
-      </Card>
-
-      {history.length > 0 && (
-        <Card>
-          <Card.Header title="Historial de suscripciones" />
-          <Card.Body>
-            <DataTable columns={historyColumns} rows={history} empty="Sin historial." />
-          </Card.Body>
-        </Card>
-      )}
-
-      <Card>
-        <Card.Header title="Progreso"
-          action={<Button variant="primary" size="sm" icon="fas fa-plus" onClick={openCheckin}>Nueva medición</Button>} />
-        <Card.Body>
-          <div className={s.formCol}>
-            {progressStats.length > 0 && <StatStrip stats={progressStats} />}
-            <div className={s.actions}>
-              {(measurementTypes || []).map((t) => (
-                <Button key={t.id} size="sm" variant={chartKeys.includes(t.key) ? 'primary' : 'secondary'}
-                  onClick={() => toggleChartKey(t.key)}>
-                  {t.label}
-                </Button>
-              ))}
-            </div>
-            <BodyMeasuresChart series={progress} selectedKeys={chartKeys} loading={progressLoading}
-              labelFor={(key) => typeByKey[key]?.label || key}
-              emptyLabel="Sin mediciones para las medidas seleccionadas." />
-            <DataTable
-              columns={[
-                { key: 'measured_at', header: 'Fecha', width: 120, render: (c) => formatShortDate(c.measured_at) },
-                { key: 'measured_by_name', header: 'Registrado por', ellipsis: true, render: (c) => c.measured_by_name },
-                { key: 'count', header: 'Medidas', width: 100, render: (c) => `${(c.values || []).length}` },
-              ]}
-              rows={checkinsPage.items || []}
-              empty="Este miembro todavía no tiene mediciones."
-            />
-          </div>
-        </Card.Body>
-      </Card>
-
       <Modal open={subscribeOpen} title={currentIsAlive ? 'Renovar suscripción' : 'Nueva suscripción'} onClose={() => setSubscribeOpen(false)}
         footer={<>
           <Button variant="secondary" onClick={() => setSubscribeOpen(false)}>Cancelar</Button>
-          <Button variant="primary" loading={subscribeBusy} onClick={submitSubscribe}>Guardar</Button>
+          <Button variant="primary" loading={subscribeBusy} disabled={!subscribeForm.plan_id} onClick={submitSubscribe}>Guardar</Button>
         </>}>
         <div className={s.formCol}>
           {currentIsAlive && (
-            <p className={s.faint}>Empieza el día siguiente al vencimiento de la suscripción vigente ({formatShortDate(current.end_date)}).</p>
+            <p className={s.faint}>La nueva vigencia empieza el día siguiente al vencimiento actual ({formatShortDate(current.end_date)}).</p>
           )}
           <Select label="Plan" icon="fas fa-id-card" value={subscribeForm.plan_id}
             onChange={(e) => pickSubscribePlan(e.target.value)}
             options={[{ value: '', label: planOptions.length ? 'Selecciona…' : 'No hay planes activos' }, ...planOptions]} />
-          <Switch label="Registrar el pago ahora" checked={subscribeForm.addPayment}
-            onChange={(e) => setSubscribeForm((f) => ({ ...f, addPayment: e.target.checked }))} />
-          {subscribeForm.addPayment && (
-            <>
-              <div className={s.formGrid}>
-                <Select label="Método de pago" icon="fas fa-wallet" value={subscribeForm.payment_method}
-                  onChange={(e) => setSubscribeForm((f) => ({ ...f, payment_method: e.target.value }))}
-                  options={[{ value: '', label: 'Selecciona…' }, ...methodOptions]} />
-                <MoneyInput label="Valor" icon="fas fa-dollar-sign"
-                  value={subscribeForm.value} onChange={(v) => setSubscribeForm((f) => ({ ...f, value: v }))} />
-              </div>
-              <DatePicker label="Fecha del pago (opcional)" value={subscribeForm.payment_date}
-                onChange={(iso) => setSubscribeForm((f) => ({ ...f, payment_date: iso }))} />
-            </>
-          )}
+          <div className={s.formGrid}>
+            <Select label="Método de pago" icon="fas fa-wallet" value={subscribeForm.payment_method}
+              onChange={(e) => setSubscribeForm((f) => ({ ...f, payment_method: e.target.value }))}
+              options={[{ value: '', label: 'Sin pago por ahora' }, ...methodOptions]} />
+            <MoneyInput label="Valor" icon="fas fa-dollar-sign"
+              value={subscribeForm.value} onChange={(v) => setSubscribeForm((f) => ({ ...f, value: v }))} />
+          </div>
+          <p className={s.faint}>Con método de pago seleccionado, el cobro se registra y factura en la misma operación.</p>
           {subscribeError && <Alert tone="danger" onClose={() => setSubscribeError('')}>{subscribeError}</Alert>}
-        </div>
-      </Modal>
-
-      <Modal open={payOpen} size="sm" title="Registrar pago" onClose={() => setPayOpen(false)}
-        footer={<>
-          <Button variant="secondary" onClick={() => setPayOpen(false)}>Cancelar</Button>
-          <Button variant="primary" loading={payBusy} onClick={submitPay}>Registrar</Button>
-        </>}>
-        <div className={s.formCol}>
-          <p className={s.muted}>El pago genera su factura en la fecha indicada.</p>
-          <Select label="Método de pago" icon="fas fa-wallet" value={payForm.payment_method}
-            onChange={(e) => setPayForm((f) => ({ ...f, payment_method: e.target.value }))}
-            options={[{ value: '', label: 'Selecciona…' }, ...methodOptions]} />
-          <MoneyInput label="Valor" icon="fas fa-dollar-sign"
-            value={payForm.value} onChange={(v) => setPayForm((f) => ({ ...f, value: v }))} />
-          <DatePicker label="Fecha del pago (opcional)" value={payForm.payment_date}
-            onChange={(iso) => setPayForm((f) => ({ ...f, payment_date: iso }))} />
-          {payError && <Alert tone="danger" onClose={() => setPayError('')}>{payError}</Alert>}
-        </div>
-      </Modal>
-
-      <ConfirmDialog open={cancelOpen} title="Cancelar suscripción" reason="required"
-        reasonLabel="Motivo de la cancelación" loading={cancelBusy} error={cancelError}
-        onConfirm={submitCancel} onClose={() => setCancelOpen(false)}>
-        Esta acción es irreversible: el miembro perderá el acceso vigente. Para que vuelva a tener suscripción habrá que registrar una nueva.
-      </ConfirmDialog>
-
-      <ConfirmDialog open={!!annulTarget} title="Anular pago" reason="required"
-        reasonLabel="Motivo de la anulación" loading={annulBusy} error={annulError}
-        onConfirm={submitAnnul} onClose={() => setAnnulTarget(null)}>
-        Esta acción es irreversible: se cancela también la factura de este pago.
-      </ConfirmDialog>
-
-      <Modal open={checkinOpen} title="Nueva medición" onClose={() => setCheckinOpen(false)}
-        footer={<>
-          <Button variant="secondary" onClick={() => setCheckinOpen(false)}>Cancelar</Button>
-          <Button variant="primary" loading={checkinBusy} onClick={submitCheckin}>Registrar</Button>
-        </>}>
-        <div className={s.formCol}>
-          <p className={s.faint}>Deja en blanco las medidas que no vas a tomar hoy.</p>
-          <DatePicker label="Fecha (opcional, hoy por defecto)" value={checkinForm.measured_at}
-            onChange={(iso) => setCheckinForm((f) => ({ ...f, measured_at: iso }))} />
-          {(measurementTypes || []).map((t) => (
-            t.sided ? (
-              <div key={t.id} className={s.formGrid}>
-                <Input label={`${t.label} izq. (${t.unit})`} type="number" min="0" step="0.1"
-                  value={checkinForm.values[`${t.id}_L`] || ''} onChange={(e) => setCheckinValue(`${t.id}_L`, e.target.value)} />
-                <Input label={`${t.label} der. (${t.unit})`} type="number" min="0" step="0.1"
-                  value={checkinForm.values[`${t.id}_R`] || ''} onChange={(e) => setCheckinValue(`${t.id}_R`, e.target.value)} />
-              </div>
-            ) : (
-              <Input key={t.id} label={`${t.label} (${t.unit})`} type="number" min="0" step="0.1"
-                value={checkinForm.values[t.id] || ''} onChange={(e) => setCheckinValue(t.id, e.target.value)} />
-            )
-          ))}
-          <Textarea label="Notas (opcional)" value={checkinForm.notes}
-            onChange={(e) => setCheckinForm((f) => ({ ...f, notes: e.target.value }))} />
-          {checkinError && <Alert tone="danger" onClose={() => setCheckinError('')}>{checkinError}</Alert>}
         </div>
       </Modal>
     </div>

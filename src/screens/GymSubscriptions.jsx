@@ -1,11 +1,12 @@
 import React from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Card, DataTable, Badge, FilterBar, Pagination, RefreshButton } from '../components';
+import { Card, DataTable, Badge, FilterBar, Pagination, RefreshButton, Spinner, Alert } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { gymMoney, gymSubscriptionStatusMeta, GYM_SUBSCRIPTION_STATUS } from '../lib/gymLabels.js';
 import { formatShortDate } from '../lib/dates.js';
 import s from './screens.module.css';
+import gl from './GymLists.module.css';
 
 const EMPTY = { items: [], pagination: null };
 
@@ -22,8 +23,8 @@ const EXPIRING_OPTIONS = [
 ];
 
 // Listado operativo de todas las suscripciones de la compañía: quién está vigente, quién está en
-// gracia y quién vence pronto. Las acciones (renovar, cancelar, registrar pago) se hacen desde la
-// ficha del miembro; aquí solo se navega a ella.
+// gracia y quién vence pronto. Cada fila abre el detalle de la suscripción
+// (/gym/subscriptions/:id), donde viven sus pagos y acciones.
 export function GymSubscriptions() {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
@@ -88,16 +89,43 @@ export function GymSubscriptions() {
         }
       />
 
-      <Card>
-        <DataTable
-          columns={columns}
-          rows={rows}
-          loading={loading}
-          error={error}
-          empty="No hay suscripciones para los filtros seleccionados."
-          onRowClick={(r) => navigate(`/gym/members/${r.gym_member_id}`)}
-        />
-      </Card>
+      <div className={s.desktopList}>
+        <Card>
+          <DataTable
+            columns={columns}
+            rows={rows}
+            loading={loading}
+            error={error}
+            empty="No hay suscripciones para los filtros seleccionados."
+            onRowClick={(r) => navigate(`/gym/subscriptions/${r.id}?${params.toString()}`)}
+          />
+        </Card>
+      </div>
+
+      <div className={s.mobileList}>
+        {loading && <Card><div className={s.mobileState}><Spinner size="sm" label="Cargando…" /></div></Card>}
+        {!loading && error && (
+          <Card><Alert tone="danger" title="No se pudieron cargar las suscripciones">{error}</Alert></Card>
+        )}
+        {!loading && !error && rows.length === 0 && (
+          <Card><div className={s.mobileState}>No hay suscripciones para los filtros seleccionados.</div></Card>
+        )}
+        {!loading && !error && rows.map((r) => {
+          const m = gymSubscriptionStatusMeta(r.status);
+          return (
+            <Card key={r.id} className={gl.cardPad}>
+              <button type="button" className={gl.tapArea}
+                onClick={() => navigate(`/gym/subscriptions/${r.id}?${params.toString()}`)}>
+                <div className={gl.info}>
+                  <span className={gl.name}>{r.member_name}</span>
+                  <span className={gl.meta}>{r.plan_name} · vence {formatShortDate(r.end_date)}</span>
+                </div>
+                <Badge variant={m.variant} dot>{m.label}</Badge>
+              </button>
+            </Card>
+          );
+        })}
+      </div>
 
       {pg && pg.last_page > 1 && (
         <Pagination page={pg.current_page} lastPage={pg.last_page} total={pg.total}

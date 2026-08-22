@@ -40,13 +40,15 @@ filtro por usuario.
 | `api-module-gym` + funcionalidad `functionality_gym` | `/gym/members`, `/gym/members/:memberId` | Miembros del gimnasio: personas registradas como usuarios reales de la plataforma (el backend las resuelve como "pasivas" al registrarlas —find-or-create por documento o celular— y las vincula a la compañía, mismo patrón que los huéspedes de Reservas). La ficha guarda solo lo que el gimnasio necesita y `user_profiles` no tiene: talla, objetivo, notas de salud, código de miembro autogenerado. Suscripciones, pagos y progreso de medidas se agregan en fases posteriores. |
 | `gym-members-create` | (acción) | Registrar un miembro nuevo. |
 | `gym-members-edit` | (acción) | Editar la ficha de un miembro: talla, objetivo, notas de salud y estado. |
-| `api-module-gym` + funcionalidad `functionality_gym` | `/gym/subscriptions` | Listado operativo de todas las suscripciones de la compañía (filtrable por estado y por "vencen en N días"); las acciones se hacen desde la ficha del miembro. |
+| `api-module-gym` + funcionalidad `functionality_gym` | `/gym/subscriptions`, `/gym/subscriptions/:subscriptionId` | Listado operativo de todas las suscripciones (filtrable por estado y por "vencen en N días") y el **detalle de la suscripción**: el nombre del miembro (arriba) navega a su perfil, y aquí viven sus pagos (registrar/anular), la renovación y la cancelación. |
 | `gym-subscriptions-create` | (acción) | Dar de alta o renovar la suscripción de un miembro a un plan (con pago inicial opcional). Si el miembro tiene una suscripción vigente, la nueva se encadena automáticamente desde el día siguiente a su vencimiento. |
 | `gym-subscriptions-cancel` | (acción) | Cancelar una suscripción vigente (irreversible, motivo obligatorio). |
 | `gym-payments-create` | (acción) | Registrar un pago sobre una suscripción existente; genera su factura en el módulo de Facturas (origen "Gimnasio"). |
 | `gym-payments-annul` | (acción) | Anular un pago de suscripción; cancela su factura (irreversible, motivo obligatorio). |
-| `gym-checkins-create` | (acción) | Registrar un chequeo de medidas físicas de un miembro (peso, % de grasa, circunferencias…), desde su ficha. |
+| `gym-checkins-create` | (acción) | Registrar un chequeo de medidas físicas de un miembro con el asistente paso a paso (`/gym/members/:memberId/checkin`): una medida por pantalla, solo las configuradas por la compañía. |
 | `gym-checkins-edit` | (acción) | Corregir fecha, notas o valores de un chequeo ya registrado (sin efecto contable, no hace falta anularlo). |
+| `api-module-gym-plans` + funcionalidad `functionality_gym` | `/gym/measurements` | Ver qué medidas físicas pide el gimnasio a sus miembros (subconjunto del catálogo: peso, % de grasa, circunferencias…). El asistente de medición solo recorre las activas. |
+| `gym-measurement-config` | (acción) | Cambiar esa selección de medidas (los interruptores y el guardar de `/gym/measurements`). |
 
 ## Operación
 

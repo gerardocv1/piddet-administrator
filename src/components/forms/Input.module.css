@@ -44,6 +44,12 @@
   height: 100%;
 }
 
+/* Safari iOS hace zoom automático al enfocar cualquier campo con letra menor a 16px y no lo
+   deshace al salir. En teléfono el texto del campo sube a ese mínimo. */
+@media (max-width: 860px) {
+  .input { font-size: 16px; }
+}
+
 .reveal {
   display: inline-flex;
   align-items: center;
