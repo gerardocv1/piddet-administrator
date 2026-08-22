@@ -194,10 +194,11 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
   masa muscular, tonificar…), no es texto libre — la clave estable de cada objetivo permitirá a
   futuro asociarle recomendaciones. La ficha del miembro (`/gym/members/:memberId`) está ordenada
   por frecuencia de uso, con tarjetas **plegables**: primero la **suscripción como resumen
-  compacto** (abierta por defecto; renovar en el sitio, el resumen abre el detalle), luego el
-  **progreso físico** (peso/IMC, la gráfica con todas las medidas y el historial de mediciones)
-  y al final el **perfil** editable (talla, objetivo del catálogo, notas de salud, estado),
-  plegado por defecto. El detalle de la suscripción
+  compacto** (abierta por defecto; renovar en el sitio, el resumen abre el detalle), luego
+  **Medidas** (peso/IMC y la tabla de mediciones — fecha, cuántas medidas, quién las registró;
+  cada fila abre su detalle en un modal) y al final el **perfil** editable (sexo, talla,
+  objetivo del catálogo, notas de salud, estado), plegado por defecto. El análisis visual vive
+  en la **vista de progreso** (`/gym/members/:memberId/progress`). El detalle de la suscripción
   (`/gym/subscriptions/:subscriptionId`) es la vista transaccional: sus pagos (registrar con el
   precio precargado, anular), renovar y cancelar; el nombre del miembro arriba navega a su
   perfil. `/gym/subscriptions` es el listado operativo, filtrable por estado y por próximas a
@@ -218,11 +219,14 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
 - **Medidas físicas:** un chequeo agrupa varios valores tomados el mismo día. **Cada compañía
   configura en `/gym/measurements` qué medidas pide** (peso, % de grasa, circunferencias…; sin
   selección guardada se piden todas); el catálogo distingue las que admiten lado
-  izquierdo/derecho (bíceps, muslo, pantorrilla, antebrazo). La ficha del miembro grafica
-  **todas las medidas configuradas a la vez** (tocar una en la leyenda la oculta o la vuelve a
-  mostrar) y muestra el peso actual (con su variación desde la medición anterior) y el IMC
-  calculado con la talla. Bajo la gráfica, el **historial de mediciones** lista cada chequeo por
-  fecha; tocarlo abre un modal con los valores tomados ese día.
+  izquierdo/derecho (bíceps, muslo, pantorrilla, antebrazo). La **vista de progreso**
+  (`/gym/members/:memberId/progress`) es interactiva: una **silueta corporal** — de hombre o de
+  mujer según el sexo de la ficha (si falta, se pregunta ahí mismo y se guarda) — con las zonas
+  tocables de las medidas corporales configuradas por la compañía; tocar una parte (pecho,
+  cintura, glúteo…) muestra su **antes/después** animado (primera vs. última medición, con el
+  delta) y su gráfica de evolución. Peso, % de grasa y masa muscular no viven en el cuerpo: se
+  eligen como chips. La ficha del miembro solo conserva el peso actual, el IMC y la tabla de
+  mediciones.
 - **Reglas:** requiere la funcionalidad `functionality_gym` activa además del permiso. Los
   miembros son usuarios de la plataforma (mismo patrón "pasivo" de Reservas). Un job diario
   (`gym:transition-subscriptions`, backend) transiciona automáticamente las suscripciones

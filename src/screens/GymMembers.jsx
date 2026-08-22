@@ -6,7 +6,7 @@ import {
 } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
-import { gymSubscriptionStatusMeta, GYM_SUBSCRIPTION_STATUS } from '../lib/gymLabels.js';
+import { gymSubscriptionStatusMeta, GYM_SUBSCRIPTION_STATUS, GYM_SEX_OPTIONS } from '../lib/gymLabels.js';
 import { ID_TYPES } from '../lib/reservationLabels.js';
 import { formatShortDate } from '../lib/dates.js';
 import s from './screens.module.css';
@@ -23,7 +23,7 @@ const STATUS_OPTIONS = [
 
 const emptyForm = {
   first_name: '', last_name: '', phone_number: '', email: '',
-  id_type_id: '1', id_number: '', height_cm: '', goal_id: '', health_notes: '',
+  id_type_id: '1', id_number: '', sex: '', height_cm: '', goal_id: '', health_notes: '',
 };
 
 // Miembros del gimnasio: personas registradas como usuarios reales de la plataforma (el backend
@@ -82,6 +82,10 @@ export function GymMembers() {
       setFormError('Completa nombres, apellidos y celular.');
       return;
     }
+    if (!form.sex) {
+      setFormError('Indica si es hombre o mujer: define la silueta de la vista de progreso.');
+      return;
+    }
     setSaving(true);
     setFormError('');
     try {
@@ -92,6 +96,7 @@ export function GymMembers() {
         email: form.email.trim() || null,
         id_type_id: form.id_type_id ? Number(form.id_type_id) : null,
         id_number: form.id_number.trim() || null,
+        sex: form.sex,
         height_cm: form.height_cm || null,
         goal_id: form.goal_id ? Number(form.goal_id) : null,
         health_notes: form.health_notes.trim() || null,
@@ -250,11 +255,14 @@ export function GymMembers() {
                 value={form.id_number} onChange={(e) => setForm({ ...form, id_number: e.target.value })} />
             </div>
             <div className={s.formGrid}>
+              <Select label="Sexo" icon="fas fa-venus-mars" value={form.sex}
+                onChange={(e) => setForm({ ...form, sex: e.target.value })}
+                options={[{ value: '', label: 'Selecciona…' }, ...GYM_SEX_OPTIONS]} />
               <Input label="Talla (cm, opcional)" type="number" inputMode="decimal" min="0" icon="fas fa-ruler-vertical"
                 value={form.height_cm} onChange={(e) => setForm({ ...form, height_cm: e.target.value })} />
-              <Select label="Objetivo (opcional)" icon="fas fa-bullseye" value={form.goal_id}
-                onChange={(e) => setForm({ ...form, goal_id: e.target.value })} options={goalOptions} />
             </div>
+            <Select label="Objetivo (opcional)" icon="fas fa-bullseye" value={form.goal_id}
+              onChange={(e) => setForm({ ...form, goal_id: e.target.value })} options={goalOptions} />
             <Textarea label="Notas de salud (opcional)" placeholder="Lesiones, condiciones a tener en cuenta…"
               value={form.health_notes} onChange={(e) => setForm({ ...form, health_notes: e.target.value })} />
             {formError && <Alert tone="danger" onClose={() => setFormError('')}>{formError}</Alert>}

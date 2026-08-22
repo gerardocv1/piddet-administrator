@@ -2,18 +2,17 @@ import React from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   Card, Badge, Button, Spinner, Alert, Input, Textarea, Switch, Select, MoneyInput,
-  Modal, PageHeader, StatStrip, BodyMeasuresChart, useToast,
+  Modal, PageHeader, StatStrip, DataTable, useToast,
 } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
-import { gymMemberStatusMeta, GYM_MEMBER_STATUS, gymMoney, gymSubscriptionStatusMeta, GYM_SUBSCRIPTION_STATUS } from '../lib/gymLabels.js';
+import { gymMemberStatusMeta, GYM_MEMBER_STATUS, GYM_SEX_OPTIONS, gymMoney, gymSubscriptionStatusMeta, GYM_SUBSCRIPTION_STATUS } from '../lib/gymLabels.js';
 import { formatShortDate } from '../lib/dates.js';
 import { useSetPageTitle } from '../lib/pageTitle.jsx';
 import s from './screens.module.css';
 import g from './GymMemberDetail.module.css';
 
 const EMPTY_SUBS = [];
-const EMPTY_TYPES = [];
 const SIDE_LABEL = { L: 'izq.', R: 'der.' };
 
 // Tarjeta plegable: el título es el interruptor (tocar minimiza/maximiza); la acción del header
@@ -134,23 +133,21 @@ export function GymMemberDetail() {
     }
   };
 
-  // ── Progreso: todas las medidas configuradas en la gráfica (leyenda oculta/muestra) ──
-  const { data: measurementTypes } = useResource(api.gymMeasurementTypes, EMPTY_TYPES, []);
-  const typeByKey = React.useMemo(() => Object.fromEntries((measurementTypes || []).map((t) => [t.key, t])), [measurementTypes]);
-  const allKeys = React.useMemo(() => (measurementTypes || []).map((t) => t.key), [measurementTypes]);
-
-  const progressFetcher = React.useCallback(() => api.gymMemberProgress(memberId), [memberId]);
-  const { data: progress, loading: progressLoading } = useResource(progressFetcher, {}, [memberId]);
+  // ── Medidas: peso/IMC de un vistazo y la tabla de mediciones (el análisis con la figura
+  // corporal y las gráficas vive en /gym/members/:id/progress) ──
+  const progressFetcher = React.useCallback(() => api.gymMemberProgress(memberId, { types: ['weight'] }), [memberId]);
+  const { data: progress } = useResource(progressFetcher, {}, [memberId]);
 
   const checkinsFetcher = React.useCallback(() => api.gymMemberCheckins(memberId, { perPage: 10 }), [memberId]);
-  const { data: checkinsPage } = useResource(checkinsFetcher, { items: [] }, [memberId]);
-  // Historial: al tocar una fecha se abre el detalle de esa medición.
+  const { data: checkinsPage, loading: checkinsLoading } = useResource(checkinsFetcher, { items: [] }, [memberId]);
+  // Al tocar una fila de la tabla se abre el detalle de esa medición.
   const [openCheckin, setOpenCheckin] = React.useState(null);
 
-  const chartedSeries = React.useMemo(
-    () => allKeys.filter((key) => (progress[key]?.points || []).length > 0).length,
-    [allKeys, progress],
-  );
+  const checkinColumns = [
+    { key: 'measured_at', header: 'Fecha', width: 110, render: (c) => <span className={s.cellStrong}>{formatShortDate(c.measured_at)}</span> },
+    { key: 'values', header: 'Medidas', width: 90, align: 'center', render: (c) => (c.values || []).length },
+    { key: 'measured_by_name', header: 'Registró', ellipsis: true, render: (c) => c.measured_by_name || '—' },
+  ];
 
   const weightPoints = progress.weight?.points || [];
   const latestWeight = weightPoints[weightPoints.length - 1];
@@ -182,6 +179,7 @@ export function GymMemberDetail() {
   React.useEffect(() => {
     if (data) {
       setForm({
+        sex: data.sex || '',
         height_cm: data.height_cm ?? '',
         goal_id: data.goal_id ? String(data.goal_id) : '',
         health_notes: data.health_notes || '',
@@ -191,6 +189,7 @@ export function GymMemberDetail() {
   }, [data]);
 
   const dirty = form && data && (
+    form.sex !== (data.sex || '') ||
     (form.height_cm || '') !== (data.height_cm ?? '') ||
     form.goal_id !== (data.goal_id ? String(data.goal_id) : '') ||
     form.health_notes !== (data.health_notes || '') ||
@@ -203,6 +202,7 @@ export function GymMemberDetail() {
     setSaveError('');
     try {
       const updated = await api.updateGymMember(data.id, {
+        sex: form.sex || null,
         height_cm: form.height_cm === '' ? null : form.height_cm,
         goal_id: form.goal_id === '' ? null : Number(form.goal_id),
         health_notes: form.health_notes.trim() || null,
@@ -276,42 +276,31 @@ export function GymMemberDetail() {
         )}
       </CollapsibleCard>
 
-      {/* ── Progreso físico ── */}
+      {/* ── Medidas: tabla de mediciones; el análisis visual vive en la vista de progreso ── */}
       <Card>
-        <Card.Header title="Progreso"
+        <Card.Header title="Medidas"
           action={
-            <Button variant="primary" size="sm" icon="fas fa-plus"
-              onClick={() => navigate(`/gym/members/${memberId}/checkin`)}>
-              Tomar medidas
-            </Button>
+            <>
+              <Button variant="secondary" size="sm" icon="fas fa-chart-line"
+                onClick={() => navigate(`/gym/members/${memberId}/progress`)}>
+                Ver progreso
+              </Button>
+              <Button variant="primary" size="sm" icon="fas fa-plus"
+                onClick={() => navigate(`/gym/members/${memberId}/checkin`)}>
+                Tomar medidas
+              </Button>
+            </>
           } />
         <Card.Body>
           <div className={s.formCol}>
             {progressStats.length > 0 && <StatStrip stats={progressStats} />}
-            <BodyMeasuresChart series={progress} selectedKeys={allKeys} loading={progressLoading}
-              labelFor={(key) => typeByKey[key]?.label || key}
-              emptyLabel="Aún no hay mediciones registradas." />
-            {chartedSeries > 1 && (
-              <p className={s.faint}>Toca una medida en la leyenda para ocultarla o volverla a mostrar.</p>
-            )}
-            {(checkinsPage.items || []).length > 0 && (
-              <div>
-                <h4 className={g.historyTitle}>Historial de mediciones</h4>
-                <ul className={g.checkinList}>
-                  {checkinsPage.items.map((c) => (
-                    <li key={c.id}>
-                      <button type="button" className={g.checkinRow} onClick={() => setOpenCheckin(c)}>
-                        <span className={g.checkinDate}>{formatShortDate(c.measured_at)}</span>
-                        <span className={g.checkinMeta}>
-                          {(c.values || []).length} medida{(c.values || []).length === 1 ? '' : 's'} · {c.measured_by_name}
-                          <i className={`fas fa-chevron-right ${g.checkinChevron}`} aria-hidden="true" />
-                        </span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
+            <DataTable
+              columns={checkinColumns}
+              rows={checkinsPage.items || []}
+              loading={checkinsLoading}
+              empty="Aún no hay mediciones registradas."
+              onRowClick={(c) => setOpenCheckin(c)}
+            />
           </div>
         </Card.Body>
       </Card>
@@ -322,12 +311,16 @@ export function GymMemberDetail() {
         {form && (
           <div className={s.formCol}>
             <div className={s.formGrid}>
+              <Select label="Sexo" icon="fas fa-venus-mars" value={form.sex}
+                hint="Decide la silueta de la vista de progreso."
+                onChange={(e) => setForm({ ...form, sex: e.target.value })}
+                options={[{ value: '', label: 'Sin definir' }, ...GYM_SEX_OPTIONS]} />
               <Input label="Talla (cm)" type="number" inputMode="decimal" min="0" icon="fas fa-ruler-vertical"
                 hint="Se usa para calcular el IMC."
                 value={form.height_cm} onChange={(e) => setForm({ ...form, height_cm: e.target.value })} />
-              <Select label="Objetivo" icon="fas fa-bullseye" value={form.goal_id}
-                onChange={(e) => setForm({ ...form, goal_id: e.target.value })} options={goalOptions} />
             </div>
+            <Select label="Objetivo" icon="fas fa-bullseye" value={form.goal_id}
+              onChange={(e) => setForm({ ...form, goal_id: e.target.value })} options={goalOptions} />
             <Textarea label="Notas de salud" placeholder="Lesiones, condiciones a tener en cuenta…"
               value={form.health_notes} onChange={(e) => setForm({ ...form, health_notes: e.target.value })} />
             <Switch label="Miembro activo" checked={form.active}

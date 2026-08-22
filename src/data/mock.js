@@ -3520,11 +3520,11 @@ const mockGymGoals = [
 ];
 
 let mockGymMembers = [
-  { id: 1, user_id: 5001, member_code: 'M00001', member_name: 'Laura Gómez', document_snapshot: '1017234567', height_cm: '165.0', goal_id: 4, goal: 'Tonificar', health_notes: '', status: 1, joined_at: '2026-05-02' },
-  { id: 2, user_id: 5002, member_code: 'M00002', member_name: 'Carlos Restrepo', document_snapshot: '1098765432', height_cm: '178.0', goal_id: 3, goal: 'Aumentar masa muscular', health_notes: 'Molestia leve en rodilla derecha', status: 1, joined_at: '2026-05-10' },
-  { id: 3, user_id: 5003, member_code: 'M00003', member_name: 'Daniela Ríos', document_snapshot: '1023456789', height_cm: '160.0', goal_id: 1, goal: 'Bajar de peso', health_notes: '', status: 1, joined_at: '2026-06-01' },
-  { id: 4, user_id: 5004, member_code: 'M00004', member_name: 'Andrés Mejía', document_snapshot: '1076543210', height_cm: '182.0', goal_id: null, goal: null, health_notes: '', status: 0, joined_at: '2026-04-15' },
-  { id: 5, user_id: 5005, member_code: 'M00005', member_name: 'Miguel Torres', document_snapshot: '1055443322', height_cm: null, goal_id: 6, goal: 'Salud general', health_notes: '', status: 1, joined_at: '2026-08-18' },
+  { id: 1, user_id: 5001, member_code: 'M00001', member_name: 'Laura Gómez', document_snapshot: '1017234567', sex: 'F', height_cm: '165.0', goal_id: 4, goal: 'Tonificar', health_notes: '', status: 1, joined_at: '2026-05-02' },
+  { id: 2, user_id: 5002, member_code: 'M00002', member_name: 'Carlos Restrepo', document_snapshot: '1098765432', sex: 'M', height_cm: '178.0', goal_id: 3, goal: 'Aumentar masa muscular', health_notes: 'Molestia leve en rodilla derecha', status: 1, joined_at: '2026-05-10' },
+  { id: 3, user_id: 5003, member_code: 'M00003', member_name: 'Daniela Ríos', document_snapshot: '1023456789', sex: 'F', height_cm: '160.0', goal_id: 1, goal: 'Bajar de peso', health_notes: '', status: 1, joined_at: '2026-06-01' },
+  { id: 4, user_id: 5004, member_code: 'M00004', member_name: 'Andrés Mejía', document_snapshot: '1076543210', sex: 'M', height_cm: '182.0', goal_id: null, goal: null, health_notes: '', status: 0, joined_at: '2026-04-15' },
+  { id: 5, user_id: 5005, member_code: 'M00005', member_name: 'Miguel Torres', document_snapshot: '1055443322', sex: null, height_cm: null, goal_id: 6, goal: 'Salud general', health_notes: '', status: 1, joined_at: '2026-08-18' },
 ];
 
 // El listado de miembros lleva la suscripción más reciente de cada uno (espejo del backend):
@@ -3717,6 +3717,7 @@ function resolveGymMock(path, query, { method = 'GET', body } = {}) {
         member_code: 'M' + String(nextNum).padStart(5, '0'),
         member_name: `${body.first_name} ${body.last_name}`.trim(),
         document_snapshot: idNumber || null,
+        sex: body.sex || null,
         height_cm: body.height_cm || null,
         goal_id: body.goal_id ? Number(body.goal_id) : null,
         goal: mockGymGoals.find((gl) => gl.id === Number(body.goal_id))?.label || null,
@@ -3746,7 +3747,7 @@ function resolveGymMock(path, query, { method = 'GET', body } = {}) {
     const member = mockGymMembers.find((m) => m.id === Number(memberMatch[1]));
     if (!member) return null;
     if (method === 'PUT') {
-      ['height_cm', 'health_notes', 'status'].forEach((key) => {
+      ['sex', 'height_cm', 'health_notes', 'status'].forEach((key) => {
         if (key in body) member[key] = key === 'status' ? Number(body[key]) : body[key];
       });
       if ('goal_id' in body) {

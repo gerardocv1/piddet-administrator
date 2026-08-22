@@ -18,6 +18,13 @@ export const gymPlanStatusMeta = gymActiveStatusMeta;
 export const GYM_MEMBER_STATUS = GYM_ACTIVE_STATUS;
 export const gymMemberStatusMeta = gymActiveStatusMeta;
 
+// Sexo del miembro ('M'/'F'): decide la silueta corporal de la vista de progreso.
+export const GYM_SEX_OPTIONS = [
+  { value: 'M', label: 'Hombre' },
+  { value: 'F', label: 'Mujer' },
+];
+export const gymSexLabel = (sex) => GYM_SEX_OPTIONS.find((o) => o.value === sex)?.label || '';
+
 // Presets de duración para el formulario de planes (en días). "custom" deja el campo libre.
 export const GYM_PLAN_DURATION_PRESETS = [
   { value: '30', label: 'Mensual (30 días)' },

@@ -33,6 +33,7 @@ import { GymMemberDetail } from './screens/GymMemberDetail.jsx';
 import { GymSubscriptions } from './screens/GymSubscriptions.jsx';
 import { GymSubscriptionDetail } from './screens/GymSubscriptionDetail.jsx';
 import { GymCheckinWizard } from './screens/GymCheckinWizard/GymCheckinWizard.jsx';
+import { GymMemberProgress } from './screens/GymMemberProgress.jsx';
 import { GymMeasurementSettings } from './screens/GymMeasurementSettings.jsx';
 import { ExpenseForm } from './screens/ExpenseForm.jsx';
 import { ExpenseWizard } from './screens/ExpenseWizard/ExpenseWizard.jsx';
@@ -216,6 +217,7 @@ function AdminApp() {
             <Route path="gym/plans" element={<RequirePermission path="/gym/plans"><GymPlans /></RequirePermission>} />
             <Route path="gym/members" element={<RequirePermission path="/gym/members"><GymMembers /></RequirePermission>} />
             <Route path="gym/members/:memberId/checkin" element={<RequirePermission path="/gym/members"><GymCheckinWizard /></RequirePermission>} />
+            <Route path="gym/members/:memberId/progress" element={<RequirePermission path="/gym/members"><GymMemberProgress /></RequirePermission>} />
             <Route path="gym/members/:memberId" element={<RequirePermission path="/gym/members"><GymMemberDetail /></RequirePermission>} />
             <Route path="gym/subscriptions" element={<RequirePermission path="/gym/subscriptions"><GymSubscriptions /></RequirePermission>} />
             <Route path="gym/subscriptions/:subscriptionId" element={<RequirePermission path="/gym/subscriptions"><GymSubscriptionDetail /></RequirePermission>} />
