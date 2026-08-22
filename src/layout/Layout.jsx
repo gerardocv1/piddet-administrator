@@ -37,6 +37,7 @@ const META = {
   '/reservations': { title: 'Reservas', crumb: 'Hospedaje' },
   '/rentable-units': { title: 'Unidades', crumb: 'Hospedaje' },
   '/gym/plans': { title: 'Planes', crumb: 'Gimnasio' },
+  '/gym/members': { title: 'Miembros', crumb: 'Gimnasio' },
   '/expenses': { title: 'Gastos', crumb: 'Operación' },
   '/shifts': { title: 'Turnos', crumb: 'Operación' },
   '/invoices': { title: 'Facturas', crumb: 'Ventas' },
@@ -85,7 +86,7 @@ export function Layout({ theme, onToggleTheme, onLogout }) {
   // La administración de un menú (/menus/:id) no tiene entrada exacta: usa un título genérico
   // (la propia pantalla muestra el nombre del menú en su cabecera).
   const sectionOf = (path) => {
-    for (const base of ['/reservations', '/rentable-units', '/gym/plans', '/expenses', '/shifts', '/invoices', '/products', '/menus']) {
+    for (const base of ['/reservations', '/rentable-units', '/gym/plans', '/gym/members', '/expenses', '/shifts', '/invoices', '/products', '/menus']) {
       if (path === base || path.startsWith(`${base}/`)) return META[base] || null;
     }
     return null;

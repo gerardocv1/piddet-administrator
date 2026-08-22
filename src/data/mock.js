@@ -412,7 +412,7 @@ export const mockMenuItems = [
 // el panel muestra Productos (y sus categorías), Menús y Usuarios; el resto queda oculto.
 const mockPermissions = {
   roles: ['Administrador'],
-  permissions: ['user-administrator', 'admin-general', 'role-list', 'role-create', 'role-update', 'role-delete', 'role-assign', 'permission-list', 'permission-update', 'api-module-menus', 'api-module-products', 'api-module-company', 'company-edit-functionalities', 'api-module-stores', 'table-list', 'table-create', 'table-update', 'api-module-orders', 'sales-report', 'order-cancel', 'order-sync-failure-admin', 'api-module-expenses', 'expenses-report', 'expense-annul', 'api-module-shifts', 'shift-global-admin', 'api-module-reservations', 'api-module-rentable-units', 'reservation-checkout', 'reservation-cancel', 'reservation-payment-annul', 'api-module-gym', 'api-module-gym-plans', 'gym-plans-create', 'gym-plans-edit'],
+  permissions: ['user-administrator', 'admin-general', 'role-list', 'role-create', 'role-update', 'role-delete', 'role-assign', 'permission-list', 'permission-update', 'api-module-menus', 'api-module-products', 'api-module-company', 'company-edit-functionalities', 'api-module-stores', 'table-list', 'table-create', 'table-update', 'api-module-orders', 'sales-report', 'order-cancel', 'order-sync-failure-admin', 'api-module-expenses', 'expenses-report', 'expense-annul', 'api-module-shifts', 'shift-global-admin', 'api-module-reservations', 'api-module-rentable-units', 'reservation-checkout', 'reservation-cancel', 'reservation-payment-annul', 'api-module-gym', 'api-module-gym-plans', 'gym-plans-create', 'gym-plans-edit', 'gym-members-create', 'gym-members-edit'],
 };
 
 // Empresa (tenant) activa y empresas disponibles para el usuario (SaaS multi-tenant).
@@ -3495,6 +3495,14 @@ let mockGymPlans = [
 
 const gymPlanPresent = (p) => ({ ...p, item_name: p.item_id ? serviceItemName(p.item_id) : null });
 
+// Miembros: personas ya resueltas como usuarios de la plataforma (user_id ficticio en el demo).
+let mockGymMembers = [
+  { id: 1, user_id: 5001, member_code: 'M00001', member_name: 'Laura Gómez', document_snapshot: '1017234567', height_cm: '165.0', goal: 'Tonificación', health_notes: '', status: 1, joined_at: '2026-05-02' },
+  { id: 2, user_id: 5002, member_code: 'M00002', member_name: 'Carlos Restrepo', document_snapshot: '1098765432', height_cm: '178.0', goal: 'Ganancia muscular', health_notes: 'Molestia leve en rodilla derecha', status: 1, joined_at: '2026-05-10' },
+  { id: 3, user_id: 5003, member_code: 'M00003', member_name: 'Daniela Ríos', document_snapshot: '1023456789', height_cm: '160.0', goal: 'Pérdida de grasa', health_notes: '', status: 1, joined_at: '2026-06-01' },
+  { id: 4, user_id: 5004, member_code: 'M00004', member_name: 'Andrés Mejía', document_snapshot: '1076543210', height_cm: '182.0', goal: '', health_notes: '', status: 0, joined_at: '2026-04-15' },
+];
+
 function resolveGymMock(path, query, { method = 'GET', body } = {}) {
   const scoped = path.match(/^\/companies\/[^/]+\/gym\/(.+)$/);
   if (!scoped) return undefined;
@@ -3547,6 +3555,52 @@ function resolveGymMock(path, query, { method = 'GET', body } = {}) {
       return gymPlanPresent(plan);
     }
     return gymPlanPresent(plan);
+  }
+
+  if (sub === 'members') {
+    if (method === 'POST') {
+      const idNumber = (body.id_number || '').trim();
+      const dup = mockGymMembers.find((m) => (idNumber && m.document_snapshot === idNumber));
+      if (dup) throw new Error('Esta persona ya es miembro del gimnasio');
+      const nextNum = mockGymMembers.reduce((max, m) => Math.max(max, Number(m.member_code.slice(1))), 0) + 1;
+      const member = {
+        id: (mockGymMembers.reduce((max, m) => Math.max(max, m.id), 0) || 0) + 1,
+        user_id: 5000 + (mockGymMembers.reduce((max, m) => Math.max(max, m.user_id - 5000), 0) || 0) + 1,
+        member_code: 'M' + String(nextNum).padStart(5, '0'),
+        member_name: `${body.first_name} ${body.last_name}`.trim(),
+        document_snapshot: idNumber || null,
+        height_cm: body.height_cm || null,
+        goal: body.goal || null,
+        health_notes: body.health_notes || null,
+        status: 1,
+        joined_at: new Date().toISOString().slice(0, 10),
+      };
+      mockGymMembers.push(member);
+      return member;
+    }
+
+    const status = query.get('status');
+    const search = (query.get('_search') || '').toLowerCase();
+    const rows = mockGymMembers
+      .filter((m) => (status === '' || status == null ? true : String(m.status) === status))
+      .filter((m) => !search
+        || m.member_name.toLowerCase().includes(search)
+        || m.member_code.toLowerCase().includes(search)
+        || (m.document_snapshot || '').includes(search))
+      .sort((a, b) => a.member_name.localeCompare(b.member_name));
+    return mockPaginate(rows, query);
+  }
+
+  const memberMatch = sub.match(/^members\/(\d+)$/);
+  if (memberMatch) {
+    const member = mockGymMembers.find((m) => m.id === Number(memberMatch[1]));
+    if (!member) return null;
+    if (method === 'PUT') {
+      ['height_cm', 'goal', 'health_notes', 'status'].forEach((key) => {
+        if (key in body) member[key] = key === 'status' ? Number(body[key]) : body[key];
+      });
+    }
+    return member;
   }
 
   return null;

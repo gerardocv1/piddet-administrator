@@ -4,13 +4,19 @@
 export const gymMoney = (value) =>
   '$ ' + Number(value || 0).toLocaleString('es-CO', { maximumFractionDigits: 0 });
 
-// Estados de un plan de membresía (deben coincidir con las constantes del modelo GymPlan).
-export const GYM_PLAN_STATUS = { INACTIVE: 0, ACTIVE: 1 };
-
-export const gymPlanStatusMeta = (status) =>
-  (Number(status) === GYM_PLAN_STATUS.ACTIVE
+// Estado activo/inactivo (0/1), compartido por planes y miembros — misma convención que el resto
+// de catálogos del backend (RentableUnit, GymPlan, GymMember: STATUS_ACTIVE=1/STATUS_INACTIVE=0).
+export const GYM_ACTIVE_STATUS = { INACTIVE: 0, ACTIVE: 1 };
+export const gymActiveStatusMeta = (status) =>
+  (Number(status) === GYM_ACTIVE_STATUS.ACTIVE
     ? { label: 'Activo', variant: 'success' }
     : { label: 'Inactivo', variant: 'neutral' });
+
+// Alias históricos por dominio (mismas constantes/función, para que cada pantalla se lea sola).
+export const GYM_PLAN_STATUS = GYM_ACTIVE_STATUS;
+export const gymPlanStatusMeta = gymActiveStatusMeta;
+export const GYM_MEMBER_STATUS = GYM_ACTIVE_STATUS;
+export const gymMemberStatusMeta = gymActiveStatusMeta;
 
 // Presets de duración para el formulario de planes (en días). "custom" deja el campo libre.
 export const GYM_PLAN_DURATION_PRESETS = [

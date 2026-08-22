@@ -34,4 +34,19 @@ export const gymService = {
 
   // Activa/desactiva el plan (nunca se borra: las suscripciones ya creadas mantienen su snapshot).
   setGymPlanStatus: (planId, status) => http.put(`${base()}/plans/${planId}/status`, { status }),
+
+  // ── Miembros ─────────────────────────────────────────────────────────────
+  // Los miembros son usuarios reales de la plataforma (resueltos como "pasivos" al registrarlos,
+  // mismo patrón que los huéspedes de Reservas): el backend hace find-or-create por documento o
+  // celular, así que crear con los datos de alguien ya existente lo reutiliza en vez de duplicarlo.
+  gymMembers: ({ status = '', search = '', page = 1, perPage = 15 } = {}) =>
+    http.get(`${base()}/members${qs({ status, _search: search, page, per_page: perPage })}`, { paginated: true }),
+
+  gymMember: (memberId) => http.get(`${base()}/members/${memberId}`),
+
+  createGymMember: (data) => http.post(`${base()}/members`, data),
+
+  // Solo los datos propios del gimnasio (altura, objetivo, notas, estado); nombre y documento se
+  // editan desde el perfil del usuario.
+  updateGymMember: (memberId, data) => http.put(`${base()}/members/${memberId}`, data),
 };

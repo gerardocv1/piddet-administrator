@@ -50,6 +50,7 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
 | Oferta | **Reservas** (hospedaje) | `/reservations` | `api-module-reservations` + `functionality_reservations` |
 | Oferta | **Unidades rentables** | `/rentable-units` | `api-module-rentable-units` + `functionality_reservations` |
 | Oferta | **Planes de gimnasio** | `/gym/plans` | `api-module-gym-plans` + `functionality_gym` |
+| Oferta | **Miembros de gimnasio** | `/gym/members` | `api-module-gym` + `functionality_gym` |
 | Operación | **Facturas** | `/invoices` | `api-module-orders` · `api-module-orders-own` |
 | Operación | **Reporte de ventas** | `/sales-report` | `sales-report` · `sales-report-own` |
 | Operación | **Gastos** | `/expenses` | `api-module-expenses` · `api-module-expenses-own` |
@@ -174,11 +175,16 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
 ### Gimnasio
 
 - **Descripción:** administración de gimnasio: suscripciones mensuales por miembro, con
-  seguimiento periódico de sus medidas físicas. En construcción por fases; hoy solo el catálogo
-  de planes de membresía.
+  seguimiento periódico de sus medidas físicas. En construcción por fases; hoy el catálogo de
+  planes de membresía y el registro de miembros.
 - **Flujo principal:** `/gym/plans` administra los planes (nombre, precio, duración en días,
   días de gracia tras el vencimiento, si el plan permite pausar la suscripción y el ítem del
-  catálogo de productos con el que se factura cada pago). Un plan nunca se borra: se desactiva.
+  catálogo de productos con el que se factura cada pago). `/gym/members` registra miembros: el
+  formulario pide nombre, celular y documento, y el backend resuelve a la persona como usuario
+  real de la plataforma —reutilizándola si ya existe por documento o celular— antes de crear su
+  ficha con un código de miembro autogenerado (`M00001`, `M00002`…). La ficha del miembro
+  (`/gym/members/:memberId`) edita talla (para el IMC), objetivo y notas de salud, y activa o
+  desactiva al miembro. Ni un plan ni un miembro se borran: se desactivan.
 - **Reglas:** requiere la funcionalidad `functionality_gym` activa además del permiso. Los
   miembros son usuarios de la plataforma (mismo patrón "pasivo" de Reservas); las suscripciones,
   los pagos (facturados contra el módulo de Facturas) y las medidas físicas se agregan en fases

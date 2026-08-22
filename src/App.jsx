@@ -28,6 +28,8 @@ import { ReservationsCalendar } from './screens/ReservationsCalendar.jsx';
 import { ReservationDetail } from './screens/ReservationDetail.jsx';
 import { ReservationWizard } from './screens/ReservationWizard/ReservationWizard.jsx';
 import { GymPlans } from './screens/GymPlans.jsx';
+import { GymMembers } from './screens/GymMembers.jsx';
+import { GymMemberDetail } from './screens/GymMemberDetail.jsx';
 import { ExpenseForm } from './screens/ExpenseForm.jsx';
 import { ExpenseWizard } from './screens/ExpenseWizard/ExpenseWizard.jsx';
 import { ExpenseDetail } from './screens/ExpenseDetail.jsx';
@@ -208,6 +210,8 @@ function AdminApp() {
             <Route path="reservations/new" element={<RequirePermission path="/reservations"><ReservationWizard /></RequirePermission>} />
             <Route path="reservations/:reservationId" element={<RequirePermission path="/reservations"><ReservationDetail /></RequirePermission>} />
             <Route path="gym/plans" element={<RequirePermission path="/gym/plans"><GymPlans /></RequirePermission>} />
+            <Route path="gym/members" element={<RequirePermission path="/gym/members"><GymMembers /></RequirePermission>} />
+            <Route path="gym/members/:memberId" element={<RequirePermission path="/gym/members"><GymMemberDetail /></RequirePermission>} />
             <Route path="tables" element={<RequirePermission path="/tables"><Tables /></RequirePermission>} />
             <Route path="stores" element={<RequirePermission path="/stores"><Stores /></RequirePermission>} />
             <Route path="stores/new" element={<RequirePermission path="/stores"><StoreDetail /></RequirePermission>} />
