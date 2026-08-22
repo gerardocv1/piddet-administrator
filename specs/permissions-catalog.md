@@ -137,6 +137,10 @@ Se consultan en `GET /companies/{company}/functionalities` y se exponen con
 | `functionality_reservations` | Habilita Reservas y Unidades de hospedaje. |
 | `functionality_taxes` | Muestra el selector de impuesto del producto. |
 | `functionality_menu_item_price` | Habilita el campo de precio por menú en los modales del detalle del menú. Sin ella, los ítems usan siempre el precio base del producto y el backend rechaza `price`. |
+| `functionality_gym` | Habilita el módulo de Gimnasio (miembros, suscripciones, planes y medidas). |
+| `functionality_expenses` | Habilita el módulo de Egresos completo (Gastos, Reporte y Categorías) y el dash de Gastos del Dashboard. Sin ella el backend responde 403 en todo el módulo. |
+| `functionality_shifts` | Habilita el módulo de Turnos de caja y su acción rápida en el Dashboard. Sin ella el backend responde 403 en todo el módulo. |
+| `functionality_pos` | Muestra el enlace externo al **Punto de venta** en el menú lateral (sección *Enlaces*). No gatea rutas del panel: el POS es una app aparte. |
 
 ## Añadir un módulo gateado
 

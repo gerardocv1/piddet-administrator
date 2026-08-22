@@ -61,6 +61,10 @@ export function Sidebar({ onLogout, open = false, onClose, company, companies = 
 
   const openProfile = () => { onClose && onClose(); onOpenProfile && onOpenProfile(); };
 
+  // El enlace externo al POS también depende de la funcionalidad de la compañía: sin ella no se
+  // muestra el enlace ni la sección «Enlaces» que lo contiene.
+  const showPos = !POS_ITEM.func || activeFunctionalities.includes(POS_ITEM.func);
+
   // Solo módulos con permiso y funcionalidad activa; grupos sin módulos visibles se omiten
   // (incluida su cabecera). En items desplegables se filtran las rutas hijas y se descarta el
   // padre si queda vacío.
@@ -151,12 +155,16 @@ export function Sidebar({ onLogout, open = false, onClose, company, companies = 
             ))}
           </React.Fragment>
         ))}
-        <div className={styles.section}>Enlaces</div>
-        <a href={POS_ITEM.href} target="_blank" rel="noopener noreferrer" onClick={onClose} className={styles.link}>
-          <i className={`${POS_ITEM.icon} ${styles.icon}`} />
-          <span className={styles.label}>{POS_ITEM.label}</span>
-          <i className={`fas fa-arrow-up-right-from-square ${styles.ext}`} />
-        </a>
+        {showPos && (
+          <>
+            <div className={styles.section}>Enlaces</div>
+            <a href={POS_ITEM.href} target="_blank" rel="noopener noreferrer" onClick={onClose} className={styles.link}>
+              <i className={`${POS_ITEM.icon} ${styles.icon}`} />
+              <span className={styles.label}>{POS_ITEM.label}</span>
+              <i className={`fas fa-arrow-up-right-from-square ${styles.ext}`} />
+            </a>
+          </>
+        )}
       </div>
 
       <div className={styles.foot}>

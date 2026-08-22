@@ -18,8 +18,9 @@ export const ALWAYS = '*';
 export const HOME_ITEM = { to: '/', label: 'Inicio', icon: 'fas fa-house', end: true, perm: ALWAYS };
 
 // Punto de venta: app externa (no es una ruta del panel). Abre pos.piddet.com en otra pestaña.
-// Se renderiza fuera de los grupos, como enlace externo, siempre visible.
-export const POS_ITEM = { href: 'https://pos.piddet.com', label: 'Punto de venta', icon: 'fas fa-cash-register' };
+// Se renderiza fuera de los grupos, como enlace externo, y solo si la compañía tiene contratada
+// la funcionalidad del POS (`functionality_pos`).
+export const POS_ITEM = { href: 'https://pos.piddet.com', label: 'Punto de venta', icon: 'fas fa-cash-register', func: 'functionality_pos' };
 
 // Grupos del menú lateral, en orden de aparición.
 export const MODULE_GROUPS = [
@@ -83,12 +84,13 @@ export const MODULE_GROUPS = [
       // SOLO sus gastos (el backend aplica el filtro); no ve Categorías. El Reporte tiene su
       // propio par de permisos: `expenses-report` (toda la compañía, con filtro por usuario) y
       // `expenses-report-own` (solo los gastos que registró él).
+      // Además del permiso, la compañía debe tener activa la funcionalidad de egresos (`func`).
       {
         label: 'Egresos', icon: 'fas fa-receipt',
         children: [
-          { to: '/expenses', label: 'Gastos', icon: 'fas fa-receipt', perm: ['api-module-expenses', 'api-module-expenses-own'] },
-          { to: '/expenses/summary', label: 'Reporte', icon: 'fas fa-chart-pie', perm: ['expenses-report', 'expenses-report-own'] },
-          { to: '/expense-categories', label: 'Categorías', icon: 'fas fa-tags', perm: 'api-module-expenses' },
+          { to: '/expenses', label: 'Gastos', icon: 'fas fa-receipt', perm: ['api-module-expenses', 'api-module-expenses-own'], func: 'functionality_expenses' },
+          { to: '/expenses/summary', label: 'Reporte', icon: 'fas fa-chart-pie', perm: ['expenses-report', 'expenses-report-own'], func: 'functionality_expenses' },
+          { to: '/expense-categories', label: 'Categorías', icon: 'fas fa-tags', perm: 'api-module-expenses', func: 'functionality_expenses' },
         ],
       },
       // Mesas: configuración (nombre, capacidad), estado de ocupación y códigos QR para el POS.
@@ -101,7 +103,8 @@ export const MODULE_GROUPS = [
       // acceso de cajero: abre/cierra y ve SOLO sus turnos (el backend aplica el filtro). El
       // turno GLOBAL solo lo abre/cierra `shift-global-admin` (gatea la opción en la UI, el
       // backend lo exige) — `api-module-shifts` da visibilidad de todos, no gestión del global.
-      { to: '/shifts', label: 'Turnos', icon: 'fas fa-cash-register', perm: ['api-module-shifts', 'api-module-shifts-own'] },
+      // Requiere además la funcionalidad de turnos activa en la compañía.
+      { to: '/shifts', label: 'Turnos', icon: 'fas fa-cash-register', perm: ['api-module-shifts', 'api-module-shifts-own'], func: 'functionality_shifts' },
     ],
   },
   {
