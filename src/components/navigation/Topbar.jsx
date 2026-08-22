@@ -1,11 +1,10 @@
 import React from 'react';
 import { Avatar } from '../core/Avatar.jsx';
-import { Notifications } from '../feedback/Notifications.jsx';
 import { SessionsModal } from '../feedback/SessionsModal.jsx';
 import { ChangePasswordModal } from '../feedback/ChangePasswordModal.jsx';
 import styles from './Topbar.module.css';
 
-/** Barra superior flat: título + crumb, notificaciones y menú de usuario.
+/** Barra superior flat: título + crumb y menú de usuario.
  * `onMenu` muestra la hamburguesa (solo móvil). */
 export function Topbar({ title, crumb, user = {}, onLogout, onMenu, theme = 'light', onToggleTheme }) {
   const [menuOpen, setMenuOpen] = React.useState(false);
@@ -14,6 +13,7 @@ export function Topbar({ title, crumb, user = {}, onLogout, onMenu, theme = 'lig
 
   const openSessions = () => { setMenuOpen(false); setSessionsOpen(true); };
   const openPwd = () => { setMenuOpen(false); setPwdOpen(true); };
+  const toggleTheme = () => { setMenuOpen(false); onToggleTheme && onToggleTheme(); };
   const logout = () => { setMenuOpen(false); onLogout && onLogout(); };
 
   return (
@@ -24,11 +24,6 @@ export function Topbar({ title, crumb, user = {}, onLogout, onMenu, theme = 'lig
         {crumb && <span className={styles.crumb}>· {crumb}</span>}
       </div>
       <div className={styles.spacer} />
-      <button onClick={onToggleTheme} aria-label={theme === 'dark' ? 'Activar modo claro' : 'Activar modo oscuro'} title={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'} className={styles.themeBtn}>
-        <i className={theme === 'dark' ? 'fas fa-sun' : 'fas fa-moon'} />
-      </button>
-      <Notifications />
-      <div className={styles.divider} />
 
       {/* Menú de usuario */}
       <div className={styles.userWrap}>
@@ -51,6 +46,9 @@ export function Topbar({ title, crumb, user = {}, onLogout, onMenu, theme = 'lig
               </button>
               <button type="button" role="menuitem" className={styles.menuItem} onClick={openPwd}>
                 <i className="fas fa-key" /> Cambiar contraseña
+              </button>
+              <button type="button" role="menuitem" className={styles.menuItem} onClick={toggleTheme}>
+                <i className={theme === 'dark' ? 'fas fa-sun' : 'fas fa-moon'} /> {theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
               </button>
               <div className={styles.menuSep} />
               <button type="button" role="menuitem" className={`${styles.menuItem} ${styles.danger}`} onClick={logout}>
