@@ -211,7 +211,26 @@ export function GymMemberProgress() {
                   const last = Number(grp.last.value);
                   const max = Math.max(first, last) || 1;
                   const delta = last - first;
-                  const single = grp.first === grp.last;
+                  const single = grp.count === 1;
+
+                  // Con una sola medición no existe un "antes": se muestra solo esa línea.
+                  if (single) {
+                    return (
+                      <div key={`${selectedKey}-${grp.side || ''}`} className={p.compare}>
+                        {grp.side && <span className={p.compareSide}>{SIDE_LABEL[grp.side] || grp.side}</span>}
+                        <div className={p.compareRow}>
+                          <span className={p.compareLabel}>Medición</span>
+                          <div className={p.barTrack}>
+                            <div className={`${p.bar} ${p.barAfter}`} style={{ width: '100%' }} />
+                          </div>
+                          <span className={p.compareValue}>{grp.last.value} {unit}</span>
+                          <span className={p.compareDate}>{formatShortDate(grp.last.date)}</span>
+                        </div>
+                        <p className={s.faint}>Con la próxima medición verás el antes y el después.</p>
+                      </div>
+                    );
+                  }
+
                   return (
                     // key con la medida: al cambiar de zona se re-monta y la animación se repite.
                     <div key={`${selectedKey}-${grp.side || ''}`} className={p.compare}>
@@ -232,11 +251,9 @@ export function GymMemberProgress() {
                         <span className={p.compareValue}>{grp.last.value} {unit}</span>
                         <span className={p.compareDate}>{formatShortDate(grp.last.date)}</span>
                       </div>
-                      {!single && (
-                        <Badge variant="neutral" dot>
-                          {fmtDelta(delta, unit)}{fmtPct(delta, first)} desde la primera medición
-                        </Badge>
-                      )}
+                      <Badge variant="neutral" dot>
+                        {fmtDelta(delta, unit)}{fmtPct(delta, first)} desde la primera medición
+                      </Badge>
                     </div>
                   );
                 })}
@@ -246,7 +263,8 @@ export function GymMemberProgress() {
         </Card.Body>
       </Card>
 
-      {member.sex && (
+      {/* La evolución solo aparece con dos o más mediciones: con una, la gráfica no dice nada. */}
+      {member.sex && groups.some((g) => g.count > 1) && (
         <Card>
           <Card.Header title={`Evolución · ${label}`} />
           <Card.Body>
