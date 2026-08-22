@@ -32,3 +32,25 @@ export const gymPlanDurationLabel = (days) => {
   if (preset) return preset.label.replace(/ \(.*\)/, '');
   return `${days} días`;
 };
+
+// Estados de una suscripción (deben coincidir con las constantes del modelo GymSubscription).
+// La verdad son las fechas: el backend expone tanto `status` (materializado por el cron diario)
+// como `computed_status` (calculado en vivo); el panel siempre pinta `computed_status`.
+export const GYM_SUBSCRIPTION_STATUS = { ACTIVE: 1, GRACE: 2, EXPIRED: 3, CANCELLED: 4, PAUSED: 5 };
+
+export const gymSubscriptionStatusMeta = (status) => {
+  switch (Number(status)) {
+    case GYM_SUBSCRIPTION_STATUS.ACTIVE: return { label: 'Activa', variant: 'success' };
+    case GYM_SUBSCRIPTION_STATUS.GRACE: return { label: 'En gracia', variant: 'warning' };
+    case GYM_SUBSCRIPTION_STATUS.EXPIRED: return { label: 'Vencida', variant: 'danger' };
+    case GYM_SUBSCRIPTION_STATUS.CANCELLED: return { label: 'Cancelada', variant: 'neutral' };
+    case GYM_SUBSCRIPTION_STATUS.PAUSED: return { label: 'Pausada', variant: 'info' };
+    default: return { label: '—', variant: 'neutral' };
+  }
+};
+
+// Estado de un pago de suscripción (0 anulado / 1 activo, igual que reservation_payments).
+export const gymPaymentStatusMeta = (status) =>
+  (Number(status) === 1
+    ? { label: 'Activo', variant: 'success' }
+    : { label: 'Anulado', variant: 'neutral' });

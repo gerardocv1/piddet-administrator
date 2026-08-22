@@ -40,6 +40,11 @@ filtro por usuario.
 | `api-module-gym` + funcionalidad `functionality_gym` | `/gym/members`, `/gym/members/:memberId` | Miembros del gimnasio: personas registradas como usuarios reales de la plataforma (el backend las resuelve como "pasivas" al registrarlas —find-or-create por documento o celular— y las vincula a la compañía, mismo patrón que los huéspedes de Reservas). La ficha guarda solo lo que el gimnasio necesita y `user_profiles` no tiene: talla, objetivo, notas de salud, código de miembro autogenerado. Suscripciones, pagos y progreso de medidas se agregan en fases posteriores. |
 | `gym-members-create` | (acción) | Registrar un miembro nuevo. |
 | `gym-members-edit` | (acción) | Editar la ficha de un miembro: talla, objetivo, notas de salud y estado. |
+| `api-module-gym` + funcionalidad `functionality_gym` | `/gym/subscriptions` | Listado operativo de todas las suscripciones de la compañía (filtrable por estado y por "vencen en N días"); las acciones se hacen desde la ficha del miembro. |
+| `gym-subscriptions-create` | (acción) | Dar de alta o renovar la suscripción de un miembro a un plan (con pago inicial opcional). Si el miembro tiene una suscripción vigente, la nueva se encadena automáticamente desde el día siguiente a su vencimiento. |
+| `gym-subscriptions-cancel` | (acción) | Cancelar una suscripción vigente (irreversible, motivo obligatorio). |
+| `gym-payments-create` | (acción) | Registrar un pago sobre una suscripción existente; genera su factura en el módulo de Facturas (origen "Gimnasio"). |
+| `gym-payments-annul` | (acción) | Anular un pago de suscripción; cancela su factura (irreversible, motivo obligatorio). |
 
 ## Operación
 

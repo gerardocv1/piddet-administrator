@@ -55,6 +55,7 @@ export const MODULE_GROUPS = [
         label: 'Gimnasio', icon: 'fas fa-dumbbell',
         children: [
           { to: '/gym/members', label: 'Miembros', icon: 'fas fa-users', perm: 'api-module-gym', func: 'functionality_gym' },
+          { to: '/gym/subscriptions', label: 'Suscripciones', icon: 'fas fa-calendar-check', perm: 'api-module-gym', func: 'functionality_gym' },
           { to: '/gym/plans', label: 'Planes', icon: 'fas fa-id-card', perm: 'api-module-gym-plans', func: 'functionality_gym' },
         ],
       },

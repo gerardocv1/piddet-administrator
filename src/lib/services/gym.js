@@ -21,6 +21,11 @@ const qs = (params = {}) => {
   return s ? `?${s}` : '';
 };
 
+// El backend omite la clave `data` cuando una lista viene vacía (ControllerApi::responseJson),
+// y el cliente HTTP devuelve entonces el envoltorio en vez de un array. Esto garantiza que los
+// endpoints de lista NO paginados siempre resuelvan a un array.
+const list = (promise) => promise.then((d) => (Array.isArray(d) ? d : []));
+
 export const gymService = {
   // ── Planes de membresía ─────────────────────────────────────────────────
   gymPlans: ({ status = '', search = '', page = 1, perPage = 15 } = {}) =>
@@ -49,4 +54,27 @@ export const gymService = {
   // Solo los datos propios del gimnasio (altura, objetivo, notas, estado); nombre y documento se
   // editan desde el perfil del usuario.
   updateGymMember: (memberId, data) => http.put(`${base()}/members/${memberId}`, data),
+
+  // ── Suscripciones ────────────────────────────────────────────────────────
+  gymSubscriptions: ({ status = '', expiringWithin = '', search = '', page = 1, perPage = 15 } = {}) =>
+    http.get(`${base()}/subscriptions${qs({ status, expiring_within: expiringWithin, _search: search, page, per_page: perPage })}`, { paginated: true }),
+
+  gymSubscription: (subscriptionId) => http.get(`${base()}/subscriptions/${subscriptionId}`),
+
+  // Historial de suscripciones del miembro, más reciente primero.
+  gymMemberSubscriptions: (memberId) => list(http.get(`${base()}/members/${memberId}/subscriptions`)),
+
+  // Da de alta o renueva (si el miembro tiene una vigente, la nueva se encadena automáticamente
+  // desde el backend). `payment` es opcional: registra el primer pago en la misma llamada.
+  createGymSubscription: (memberId, data) => http.post(`${base()}/members/${memberId}/subscriptions`, data),
+
+  // Cancela una suscripción vigente (irreversible, motivo obligatorio).
+  cancelGymSubscription: (subscriptionId, reason) => http.put(`${base()}/subscriptions/${subscriptionId}/cancel`, { reason }),
+
+  // ── Pagos de suscripción ─────────────────────────────────────────────────
+  // Cada pago genera su factura (orden GYM) en la fecha del pago.
+  addGymSubscriptionPayment: (subscriptionId, data) => http.post(`${base()}/subscriptions/${subscriptionId}/payments`, data),
+
+  // Anula el pago y cancela su factura (irreversible, motivo obligatorio).
+  annulGymPayment: (paymentId, reason) => http.put(`${base()}/payments/${paymentId}/annul`, { reason }),
 };

@@ -51,6 +51,7 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
 | Oferta | **Unidades rentables** | `/rentable-units` | `api-module-rentable-units` + `functionality_reservations` |
 | Oferta | **Planes de gimnasio** | `/gym/plans` | `api-module-gym-plans` + `functionality_gym` |
 | Oferta | **Miembros de gimnasio** | `/gym/members` | `api-module-gym` + `functionality_gym` |
+| Oferta | **Suscripciones de gimnasio** | `/gym/subscriptions` | `api-module-gym` + `functionality_gym` |
 | Operación | **Facturas** | `/invoices` | `api-module-orders` · `api-module-orders-own` |
 | Operación | **Reporte de ventas** | `/sales-report` | `sales-report` · `sales-report-own` |
 | Operación | **Gastos** | `/expenses` | `api-module-expenses` · `api-module-expenses-own` |
@@ -183,12 +184,24 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
   formulario pide nombre, celular y documento, y el backend resuelve a la persona como usuario
   real de la plataforma —reutilizándola si ya existe por documento o celular— antes de crear su
   ficha con un código de miembro autogenerado (`M00001`, `M00002`…). La ficha del miembro
-  (`/gym/members/:memberId`) edita talla (para el IMC), objetivo y notas de salud, y activa o
-  desactiva al miembro. Ni un plan ni un miembro se borran: se desactivan.
+  (`/gym/members/:memberId`) edita talla (para el IMC), objetivo y notas de salud, activa o
+  desactiva al miembro, y administra su suscripción: darla de alta o renovarla (con pago inicial
+  opcional), registrar pagos adicionales, anular un pago y cancelarla. `/gym/subscriptions` es el
+  listado operativo de todas las suscripciones de la compañía, filtrable por estado y por
+  próximas a vencer. Ni un plan ni un miembro se borran: se desactivan; una suscripción cancelada
+  y un pago anulado tampoco se borran, quedan en el historial.
+- **Suscripciones:** la verdad son las fechas (inicio, fin, fin de gracia); el estado
+  (`computed_status`: activa / en gracia / vencida / cancelada) se deriva de ellas. Renovar
+  **nunca** muta la suscripción vigente: crea una fila nueva encadenada, que empieza el día
+  siguiente al vencimiento de la anterior. Cancelar es irreversible y pide motivo.
+- **Pagos:** cada pago manual (efectivo, tarjeta…) genera su propia factura en el módulo de
+  Facturas (origen "Gimnasio", numeración propia), compartiendo la misma infraestructura de
+  facturación que el resto de la plataforma. Anular un pago cancela también su factura;
+  irreversible, pide motivo.
 - **Reglas:** requiere la funcionalidad `functionality_gym` activa además del permiso. Los
-  miembros son usuarios de la plataforma (mismo patrón "pasivo" de Reservas); las suscripciones,
-  los pagos (facturados contra el módulo de Facturas) y las medidas físicas se agregan en fases
-  posteriores.
+  miembros son usuarios de la plataforma (mismo patrón "pasivo" de Reservas). Las medidas físicas
+  se agregan en una fase posterior. Un job diario (`gym:transition-subscriptions`, backend)
+  transiciona automáticamente las suscripciones vencidas: activa → en gracia → vencida.
 
 ### Reportes
 

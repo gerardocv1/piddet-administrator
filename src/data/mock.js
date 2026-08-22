@@ -412,7 +412,7 @@ export const mockMenuItems = [
 // el panel muestra Productos (y sus categorías), Menús y Usuarios; el resto queda oculto.
 const mockPermissions = {
   roles: ['Administrador'],
-  permissions: ['user-administrator', 'admin-general', 'role-list', 'role-create', 'role-update', 'role-delete', 'role-assign', 'permission-list', 'permission-update', 'api-module-menus', 'api-module-products', 'api-module-company', 'company-edit-functionalities', 'api-module-stores', 'table-list', 'table-create', 'table-update', 'api-module-orders', 'sales-report', 'order-cancel', 'order-sync-failure-admin', 'api-module-expenses', 'expenses-report', 'expense-annul', 'api-module-shifts', 'shift-global-admin', 'api-module-reservations', 'api-module-rentable-units', 'reservation-checkout', 'reservation-cancel', 'reservation-payment-annul', 'api-module-gym', 'api-module-gym-plans', 'gym-plans-create', 'gym-plans-edit', 'gym-members-create', 'gym-members-edit'],
+  permissions: ['user-administrator', 'admin-general', 'role-list', 'role-create', 'role-update', 'role-delete', 'role-assign', 'permission-list', 'permission-update', 'api-module-menus', 'api-module-products', 'api-module-company', 'company-edit-functionalities', 'api-module-stores', 'table-list', 'table-create', 'table-update', 'api-module-orders', 'sales-report', 'order-cancel', 'order-sync-failure-admin', 'api-module-expenses', 'expenses-report', 'expense-annul', 'api-module-shifts', 'shift-global-admin', 'api-module-reservations', 'api-module-rentable-units', 'reservation-checkout', 'reservation-cancel', 'reservation-payment-annul', 'api-module-gym', 'api-module-gym-plans', 'gym-plans-create', 'gym-plans-edit', 'gym-members-create', 'gym-members-edit', 'gym-subscriptions-create', 'gym-subscriptions-cancel', 'gym-payments-create', 'gym-payments-annul'],
 };
 
 // Empresa (tenant) activa y empresas disponibles para el usuario (SaaS multi-tenant).
@@ -3495,12 +3495,76 @@ let mockGymPlans = [
 
 const gymPlanPresent = (p) => ({ ...p, item_name: p.item_id ? serviceItemName(p.item_id) : null });
 
+const todayIso = () => isoDay(0);
+const addDaysIso = (iso, days) => {
+  const [y, m, d] = iso.split('-').map(Number);
+  const dt = new Date(y, m - 1, d);
+  dt.setDate(dt.getDate() + days);
+  const p = (n) => String(n).padStart(2, '0');
+  return `${dt.getFullYear()}-${p(dt.getMonth() + 1)}-${p(dt.getDate())}`;
+};
+// `computed_status` espeja el que calcula el backend en vivo; en el demo es el mismo valor que
+// `status` (aquí no hay cron que lo materialice, así que ambos se fijan igual al crear/mutar).
+const gymSubPresent = (s) => ({ ...s, computed_status: s.status });
+
 // Miembros: personas ya resueltas como usuarios de la plataforma (user_id ficticio en el demo).
 let mockGymMembers = [
   { id: 1, user_id: 5001, member_code: 'M00001', member_name: 'Laura Gómez', document_snapshot: '1017234567', height_cm: '165.0', goal: 'Tonificación', health_notes: '', status: 1, joined_at: '2026-05-02' },
   { id: 2, user_id: 5002, member_code: 'M00002', member_name: 'Carlos Restrepo', document_snapshot: '1098765432', height_cm: '178.0', goal: 'Ganancia muscular', health_notes: 'Molestia leve en rodilla derecha', status: 1, joined_at: '2026-05-10' },
   { id: 3, user_id: 5003, member_code: 'M00003', member_name: 'Daniela Ríos', document_snapshot: '1023456789', height_cm: '160.0', goal: 'Pérdida de grasa', health_notes: '', status: 1, joined_at: '2026-06-01' },
   { id: 4, user_id: 5004, member_code: 'M00004', member_name: 'Andrés Mejía', document_snapshot: '1076543210', height_cm: '182.0', goal: '', health_notes: '', status: 0, joined_at: '2026-04-15' },
+];
+
+// Suscripciones: una por miembro salvo Daniela (cadena de 2, para ver el historial). `status`
+// viene ya calculado con las fechas de abajo (equivalente al `computed_status` que expone el
+// backend); en el demo no se recalcula en vivo.
+let mockGymSubscriptions = [
+  {
+    id: 'gsub-1', gym_member_id: 1, member_name: 'Laura Gómez',
+    plan_id: 1, plan_name: 'Plan mensual', price: '90000.00', duration_days: 30, grace_period_days: 3,
+    start_date: isoDay(10), end_date: isoDay(-20), grace_ends_at: isoDay(-23),
+    status: 1, is_renewal: false, previous_subscription_id: null, cancelled_at: null, cancellation_reason: null,
+    payments: [
+      { id: 'gpay-1', value: '90000.00', payment_method: 'nequi', payment_method_name: 'Nequi', payment_date: isoDay(10), notes: null, order_id: 'ord-gym-1', status: 1, created_by_name: 'Gerardo', annulled_at: null, annulment_reason: null },
+    ],
+  },
+  {
+    id: 'gsub-2', gym_member_id: 2, member_name: 'Carlos Restrepo',
+    plan_id: 1, plan_name: 'Plan mensual', price: '90000.00', duration_days: 30, grace_period_days: 3,
+    start_date: isoDay(31), end_date: isoDay(1), grace_ends_at: isoDay(-2),
+    status: 2, is_renewal: false, previous_subscription_id: null, cancelled_at: null, cancellation_reason: null,
+    payments: [
+      { id: 'gpay-2', value: '90000.00', payment_method: 'cash', payment_method_name: 'Efectivo', payment_date: isoDay(31), notes: null, order_id: 'ord-gym-2', status: 1, created_by_name: 'Gerardo', annulled_at: null, annulment_reason: null },
+    ],
+  },
+  {
+    id: 'gsub-3a', gym_member_id: 3, member_name: 'Daniela Ríos',
+    plan_id: 1, plan_name: 'Plan mensual', price: '90000.00', duration_days: 30, grace_period_days: 3,
+    start_date: isoDay(70), end_date: isoDay(40), grace_ends_at: isoDay(37),
+    status: 3, is_renewal: false, previous_subscription_id: null, cancelled_at: null, cancellation_reason: null,
+    payments: [
+      { id: 'gpay-3a', value: '90000.00', payment_method: 'datafono', payment_method_name: 'Datafono', payment_date: isoDay(70), notes: null, order_id: 'ord-gym-3a', status: 1, created_by_name: 'Gerardo', annulled_at: null, annulment_reason: null },
+    ],
+  },
+  {
+    id: 'gsub-3b', gym_member_id: 3, member_name: 'Daniela Ríos',
+    plan_id: 1, plan_name: 'Plan mensual', price: '90000.00', duration_days: 30, grace_period_days: 3,
+    start_date: isoDay(39), end_date: isoDay(9), grace_ends_at: isoDay(6),
+    status: 3, is_renewal: true, previous_subscription_id: 'gsub-3a', cancelled_at: null, cancellation_reason: null,
+    payments: [
+      { id: 'gpay-3b', value: '90000.00', payment_method: 'datafono', payment_method_name: 'Datafono', payment_date: isoDay(39), notes: null, order_id: 'ord-gym-3b', status: 1, created_by_name: 'Gerardo', annulled_at: null, annulment_reason: null },
+    ],
+  },
+  {
+    id: 'gsub-4', gym_member_id: 4, member_name: 'Andrés Mejía',
+    plan_id: 2, plan_name: 'Plan trimestral', price: '240000.00', duration_days: 90, grace_period_days: 3,
+    start_date: isoDay(95), end_date: isoDay(5), grace_ends_at: isoDay(2),
+    status: 4, is_renewal: false, previous_subscription_id: null,
+    cancelled_at: isoDay(50), cancellation_reason: 'El miembro se mudó de ciudad',
+    payments: [
+      { id: 'gpay-4', value: '240000.00', payment_method: 'bancolombia', payment_method_name: 'Ahorro a la mano Bancolombia', payment_date: isoDay(95), notes: null, order_id: 'ord-gym-4', status: 0, created_by_name: 'Gerardo', annulled_at: isoDay(50), annulment_reason: 'Cancelación de la suscripción' },
+    ],
+  },
 ];
 
 function resolveGymMock(path, query, { method = 'GET', body } = {}) {
@@ -3601,6 +3665,136 @@ function resolveGymMock(path, query, { method = 'GET', body } = {}) {
       });
     }
     return member;
+  }
+
+  const memberSubsMatch = sub.match(/^members\/(\d+)\/subscriptions$/);
+  if (memberSubsMatch) {
+    const memberId = Number(memberSubsMatch[1]);
+    const member = mockGymMembers.find((m) => m.id === memberId);
+    if (!member) return null;
+
+    if (method === 'POST') {
+      const plan = mockGymPlans.find((p) => p.id === Number(body.plan_id));
+      if (!plan || plan.status !== 1) throw new Error('El plan no existe o no está activo');
+
+      const forMember = mockGymSubscriptions.filter((s) => s.gym_member_id === memberId)
+        .sort((a, b) => (a.start_date < b.start_date ? 1 : -1));
+      const previous = forMember[0] || null;
+      const isRenewal = !!previous && [1, 2].includes(previous.status);
+
+      const startDate = isRenewal ? addDaysIso(previous.end_date, 1) : todayIso();
+      const endDate = addDaysIso(startDate, plan.duration_days - 1);
+      const graceEndsAt = addDaysIso(endDate, plan.grace_period_days);
+
+      const subscription = {
+        id: 'gsub-' + ((mockGymSubscriptions.length || 0) + 1) + '-' + Date.now().toString(36),
+        gym_member_id: memberId,
+        member_name: member.member_name,
+        plan_id: plan.id,
+        plan_name: plan.name,
+        price: plan.price,
+        duration_days: plan.duration_days,
+        grace_period_days: plan.grace_period_days,
+        start_date: startDate,
+        end_date: endDate,
+        grace_ends_at: graceEndsAt,
+        status: 1,
+        is_renewal: isRenewal,
+        previous_subscription_id: isRenewal ? previous.id : null,
+        cancelled_at: null,
+        cancellation_reason: null,
+        payments: [],
+      };
+      if (body.payment && body.payment.value) {
+        subscription.payments.push({
+          id: 'gpay-' + Date.now().toString(36),
+          value: body.payment.value,
+          payment_method: body.payment.payment_method,
+          payment_method_name: paymentMethodName(body.payment.payment_method),
+          payment_date: body.payment.payment_date || todayIso(),
+          notes: body.payment.notes || null,
+          order_id: 'ord-gym-' + Date.now().toString(36),
+          status: 1,
+          created_by_name: 'Gerardo',
+          annulled_at: null,
+          annulment_reason: null,
+        });
+      }
+      mockGymSubscriptions.push(subscription);
+      return gymSubPresent(subscription);
+    }
+
+    return mockGymSubscriptions
+      .filter((s) => s.gym_member_id === memberId)
+      .sort((a, b) => (a.start_date < b.start_date ? 1 : -1))
+      .map(gymSubPresent);
+  }
+
+  if (sub === 'subscriptions') {
+    const status = query.get('status');
+    const expiringWithin = query.get('expiring_within');
+    let rows = mockGymSubscriptions.slice();
+    if (status) rows = rows.filter((s) => String(s.status) === status);
+    if (expiringWithin) {
+      const limit = addDaysIso(todayIso(), Number(expiringWithin));
+      rows = rows.filter((s) => [1, 2].includes(s.status) && s.end_date >= todayIso() && s.end_date <= limit);
+    }
+    rows = rows.sort((a, b) => (a.end_date < b.end_date ? -1 : 1)).map((s) => ({
+      id: s.id, gym_member_id: s.gym_member_id, member_name: s.member_name,
+      plan_name: s.plan_name, price: s.price, start_date: s.start_date,
+      end_date: s.end_date, grace_ends_at: s.grace_ends_at, status: s.status,
+    }));
+    return mockPaginate(rows, query);
+  }
+
+  const subCancelMatch = sub.match(/^subscriptions\/([\w-]+)\/cancel$/);
+  if (subCancelMatch) {
+    const subscription = mockGymSubscriptions.find((s) => s.id === subCancelMatch[1]);
+    if (!subscription) return null;
+    subscription.status = 4;
+    subscription.cancelled_at = new Date().toISOString();
+    subscription.cancellation_reason = body.reason;
+    return gymSubPresent(subscription);
+  }
+
+  const subPaymentsMatch = sub.match(/^subscriptions\/([\w-]+)\/payments$/);
+  if (subPaymentsMatch) {
+    const subscription = mockGymSubscriptions.find((s) => s.id === subPaymentsMatch[1]);
+    if (!subscription) return null;
+    subscription.payments.push({
+      id: 'gpay-' + Date.now().toString(36),
+      value: body.value,
+      payment_method: body.payment_method,
+      payment_method_name: paymentMethodName(body.payment_method),
+      payment_date: body.payment_date || todayIso(),
+      notes: body.notes || null,
+      order_id: 'ord-gym-' + Date.now().toString(36),
+      status: 1,
+      created_by_name: 'Gerardo',
+      annulled_at: null,
+      annulment_reason: null,
+    });
+    return gymSubPresent(subscription);
+  }
+
+  const subMatch = sub.match(/^subscriptions\/([\w-]+)$/);
+  if (subMatch) {
+    const subscription = mockGymSubscriptions.find((s) => s.id === subMatch[1]);
+    return subscription ? gymSubPresent(subscription) : null;
+  }
+
+  const paymentAnnulMatch = sub.match(/^payments\/([\w-]+)\/annul$/);
+  if (paymentAnnulMatch) {
+    for (const subscription of mockGymSubscriptions) {
+      const payment = (subscription.payments || []).find((p) => p.id === paymentAnnulMatch[1]);
+      if (payment) {
+        payment.status = 0;
+        payment.annulled_at = new Date().toISOString();
+        payment.annulment_reason = body.reason;
+        return gymSubPresent(subscription);
+      }
+    }
+    return null;
   }
 
   return null;
