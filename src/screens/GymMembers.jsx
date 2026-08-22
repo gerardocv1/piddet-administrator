@@ -20,7 +20,7 @@ const STATUS_OPTIONS = [
 
 const emptyForm = {
   first_name: '', last_name: '', phone_number: '', email: '',
-  id_type_id: '1', id_number: '', height_cm: '', goal: '', health_notes: '',
+  id_type_id: '1', id_number: '', height_cm: '', goal_id: '', health_notes: '',
 };
 
 // Miembros del gimnasio: personas registradas como usuarios reales de la plataforma (el backend
@@ -60,6 +60,13 @@ export function GymMembers() {
   const rows = data.items || [];
   const pg = data.pagination;
 
+  // Catálogo cerrado de objetivos: el miembro elige uno, no hay texto libre.
+  const { data: goals } = useResource(api.gymGoals, [], []);
+  const goalOptions = React.useMemo(
+    () => [{ value: '', label: 'Sin objetivo' }, ...(goals || []).map((goal) => ({ value: String(goal.id), label: goal.label }))],
+    [goals],
+  );
+
   const [form, setForm] = React.useState(null);
   const [saving, setSaving] = React.useState(false);
   const [formError, setFormError] = React.useState('');
@@ -83,7 +90,7 @@ export function GymMembers() {
         id_type_id: form.id_type_id ? Number(form.id_type_id) : null,
         id_number: form.id_number.trim() || null,
         height_cm: form.height_cm || null,
-        goal: form.goal.trim() || null,
+        goal_id: form.goal_id ? Number(form.goal_id) : null,
         health_notes: form.health_notes.trim() || null,
       });
       toast({ tone: 'success', title: 'Miembro registrado' });
@@ -222,8 +229,8 @@ export function GymMembers() {
             <div className={s.formGrid}>
               <Input label="Talla (cm, opcional)" type="number" inputMode="decimal" min="0" icon="fas fa-ruler-vertical"
                 value={form.height_cm} onChange={(e) => setForm({ ...form, height_cm: e.target.value })} />
-              <Input label="Objetivo (opcional)" icon="fas fa-bullseye" placeholder="Ej. Pérdida de grasa"
-                value={form.goal} onChange={(e) => setForm({ ...form, goal: e.target.value })} />
+              <Select label="Objetivo (opcional)" icon="fas fa-bullseye" value={form.goal_id}
+                onChange={(e) => setForm({ ...form, goal_id: e.target.value })} options={goalOptions} />
             </div>
             <Textarea label="Notas de salud (opcional)" placeholder="Lesiones, condiciones a tener en cuenta…"
               value={form.health_notes} onChange={(e) => setForm({ ...form, health_notes: e.target.value })} />

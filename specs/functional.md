@@ -185,11 +185,15 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
   catálogo de productos con el que se factura cada pago). `/gym/members` registra miembros: el
   formulario pide nombre, celular y documento, y el backend resuelve a la persona como usuario
   real de la plataforma —reutilizándola si ya existe por documento o celular— antes de crear su
-  ficha con un código de miembro autogenerado (`M00001`, `M00002`…). La ficha del miembro
-  (`/gym/members/:memberId`) está ordenada por frecuencia de uso: primero la **suscripción como
-  resumen compacto** (renovar en el sitio; el resumen abre el detalle), luego el **progreso
-  físico** (peso/IMC, una medida graficada a la vez y el historial de chequeos) y al final el
-  **perfil** editable (talla, objetivo, notas de salud, estado). El detalle de la suscripción
+  ficha con un código de miembro autogenerado (`M00001`, `M00002`…). El **objetivo del miembro
+  es cerrado**: se elige de un catálogo (`GET /gym/goals`: bajar de peso, subir de peso, aumentar
+  masa muscular, tonificar…), no es texto libre — la clave estable de cada objetivo permitirá a
+  futuro asociarle recomendaciones. La ficha del miembro (`/gym/members/:memberId`) está ordenada
+  por frecuencia de uso, con tarjetas **plegables**: primero la **suscripción como resumen
+  compacto** (abierta por defecto; renovar en el sitio, el resumen abre el detalle), luego el
+  **progreso físico** (peso/IMC, la gráfica con todas las medidas y el historial de mediciones)
+  y al final el **perfil** editable (talla, objetivo del catálogo, notas de salud, estado),
+  plegado por defecto. El detalle de la suscripción
   (`/gym/subscriptions/:subscriptionId`) es la vista transaccional: sus pagos (registrar con el
   precio precargado, anular), renovar y cancelar; el nombre del miembro arriba navega a su
   perfil. `/gym/subscriptions` es el listado operativo, filtrable por estado y por próximas a
@@ -210,9 +214,11 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
 - **Medidas físicas:** un chequeo agrupa varios valores tomados el mismo día. **Cada compañía
   configura en `/gym/measurements` qué medidas pide** (peso, % de grasa, circunferencias…; sin
   selección guardada se piden todas); el catálogo distingue las que admiten lado
-  izquierdo/derecho (bíceps, muslo, pantorrilla, antebrazo). La ficha del miembro grafica el
-  progreso de la medida seleccionada y muestra el peso actual (con su variación desde la medición
-  anterior) y el IMC calculado con la talla del miembro.
+  izquierdo/derecho (bíceps, muslo, pantorrilla, antebrazo). La ficha del miembro grafica
+  **todas las medidas configuradas a la vez** (tocar una en la leyenda la oculta o la vuelve a
+  mostrar) y muestra el peso actual (con su variación desde la medición anterior) y el IMC
+  calculado con la talla. Bajo la gráfica, el **historial de mediciones** lista cada chequeo por
+  fecha; tocarlo abre un modal con los valores tomados ese día.
 - **Reglas:** requiere la funcionalidad `functionality_gym` activa además del permiso. Los
   miembros son usuarios de la plataforma (mismo patrón "pasivo" de Reservas). Un job diario
   (`gym:transition-subscriptions`, backend) transiciona automáticamente las suscripciones

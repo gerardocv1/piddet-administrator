@@ -83,6 +83,10 @@ export const gymService = {
   // Anula el pago y cancela su factura (irreversible, motivo obligatorio).
   annulGymPayment: (paymentId, reason) => http.put(`${base()}/payments/${paymentId}/annul`, { reason }),
 
+  // Catálogo cerrado de objetivos del miembro (el objetivo se elige, no es texto libre):
+  // [{ id, key, label }].
+  gymGoals: () => list(http.get(`${base()}/goals`)),
+
   // ── Medidas físicas ──────────────────────────────────────────────────────
   // Medidas que la compañía pide a sus miembros (el catálogo filtrado por su selección; sin
   // selección guardada, todas): [{ id, key, label, unit, sided, sort_order }].

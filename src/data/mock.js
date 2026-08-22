@@ -3508,11 +3508,22 @@ const addDaysIso = (iso, days) => {
 const gymSubPresent = (s) => ({ ...s, computed_status: s.status });
 
 // Miembros: personas ya resueltas como usuarios de la plataforma (user_id ficticio en el demo).
+// Catálogo cerrado de objetivos (espejo del seed de gym_goals): el miembro elige uno, no hay
+// texto libre. `goal` en el miembro es el snapshot del label.
+const mockGymGoals = [
+  { id: 1, key: 'lose_weight', label: 'Bajar de peso' },
+  { id: 2, key: 'gain_weight', label: 'Subir de peso' },
+  { id: 3, key: 'gain_muscle', label: 'Aumentar masa muscular' },
+  { id: 4, key: 'tone', label: 'Tonificar' },
+  { id: 5, key: 'improve_endurance', label: 'Mejorar resistencia' },
+  { id: 6, key: 'general_health', label: 'Salud general' },
+];
+
 let mockGymMembers = [
-  { id: 1, user_id: 5001, member_code: 'M00001', member_name: 'Laura Gómez', document_snapshot: '1017234567', height_cm: '165.0', goal: 'Tonificación', health_notes: '', status: 1, joined_at: '2026-05-02' },
-  { id: 2, user_id: 5002, member_code: 'M00002', member_name: 'Carlos Restrepo', document_snapshot: '1098765432', height_cm: '178.0', goal: 'Ganancia muscular', health_notes: 'Molestia leve en rodilla derecha', status: 1, joined_at: '2026-05-10' },
-  { id: 3, user_id: 5003, member_code: 'M00003', member_name: 'Daniela Ríos', document_snapshot: '1023456789', height_cm: '160.0', goal: 'Pérdida de grasa', health_notes: '', status: 1, joined_at: '2026-06-01' },
-  { id: 4, user_id: 5004, member_code: 'M00004', member_name: 'Andrés Mejía', document_snapshot: '1076543210', height_cm: '182.0', goal: '', health_notes: '', status: 0, joined_at: '2026-04-15' },
+  { id: 1, user_id: 5001, member_code: 'M00001', member_name: 'Laura Gómez', document_snapshot: '1017234567', height_cm: '165.0', goal_id: 4, goal: 'Tonificar', health_notes: '', status: 1, joined_at: '2026-05-02' },
+  { id: 2, user_id: 5002, member_code: 'M00002', member_name: 'Carlos Restrepo', document_snapshot: '1098765432', height_cm: '178.0', goal_id: 3, goal: 'Aumentar masa muscular', health_notes: 'Molestia leve en rodilla derecha', status: 1, joined_at: '2026-05-10' },
+  { id: 3, user_id: 5003, member_code: 'M00003', member_name: 'Daniela Ríos', document_snapshot: '1023456789', height_cm: '160.0', goal_id: 1, goal: 'Bajar de peso', health_notes: '', status: 1, joined_at: '2026-06-01' },
+  { id: 4, user_id: 5004, member_code: 'M00004', member_name: 'Andrés Mejía', document_snapshot: '1076543210', height_cm: '182.0', goal_id: null, goal: null, health_notes: '', status: 0, joined_at: '2026-04-15' },
 ];
 
 // Suscripciones: una por miembro salvo Daniela (cadena de 2, para ver el historial). `status`
@@ -3689,7 +3700,8 @@ function resolveGymMock(path, query, { method = 'GET', body } = {}) {
         member_name: `${body.first_name} ${body.last_name}`.trim(),
         document_snapshot: idNumber || null,
         height_cm: body.height_cm || null,
-        goal: body.goal || null,
+        goal_id: body.goal_id ? Number(body.goal_id) : null,
+        goal: mockGymGoals.find((gl) => gl.id === Number(body.goal_id))?.label || null,
         health_notes: body.health_notes || null,
         status: 1,
         joined_at: new Date().toISOString().slice(0, 10),
@@ -3715,9 +3727,14 @@ function resolveGymMock(path, query, { method = 'GET', body } = {}) {
     const member = mockGymMembers.find((m) => m.id === Number(memberMatch[1]));
     if (!member) return null;
     if (method === 'PUT') {
-      ['height_cm', 'goal', 'health_notes', 'status'].forEach((key) => {
+      ['height_cm', 'health_notes', 'status'].forEach((key) => {
         if (key in body) member[key] = key === 'status' ? Number(body[key]) : body[key];
       });
+      if ('goal_id' in body) {
+        const goal = mockGymGoals.find((gl) => gl.id === Number(body.goal_id));
+        member.goal_id = goal ? goal.id : null;
+        member.goal = goal ? goal.label : null;
+      }
     }
     return member;
   }
@@ -3783,6 +3800,10 @@ function resolveGymMock(path, query, { method = 'GET', body } = {}) {
       .filter((s) => s.gym_member_id === memberId)
       .sort((a, b) => (a.start_date < b.start_date ? 1 : -1))
       .map(gymSubPresent);
+  }
+
+  if (sub === 'goals') {
+    return mockGymGoals;
   }
 
   if (sub === 'measurement-types') {

@@ -1,5 +1,25 @@
 /* Ficha del miembro del gimnasio: resumen tappable de la suscripción y listas compactas. */
 
+/* Tarjetas plegables: el título es el interruptor. */
+.collapseToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: none;
+  background: transparent;
+  padding: 0;
+  min-height: 44px;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: var(--text-md);
+  font-weight: 700;
+  color: var(--gray-900);
+}
+.collapseChevron { color: var(--gray-400); font-size: 0.7rem; transition: transform 0.15s ease; }
+.chevronOpen { transform: rotate(180deg); }
+/* Plegada, el header es el borde inferior de la tarjeta: sin línea doble. */
+.collapsedHeader { border-bottom: none; }
+
 /* Fila-resumen de la suscripción vigente: toda el área navega al detalle. */
 .subSummary {
   display: flex;
@@ -30,7 +50,13 @@
   color: var(--gray-400);
 }
 
-/* Últimas mediciones: filas apiladas, sin tabla. */
+/* Historial de mediciones: filas apiladas y tappables (abren el detalle en un modal). */
+.historyTitle {
+  margin: 0 0 4px;
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--gray-600);
+}
 .checkinList {
   list-style: none;
   margin: 0;
@@ -41,11 +67,47 @@
 .checkinList li + li { border-top: 1px solid var(--border-color); }
 .checkinRow {
   display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 0;
+  border: none;
+  background: transparent;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  text-align: left;
+}
+.checkinRow:active { opacity: 0.7; }
+.checkinDate { font-weight: 600; color: var(--gray-800); white-space: nowrap; }
+.checkinMeta {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: var(--text-sm);
+  color: var(--gray-500);
+  text-align: right;
+}
+.checkinChevron { color: var(--gray-400); font-size: 0.65rem; }
+
+/* Detalle de una medición (modal del historial). */
+.checkinBy { margin: 0; font-size: var(--text-sm); color: var(--gray-500); }
+.valueList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.valueList li + li { border-top: 1px solid var(--border-color); }
+.valueRow {
+  display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 12px;
-  min-height: 44px;
-  padding: 10px 0;
+  min-height: 40px;
+  padding: 9px 0;
 }
-.checkinDate { font-weight: 600; color: var(--gray-800); white-space: nowrap; }
-.checkinMeta { font-size: var(--text-sm); color: var(--gray-500); text-align: right; }
+.valueLabel { color: var(--gray-700); }
+.valueNumber { font-weight: 700; color: var(--gray-900); white-space: nowrap; }

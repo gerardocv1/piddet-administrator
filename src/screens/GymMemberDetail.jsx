@@ -14,11 +14,30 @@ import g from './GymMemberDetail.module.css';
 
 const EMPTY_SUBS = [];
 const EMPTY_TYPES = [];
+const SIDE_LABEL = { L: 'izq.', R: 'der.' };
+
+// Tarjeta plegable: el título es el interruptor (tocar minimiza/maximiza); la acción del header
+// queda siempre visible, así "Renovar" sigue a un toque aunque la tarjeta esté plegada.
+function CollapsibleCard({ title, action, defaultOpen = true, children }) {
+  const [open, setOpen] = React.useState(defaultOpen);
+  return (
+    <Card>
+      <Card.Header action={action} className={open ? '' : g.collapsedHeader}>
+        <button type="button" className={g.collapseToggle} onClick={() => setOpen((o) => !o)} aria-expanded={open}>
+          {title}
+          <i className={`fas fa-chevron-down ${g.collapseChevron} ${open ? g.chevronOpen : ''}`} aria-hidden="true" />
+        </button>
+      </Card.Header>
+      {open && <Card.Body>{children}</Card.Body>}
+    </Card>
+  );
+}
 
 // Ficha del miembro, en orden de uso móvil: primero su suscripción (resumen compacto — el
 // detalle transaccional con los pagos vive en /gym/subscriptions/:id), luego su progreso
-// físico (una medida a la vez, elegida con un selector) y al final el perfil editable.
-// Registrar medidas abre el asistente paso a paso (/gym/members/:id/checkin).
+// físico (todas las medidas configuradas en una gráfica, ocultables desde la leyenda, con el
+// historial de mediciones debajo) y al final el perfil, plegado por defecto. Suscripción y
+// perfil se pueden minimizar/maximizar. Registrar medidas abre el asistente paso a paso.
 export function GymMemberDetail() {
   const { memberId } = useParams();
   const navigate = useNavigate();
@@ -115,17 +134,23 @@ export function GymMemberDetail() {
     }
   };
 
-  // ── Progreso: una medida a la vez, elegida con un selector ───────────────
+  // ── Progreso: todas las medidas configuradas en la gráfica (leyenda oculta/muestra) ──
   const { data: measurementTypes } = useResource(api.gymMeasurementTypes, EMPTY_TYPES, []);
   const typeByKey = React.useMemo(() => Object.fromEntries((measurementTypes || []).map((t) => [t.key, t])), [measurementTypes]);
-  const [chartKey, setChartKey] = React.useState('');
-  const selectedKey = chartKey || (typeByKey.weight ? 'weight' : (measurementTypes[0]?.key || ''));
+  const allKeys = React.useMemo(() => (measurementTypes || []).map((t) => t.key), [measurementTypes]);
 
   const progressFetcher = React.useCallback(() => api.gymMemberProgress(memberId), [memberId]);
   const { data: progress, loading: progressLoading } = useResource(progressFetcher, {}, [memberId]);
 
-  const checkinsFetcher = React.useCallback(() => api.gymMemberCheckins(memberId, { perPage: 5 }), [memberId]);
+  const checkinsFetcher = React.useCallback(() => api.gymMemberCheckins(memberId, { perPage: 10 }), [memberId]);
   const { data: checkinsPage } = useResource(checkinsFetcher, { items: [] }, [memberId]);
+  // Historial: al tocar una fecha se abre el detalle de esa medición.
+  const [openCheckin, setOpenCheckin] = React.useState(null);
+
+  const chartedSeries = React.useMemo(
+    () => allKeys.filter((key) => (progress[key]?.points || []).length > 0).length,
+    [allKeys, progress],
+  );
 
   const weightPoints = progress.weight?.points || [];
   const latestWeight = weightPoints[weightPoints.length - 1];
@@ -143,12 +168,13 @@ export function GymMemberDetail() {
   }
   if (bmi) progressStats.push({ label: 'IMC', value: bmi.toFixed(1) });
 
-  const measureOptions = React.useMemo(
-    () => (measurementTypes || []).map((t) => ({ value: t.key, label: t.label })),
-    [measurementTypes],
+  // ── Perfil editable (objetivo cerrado: se elige del catálogo) ────────────
+  const { data: goals } = useResource(api.gymGoals, [], []);
+  const goalOptions = React.useMemo(
+    () => [{ value: '', label: 'Sin objetivo' }, ...(goals || []).map((goal) => ({ value: String(goal.id), label: goal.label }))],
+    [goals],
   );
 
-  // ── Perfil editable ──────────────────────────────────────────────────────
   const [form, setForm] = React.useState(null);
   const [saving, setSaving] = React.useState(false);
   const [saveError, setSaveError] = React.useState('');
@@ -157,7 +183,7 @@ export function GymMemberDetail() {
     if (data) {
       setForm({
         height_cm: data.height_cm ?? '',
-        goal: data.goal || '',
+        goal_id: data.goal_id ? String(data.goal_id) : '',
         health_notes: data.health_notes || '',
         active: Number(data.status) === GYM_MEMBER_STATUS.ACTIVE,
       });
@@ -166,7 +192,7 @@ export function GymMemberDetail() {
 
   const dirty = form && data && (
     (form.height_cm || '') !== (data.height_cm ?? '') ||
-    form.goal !== (data.goal || '') ||
+    form.goal_id !== (data.goal_id ? String(data.goal_id) : '') ||
     form.health_notes !== (data.health_notes || '') ||
     form.active !== (Number(data.status) === GYM_MEMBER_STATUS.ACTIVE)
   );
@@ -178,7 +204,7 @@ export function GymMemberDetail() {
     try {
       const updated = await api.updateGymMember(data.id, {
         height_cm: form.height_cm === '' ? null : form.height_cm,
-        goal: form.goal.trim() || null,
+        goal_id: form.goal_id === '' ? null : Number(form.goal_id),
         health_notes: form.health_notes.trim() || null,
         status: form.active ? GYM_MEMBER_STATUS.ACTIVE : GYM_MEMBER_STATUS.INACTIVE,
       });
@@ -217,41 +243,38 @@ export function GymMemberDetail() {
       />
 
       {/* ── Suscripción: resumen compacto; el detalle (pagos) vive en su propia vista ── */}
-      <Card>
-        <Card.Header title="Suscripción"
-          action={
-            <Button variant="primary" size="sm" icon={currentIsAlive ? 'fas fa-rotate' : 'fas fa-plus'} onClick={openSubscribe}>
-              {currentIsAlive ? 'Renovar' : 'Nueva suscripción'}
-            </Button>
-          } />
-        <Card.Body>
-          {!current ? (
-            <p className={s.faint}>Este miembro todavía no tiene una suscripción.</p>
-          ) : (
-            <button type="button" className={g.subSummary}
-              onClick={() => navigate(`/gym/subscriptions/${current.id}`)}>
-              <div className={g.subInfo}>
-                <span className={g.subPlan}>{current.plan_name}</span>
-                <span className={g.subDates}>
-                  {currentStatus === GYM_SUBSCRIPTION_STATUS.EXPIRED || currentStatus === GYM_SUBSCRIPTION_STATUS.CANCELLED
-                    ? `Venció el ${formatShortDate(current.end_date)}`
-                    : `Vence el ${formatShortDate(current.end_date)}`}
-                  {' · '}{gymMoney(current.price)}
-                </span>
-              </div>
-              <span className={g.subRight}>
-                <Badge variant={subMeta.variant} dot>{subMeta.label}</Badge>
-                <i className={`fas fa-chevron-right ${g.subChevron}`} aria-hidden="true" />
+      <CollapsibleCard title="Suscripción" defaultOpen
+        action={
+          <Button variant="primary" size="sm" icon={currentIsAlive ? 'fas fa-rotate' : 'fas fa-plus'} onClick={openSubscribe}>
+            {currentIsAlive ? 'Renovar' : 'Nueva suscripción'}
+          </Button>
+        }>
+        {!current ? (
+          <p className={s.faint}>Este miembro todavía no tiene una suscripción.</p>
+        ) : (
+          <button type="button" className={g.subSummary}
+            onClick={() => navigate(`/gym/subscriptions/${current.id}`)}>
+            <div className={g.subInfo}>
+              <span className={g.subPlan}>{current.plan_name}</span>
+              <span className={g.subDates}>
+                {currentStatus === GYM_SUBSCRIPTION_STATUS.EXPIRED || currentStatus === GYM_SUBSCRIPTION_STATUS.CANCELLED
+                  ? `Venció el ${formatShortDate(current.end_date)}`
+                  : `Vence el ${formatShortDate(current.end_date)}`}
+                {' · '}{gymMoney(current.price)}
               </span>
-            </button>
-          )}
-          {subscriptions.length > 1 && (
-            <p className={g.subHistoryNote}>
-              {subscriptions.length - 1} suscripción{subscriptions.length - 1 === 1 ? '' : 'es'} anterior{subscriptions.length - 1 === 1 ? '' : 'es'} — se abren desde el listado de suscripciones.
-            </p>
-          )}
-        </Card.Body>
-      </Card>
+            </div>
+            <span className={g.subRight}>
+              <Badge variant={subMeta.variant} dot>{subMeta.label}</Badge>
+              <i className={`fas fa-chevron-right ${g.subChevron}`} aria-hidden="true" />
+            </span>
+          </button>
+        )}
+        {subscriptions.length > 1 && (
+          <p className={g.subHistoryNote}>
+            {subscriptions.length - 1} suscripción{subscriptions.length - 1 === 1 ? '' : 'es'} anterior{subscriptions.length - 1 === 1 ? '' : 'es'} — se abren desde el listado de suscripciones.
+          </p>
+        )}
+      </CollapsibleCard>
 
       {/* ── Progreso físico ── */}
       <Card>
@@ -265,54 +288,78 @@ export function GymMemberDetail() {
         <Card.Body>
           <div className={s.formCol}>
             {progressStats.length > 0 && <StatStrip stats={progressStats} />}
-            {measureOptions.length > 0 && (
-              <Select label="Medida a graficar" icon="fas fa-chart-line" value={selectedKey}
-                onChange={(e) => setChartKey(e.target.value)} options={measureOptions} />
-            )}
-            <BodyMeasuresChart series={progress} selectedKeys={selectedKey ? [selectedKey] : []} loading={progressLoading}
+            <BodyMeasuresChart series={progress} selectedKeys={allKeys} loading={progressLoading}
               labelFor={(key) => typeByKey[key]?.label || key}
-              emptyLabel="Aún no hay mediciones de esta medida." />
+              emptyLabel="Aún no hay mediciones registradas." />
+            {chartedSeries > 1 && (
+              <p className={s.faint}>Toca una medida en la leyenda para ocultarla o volverla a mostrar.</p>
+            )}
             {(checkinsPage.items || []).length > 0 && (
-              <ul className={g.checkinList}>
-                {checkinsPage.items.map((c) => (
-                  <li key={c.id} className={g.checkinRow}>
-                    <span className={g.checkinDate}>{formatShortDate(c.measured_at)}</span>
-                    <span className={g.checkinMeta}>
-                      {(c.values || []).length} medida{(c.values || []).length === 1 ? '' : 's'} · {c.measured_by_name}
-                    </span>
-                  </li>
-                ))}
-              </ul>
+              <div>
+                <h4 className={g.historyTitle}>Historial de mediciones</h4>
+                <ul className={g.checkinList}>
+                  {checkinsPage.items.map((c) => (
+                    <li key={c.id}>
+                      <button type="button" className={g.checkinRow} onClick={() => setOpenCheckin(c)}>
+                        <span className={g.checkinDate}>{formatShortDate(c.measured_at)}</span>
+                        <span className={g.checkinMeta}>
+                          {(c.values || []).length} medida{(c.values || []).length === 1 ? '' : 's'} · {c.measured_by_name}
+                          <i className={`fas fa-chevron-right ${g.checkinChevron}`} aria-hidden="true" />
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             )}
           </div>
         </Card.Body>
       </Card>
 
-      {/* ── Perfil ── */}
+      {/* ── Perfil (plegado por defecto: se consulta poco y ocupa pantalla en móvil) ── */}
       {saveError && <Alert tone="danger" title="No se pudo completar la acción" onClose={() => setSaveError('')}>{saveError}</Alert>}
-      <Card>
-        <Card.Header title="Perfil" />
-        <Card.Body>
-          {form && (
-            <div className={s.formCol}>
-              <div className={s.formGrid}>
-                <Input label="Talla (cm)" type="number" inputMode="decimal" min="0" icon="fas fa-ruler-vertical"
-                  hint="Se usa para calcular el IMC."
-                  value={form.height_cm} onChange={(e) => setForm({ ...form, height_cm: e.target.value })} />
-                <Input label="Objetivo" icon="fas fa-bullseye" placeholder="Ej. Pérdida de grasa"
-                  value={form.goal} onChange={(e) => setForm({ ...form, goal: e.target.value })} />
-              </div>
-              <Textarea label="Notas de salud" placeholder="Lesiones, condiciones a tener en cuenta…"
-                value={form.health_notes} onChange={(e) => setForm({ ...form, health_notes: e.target.value })} />
-              <Switch label="Miembro activo" checked={form.active}
-                onChange={(e) => setForm({ ...form, active: e.target.checked })} />
-              <div className={s.actions}>
-                <Button variant="primary" loading={saving} disabled={!dirty} onClick={save}>Guardar cambios</Button>
-              </div>
+      <CollapsibleCard title="Perfil" defaultOpen={false}>
+        {form && (
+          <div className={s.formCol}>
+            <div className={s.formGrid}>
+              <Input label="Talla (cm)" type="number" inputMode="decimal" min="0" icon="fas fa-ruler-vertical"
+                hint="Se usa para calcular el IMC."
+                value={form.height_cm} onChange={(e) => setForm({ ...form, height_cm: e.target.value })} />
+              <Select label="Objetivo" icon="fas fa-bullseye" value={form.goal_id}
+                onChange={(e) => setForm({ ...form, goal_id: e.target.value })} options={goalOptions} />
             </div>
-          )}
-        </Card.Body>
-      </Card>
+            <Textarea label="Notas de salud" placeholder="Lesiones, condiciones a tener en cuenta…"
+              value={form.health_notes} onChange={(e) => setForm({ ...form, health_notes: e.target.value })} />
+            <Switch label="Miembro activo" checked={form.active}
+              onChange={(e) => setForm({ ...form, active: e.target.checked })} />
+            <div className={s.actions}>
+              <Button variant="primary" loading={saving} disabled={!dirty} onClick={save}>Guardar cambios</Button>
+            </div>
+          </div>
+        )}
+      </CollapsibleCard>
+
+      {/* Detalle de una medición del historial */}
+      <Modal open={!!openCheckin} title={openCheckin ? `Medición del ${formatShortDate(openCheckin.measured_at)}` : ''}
+        onClose={() => setOpenCheckin(null)}
+        footer={<Button variant="secondary" onClick={() => setOpenCheckin(null)}>Cerrar</Button>}>
+        {openCheckin && (
+          <div className={s.formCol}>
+            <p className={g.checkinBy}>Registrada por {openCheckin.measured_by_name}</p>
+            <ul className={g.valueList}>
+              {(openCheckin.values || []).map((v, i) => (
+                <li key={i} className={g.valueRow}>
+                  <span className={g.valueLabel}>
+                    {v.label || v.key}{v.side ? ` (${SIDE_LABEL[v.side] || v.side})` : ''}
+                  </span>
+                  <span className={g.valueNumber}>{v.value} {v.unit}</span>
+                </li>
+              ))}
+            </ul>
+            {openCheckin.notes && <p className={s.faint}>{openCheckin.notes}</p>}
+          </div>
+        )}
+      </Modal>
 
       <Modal open={subscribeOpen} title={currentIsAlive ? 'Renovar suscripción' : 'Nueva suscripción'} onClose={() => setSubscribeOpen(false)}
         footer={<>
