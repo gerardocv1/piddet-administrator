@@ -7,6 +7,7 @@ import {
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { gymMemberStatusMeta, GYM_MEMBER_STATUS, GYM_SEX_OPTIONS, gymMoney, gymSubscriptionStatusMeta, GYM_SUBSCRIPTION_STATUS } from '../lib/gymLabels.js';
+import { ID_TYPES } from '../lib/reservationLabels.js';
 import { formatShortDate } from '../lib/dates.js';
 import { useSetPageTitle } from '../lib/pageTitle.jsx';
 import s from './screens.module.css';
@@ -133,6 +134,53 @@ export function GymMemberDetail() {
     }
   };
 
+  // ── Datos personales de la persona (nombres, correo, documento). El celular no se edita:
+  // es la credencial con la que inicia sesión. ──
+  const [personalOpen, setPersonalOpen] = React.useState(false);
+  const [personalForm, setPersonalForm] = React.useState(null);
+  const [personalBusy, setPersonalBusy] = React.useState(false);
+  const [personalError, setPersonalError] = React.useState('');
+
+  const openPersonal = () => {
+    const per = data?.personal || {};
+    const nameParts = (data?.member_name || '').trim().split(/\s+/);
+    setPersonalForm({
+      first_name: per.first_name || nameParts[0] || '',
+      last_name: per.last_name || nameParts.slice(1).join(' '),
+      email: per.email || '',
+      id_type_id: per.id_type_id ? String(per.id_type_id) : '1',
+      id_number: per.id_number || data?.document_snapshot || '',
+    });
+    setPersonalError('');
+    setPersonalOpen(true);
+  };
+
+  const submitPersonal = async () => {
+    if (personalBusy) return;
+    if (!personalForm.first_name.trim() || !personalForm.last_name.trim()) {
+      setPersonalError('Nombres y apellidos son obligatorios.');
+      return;
+    }
+    setPersonalBusy(true);
+    setPersonalError('');
+    try {
+      const updated = await api.updateGymMemberPersonal(data.id, {
+        first_name: personalForm.first_name.trim(),
+        last_name: personalForm.last_name.trim(),
+        email: personalForm.email.trim() || null,
+        id_type_id: personalForm.id_type_id ? Number(personalForm.id_type_id) : null,
+        id_number: personalForm.id_number.trim() || null,
+      });
+      setData(updated);
+      toast({ tone: 'success', title: 'Datos personales actualizados' });
+      setPersonalOpen(false);
+    } catch (e) {
+      setPersonalError(e?.message || 'No se pudieron guardar los datos.');
+    } finally {
+      setPersonalBusy(false);
+    }
+  };
+
   // ── Medidas: peso/IMC de un vistazo y la tabla de mediciones (el análisis con la figura
   // corporal y las gráficas vive en /gym/members/:id/progress) ──
   const progressFetcher = React.useCallback(() => api.gymMemberProgress(memberId, { types: ['weight'] }), [memberId]);
@@ -234,6 +282,11 @@ export function GymMemberDetail() {
       <PageHeader
         onBack={goBack}
         subtitle={data.member_name}
+        actions={
+          <Button variant="secondary" size="sm" icon="fas fa-pen" onClick={openPersonal}>
+            Editar datos
+          </Button>
+        }
         meta={[
           { label: 'Código', value: data.member_code },
           { label: 'Documento', value: data.document_snapshot || '—' },
@@ -350,6 +403,37 @@ export function GymMemberDetail() {
               ))}
             </ul>
             {openCheckin.notes && <p className={s.faint}>{openCheckin.notes}</p>}
+          </div>
+        )}
+      </Modal>
+
+      {/* Datos personales de la persona (users + perfil): el celular queda fuera a propósito. */}
+      <Modal open={personalOpen} title="Editar datos personales" onClose={() => setPersonalOpen(false)}
+        footer={<>
+          <Button variant="secondary" onClick={() => setPersonalOpen(false)}>Cancelar</Button>
+          <Button variant="primary" loading={personalBusy} onClick={submitPersonal}>Guardar</Button>
+        </>}>
+        {personalForm && (
+          <div className={s.formCol}>
+            <div className={s.formGrid}>
+              <Input label="Nombres" icon="fas fa-user" value={personalForm.first_name}
+                onChange={(e) => setPersonalForm({ ...personalForm, first_name: e.target.value })} />
+              <Input label="Apellidos" icon="fas fa-user" value={personalForm.last_name}
+                onChange={(e) => setPersonalForm({ ...personalForm, last_name: e.target.value })} />
+            </div>
+            <Input label="Correo" icon="fas fa-envelope" type="email" inputMode="email" placeholder="Opcional"
+              value={personalForm.email} onChange={(e) => setPersonalForm({ ...personalForm, email: e.target.value })} />
+            <div className={s.formGrid}>
+              <Select label="Tipo de documento" icon="fas fa-id-card" value={personalForm.id_type_id}
+                onChange={(e) => setPersonalForm({ ...personalForm, id_type_id: e.target.value })} options={ID_TYPES} />
+              <Input label="Número de documento" icon="fas fa-hashtag" inputMode="numeric"
+                value={personalForm.id_number} onChange={(e) => setPersonalForm({ ...personalForm, id_number: e.target.value })} />
+            </div>
+            <p className={s.faint}>
+              El celular{data.personal?.phone_number ? ` (${data.personal.phone_number})` : ''} no se edita aquí:
+              es el acceso de la cuenta de la persona.
+            </p>
+            {personalError && <Alert tone="danger" onClose={() => setPersonalError('')}>{personalError}</Alert>}
           </div>
         )}
       </Modal>

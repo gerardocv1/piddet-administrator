@@ -197,8 +197,11 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
   compacto** (abierta por defecto; renovar en el sitio, el resumen abre el detalle), luego
   **Medidas** (peso/IMC y la tabla de mediciones — fecha, cuántas medidas, quién las registró;
   cada fila abre su detalle en un modal) y al final el **perfil** editable (sexo, talla,
-  objetivo del catálogo, notas de salud, estado), plegado por defecto. El análisis visual vive
-  en la **vista de progreso** (`/gym/members/:memberId/progress`). El detalle de la suscripción
+  objetivo del catálogo, notas de salud, estado), plegado por defecto. **"Editar datos"** (en la
+  cabecera de la ficha) corrige los datos personales de la persona —nombres, correo, tipo y
+  número de documento—, actualizando su usuario de plataforma y los snapshots del gimnasio; el
+  **celular no se edita** porque es la credencial con la que inicia sesión. El análisis visual
+  vive en la **vista de progreso** (`/gym/members/:memberId/progress`). El detalle de la suscripción
   (`/gym/subscriptions/:subscriptionId`) es la vista transaccional: sus pagos (registrar con el
   precio precargado, anular), renovar y cancelar; el nombre del miembro arriba navega a su
   perfil. `/gym/subscriptions` es el listado operativo, filtrable por estado y por próximas a

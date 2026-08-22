@@ -56,9 +56,12 @@ export const gymService = {
 
   createGymMember: (data) => http.post(`${base()}/members`, data),
 
-  // Solo los datos propios del gimnasio (altura, objetivo, notas, estado); nombre y documento se
-  // editan desde el perfil del usuario.
+  // Solo los datos propios del gimnasio (sexo, altura, objetivo, notas, estado).
   updateGymMember: (memberId, data) => http.put(`${base()}/members/${memberId}`, data),
+
+  // Datos personales de la persona (nombres, correo, documento). El celular NO se edita: es la
+  // credencial de acceso de la cuenta. Refresca los snapshots (nombre en ficha y suscripciones).
+  updateGymMemberPersonal: (memberId, data) => http.put(`${base()}/members/${memberId}/personal`, data),
 
   // ── Suscripciones ────────────────────────────────────────────────────────
   gymSubscriptions: ({ status = '', expiringWithin = '', search = '', page = 1, perPage = 15 } = {}) =>
