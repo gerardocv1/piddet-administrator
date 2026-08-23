@@ -26,8 +26,13 @@
 
 .body { padding: 1.5rem; }
 
-/* En pantallas de teléfono el marco de la tarjeta se estrecha: el contenido manda. */
+/* En móvil la línea se vuelve nativa de app: la tarjeta pierde el marco (la agrupa la
+   diferencia de fondo con --bg-body y el aire), el radio sube y el contenido manda. */
 @media (max-width: 860px) {
+  .card {
+    border: 0;
+    border-radius: var(--radius-xl);
+  }
   .header { padding: 0.8rem 0.9rem; }
   .body { padding: 0.9rem; }
 }

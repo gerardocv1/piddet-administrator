@@ -67,13 +67,16 @@ export function DateRangePicker({ label, icon, value, onChange, min }) {
   React.useEffect(() => {
     if (!open) return undefined;
     const onScroll = () => place();
+    const onKey = (e) => { if (e.key === 'Escape') close(); };
     window.addEventListener('resize', onScroll);
     window.addEventListener('scroll', onScroll, true);
+    document.addEventListener('keydown', onKey);
     return () => {
       window.removeEventListener('resize', onScroll);
       window.removeEventListener('scroll', onScroll, true);
+      document.removeEventListener('keydown', onKey);
     };
-  }, [open]);
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const committed = { from: parseIsoDate(value?.from), to: parseIsoDate(value?.to) };
   // Sin `drafting` el calendario va sin selección: el primer clic define SIEMPRE la entrada.

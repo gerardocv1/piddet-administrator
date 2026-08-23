@@ -55,11 +55,14 @@ export function DatePicker({ label, icon, value, onChange, max, min, variant = '
   React.useEffect(() => {
     if (!open) return undefined;
     const onScroll = () => place();
+    const onKey = (e) => { if (e.key === 'Escape') setOpen(false); };
     window.addEventListener('resize', onScroll);
     window.addEventListener('scroll', onScroll, true);
+    document.addEventListener('keydown', onKey);
     return () => {
       window.removeEventListener('resize', onScroll);
       window.removeEventListener('scroll', onScroll, true);
+      document.removeEventListener('keydown', onKey);
     };
   }, [open]);
 

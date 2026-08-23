@@ -48,6 +48,17 @@
    deshace al salir. En teléfono el texto del campo sube a ese mínimo. */
 @media (max-width: 860px) {
   .input { font-size: 16px; }
+
+  /* Campo relleno, sin borde: la línea nativa de app. El foco recupera la superficie clara
+     para que se note dónde se escribe; el error conserva su borde. */
+  .wrap {
+    background: var(--gray-100);
+    border-color: transparent;
+    border-radius: var(--radius-lg);
+    height: 48px;
+  }
+  .wrap:focus-within { background: var(--surface-card); }
+  .wrap.error { border-color: var(--color-danger); }
 }
 
 .reveal {

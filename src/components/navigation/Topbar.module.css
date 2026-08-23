@@ -40,6 +40,8 @@
   text-overflow: ellipsis;
 }
 .crumb { font-size: var(--text-sm); color: var(--gray-400); white-space: nowrap; flex: 0 0 auto; }
+/* El separador visual del crumb es cosa del layout de escritorio, no del texto. */
+.crumb::before { content: '· '; }
 
 .spacer { flex: 1; }
 
@@ -117,21 +119,49 @@
 .menuItem.danger i { color: var(--color-danger); }
 .menuItem.danger:hover { background: color-mix(in srgb, var(--color-danger) 10%, transparent); }
 
+/* Móvil: cabecera limpia de la línea nativa — se funde con el fondo (sin superficie ni línea
+   divisoria), el crumb pasa a eyebrow sobre un título grande, y no hay hamburguesa: la
+   navegación vive en el MobileDock. */
 @media (max-width: 860px) {
   .topbar {
-    padding: env(safe-area-inset-top) max(0.85rem, env(safe-area-inset-right)) 0 max(0.85rem, env(safe-area-inset-left));
+    height: auto;
+    min-height: calc(var(--topbar-h) + env(safe-area-inset-top));
+    padding: calc(env(safe-area-inset-top) + 0.625rem) max(1rem, env(safe-area-inset-right)) 0.375rem max(1rem, env(safe-area-inset-left));
     gap: 0.5rem;
+    background: var(--bg-body);
+    border-bottom: 0;
   }
-  .title { font-size: var(--text-lg); }
-  .menuBtn { display: inline-flex; }
-  .crumb, .divider, .userText { display: none; }
-  .menuBtn, .themeBtn { width: 34px; height: 34px; font-size: 0.95rem; }
+  .menuBtn, .divider, .userText, .userChev { display: none; }
+  .titleWrap {
+    flex-direction: column-reverse;
+    align-items: flex-start;
+    gap: 2px;
+  }
+  .title {
+    font-size: var(--text-xl);
+    font-weight: var(--fw-heavy);
+    letter-spacing: var(--ls-tight);
+  }
+  .crumb {
+    font-size: var(--text-xs);
+    font-weight: var(--fw-semibold);
+    letter-spacing: var(--ls-wide);
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .crumb::before { content: none; }
+  .themeBtn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--gray-100);
+  }
 }
 
 @media (max-width: 480px) {
   .topbar {
-    padding: env(safe-area-inset-top) max(0.7rem, env(safe-area-inset-right)) 0 max(0.7rem, env(safe-area-inset-left));
+    padding: calc(env(safe-area-inset-top) + 0.5rem) max(0.85rem, env(safe-area-inset-right)) 0.375rem max(0.85rem, env(safe-area-inset-left));
     gap: 0.35rem;
   }
-  .menuBtn, .themeBtn { width: 32px; height: 32px; }
+  .themeBtn { width: 36px; height: 36px; }
 }

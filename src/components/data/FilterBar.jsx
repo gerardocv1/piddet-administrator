@@ -286,6 +286,13 @@ function DateRangeFilter({ filter, from, to, onChange }) {
 function FilterSheet({ isMobile, filters, draft, setDraft, onClose, onApply, onClear, activeCount, resultCount }) {
   const setVal = (key, val) => setDraft({ ...draft, [key]: val });
 
+  // Escape descarta el borrador y cierra, como cualquier diálogo.
+  React.useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
   return (
     <div onClick={onClose} className={styles.sheetOverlay} data-mobile={isMobile}>
       <div onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" className={styles.sheetPanel} data-mobile={isMobile}>

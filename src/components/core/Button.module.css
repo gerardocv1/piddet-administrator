@@ -65,6 +65,8 @@
 @media (max-width: 860px) {
   .sm { min-height: 40px; }
   .md { min-height: 44px; }
+  /* Radio más generoso: acompaña la línea nativa (campos rellenos, tarjetas sin marco). */
+  .btn { border-radius: var(--radius-lg); }
 }
 
 /* ---- Ruedita de carga: hereda el color del botón, sin atenuarlo ---- */

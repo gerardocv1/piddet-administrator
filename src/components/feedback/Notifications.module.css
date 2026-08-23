@@ -21,7 +21,8 @@
   min-width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--color-primary);
+  /* Punto de no-leídas en danger, como el demo del catálogo: avisa, no es una acción. */
+  background: var(--color-danger);
   border: 2px solid var(--surface-card);
 }
 
@@ -124,4 +125,15 @@
   font-weight: 600;
   color: var(--color-primary);
   border-top: 1px solid var(--border-color);
+}
+
+/* Móvil: circular relleno, como los controles de la cabecera limpia. */
+@media (max-width: 860px) {
+  .bell {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--gray-100);
+  }
+  .unreadDot { border-color: var(--bg-body); }
 }

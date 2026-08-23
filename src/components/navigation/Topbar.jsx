@@ -21,7 +21,7 @@ export function Topbar({ title, crumb, user = {}, onLogout, onMenu, theme = 'lig
       <button onClick={onMenu} aria-label="Abrir menú" className={styles.menuBtn}><i className="fas fa-bars" /></button>
       <div className={styles.titleWrap}>
         <h1 className={styles.title}>{title}</h1>
-        {crumb && <span className={styles.crumb}>· {crumb}</span>}
+        {crumb && <span className={styles.crumb}>{crumb}</span>}
       </div>
       <div className={styles.spacer} />
       <button onClick={onToggleTheme} aria-label={theme === 'dark' ? 'Activar modo claro' : 'Activar modo oscuro'} title={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'} className={styles.themeBtn}>
