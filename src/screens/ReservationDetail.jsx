@@ -36,6 +36,7 @@ export function ReservationDetail() {
   const [stayAvail, setStayAvail] = React.useState(null);
   const [stayAvailLoading, setStayAvailLoading] = React.useState(false);
   const [checkInOpen, setCheckInOpen] = React.useState(false);
+  const [forceCheckInOpen, setForceCheckInOpen] = React.useState(false);
   const [reopenOpen, setReopenOpen] = React.useState(false);
   const [payOpen, setPayOpen] = React.useState(false);
   const [payment, setPayment] = React.useState({ payment_method: '', value: '' });
@@ -232,9 +233,14 @@ export function ReservationDetail() {
     if (ok) { setStayOpen(false); toast({ tone: 'success', title: 'Estadía actualizada' }); }
   };
 
-  const doCheckIn = async () => {
-    const ok = await run(() => api.checkInReservation(reservationId), 'No se pudo hacer check-in.');
-    if (ok) { setCheckInOpen(false); toast({ tone: 'success', title: 'Entrada registrada' }); }
+  // `force` salta la regla del pre-check-in (check-in forzado): el backend registra la entrada
+  // sin los datos del huésped. Cada modal confirma lo suyo antes de llegar aquí.
+  const doCheckIn = async (force = false) => {
+    const ok = await run(() => api.checkInReservation(reservationId, { force }), 'No se pudo hacer check-in.');
+    if (ok) {
+      setCheckInOpen(false); setForceCheckInOpen(false);
+      toast({ tone: 'success', title: 'Entrada registrada' });
+    }
   };
 
   const doConfirm = async () => {
@@ -294,7 +300,7 @@ export function ReservationDetail() {
           {isPending &&<Button variant="secondary" size="sm" icon="fas fa-circle-check" loading={busy} onClick={() => doConfirm()}>Confirmar</Button>}
           {isConfirmed && (
             <Button variant="outline-primary" size="sm" icon="fas fa-door-open" disabled={!precheckinDone}
-              title={precheckinDone ? 'Registrar la entrada del huésped' : 'El huésped debe completar su pre-check-in antes de la entrada'}
+              title={precheckinDone ? 'Registrar la entrada del huésped' : 'El huésped debe completar su pre-check-in antes de la entrada (o usa el check-in forzado del menú de acciones)'}
               onClick={() => setCheckInOpen(true)}>Check-in</Button>
           )}
           {isCheckedIn && can('reservation-checkout') && (
@@ -309,6 +315,11 @@ export function ReservationDetail() {
               items={[
                 { label: 'Modificar estadía', icon: 'fas fa-calendar-days', disabled: !isOpen, onClick: openStayModal },
                 { label: 'Modificar precio', icon: 'fas fa-tag', disabled: !isOpen, onClick: openPriceModal },
+                // Salida de emergencia del pre-check-in: cuando conseguir los datos del huésped
+                // no es viable, la entrada se registra igual (previa confirmación en su modal).
+                ...(isConfirmed && !precheckinDone
+                  ? [{ label: 'Check-in forzado', icon: 'fas fa-person-walking-arrow-right', onClick: () => { setActionError(''); setForceCheckInOpen(true); } }]
+                  : []),
                 ...(can('reservation-cancel') ? [{ label: 'Cancelar esta reserva', icon: 'fas fa-ban', variant: 'danger', onClick: () => setCancelOpen(true) }] : []),
               ]}
             />
@@ -771,13 +782,39 @@ export function ReservationDetail() {
       <Modal open={checkInOpen} size="sm" title="Registrar entrada" onClose={() => setCheckInOpen(false)}
         footer={<>
           <Button variant="secondary" onClick={() => setCheckInOpen(false)}>Cancelar</Button>
-          <Button variant="primary" icon="fas fa-door-open" loading={busy} onClick={doCheckIn}>Iniciar estadía</Button>
+          <Button variant="primary" icon="fas fa-door-open" loading={busy} onClick={() => doCheckIn()}>Iniciar estadía</Button>
         </>}>
         <p>
           Vas a registrar la entrada de <strong>{data.holder_user_name}</strong> en {data.rentable_unit_name},
           por {data.nights} {Number(data.nights) === 1 ? 'noche' : 'noches'} y {guestsCount} {guestsCount === 1 ? 'persona' : 'personas'}.
           La reserva pasa a “En estadía” y podrás agregar consumos a su cuenta.
         </p>
+      </Modal>
+
+      {/* Check-in forzado: registra la entrada sin el pre-check-in del huésped. Se advierte qué
+          se está saltando y con qué datos queda la reserva, pero se permite pasar igual. */}
+      <Modal open={forceCheckInOpen} size="sm" title="Check-in forzado" onClose={() => setForceCheckInOpen(false)}
+        footer={<>
+          <Button variant="secondary" onClick={() => setForceCheckInOpen(false)}>Cancelar</Button>
+          <Button variant="primary" icon="fas fa-person-walking-arrow-right" loading={busy} onClick={() => doCheckIn(true)}>Forzar check-in</Button>
+        </>}>
+        <div className={s.formCol}>
+          {errorBlock}
+          <Alert tone="warning" variant="tint" title="Pre-check-in sin completar">
+            Vas a registrar la entrada <strong>sin los datos del pre-check-in</strong>: la reserva
+            quedará en estadía sin los documentos del huésped ni la información de sus
+            acompañantes. Úsalo solo cuando no sea viable conseguir esa información.
+          </Alert>
+          <p>
+            Se registrará la entrada de <strong>{data.holder_user_name}</strong> en {data.rentable_unit_name},
+            por {data.nights} {Number(data.nights) === 1 ? 'noche' : 'noches'} y {guestsCount} {guestsCount === 1 ? 'persona' : 'personas'}.
+            La reserva pasa a “En estadía” y podrás agregar consumos a su cuenta.
+          </p>
+          <p className={s.muted}>
+            El enlace de pre-check-in sigue activo: puedes compartirlo durante la estadía para que
+            el huésped complete sus datos.
+          </p>
+        </div>
       </Modal>
 
       <Modal open={reopenOpen} size="sm" title="Reabrir reserva" onClose={() => setReopenOpen(false)}
