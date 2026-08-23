@@ -94,8 +94,16 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
 
 ### Dashboard
 
-- **Descripción:** vista inicial.
-- **Flujo principal:** muestra estadísticas, pedidos recientes y tiendas. Solo lectura.
+- **Descripción:** vista inicial (`/`), siempre visible. Solo lectura.
+- **Flujo principal:** acciones rápidas de móvil (cobrar membresía, registrar gasto, abrir/cerrar
+  turno) y, bajo un único control de período (fecha fin + semanas + refrescar), los reportes que
+  permitan los permisos y funcionalidades: balance del período, ventas, gastos y hospedaje, cada
+  uno con su franja de KPIs y su gráfico comparativo.
+- **Reglas:** en el teléfono cada franja se queda con la cifra que se mira de un vistazo —ventas
+  totales y ticket promedio; gastos totales; ingresos de hospedaje y ocupación— y el desglose
+  (productos, servicios, registros, gasto promedio, mayor gasto, reservas, noches vendidas) se
+  ve solo en escritorio: son los KPIs marcados `desktopOnly` en `StatStrip`. Mantener pulsado el
+  botón de refrescar ~2s fuerza el recálculo sin caché.
 
 ### Productos / Categorías / Toppings (oferta)
 
@@ -177,6 +185,12 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
   del huésped no es viable, el menú de acciones de una reserva confirmada ofrece **Check-in
   forzado**: un modal advierte que la entrada se registra sin los datos del pre-check-in y aun
   así permite pasar (el enlace de pre-check-in sigue activo durante la estadía).
+- **En el teléfono** el detalle se descarga: la cabecera deja solo la acción principal del estado
+  (confirmar, check-in, checkout o reabrir) y el menú ⋮, que absorbe actualizar y el enlace de
+  pre-check-in; se omite lo que ya está en otro lado —la tarjeta de pre-check-in (el código está
+  en el título y el aviso de pendiente sigue arriba), los consumos POS (se listan en las facturas)
+  y las filas de total/abonado/personas de la estadía— y el resumen de la cuenta pasa a encabezar
+  su pestaña.
 
 ### Gimnasio
 

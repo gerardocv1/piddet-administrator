@@ -26,26 +26,29 @@ const money = (v) => {
   return (n < 0 ? '-' : '') + '$' + Math.abs(n).toLocaleString('es-CO');
 };
 
+// `desktopOnly` marca el desglose que no se lleva al teléfono: en móvil cada reporte se queda
+// con la cifra que se mira de un vistazo (el total y, en ventas, el ticket promedio) y el resto
+// del detalle se sigue viendo en escritorio.
 const buildSalesKpis = ({ totals, deltas } = {}) => (totals ? [
   { label: 'Ventas totales', value: totals.total_formatted, ...kpiDelta(deltas?.total) },
-  { label: 'Productos', value: totals.products_formatted, ...kpiDelta(deltas?.products) },
-  { label: 'Servicios', value: totals.services_formatted, ...kpiDelta(deltas?.services) },
+  { label: 'Productos', value: totals.products_formatted, ...kpiDelta(deltas?.products), desktopOnly: true },
+  { label: 'Servicios', value: totals.services_formatted, ...kpiDelta(deltas?.services), desktopOnly: true },
   { label: 'Ticket promedio', value: totals.avg_ticket_formatted, ...kpiDelta(deltas?.avg_ticket) },
 ] : []);
 
 const buildExpensesKpis = ({ totals, deltas } = {}) => (totals ? [
   { label: 'Gastos totales', value: totals.total_formatted, ...kpiDelta(deltas?.total) },
-  { label: 'Registros', value: String(totals.count), ...kpiDelta(deltas?.count) },
-  { label: 'Gasto promedio', value: totals.avg_formatted, ...kpiDelta(deltas?.avg) },
-  { label: 'Mayor gasto', value: totals.max_formatted, ...kpiDelta(deltas?.max) },
+  { label: 'Registros', value: String(totals.count), ...kpiDelta(deltas?.count), desktopOnly: true },
+  { label: 'Gasto promedio', value: totals.avg_formatted, ...kpiDelta(deltas?.avg), desktopOnly: true },
+  { label: 'Mayor gasto', value: totals.max_formatted, ...kpiDelta(deltas?.max), desktopOnly: true },
 ] : []);
 
 // KPIs de hospedaje. Los deltas del reporte de reservas son diferencias absolutas (no {percent}),
 // así que aquí solo se muestran los totales.
 const buildReservationsKpis = ({ totals } = {}) => (totals ? [
   { label: 'Ingresos hospedaje', value: money(totals.revenue) },
-  { label: 'Reservas', value: String(totals.reservations) },
-  { label: 'Noches vendidas', value: String(totals.nights_sold) },
+  { label: 'Reservas', value: String(totals.reservations), desktopOnly: true },
+  { label: 'Noches vendidas', value: String(totals.nights_sold), desktopOnly: true },
   { label: 'Ocupación', value: `${totals.occupancy_rate}%` },
 ] : []);
 

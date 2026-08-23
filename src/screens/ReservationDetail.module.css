@@ -51,8 +51,13 @@
   gap: 14px;
   align-items: start;
 }
-@media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
 .mainCol, .sideCol { display: flex; flex-direction: column; gap: 14px; }
+/* En una sola columna el resumen de la cuenta va primero: es lo que se consulta en el mostrador,
+   y si queda al final hay que recorrer todos los listados para llegar al saldo. */
+@media (max-width: 900px) {
+  .grid { grid-template-columns: 1fr; }
+  .sideCol { order: -1; }
+}
 
 .meta { display: flex; flex-direction: column; gap: 12px; margin: 0; }
 .meta > div { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
@@ -63,6 +68,11 @@
    Se cualifican con .meta para ganarle a `.meta dd`, que ya fija el color. */
 .meta dd.metaDue { color: var(--color-danger-fg); font-weight: var(--fw-bold, 700); }
 .meta dd.metaSettled { color: var(--color-success-fg); font-weight: var(--fw-bold, 700); }
+/* Dato de escritorio dentro de una lista etiqueta-valor: en el teléfono la fila desaparece.
+   Va cualificado con `.meta >` para ganarle a `.meta > div`, que fija el display. */
+@media (max-width: 860px) {
+  .meta > .metaDesktop { display: none; }
+}
 
 /* Nota de la reserva: bloque rotulado, separado de los datos calculados de la estadía. */
 .noteBlock {

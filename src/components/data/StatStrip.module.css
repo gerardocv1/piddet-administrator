@@ -30,10 +30,14 @@
 .delta.up { color: var(--color-success-fg); }
 .delta i { margin-right: 4px; }
 
-/* KPI 2×2 en tablet y móvil */
+/* KPI 2×2 en tablet y móvil. Las columnas se auto-ajustan (no `1fr 1fr` fijo) porque en el
+   teléfono la franja se queda solo con los KPIs esenciales: si sobrevive uno solo, ocupa el
+   ancho completo en vez de quedar colgando en media fila. */
 @media (max-width: 860px) {
-  .strip { grid-template-columns: 1fr 1fr; gap: 1rem 1.5rem; }
+  .strip { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem 1.5rem; }
   .value { font-size: 1.35rem; }
+  /* Dato secundario: solo en escritorio. */
+  .desktopOnly { display: none; }
 }
 /* Teléfono: se mantiene 2×2 (no 1 columna) y se compacta la tipografía */
 @media (max-width: 480px) {

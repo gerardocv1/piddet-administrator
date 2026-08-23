@@ -4,6 +4,7 @@ import { Card, Badge, Button, IconButton, RefreshButton, Avatar, Spinner, Modal,
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { usePermissions } from '../lib/permissions/usePermissions.js';
+import { useIsMobile } from '../lib/useIsMobile.js';
 import { reservationMoney, reservationStatusMeta, arrivalSlotLabel, idTypeLabel, RESERVATION_STATUS } from '../lib/reservationLabels.js';
 import { formatStayRange } from '../lib/dates.js';
 import { useSetPageTitle } from '../lib/pageTitle.jsx';
@@ -21,6 +22,7 @@ export function ReservationDetail() {
   const [params] = useSearchParams();
   const { can } = usePermissions();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   const fetcher = React.useCallback(() => api.reservation(reservationId), [reservationId]);
   const { data, setData, loading, error, reload } = useResource(fetcher, null, [reservationId]);
@@ -283,11 +285,35 @@ export function ReservationDetail() {
       setTimeout(() => setLinkCopied(false), 2000);
       toast({ tone: 'success', title: 'Enlace de pre-check-in copiado' });
     } catch {
-      // Sin permiso de portapapeles el enlace sigue visible para copiarlo a mano: es un aviso
-      // que el usuario debe leer, no una confirmación.
-      setActionError('No se pudo copiar el enlace. Cópialo a mano desde la pestaña Reserva.');
+      // Sin permiso de portapapeles el enlace se muestra en el aviso para copiarlo a mano: es
+      // un aviso que el usuario debe leer, no una confirmación. Va completo porque en el
+      // teléfono la tarjeta de pre-check-in no está en pantalla.
+      setActionError(`No se pudo copiar el enlace. Cópialo a mano: ${checkinLink}`);
     }
   };
+
+  // ── Menú ⋮ de la cabecera ─────────────────────────────────────────────────
+  // En escritorio agrupa solo lo secundario; en el teléfono absorbe además actualizar y el
+  // enlace de pre-check-in (su tarjeta no se muestra ahí), que es lo que descarga la vista.
+  const menuItems = [
+    ...(isMobile ? [{
+      label: 'Actualizar', icon: 'fas fa-rotate-right', disabled: loading,
+      onClick: () => { reload(); reloadOrders(); },
+    }] : []),
+    ...(isMobile && isOpen ? [{
+      label: 'Copiar enlace de pre-check-in', icon: 'fas fa-link', onClick: copyCheckinLink,
+    }] : []),
+    ...(status === RESERVATION_STATUS.CANCELLED ? [] : [
+      { label: 'Modificar estadía', icon: 'fas fa-calendar-days', disabled: !isOpen, onClick: openStayModal },
+      { label: 'Modificar precio', icon: 'fas fa-tag', disabled: !isOpen, onClick: openPriceModal },
+      // Salida de emergencia del pre-check-in: cuando conseguir los datos del huésped
+      // no es viable, la entrada se registra igual (previa confirmación en su modal).
+      ...(isConfirmed && !precheckinDone
+        ? [{ label: 'Check-in forzado', icon: 'fas fa-person-walking-arrow-right', onClick: () => { setActionError(''); setForceCheckInOpen(true); } }]
+        : []),
+      ...(can('reservation-cancel') ? [{ label: 'Cancelar esta reserva', icon: 'fas fa-ban', variant: 'danger', onClick: () => setCancelOpen(true) }] : []),
+    ]),
+  ];
 
   return (
     <div className={s.page}>
@@ -296,8 +322,10 @@ export function ReservationDetail() {
         backTitle="Volver a reservas"
         subtitle={`${formatStayRange(data.check_in_date, data.check_out_date)} · ${data.nights} ${Number(data.nights) === 1 ? 'noche' : 'noches'}`}
         actions={<>
-          <RefreshButton loading={loading} onClick={() => { reload(); reloadOrders(); }} />
-          {isPending &&<Button variant="secondary" size="sm" icon="fas fa-circle-check" loading={busy} onClick={() => doConfirm()}>Confirmar</Button>}
+          {/* En el teléfono la fila se queda solo con la acción principal del estado y el menú:
+              actualizar y el enlace de pre-check-in viven dentro de `menuItems`. */}
+          {!isMobile && <RefreshButton loading={loading} onClick={() => { reload(); reloadOrders(); }} />}
+          {isPending && <Button variant="secondary" size="sm" icon="fas fa-circle-check" loading={busy} onClick={() => doConfirm()}>Confirmar</Button>}
           {isConfirmed && (
             <Button variant="outline-primary" size="sm" icon="fas fa-door-open" disabled={!precheckinDone}
               title={precheckinDone ? 'Registrar la entrada del huésped' : 'El huésped debe completar su pre-check-in antes de la entrada (o usa el check-in forzado del menú de acciones)'}
@@ -309,19 +337,11 @@ export function ReservationDetail() {
           {isCheckedOut && can('reservation-checkout') && (
             <Button variant="secondary" size="sm" icon="fas fa-rotate-left" onClick={() => setReopenOpen(true)}>Reabrir</Button>
           )}
-          {status !== RESERVATION_STATUS.CANCELLED && (
+          {menuItems.length > 0 && (
             <Dropdown
               trigger={<IconButton icon="fas fa-ellipsis-vertical" variant="light" size="sm" title="Más acciones" />}
-              items={[
-                { label: 'Modificar estadía', icon: 'fas fa-calendar-days', disabled: !isOpen, onClick: openStayModal },
-                { label: 'Modificar precio', icon: 'fas fa-tag', disabled: !isOpen, onClick: openPriceModal },
-                // Salida de emergencia del pre-check-in: cuando conseguir los datos del huésped
-                // no es viable, la entrada se registra igual (previa confirmación en su modal).
-                ...(isConfirmed && !precheckinDone
-                  ? [{ label: 'Check-in forzado', icon: 'fas fa-person-walking-arrow-right', onClick: () => { setActionError(''); setForceCheckInOpen(true); } }]
-                  : []),
-                ...(can('reservation-cancel') ? [{ label: 'Cancelar esta reserva', icon: 'fas fa-ban', variant: 'danger', onClick: () => setCancelOpen(true) }] : []),
-              ]}
+              items={menuItems}
+              width={isMobile ? 250 : 210}
             />
           )}
         </>}
@@ -335,7 +355,9 @@ export function ReservationDetail() {
               : `${guestsCount} (titular incluido)`,
           },
           { label: 'Llegada estimada', value: arrivalSlotLabel(data.expected_arrival_time) },
-          { label: 'Registró', value: data.created_by_name || '—' },
+          // Quién registró la reserva es dato de escritorio: en el teléfono no cabe en la
+          // cabecera sin empujar lo operativo fuera de la primera pantalla.
+          isMobile ? null : { label: 'Registró', value: data.created_by_name || '—' },
         ]}
         note={status === RESERVATION_STATUS.CANCELLED ? (
           <><i className="fas fa-ban" /> Reserva cancelada
@@ -404,13 +426,16 @@ export function ReservationDetail() {
                   <div><dt><i className="fas fa-moon" /> Tarifa / noche</dt><dd>{reservationMoney(data.price_per_night)}</dd></div>
                   {/* El dinero también se ve aquí, en moneda: quien mira la estadía quiere saber
                       qué se abonó sin cambiar de pestaña (y así nadie lo anota en la nota). */}
-                  <div><dt><i className="fas fa-file-invoice-dollar" /> Total de la cuenta</dt><dd>{reservationMoney(accountTotal)}</dd></div>
-                  <div><dt><i className="fas fa-hand-holding-dollar" /> Abonado</dt><dd>{reservationMoney(summary.paid)}</dd></div>
+                  {/* En el teléfono la estadía se queda con la tarifa y lo que falta por cobrar:
+                      el total y lo abonado son la pestaña Cuenta, y las personas ya están en la
+                      cabecera. En escritorio se sigue viendo todo junto. */}
+                  <div className={t.metaDesktop}><dt><i className="fas fa-file-invoice-dollar" /> Total de la cuenta</dt><dd>{reservationMoney(accountTotal)}</dd></div>
+                  <div className={t.metaDesktop}><dt><i className="fas fa-hand-holding-dollar" /> Abonado</dt><dd>{reservationMoney(summary.paid)}</dd></div>
                   <div>
                     <dt><i className="fas fa-scale-balanced" /> Por cobrar</dt>
                     <dd className={pendingTotal > 0 ? t.metaDue : t.metaSettled}>{reservationMoney(pendingTotal)}</dd>
                   </div>
-                  <div><dt><i className="fas fa-users" /> Personas</dt><dd>{guestsCount} (titular incluido)</dd></div>
+                  <div className={t.metaDesktop}><dt><i className="fas fa-users" /> Personas</dt><dd>{guestsCount} (titular incluido)</dd></div>
                 </dl>
                 {/* Texto libre de quien registró la reserva. Va rotulado: suelto se lee como un
                     dato del sistema (y alguien ya escribió aquí un monto creyendo que era el abono). */}
@@ -477,31 +502,35 @@ export function ReservationDetail() {
             </Card>
           </div>
 
-          <div className={t.sideCol}>
-            {/* Pre-check-in */}
-            <Card>
-              <Card.Header title="Pre-check-in" action={
-                data.precheckin_completed_at
-                  ? <span className={t.statusDone}>Completado</span>
-                  : <span className={t.statusPending}>Pendiente</span>
-              } />
-              <Card.Body>
-                <div className={t.linkBox}>
-                  <div className={t.linkRow}>
-                    <span className={t.code}>{data.code}</span>
-                    <IconButton icon={linkCopied ? 'fas fa-check' : 'fas fa-copy'} variant="light"
-                      title={linkCopied ? 'Enlace copiado' : 'Copiar enlace'} onClick={copyCheckinLink} />
+          {/* Pre-check-in: en el teléfono no se pinta como tarjeta —el código ya está en el
+              título de la pantalla, el aviso de pendiente sigue arriba y el enlace se copia
+              desde el menú ⋮—, así que la pestaña queda con estadía, huéspedes y servicios. */}
+          {!isMobile && (
+            <div className={t.sideCol}>
+              <Card>
+                <Card.Header title="Pre-check-in" action={
+                  data.precheckin_completed_at
+                    ? <span className={t.statusDone}>Completado</span>
+                    : <span className={t.statusPending}>Pendiente</span>
+                } />
+                <Card.Body>
+                  <div className={t.linkBox}>
+                    <div className={t.linkRow}>
+                      <span className={t.code}>{data.code}</span>
+                      <IconButton icon={linkCopied ? 'fas fa-check' : 'fas fa-copy'} variant="light"
+                        title={linkCopied ? 'Enlace copiado' : 'Copiar enlace'} onClick={copyCheckinLink} />
+                    </div>
+                    <a className={t.link} href={checkinLink} target="_blank" rel="noreferrer">{checkinLink}</a>
                   </div>
-                  <a className={t.link} href={checkinLink} target="_blank" rel="noreferrer">{checkinLink}</a>
-                </div>
-                <p className={t.linkHint}>
-                  {data.precheckin_completed_at
-                    ? `El huésped completó sus datos el ${String(data.precheckin_completed_at).slice(0, 10)}.`
-                    : 'Comparte el enlace para que el huésped complete sus datos. Para entrar le pedimos este código y su nombre.'}
-                </p>
-              </Card.Body>
-            </Card>
-          </div>
+                  <p className={t.linkHint}>
+                    {data.precheckin_completed_at
+                      ? `El huésped completó sus datos el ${String(data.precheckin_completed_at).slice(0, 10)}.`
+                      : 'Comparte el enlace para que el huésped complete sus datos. Para entrar le pedimos este código y su nombre.'}
+                  </p>
+                </Card.Body>
+              </Card>
+            </div>
+          )}
         </div>
       )}
 
@@ -530,8 +559,9 @@ export function ReservationDetail() {
               </Card.Body>
             </Card>
 
-            {/* Consumos POS vinculados */}
-            {consumptions.length > 0 && (
+            {/* Consumos POS vinculados. En el teléfono se omiten: cada uno aparece igual en
+                "Facturas de la reserva" y el total ya está en el resumen de la cuenta. */}
+            {!isMobile && consumptions.length > 0 && (
               <Card>
                 <Card.Header title="Consumos desde el POS" />
                 <Card.Body>
