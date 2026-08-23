@@ -10,8 +10,8 @@
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui"],
   "orientation": "any",
-  "background_color": "#ffffff",
-  "theme_color": "#ffffff",
+  "background_color": "#fbfbfc",
+  "theme_color": "#fbfbfc",
   "icons": [
     {
       "src": "/favicon/android-chrome-192x192.png",

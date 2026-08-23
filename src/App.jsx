@@ -80,12 +80,16 @@ const PUBLIC_COMPANY_RE = /^\/([^/]+)\/?$/;
 const PUBLIC_LODGING_RE = /^\/([^/]+)\/hospedaje\/?$/;
 const PUBLIC_LODGING_UNIT_RE = /^\/([^/]+)\/hospedaje\/(\d+)\/?$/;
 
-// Color de la barra de estado en la app instalada: debe seguir al tema activo (el fondo de la
-// barra superior), no a la preferencia del sistema.
-const THEME_COLORS = { light: '#ffffff', dark: '#11161f' };
+// Color de la barra de estado en la app instalada: debe seguir al tema activo, no a la
+// preferencia del sistema. Se lee del propio token --bg-body (el fondo con el que la cabecera
+// móvil se funde) en vez de repetir el valor aquí: si la barra no coincide EXACTO con el fondo,
+// en el teléfono se ve una línea de corte bajo la hora.
+const FALLBACK_THEME_COLORS = { light: '#fbfbfc', dark: '#11161f' };
 function applyThemeColor(theme) {
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.setAttribute('content', THEME_COLORS[theme] || THEME_COLORS.light);
+  if (!meta) return;
+  const token = getComputedStyle(document.documentElement).getPropertyValue('--bg-body').trim();
+  meta.setAttribute('content', token || FALLBACK_THEME_COLORS[theme] || FALLBACK_THEME_COLORS.light);
 }
 
 // Landing de la raíz: muestra el Inicio si está habilitado; si no, redirige al primer módulo
