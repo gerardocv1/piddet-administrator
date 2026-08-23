@@ -19,17 +19,33 @@
     padding: 5px;
     border-radius: var(--radius-pill);
     background: var(--surface-card);
-    box-shadow: var(--shadow-lg);
+    /* Flota sobre el contenido: necesita leerse SIEMPRE, también sobre fondos claros. Un
+       hairline lo recorta del fondo y la sombra en dos capas (contacto + halo difuso) le da
+       altura real, en vez de la sombra plana que lo dejaba casi invisible. */
+    border: 1px solid var(--border-color);
+    box-shadow:
+      0 2px 6px rgba(23, 43, 77, 0.10),
+      0 12px 32px -6px rgba(23, 43, 77, 0.28);
     max-width: calc(100vw - 1.5rem);
   }
 }
 
 @supports (backdrop-filter: blur(14px)) {
   .dock {
-    background: color-mix(in srgb, var(--surface-card) 72%, transparent);
-    backdrop-filter: blur(14px) saturate(1.4);
-    -webkit-backdrop-filter: blur(14px) saturate(1.4);
+    /* Bastante opaco para conservar el contraste; el blur aporta el matiz translúcido. */
+    background: color-mix(in srgb, var(--surface-card) 88%, transparent);
+    backdrop-filter: blur(16px) saturate(1.6);
+    -webkit-backdrop-filter: blur(16px) saturate(1.6);
   }
+}
+
+/* En oscuro la sombra no separa (todo es oscuro): el borde toma el relevo y la superficie
+   sube un punto respecto al fondo. */
+:global([data-theme='dark']) .dock {
+  border-color: var(--gray-300);
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.45),
+    0 12px 32px -6px rgba(0, 0, 0, 0.6);
 }
 
 /* Todos los destinos son cuadrados táctiles de solo icono; el activo solo cambia de tinte. */

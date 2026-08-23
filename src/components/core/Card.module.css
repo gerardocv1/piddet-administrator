@@ -26,12 +26,14 @@
 
 .body { padding: 1.5rem; }
 
-/* En móvil la línea se vuelve nativa de app: la tarjeta pierde el marco (la agrupa la
-   diferencia de fondo con --bg-body y el aire), el radio sube y el contenido manda. */
+/* En móvil la línea se vuelve nativa de app: la tarjeta desaparece como objeto —sin marco y
+   sin superficie propia— y lo que agrupa es el aire y el encabezado. Pintar una superficie
+   distinta del fondo dejaba un corte visible en el teléfono. */
 @media (max-width: 860px) {
   .card {
     border: 0;
     border-radius: var(--radius-xl);
+    background: transparent;
   }
   .header { padding: 0.8rem 0.9rem; }
   .body { padding: 0.9rem; }
