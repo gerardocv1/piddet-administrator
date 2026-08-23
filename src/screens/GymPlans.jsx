@@ -1,7 +1,7 @@
 import React from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
-  Card, DataTable, Badge, Button, FilterBar, Pagination, RefreshButton,
+  Card, DataTable, Badge, Button, IconButton, Dropdown, FilterBar, Pagination, RefreshButton,
   Modal, Input, Textarea, Select, MoneyInput, Switch, Alert, Spinner, useToast,
 } from '../components';
 import { api } from '../lib/api.js';
@@ -204,22 +204,32 @@ export function GymPlans() {
           const m = gymPlanStatusMeta(r.status);
           return (
             <Card key={r.id} className={gl.cardPad}>
-              <button type="button" className={gl.tapArea} onClick={() => openEdit(r)}>
-                <div className={gl.info}>
-                  <span className={gl.name}>{r.name}</span>
-                  <span className={gl.meta}>{gymPlanDurationLabel(r.duration_days)} · {gymMoney(r.price)}</span>
-                </div>
-                <Badge variant={m.variant} dot>{m.label}</Badge>
-              </button>
-              <div className={gl.foot}>
-                <Button variant="secondary" size="sm" icon="fas fa-pen" onClick={() => openEdit(r)}>
-                  Editar
-                </Button>
-                <Button variant="outline-primary" size="sm" loading={statusBusyId === r.id}
-                  onClick={() => toggleStatus(r)}>
-                  {Number(r.status) === GYM_PLAN_STATUS.ACTIVE ? 'Desactivar' : 'Activar'}
-                </Button>
+              {/* Tocar la tarjeta abre el editor, así que "Editar" no necesita botón propio:
+                  el pie a lo ancho se cambia por el menú ⋮ con lo que no es tocar la fila. */}
+              <div className={gl.row}>
+                <button type="button" className={gl.tapArea} onClick={() => openEdit(r)}>
+                  <div className={gl.info}>
+                    <span className={gl.name}>{r.name}</span>
+                    <span className={gl.metaRow}>
+                      <Badge variant={m.variant} dot>{m.label}</Badge>
+                      <span className={gl.meta}>{gymPlanDurationLabel(r.duration_days)} · {gymMoney(r.price)}</span>
+                    </span>
+                  </div>
+                </button>
+                <Dropdown
+                  trigger={<IconButton icon="fas fa-ellipsis-vertical" variant="light" size="sm" title="Más acciones" />}
+                  items={[
+                    { label: 'Editar plan', icon: 'fas fa-pen', onClick: () => openEdit(r) },
+                    {
+                      label: Number(r.status) === GYM_PLAN_STATUS.ACTIVE ? 'Desactivar' : 'Activar',
+                      icon: Number(r.status) === GYM_PLAN_STATUS.ACTIVE ? 'fas fa-toggle-off' : 'fas fa-toggle-on',
+                      disabled: statusBusyId === r.id,
+                      onClick: () => toggleStatus(r),
+                    },
+                  ]}
+                />
               </div>
+
             </Card>
           );
         })}

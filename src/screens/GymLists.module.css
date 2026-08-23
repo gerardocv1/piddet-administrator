@@ -47,14 +47,3 @@
   .cardPad { padding: 8px 12px; }
   .tapArea { min-height: 40px; }
 }
-/* Pie con acciones, separado por hairline (mismo dibujo que la tarjeta de usuarios). */
-.foot {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
-  padding-top: 10px;
-  margin-top: 10px;
-  border-top: 1px solid var(--gray-100);
-}
-.foot > * { flex: 1; }

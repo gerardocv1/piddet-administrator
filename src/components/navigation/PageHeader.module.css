@@ -77,3 +77,11 @@
   font-size: var(--text-sm);
 }
 .note i { color: var(--color-danger); }
+
+/* Móvil: en dos columnas estrechas un valor largo (un rango de fechas) se cortaba con "…".
+   Mejor que envuelva a dos líneas: el dato completo importa más que la línea perfecta.
+   Va al final del archivo a propósito: `.meta dd` de arriba fija `nowrap` con la misma
+   especificidad, así que solo gana declarándose después. */
+@media (max-width: 860px) {
+  .meta dd { white-space: normal; overflow: visible; }
+}
