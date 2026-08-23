@@ -16,7 +16,11 @@
   letter-spacing: 0.04em;
   color: var(--gray-500);
   border-bottom: 1px solid var(--border-color);
+  /* La tabla es table-layout:fixed: si un encabezado no cabe en su columna debe recortarse,
+     nunca desbordar sobre el de al lado (se veía en pantallas angostas). */
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .td {

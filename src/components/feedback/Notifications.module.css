@@ -1,4 +1,7 @@
 .root { position: relative; }
+/* Sin campana propia (el acceso vive en el menú de usuario): el panel se ancla al contenedor
+   que lo monta, no a este envoltorio vacío. */
+.root[data-headless] { position: static; }
 
 .bell {
   width: 38px;
@@ -39,6 +42,7 @@
   box-shadow: var(--shadow-lg);
   z-index: 41;
   overflow: hidden;
+  max-width: calc(100vw - 1.5rem);
 }
 
 .panelHead {

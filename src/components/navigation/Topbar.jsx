@@ -5,32 +5,34 @@ import { SessionsModal } from '../feedback/SessionsModal.jsx';
 import { ChangePasswordModal } from '../feedback/ChangePasswordModal.jsx';
 import styles from './Topbar.module.css';
 
-/** Barra superior flat: título + crumb, notificaciones y menú de usuario.
- * `onMenu` muestra la hamburguesa (solo móvil). */
-export function Topbar({ title, crumb, user = {}, onLogout, onMenu, theme = 'light', onToggleTheme }) {
+/**
+ * Barra superior flat: título + crumb y menú de usuario.
+ *
+ * La barra no lleva botones sueltos: notificaciones y cambio de tema viven dentro del menú de
+ * usuario, junto a sesiones y contraseña. En móvil no hay hamburguesa — la navegación es el
+ * MobileDock — y la barra se funde con el fondo (ver CSS).
+ */
+export function Topbar({ title, crumb, user = {}, onLogout, theme = 'light', onToggleTheme }) {
   const [menuOpen, setMenuOpen] = React.useState(false);
+  const [notisOpen, setNotisOpen] = React.useState(false);
   const [sessionsOpen, setSessionsOpen] = React.useState(false);
   const [pwdOpen, setPwdOpen] = React.useState(false);
 
   const openSessions = () => { setMenuOpen(false); setSessionsOpen(true); };
   const openPwd = () => { setMenuOpen(false); setPwdOpen(true); };
+  const openNotis = () => { setMenuOpen(false); setNotisOpen(true); };
+  const toggleTheme = () => { setMenuOpen(false); onToggleTheme && onToggleTheme(); };
   const logout = () => { setMenuOpen(false); onLogout && onLogout(); };
 
   return (
     <header className={styles.topbar}>
-      <button onClick={onMenu} aria-label="Abrir menú" className={styles.menuBtn}><i className="fas fa-bars" /></button>
       <div className={styles.titleWrap}>
         <h1 className={styles.title}>{title}</h1>
         {crumb && <span className={styles.crumb}>{crumb}</span>}
       </div>
       <div className={styles.spacer} />
-      <button onClick={onToggleTheme} aria-label={theme === 'dark' ? 'Activar modo claro' : 'Activar modo oscuro'} title={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'} className={styles.themeBtn}>
-        <i className={theme === 'dark' ? 'fas fa-sun' : 'fas fa-moon'} />
-      </button>
-      <Notifications />
-      <div className={styles.divider} />
 
-      {/* Menú de usuario */}
+      {/* Menú de usuario: concentra notificaciones, tema y cuenta, para dejar la barra limpia */}
       <div className={styles.userWrap}>
         <button type="button" className={styles.user} onClick={() => setMenuOpen((o) => !o)}
           aria-haspopup="menu" aria-expanded={menuOpen}>
@@ -46,6 +48,14 @@ export function Topbar({ title, crumb, user = {}, onLogout, onMenu, theme = 'lig
           <>
             <div className={styles.scrim} onClick={() => setMenuOpen(false)} />
             <div className={styles.menu} role="menu">
+              <button type="button" role="menuitem" className={styles.menuItem} onClick={openNotis}>
+                <i className="far fa-bell" /> Notificaciones
+              </button>
+              <button type="button" role="menuitem" className={styles.menuItem} onClick={toggleTheme}>
+                <i className={theme === 'dark' ? 'fas fa-sun' : 'fas fa-moon'} />
+                {theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
+              </button>
+              <div className={styles.menuSep} />
               <button type="button" role="menuitem" className={styles.menuItem} onClick={openSessions}>
                 <i className="fas fa-clock-rotate-left" /> Mis sesiones
               </button>
@@ -59,6 +69,9 @@ export function Topbar({ title, crumb, user = {}, onLogout, onMenu, theme = 'lig
             </div>
           </>
         )}
+
+        {/* El panel cuelga del widget de usuario: su acceso ya no ocupa un botón en la barra. */}
+        <Notifications showTrigger={false} open={notisOpen} onOpenChange={setNotisOpen} />
       </div>
 
       {sessionsOpen && <SessionsModal open onClose={() => setSessionsOpen(false)} />}

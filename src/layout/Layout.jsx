@@ -107,7 +107,7 @@ export function Layout({ theme, onToggleTheme, onLogout }) {
         onOpenProfile={openCompanyProfile} />
       <PageTitleProvider>
         <div className={styles.contentCol}>
-          <LayoutTopbar meta={meta} user={user} onLogout={onLogout} onMenu={() => setNavOpen(true)}
+          <LayoutTopbar meta={meta} user={user} onLogout={onLogout}
             theme={theme} onToggleTheme={onToggleTheme} />
           <main className={styles.main}><Outlet /></main>
           {/* Navegación móvil: dock flotante (reemplaza a la hamburguesa); «Más» abre el cajón. */}

@@ -11,9 +11,22 @@ const TYPE = {
   tienda: { icon: 'fas fa-store', tile: styles.tienda },
 };
 
-/** Campana con panel de notificaciones desplegable. */
-export function Notifications() {
-  const [open, setOpen] = React.useState(false);
+/**
+ * Panel de notificaciones desplegable.
+ *
+ * Por defecto se muestra con su propia campana. Con `showTrigger={false}` se monta solo el
+ * panel y la apertura se controla desde fuera (`open` / `onOpenChange`): así el acceso a
+ * notificaciones puede vivir en el menú de usuario en vez de ocupar un botón en la barra.
+ */
+export function Notifications({ open: openProp, onOpenChange, showTrigger = true }) {
+  const [internalOpen, setInternalOpen] = React.useState(false);
+  const isControlled = openProp !== undefined;
+  const open = isControlled ? openProp : internalOpen;
+  const setOpen = (next) => {
+    const value = typeof next === 'function' ? next(open) : next;
+    if (!isControlled) setInternalOpen(value);
+    onOpenChange && onOpenChange(value);
+  };
   // El módulo de notificaciones aún no tiene endpoint en backend: no se consulta hasta
   // implementarlo (reactivar con `useResource(api.notifications, [])`). Mientras tanto la
   // campana se muestra vacía sin disparar peticiones.
@@ -23,12 +36,14 @@ export function Notifications() {
 
   const unread = notis.filter((n) => n.unread).length;
   return (
-    <div className={styles.root}>
-      <button onClick={() => setOpen((o) => !o)} aria-label="Notificaciones"
-        className={[styles.bell, open ? styles.open : ''].filter(Boolean).join(' ')}>
-        <i className="far fa-bell" />
-        {unread > 0 && <span className={styles.unreadDot} />}
-      </button>
+    <div className={styles.root} data-headless={!showTrigger || undefined}>
+      {showTrigger && (
+        <button onClick={() => setOpen((o) => !o)} aria-label="Notificaciones"
+          className={[styles.bell, open ? styles.open : ''].filter(Boolean).join(' ')}>
+          <i className="far fa-bell" />
+          {unread > 0 && <span className={styles.unreadDot} />}
+        </button>
+      )}
       {open && (
         <>
           <div onClick={() => setOpen(false)} className={styles.scrim} />
