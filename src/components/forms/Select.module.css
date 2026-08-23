@@ -72,3 +72,16 @@
   font-size: var(--text-xs);
   color: var(--gray-500);
 }
+
+/* Móvil nativo: campo relleno sin borde (misma línea que Input). La variante sm conserva su
+   altura compacta. */
+@media (max-width: 860px) {
+  .wrap {
+    background: var(--gray-100);
+    border-color: transparent;
+    border-radius: var(--radius-lg);
+    height: 48px;
+  }
+  .wrap.sm { height: 38px; }
+  .wrap:focus-within { background: var(--surface-card); }
+}

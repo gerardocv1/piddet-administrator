@@ -122,3 +122,15 @@
   color: var(--gray-500);
 }
 .hint.errorText { color: var(--color-danger); }
+
+/* Móvil nativo: campo relleno sin borde (misma línea que Input). */
+@media (max-width: 860px) {
+  .wrap {
+    background: var(--gray-100);
+    border-color: transparent;
+    border-radius: var(--radius-lg);
+    height: 48px;
+  }
+  .wrap:focus-within { background: var(--surface-card); }
+  .wrap.wrapError { border-color: var(--color-danger); }
+}

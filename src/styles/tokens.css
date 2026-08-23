@@ -2,21 +2,25 @@
    Piddet — tokens de diseño (línea visual "B2" flat)
    Variables CSS globales: colores, tipografía, espaciado, sombras.
    ============================================================ */
-@import url('https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300;0,400;0,600;0,700;0,800;1,400&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&display=swap');
+/* Las fuentes (Open Sans, Baloo 2) se cargan desde index.html con <link> no bloqueante:
+   un @import aquí bloquearía el CSSOM —y con él la ejecución del script— hasta que Google
+   Fonts responda. Los tokens declaran solo los fallbacks. */
 
 :root {
-  /* ---- Marca (naranja) ---- */
-  --color-primary: #ff7c00;
-  --color-primary-600: #e06e00;
-  --color-primary-700: #b85a00;
-  --color-primary-300: #ffac4d;
-  --color-primary-100: #ffe8d1;
-  --color-primary-050: #fff6ed;
-  --gradient-primary: linear-gradient(87deg, #ff7c00 0%, #ffab3e 100%);
+  /* ---- Primario de acción (azul petróleo) ----
+     Deriva del petróleo de la marca (--brand-dark) y combina con el naranja. Es el color de
+     botones, enlaces, foco y estados activos: el naranja resultaba invasivo repetido en cada
+     acción, así que queda reservado como firma de marca (--color-accent / --brand-piddet). */
+  --color-primary: #156e7f;
+  --color-primary-600: #115a68;
+  --color-primary-700: #0d4551;
+  --color-primary-300: #62a8b5;
+  --color-primary-100: #d4e8ec;
+  --color-primary-050: #eff6f8;
+  --gradient-primary: linear-gradient(87deg, #156e7f 0%, #2f97a5 100%);
 
-  /* Naranja de la plataforma. A diferencia de --color-primary, NO se retiñe con los colores de
-     la compañía: es la firma de piddet (wordmark) en las páginas públicas de cualquier empresa. */
+  /* Naranja de la plataforma. NO se retiñe con los colores de la compañía: es la firma de
+     piddet (wordmark) en las páginas públicas de cualquier empresa. */
   --brand-piddet: #ff7c00;
 
   /* Verde de WhatsApp (marca externa): `--brand-whatsapp` es su verde de icono y
@@ -24,9 +28,11 @@
   --brand-whatsapp: #25d366;
   --brand-whatsapp-fg: #128c4a;
 
-  /* ---- Color secundario (teal, combina con el naranja) ---- */
-  --color-accent: #0ea5a3;
-  --color-accent-100: rgba(14, 165, 163, 0.16);
+  /* ---- Realce de marca (naranja) ----
+     Solo para el logo y lo más relevante de una pantalla (un KPI destacado, el ítem activo del
+     menú); nunca para botones o acciones corrientes. */
+  --color-accent: #ff7c00;
+  --color-accent-100: rgba(255, 124, 0, 0.14);
 
   /* ---- Marca oscura (sidebar / login) ---- */
   --brand-dark: #0b2630;
@@ -55,10 +61,13 @@
   --border-color: #e9ecef;
   --border-input: #cdd2dc;
 
-  /* ---- Semánticos (bg = tinte suave · fg = texto/realce legible) ---- */
-  --color-success: #2dce89;
-  --color-success-100: #d8f6e7;
-  --color-success-fg: #1aae6f;
+  /* ---- Semánticos (bg = tinte suave · fg = texto/realce legible) ----
+     El verde es un esmeralda sobrio, armonizado con el primario petróleo (el menta brillante
+     anterior, #2dce89, vibraba contra él); mantiene distancia de matiz para leerse como
+     "éxito" y no confundirse con una acción. */
+  --color-success: #27a56f;
+  --color-success-100: #d6efe4;
+  --color-success-fg: #1e8a5c;
   --color-info: #11cdef;
   --color-info-100: #d5f6fc;
   --color-info-fg: #0b9cb8;
@@ -124,7 +133,7 @@
   --overlay-bg: rgba(12, 16, 22, 0.55);
 
   /* ---- Foco ---- */
-  --ring-primary: 0 0 0 3px rgba(255, 124, 0, 0.22);
+  --ring-primary: 0 0 0 3px rgba(21, 110, 127, 0.25);
 
   /* ---- Layout ---- */
   --sidebar-w: 244px;
@@ -201,11 +210,16 @@
   --text-body: var(--gray-700);
   --text-muted: var(--gray-500);
 
-  /* Tintes semánticos suaves para fondo oscuro */
-  --color-primary-700: #ffb066;
-  --color-primary-100: rgba(255, 124, 0, 0.22);
-  --color-primary-050: rgba(255, 124, 0, 0.12);
-  --color-success-100: rgba(45, 206, 137, 0.18);
+  /* Primario de acción: un punto más claro para que no se apague sobre la superficie oscura */
+  --color-primary: #1f8496;
+  --color-primary-600: #186e7e;
+  --color-primary-700: #82c5d2;
+  --color-primary-300: #4fa5b4;
+  --color-primary-100: rgba(47, 151, 165, 0.24);
+  --color-primary-050: rgba(47, 151, 165, 0.13);
+  --color-accent-100: rgba(255, 124, 0, 0.20);
+  --color-success-100: rgba(39, 165, 111, 0.20);
+  --color-success-fg: #3fbd88;
   --color-info-100: rgba(17, 205, 239, 0.18);
   --color-warning-100: rgba(251, 99, 64, 0.18);
   --color-danger-100: rgba(245, 54, 92, 0.18);
@@ -213,7 +227,7 @@
   /* Sombras más profundas */
   --shadow-xs: 0 0 0.5rem rgba(0, 0, 0, 0.4);
   --shadow-lg: 0 0.5rem 2rem 0 rgba(0, 0, 0, 0.55);
-  --ring-primary: 0 0 0 3px rgba(255, 124, 0, 0.30);
+  --ring-primary: 0 0 0 3px rgba(64, 164, 180, 0.35);
 
   /* Panel de marca: petróleo apenas elevado sobre --bg-body. */
   --brand-dark: #0e2c35;

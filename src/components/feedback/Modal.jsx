@@ -16,6 +16,15 @@ const WIDTHS = { sm: 400, md: 500, lg: 600 };
 
 export function Modal({ open = true, title, subtitle, children, footer, onClose, size = 'md', width, sheet, style = {}, ...rest }) {
   const isMobile = useIsMobile();
+
+  // Escape cierra el modal (si es cerrable), como cualquier diálogo de escritorio.
+  React.useEffect(() => {
+    if (!open || !onClose) return undefined;
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [open, onClose]);
+
   if (!open) return null;
 
   const asSheet = (sheet != null ? sheet : size !== 'sm') && isMobile;

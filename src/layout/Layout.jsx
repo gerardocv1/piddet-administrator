@@ -1,6 +1,6 @@
 import React from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { Sidebar, Topbar } from '../components';
+import { Sidebar, Topbar, MobileDock } from '../components';
 import { api } from '../lib/api.js';
 import { auth as authLib } from '../lib/auth/index.js';
 import { ADMIN_BASE } from '../lib/adminBase.js';
@@ -107,9 +107,11 @@ export function Layout({ theme, onToggleTheme, onLogout }) {
         onOpenProfile={openCompanyProfile} />
       <PageTitleProvider>
         <div className={styles.contentCol}>
-          <LayoutTopbar meta={meta} user={user} onLogout={onLogout} onMenu={() => setNavOpen(true)}
+          <LayoutTopbar meta={meta} user={user} onLogout={onLogout}
             theme={theme} onToggleTheme={onToggleTheme} />
           <main className={styles.main}><Outlet /></main>
+          {/* Navegación móvil: dock flotante (reemplaza a la hamburguesa); «Más» abre el cajón. */}
+          <MobileDock onMore={() => setNavOpen(true)} moreOpen={navOpen} />
         </div>
       </PageTitleProvider>
     </div>

@@ -13,21 +13,6 @@
   transition: background-color .25s ease, border-color .25s ease, color .25s ease;
 }
 
-.menuBtn {
-  display: none;
-  width: 38px;
-  height: 38px;
-  border-radius: var(--radius);
-  border: 1px solid var(--border-color);
-  background: var(--surface-card);
-  color: var(--gray-600);
-  cursor: pointer;
-  align-items: center;
-  justify-content: center;
-  font-size: 1rem;
-  flex: 0 0 auto;
-}
-
 .titleWrap { display: flex; align-items: baseline; gap: 9px; min-width: 0; }
 .title {
   font-size: var(--text-xl);
@@ -40,24 +25,10 @@
   text-overflow: ellipsis;
 }
 .crumb { font-size: var(--text-sm); color: var(--gray-400); white-space: nowrap; flex: 0 0 auto; }
+/* El separador visual del crumb es cosa del layout de escritorio, no del texto. */
+.crumb::before { content: '· '; }
 
 .spacer { flex: 1; }
-
-.themeBtn {
-  width: 38px;
-  height: 38px;
-  border-radius: var(--radius);
-  border: none;
-  background: transparent;
-  color: var(--gray-500);
-  cursor: pointer;
-  font-size: 1rem;
-  flex: 0 0 auto;
-  transition: background .12s ease;
-}
-.themeBtn:hover { background: var(--gray-100); }
-
-.divider { width: 1px; height: 26px; background: var(--border-color); }
 
 .userWrap { position: relative; flex: 0 0 auto; }
 .user {
@@ -117,21 +88,29 @@
 .menuItem.danger i { color: var(--color-danger); }
 .menuItem.danger:hover { background: color-mix(in srgb, var(--color-danger) 10%, transparent); }
 
+/* Móvil: cabecera limpia de la línea nativa — se funde con el fondo (sin superficie ni línea
+   divisoria) y muestra SOLO el nombre de la pantalla: la categoría sobra cuando el dock ya
+   dice dónde estás. Tampoco hay hamburguesa: la navegación vive en el MobileDock. */
 @media (max-width: 860px) {
   .topbar {
-    padding: env(safe-area-inset-top) max(0.85rem, env(safe-area-inset-right)) 0 max(0.85rem, env(safe-area-inset-left));
+    height: auto;
+    min-height: calc(var(--topbar-h) + env(safe-area-inset-top));
+    padding: calc(env(safe-area-inset-top) + 0.625rem) max(1rem, env(safe-area-inset-right)) 0.375rem max(1rem, env(safe-area-inset-left));
     gap: 0.5rem;
+    background: var(--bg-body);
+    border-bottom: 0;
   }
-  .title { font-size: var(--text-lg); }
-  .menuBtn { display: inline-flex; }
-  .crumb, .divider, .userText { display: none; }
-  .menuBtn, .themeBtn { width: 34px; height: 34px; font-size: 0.95rem; }
+  .userText, .userChev, .crumb { display: none; }
+  .title {
+    font-size: var(--text-xl);
+    font-weight: var(--fw-heavy);
+    letter-spacing: var(--ls-tight);
+  }
 }
 
 @media (max-width: 480px) {
   .topbar {
-    padding: env(safe-area-inset-top) max(0.7rem, env(safe-area-inset-right)) 0 max(0.7rem, env(safe-area-inset-left));
+    padding: calc(env(safe-area-inset-top) + 0.5rem) max(0.85rem, env(safe-area-inset-right)) 0.375rem max(0.85rem, env(safe-area-inset-left));
     gap: 0.35rem;
   }
-  .menuBtn, .themeBtn { width: 32px; height: 32px; }
 }

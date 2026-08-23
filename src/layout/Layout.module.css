@@ -29,13 +29,14 @@
 @media (max-width: 860px) {
   /* Los laterales usan el mayor entre el margen propio y el recorte de la pantalla (notch en
      horizontal); abajo se suma la barra de gestos de la app instalada. */
+  /* Abajo se suma el alto del dock flotante para que el final del contenido no quede oculto. */
   .main {
-    padding: 0.85rem max(0.85rem, env(safe-area-inset-right)) calc(0.85rem + env(safe-area-inset-bottom)) max(0.85rem, env(safe-area-inset-left));
+    padding: 0.85rem max(0.85rem, env(safe-area-inset-right)) calc(5.25rem + env(safe-area-inset-bottom)) max(0.85rem, env(safe-area-inset-left));
   }
 }
 
 @media (max-width: 480px) {
   .main {
-    padding: 0.7rem max(0.7rem, env(safe-area-inset-right)) calc(0.7rem + env(safe-area-inset-bottom)) max(0.7rem, env(safe-area-inset-left));
+    padding: 0.7rem max(0.7rem, env(safe-area-inset-right)) calc(5.1rem + env(safe-area-inset-bottom)) max(0.7rem, env(safe-area-inset-left));
   }
 }
