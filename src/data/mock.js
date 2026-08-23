@@ -3311,9 +3311,10 @@ function resolveReservationsCore(sub, query, { method, body }) {
 
   if (!action) return detail(r); // GET detalle
   if (action === 'confirm') { if (r.status === 1) r.status = 2; return detail(r); }
-  // El check-in exige el pre-check-in del huésped (misma regla que el backend).
+  // El check-in exige el pre-check-in del huésped (misma regla que el backend), salvo que se
+  // fuerce con { force: true } (check-in forzado desde el panel).
   if (action === 'check-in') {
-    if (!r.precheckin_completed_at) throw new Error('El huésped debe completar el pre-check-in antes de registrar la entrada');
+    if (!r.precheckin_completed_at && !body?.force) throw new Error('El huésped debe completar el pre-check-in antes de registrar la entrada');
     if (r.status === 2) { r.status = 3; r.checkin_at = new Date().toISOString(); }
     return detail(r);
   }

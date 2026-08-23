@@ -173,6 +173,10 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
   cargos, abonos y checkout.
 - **Reglas:** requiere la funcionalidad `functionality_reservations` activa además del permiso.
   El pre-check-in del huésped ocurre fuera del panel, en la superficie pública del backend.
+  Registrar la entrada exige ese pre-check-in completo; para los casos donde conseguir los datos
+  del huésped no es viable, el menú de acciones de una reserva confirmada ofrece **Check-in
+  forzado**: un modal advierte que la entrada se registra sin los datos del pre-check-in y aun
+  así permite pasar (el enlace de pre-check-in sigue activo durante la estadía).
 
 ### Gimnasio
 

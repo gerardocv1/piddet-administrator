@@ -104,7 +104,10 @@ export const reservationsService = {
   createReservation: (data) => http.post(`${base()}/reservations`, data),
 
   confirmReservation: (reservationId) => http.patch(`${base()}/reservations/${reservationId}/confirm`),
-  checkInReservation: (reservationId) => http.patch(`${base()}/reservations/${reservationId}/check-in`),
+  // Registra la entrada. Exige el pre-check-in completo; con `force` se salta esa regla
+  // (check-in forzado: entra sin los datos del huésped cuando conseguirlos no es viable).
+  checkInReservation: (reservationId, { force = false } = {}) =>
+    http.patch(`${base()}/reservations/${reservationId}/check-in`, force ? { force: true } : undefined),
   // Cancela la reserva en cualquier estado no cancelado; cancela también sus facturas vigentes.
   cancelReservation: (reservationId, reason) => http.patch(`${base()}/reservations/${reservationId}/cancel`, { reason }),
   // Reabre una reserva finalizada conservando pagos y facturas (los consolidados no se anulan).
