@@ -35,6 +35,6 @@
     border-radius: var(--radius-xl);
     background: transparent;
   }
-  .header { padding: 0.8rem 0.9rem; }
-  .body { padding: 0.9rem; }
+  .header { padding: 0.7rem 0.9rem 0.55rem; }
+  .body { padding: 0.25rem 0.9rem 0.9rem; }
 }

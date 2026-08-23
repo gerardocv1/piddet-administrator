@@ -29,8 +29,15 @@
   }
   .top { row-gap: 10px; }
   .text { flex: 1 1 auto; }
-  .actions { flex: 1 0 100%; }
-  .actions button { flex: 1 1 auto; justify-content: center; }
+  /* Las acciones se quedan en la fila del subtítulo con su ancho natural (antes se estiraban
+     a lo ancho en una fila propia: parecían barras y gastaban media pantalla). Si no caben,
+     `.top` las envuelve y `margin-left: auto` las mantiene a la derecha. Lo secundario se
+     agrupa en el menú ⋮ de cada pantalla. */
+  .actions { margin-left: auto; gap: 8px; }
+  /* Sin marco, el aire es lo único que separa: se ajusta para que la cabecera no empuje lo
+     operativo fuera de la primera pantalla. */
+  .card { gap: 10px; }
+  .meta { padding-top: 10px; gap: 8px 20px; }
 }
 
 .meta {

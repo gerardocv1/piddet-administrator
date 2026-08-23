@@ -1,11 +1,12 @@
 import React from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
-  Card, Badge, Button, Spinner, Alert, Input, Textarea, Switch, Select, MoneyInput,
-  Modal, PageHeader, StatStrip, DataTable, useToast,
+  Card, Badge, Button, IconButton, Dropdown, Spinner, Alert, Input, Textarea, Switch, Select,
+  MoneyInput, Modal, PageHeader, StatStrip, DataTable, useToast,
 } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
+import { useIsMobile } from '../lib/useIsMobile.js';
 import { gymMemberStatusMeta, GYM_MEMBER_STATUS, GYM_SEX_OPTIONS, gymMoney, gymSubscriptionStatusMeta, GYM_SUBSCRIPTION_STATUS } from '../lib/gymLabels.js';
 import { ID_TYPES } from '../lib/reservationLabels.js';
 import { formatShortDate } from '../lib/dates.js';
@@ -43,6 +44,7 @@ export function GymMemberDetail() {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   const fetcher = React.useCallback(() => api.gymMember(memberId), [memberId]);
   const { data, setData, loading, error } = useResource(fetcher, null, [memberId]);
@@ -282,11 +284,21 @@ export function GymMemberDetail() {
       <PageHeader
         onBack={goBack}
         subtitle={data.member_name}
-        actions={
+        actions={isMobile ? (
+          // En el teléfono la cabecera no lleva botones sueltos: editar los datos y ver el
+          // progreso son secundarios frente a cobrar y tomar medidas, y viven en el menú.
+          <Dropdown
+            trigger={<IconButton icon="fas fa-ellipsis-vertical" variant="light" size="sm" title="Más acciones" />}
+            items={[
+              { label: 'Editar datos', icon: 'fas fa-pen', onClick: openPersonal },
+              { label: 'Ver progreso', icon: 'fas fa-chart-line', onClick: () => navigate(`/gym/members/${memberId}/progress`) },
+            ]}
+          />
+        ) : (
           <Button variant="secondary" size="sm" icon="fas fa-pen" onClick={openPersonal}>
             Editar datos
           </Button>
-        }
+        )}
         meta={[
           { label: 'Código', value: data.member_code },
           { label: 'Documento', value: data.document_snapshot || '—' },
@@ -333,27 +345,54 @@ export function GymMemberDetail() {
       <Card>
         <Card.Header title="Medidas"
           action={
-            <>
-              <Button variant="secondary" size="sm" icon="fas fa-chart-line"
-                onClick={() => navigate(`/gym/members/${memberId}/progress`)}>
-                Ver progreso
-              </Button>
+            <span className={g.headerActions}>
+              {!isMobile && (
+                <Button variant="secondary" size="sm" icon="fas fa-chart-line"
+                  onClick={() => navigate(`/gym/members/${memberId}/progress`)}>
+                  Ver progreso
+                </Button>
+              )}
               <Button variant="primary" size="sm" icon="fas fa-plus"
                 onClick={() => navigate(`/gym/members/${memberId}/checkin`)}>
                 Tomar medidas
               </Button>
-            </>
+            </span>
           } />
         <Card.Body>
           <div className={s.formCol}>
             {progressStats.length > 0 && <StatStrip stats={progressStats} />}
-            <DataTable
-              columns={checkinColumns}
-              rows={checkinsPage.items || []}
-              loading={checkinsLoading}
-              empty="Aún no hay mediciones registradas."
-              onRowClick={(c) => setOpenCheckin(c)}
-            />
+            <div className={s.desktopList}>
+              <DataTable
+                columns={checkinColumns}
+                rows={checkinsPage.items || []}
+                loading={checkinsLoading}
+                empty="Aún no hay mediciones registradas."
+                onRowClick={(c) => setOpenCheckin(c)}
+              />
+            </div>
+            {/* Móvil: una fila por medición (fecha · nº de medidas), tappable para ver el
+                detalle. La tabla no cabía a lo ancho y recortaba quién la registró. */}
+            <div className={s.mobileList}>
+              {checkinsLoading && <div className={s.mobileState}><Spinner size="sm" label="Cargando…" /></div>}
+              {!checkinsLoading && (checkinsPage.items || []).length === 0 && (
+                <p className={s.faint}>Aún no hay mediciones registradas.</p>
+              )}
+              {!checkinsLoading && (checkinsPage.items || []).length > 0 && (
+                <ul className={g.checkinList}>
+                  {(checkinsPage.items || []).map((c) => (
+                    <li key={c.id}>
+                      <button type="button" className={g.checkinRow} onClick={() => setOpenCheckin(c)}>
+                        <span className={g.checkinDate}>{formatShortDate(c.measured_at)}</span>
+                        <span className={g.checkinMeta}>
+                          {(c.values || []).length} {(c.values || []).length === 1 ? 'medida' : 'medidas'}
+                          <i className={`fas fa-chevron-right ${g.checkinChevron}`} aria-hidden="true" />
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           </div>
         </Card.Body>
       </Card>

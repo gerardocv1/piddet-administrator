@@ -198,6 +198,9 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
   seguimiento periódico de sus medidas físicas. **Diseñado para operarse desde el teléfono**: el
   Inicio ofrece la acción rápida "Cobrar / renovar membresía", los listados se vuelven tarjetas
   en móvil (con "Renovar" directo en cada afiliado) y las tareas largas son asistentes paso a paso.
+  En el teléfono cada sección deja **una sola acción visible** —cobrar en Suscripción, tomar
+  medidas en Medidas— y lo secundario (editar datos, ver progreso) vive en el menú ⋮ de la
+  cabecera; el historial de mediciones se lista como filas tappables en vez de tabla.
 - **Flujo principal:** `/gym/plans` administra los planes (nombre, precio, duración en días,
   días de gracia tras el vencimiento, si el plan permite pausar la suscripción y el ítem del
   catálogo de productos con el que se factura cada pago). `/gym/members` registra afiliados **en

@@ -110,6 +110,32 @@ FontAwesome 6 por CDN (declarado en `index.html`). Se pasan como **string de cla
 <Button icon="fas fa-plus">Nuevo</Button>
 ```
 
+## Móvil: una acción visible por sección, el resto en el menú ⋮
+
+En el teléfono los botones son compactos (`Button` baja su alto y tipografía en ≤ 860 px) y **no
+se estiran a lo ancho**: la cabecera (`PageHeader`) deja las acciones con su ancho natural a la
+derecha. La regla de composición es una sola acción visible por sección —la que se usa en el
+mostrador— y todo lo secundario agrupado en un `Dropdown` con el disparador `⋮`:
+
+```jsx
+const isMobile = useIsMobile();
+<PageHeader
+  actions={isMobile ? (
+    <Dropdown
+      trigger={<IconButton icon="fas fa-ellipsis-vertical" variant="light" size="sm" title="Más acciones" />}
+      items={[{ label: 'Editar datos', icon: 'fas fa-pen', onClick: openPersonal }]}
+    />
+  ) : (
+    <Button variant="secondary" size="sm" icon="fas fa-pen" onClick={openPersonal}>Editar datos</Button>
+  )}
+/>
+```
+
+Al menú se llevan actualizar, enlaces auxiliares y cualquier cosa que no sea la acción principal
+del estado. Lo que ya está en otro lado (el contador de resultados de un listado, un dato que
+repite otra pestaña) se oculta en móvil en vez de duplicarse. Ejemplos reales:
+`screens/GymMemberDetail.jsx` y `screens/ReservationDetail.jsx`.
+
 ## Patrón de una pantalla con datos
 
 Flujo completo (datos + UI) en [`backend-service.md`](backend-service.md). Resumen de UI:

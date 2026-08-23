@@ -20,6 +20,9 @@
 @media (max-width: 860px) {
   .page { gap: 12px; }
   .toolbar { gap: 10px; }
+  /* El contador de resultados ("12 afiliados") es dato de escritorio: en el teléfono la lista
+     está a la vista y ese texto solo aprieta la fila de acciones. */
+  .toolbarText { display: none; }
 }
 .spacer { flex: 1; min-width: 0; }
 
