@@ -175,14 +175,20 @@ export function GymMembers() {
   // no su activo/inactivo administrativo. Sin suscripción, la acción pasa de Renovar a Suscribir.
   const membership = (r) => {
     if (!r.subscription) {
-      return { badge: { label: 'Sin suscripción', variant: 'neutral' }, text: null, alive: false };
+      return { badge: { label: 'Sin suscripción', variant: 'neutral' }, text: null, detail: null, alive: false };
     }
     const st = Number(r.subscription.computed_status ?? r.subscription.status);
     const alive = st === GYM_SUBSCRIPTION_STATUS.ACTIVE || st === GYM_SUBSCRIPTION_STATUS.GRACE;
-    const text = st === GYM_SUBSCRIPTION_STATUS.CANCELLED
-      ? `Cancelada · ${r.subscription.plan_name}`
-      : `${alive ? 'Vence' : 'Venció'} el ${formatShortDate(r.subscription.end_date)}`;
-    return { badge: gymSubscriptionStatusMeta(st), text, alive };
+    const cancelled = st === GYM_SUBSCRIPTION_STATUS.CANCELLED;
+    const vigencia = `${alive ? 'Vence' : 'Venció'} el ${formatShortDate(r.subscription.end_date)}`;
+    // `text` es la columna Vigencia de la tabla (escritorio). `detail` es la línea de la tarjeta
+    // móvil, donde el estado ya lo dice el badge de al lado: ahí no se repite, se nombra el plan.
+    return {
+      badge: gymSubscriptionStatusMeta(st),
+      text: cancelled ? `Cancelada · ${r.subscription.plan_name}` : vigencia,
+      detail: cancelled ? r.subscription.plan_name : vigencia,
+      alive,
+    };
   };
 
   const columns = [
@@ -267,16 +273,18 @@ export function GymMembers() {
                   onClick={() => navigate(`/gym/members/${r.id}?${params.toString()}`)}>
                   <div className={gl.info}>
                     <span className={gl.name}>{r.member_name}</span>
-                    <span className={gl.meta}>{r.member_code}{ms.text ? ` · ${ms.text}` : ''}</span>
+                    {/* Estado y vigencia en la misma línea: apilar el badge sobre la acción
+                        hacía cada tarjeta el doble de alta para dos datos de una línea. */}
+                    <span className={gl.metaRow}>
+                      <Badge variant={ms.badge.variant} dot>{ms.badge.label}</Badge>
+                      <span className={gl.meta}>{ms.detail || r.member_code}</span>
+                    </span>
                   </div>
                 </button>
-                <div className={gl.rightCol}>
-                  <Badge variant={ms.badge.variant} dot>{ms.badge.label}</Badge>
-                  <Button variant="secondary" size="sm" icon={ms.alive ? 'fas fa-rotate' : 'fas fa-plus'}
-                    onClick={() => navigate(`/gym/members/${r.id}?action=renew`)}>
-                    {ms.alive ? 'Renovar' : 'Suscribir'}
-                  </Button>
-                </div>
+                <Button variant="secondary" size="sm" icon={ms.alive ? 'fas fa-rotate' : 'fas fa-plus'}
+                  onClick={() => navigate(`/gym/members/${r.id}?action=renew`)}>
+                  {ms.alive ? 'Renovar' : 'Suscribir'}
+                </Button>
               </div>
             </Card>
           );

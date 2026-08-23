@@ -29,8 +29,15 @@
   }
   .top { row-gap: 10px; }
   .text { flex: 1 1 auto; }
-  .actions { flex: 1 0 100%; }
-  .actions button { flex: 1 1 auto; justify-content: center; }
+  /* Las acciones se quedan en la fila del subtítulo con su ancho natural (antes se estiraban
+     a lo ancho en una fila propia: parecían barras y gastaban media pantalla). Si no caben,
+     `.top` las envuelve y `margin-left: auto` las mantiene a la derecha. Lo secundario se
+     agrupa en el menú ⋮ de cada pantalla. */
+  .actions { margin-left: auto; gap: 8px; }
+  /* Sin marco, el aire es lo único que separa: se ajusta para que la cabecera no empuje lo
+     operativo fuera de la primera pantalla. */
+  .card { gap: 10px; }
+  .meta { padding-top: 10px; gap: 8px 20px; }
 }
 
 .meta {
@@ -70,3 +77,11 @@
   font-size: var(--text-sm);
 }
 .note i { color: var(--color-danger); }
+
+/* Móvil: en dos columnas estrechas un valor largo (un rango de fechas) se cortaba con "…".
+   Mejor que envuelva a dos líneas: el dato completo importa más que la línea perfecta.
+   Va al final del archivo a propósito: `.meta dd` de arriba fija `nowrap` con la misma
+   especificidad, así que solo gana declarándose después. */
+@media (max-width: 860px) {
+  .meta dd { white-space: normal; overflow: visible; }
+}

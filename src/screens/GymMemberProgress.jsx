@@ -5,6 +5,7 @@ import {
 } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
+import { useIsMobile } from '../lib/useIsMobile.js';
 import { GYM_SEX_OPTIONS } from '../lib/gymLabels.js';
 import { formatShortDate } from '../lib/dates.js';
 import { useSetPageTitle } from '../lib/pageTitle.jsx';
@@ -36,7 +37,8 @@ const fmtDelta = (delta, unit) => `${delta > 0 ? '+' : ''}${delta.toFixed(1)}${u
 const fmtPct = (delta, base) => (base ? ` (${delta > 0 ? '+' : ''}${((delta / base) * 100).toFixed(1)}%)` : '');
 
 // KPIs de la medida seleccionada: valor actual (con su cambio desde la medición anterior),
-// cambio total desde la primera y cuántas mediciones hay. En medidas bilaterales, un KPI por lado.
+// cambio total desde la primera y cuántas mediciones hay (esta última solo en escritorio: en el
+// teléfono es contexto y dejaba una fila con un KPI suelto). En bilaterales, un KPI por lado.
 function kpisFor(groups, unit) {
   if (!groups.length) return [];
   if (groups.length === 1 && !groups[0].side) {
@@ -55,7 +57,7 @@ function kpisFor(groups, unit) {
         delta: fmtPct(total, Number(g.first.value)).trim() || undefined,
         up: total >= 0,
       },
-      { label: 'Mediciones', value: String(g.count) },
+      { label: 'Mediciones', value: String(g.count), desktopOnly: true },
     ].filter(Boolean);
   }
   const stats = groups.map((g) => {
@@ -67,7 +69,7 @@ function kpisFor(groups, unit) {
       up: total >= 0,
     };
   });
-  stats.push({ label: 'Mediciones', value: String(Math.max(...groups.map((g) => g.count))) });
+  stats.push({ label: 'Mediciones', value: String(Math.max(...groups.map((g) => g.count))), desktopOnly: true });
   return stats;
 }
 
@@ -79,6 +81,7 @@ export function GymMemberProgress() {
   const { memberId } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   const fetcher = React.useCallback(() => api.gymMember(memberId), [memberId]);
   const { data: member, setData: setMember, loading, error } = useResource(fetcher, null, [memberId]);
@@ -142,7 +145,8 @@ export function GymMemberProgress() {
         subtitle={member.member_name}
         meta={[
           { label: 'Código', value: member.member_code },
-          { label: 'Vista', value: 'Progreso físico' },
+          // "Vista: Progreso físico" repite el título de la pantalla: en el teléfono estorba.
+          isMobile ? null : { label: 'Vista', value: 'Progreso físico' },
         ]}
       />
 

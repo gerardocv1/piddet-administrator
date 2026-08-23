@@ -28,27 +28,22 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.meta { font-size: var(--text-sm); color: var(--gray-600); }
+.meta {
+  font-size: var(--text-sm);
+  color: var(--gray-600);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Segunda línea de la tarjeta: estado + vigencia, en vez de apilarlos contra la acción. */
+.metaRow { display: flex; align-items: center; gap: 8px; min-width: 0; }
 
-/* Fila de tarjeta compacta: información tappable a la izquierda, estado + acción a la derecha
-   (sin pie de botones a lo ancho: una sola acción pequeña por tarjeta). */
+/* Fila de tarjeta compacta: información tappable a la izquierda (nombre + estado y vigencia)
+   y una sola acción pequeña a la derecha; sin pie de botones a lo ancho. */
 .row { display: flex; align-items: center; gap: 12px; }
-.rightCol {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 8px;
-  flex: 0 0 auto;
-}
 
-/* Pie con acciones, separado por hairline (mismo dibujo que la tarjeta de usuarios). */
-.foot {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
-  padding-top: 10px;
-  margin-top: 10px;
-  border-top: 1px solid var(--gray-100);
+/* Móvil: tarjeta de dos líneas, sin aire de sobra — la lista se lee de un vistazo. */
+@media (max-width: 860px) {
+  .cardPad { padding: 8px 12px; }
+  .tapArea { min-height: 40px; }
 }
-.foot > * { flex: 1; }

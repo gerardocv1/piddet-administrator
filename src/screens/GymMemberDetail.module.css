@@ -1,5 +1,9 @@
 /* Ficha del afiliado del gimnasio: resumen tappable de la suscripción y listas compactas. */
 
+/* Acciones del encabezado de una tarjeta: agrupadas juntas a la derecha (Card.Header reparte
+   sus hijos con space-between, así que sin envoltorio los botones se separaban entre sí). */
+.headerActions { display: inline-flex; align-items: center; gap: 8px; }
+
 /* Tarjetas plegables: el título es el interruptor. */
 .collapseToggle {
   display: inline-flex;

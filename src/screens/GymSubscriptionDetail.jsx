@@ -1,11 +1,12 @@
 import React from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
-  Card, Badge, Button, Spinner, Alert, Select, MoneyInput, DatePicker, Modal, ConfirmDialog,
-  PageHeader, useToast,
+  Card, Badge, Button, IconButton, Dropdown, Spinner, Alert, Select, MoneyInput, DatePicker,
+  Modal, ConfirmDialog, PageHeader, useToast,
 } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
+import { useIsMobile } from '../lib/useIsMobile.js';
 import { gymMoney, gymSubscriptionStatusMeta, GYM_SUBSCRIPTION_STATUS } from '../lib/gymLabels.js';
 import { formatShortDate } from '../lib/dates.js';
 import { useSetPageTitle } from '../lib/pageTitle.jsx';
@@ -21,6 +22,7 @@ export function GymSubscriptionDetail() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   const fetcher = React.useCallback(() => api.gymSubscription(subscriptionId), [subscriptionId]);
   const { data, setData, loading, error } = useResource(fetcher, null, [subscriptionId]);
@@ -200,13 +202,24 @@ export function GymSubscriptionDetail() {
         }
         actions={
           <>
-            {isAlive && (
+            {/* En el teléfono la cabecera se queda con Renovar: registrar el pago ya es la acción
+                de la tarjeta de Pagos y cancelar es excepcional, así que va en el menú ⋮. */}
+            {isAlive && !isMobile && (
               <Button variant="outline-primary" size="sm" icon="fas fa-dollar-sign" onClick={openPay}>Registrar pago</Button>
             )}
-            {isAlive && (
+            {isAlive && !isMobile && (
               <Button variant="neutral" size="sm" icon="fas fa-ban" onClick={() => setCancelOpen(true)}>Cancelar</Button>
             )}
             <Button variant="primary" size="sm" icon="fas fa-rotate" onClick={openRenew}>Renovar</Button>
+            {isAlive && isMobile && (
+              <Dropdown
+                trigger={<IconButton icon="fas fa-ellipsis-vertical" variant="light" size="sm" title="Más acciones" />}
+                items={[
+                  { label: 'Registrar pago', icon: 'fas fa-dollar-sign', onClick: openPay },
+                  { label: 'Cancelar suscripción', icon: 'fas fa-ban', variant: 'danger', onClick: () => setCancelOpen(true) },
+                ]}
+              />
+            )}
           </>
         }
         meta={[
