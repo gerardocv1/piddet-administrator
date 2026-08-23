@@ -3,7 +3,10 @@ import { Spinner } from '../core/Spinner.jsx';
 import styles from './StatStrip.module.css';
 
 /** Franja de KPIs: un solo panel con columnas separadas por borde (estilo flat).
- *  Mientras `loading`, muestra una ruedita en lugar de una franja vacía. */
+ *  Mientras `loading`, muestra una ruedita en lugar de una franja vacía.
+ *
+ *  stats: [{ label, value, delta?, up?, desktopOnly? }]. Un KPI `desktopOnly` se oculta en el
+ *  teléfono: la franja se queda con lo esencial y el dato secundario sigue en escritorio. */
 export function StatStrip({ stats = [], loading = false }) {
   if (loading) {
     return (
@@ -15,7 +18,7 @@ export function StatStrip({ stats = [], loading = false }) {
   return (
     <div className={styles.strip} style={{ '--cols': stats.length || 1 }}>
       {stats.map((s) => (
-        <div key={s.label} className={styles.item}>
+        <div key={s.label} className={[styles.item, s.desktopOnly ? styles.desktopOnly : ''].filter(Boolean).join(' ')}>
           <div className={styles.label}>{s.label}</div>
           <div className={styles.valueRow}>
             <span className={styles.value}>{s.value}</span>
