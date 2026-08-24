@@ -208,11 +208,12 @@ function DateFilter({ filter, value, onChange }) {
   );
 }
 
-const DATE_FMT = new Intl.DateTimeFormat('es-CO', { day: '2-digit', month: 'short', year: 'numeric' });
+// Las fechas de la barra de filtros van en ISO (2026-08-24): es la forma más corta e
+// inequívoca, y un rango cabe entero en la pastilla sin recortarse.
 function formatDate(iso) {
   const [y, m, d] = String(iso).split('-').map(Number);
   if (!y || !m || !d) return iso;
-  return DATE_FMT.format(new Date(y, m - 1, d));
+  return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 }
 
 /* ---------- Filtro de rango de fechas (un solo control; calendario en popover) ---------- */

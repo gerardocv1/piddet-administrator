@@ -138,6 +138,9 @@
   /* ---- Sombras (uso mínimo en la línea flat) ---- */
   --shadow-xs: 0 0 0.5rem rgba(136, 152, 170, 0.12);
   --shadow-lg: 0 0.5rem 2rem 0 rgba(23, 43, 77, 0.18);
+  /* Sombra corta bajo el encabezado de una sección: marca dónde empieza su contenido sin
+     volver a pintar cajas (la línea sigue siendo flat). */
+  --shadow-header: 0 2px 4px -2px rgba(23, 43, 77, 0.10);
 
   /* ---- Overlay / scrim de modales ---- */
   --overlay-bg: rgba(12, 16, 22, 0.55);
@@ -237,6 +240,7 @@
   /* Sombras más profundas */
   --shadow-xs: 0 0 0.5rem rgba(0, 0, 0, 0.4);
   --shadow-lg: 0 0.5rem 2rem 0 rgba(0, 0, 0, 0.55);
+  --shadow-header: 0 2px 4px -2px rgba(0, 0, 0, 0.45);
   --ring-primary: 0 0 0 3px rgba(64, 164, 180, 0.35);
 
   /* Panel de marca: petróleo apenas elevado sobre --bg-body. */

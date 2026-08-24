@@ -48,7 +48,11 @@ El punto de partida de la copia espejo quedó registrado en el README del catál
 origen en este repo). Si los repos se desvían, **gana el catálogo en lo visual** y gana este
 repo en lo funcional; la desviación se corrige portando en la dirección que corresponda.
 
-Último porteo aplicado (catálogo `8464c0d` → este repo): tokens de acento de compañía
+Último porteo aplicado (catálogo `212274d` → este repo): token `--shadow-header` y la sombra
+corta que el encabezado de la `Card` proyecta sobre su cuerpo (cada sección se lee aparte), más
+las fechas en ISO de la `FilterBar`.
+
+Porteo anterior (catálogo `8464c0d` → este repo): tokens de acento de compañía
 (`--company-accent`, `-strong`, `-soft`, `-on-dark` en `tokens.css`) — la identidad de la
 compañía activa asoma solo en navegación y realces decorativos (dock móvil, menú «Más»,
 iconos de módulo, accesos rápidos del dashboard, icono activo del sidebar); botones de

@@ -1,7 +1,7 @@
 import React from 'react';
 import styles from './Card.module.css';
 
-/** Superficie base flat: blanca, borde fino, sin sombra. */
+/** Superficie base flat: blanca y de borde fino; solo el encabezado proyecta una sombra corta. */
 export function Card({ children, padding, className = '', style = {}, ...rest }) {
   return (
     <div className={[styles.card, className].filter(Boolean).join(' ')} style={padding ? { padding, ...style } : style} {...rest}>

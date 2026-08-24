@@ -15,6 +15,12 @@
   flex-wrap: wrap;
   padding: 1.1rem 1.5rem;
   border-bottom: 1px solid var(--border-color);
+  /* Sombra corta hacia abajo: separa el encabezado de su contenido para que cada sección se
+     lea como un bloque propio. Va sobre el cuerpo (`position`/`z-index`) para que la sombra
+     caiga encima y no la tape la primera fila. */
+  position: relative;
+  z-index: 1;
+  box-shadow: var(--shadow-header);
 }
 
 .headerTitle {
