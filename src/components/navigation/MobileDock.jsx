@@ -38,8 +38,9 @@ function subItemsFor(pathname, permissions, activeFunctionalities) {
  * el contenido **pasa por debajo** y se desvanece detrás de la barra en vez de chocar con un
  * borde. Reemplaza a la hamburguesa.
  *
- * Lleva Inicio + los primeros módulos principales (los de Oferta y Operación), y «Más», que abre
- * el cajón lateral con el menú completo. De un módulo desplegable se toma su icono y su etiqueta,
+ * Lleva Inicio + los primeros módulos principales (los de Oferta y Operación), y «Más», que
+ * navega al menú completo a pantalla propia (/more) — el dock sigue visible y «Más» queda
+ * marcado activo, como cualquier otro destino. De un módulo desplegable se toma su icono y su etiqueta,
  * y se navega a su primera ruta accesible; queda marcado activo mientras se esté en cualquiera de
  * sus pantallas. Cada destino es icono con su nombre pequeño debajo y el activo se distingue
  * por el tinte. Respeta permisos y funcionalidades igual que el Sidebar.
@@ -48,7 +49,7 @@ function subItemsFor(pathname, permissions, activeFunctionalities) {
  * Reporte, Categorías), encima de los destinos aparece un submenú horizontal compacto con esas
  * hermanas: se salta entre ellas sin pasar por «Más».
  */
-export function MobileDock({ onMore, moreOpen = false }) {
+export function MobileDock() {
   const { pathname } = useLocation();
   const { permissions } = usePermissions();
   const { ready, activeNames } = useFunctionalities();
@@ -74,8 +75,7 @@ export function MobileDock({ onMore, moreOpen = false }) {
       .slice(0, DOCK_SLOTS);
   }, [permissions, activeFunctionalities]);
 
-  const itemClass = (active) =>
-    [styles.item, active && !moreOpen ? styles.active : ''].filter(Boolean).join(' ');
+  const itemClass = (active) => [styles.item, active ? styles.active : ''].filter(Boolean).join(' ');
 
   const subItems = React.useMemo(
     () => subItemsFor(pathname, permissions, activeFunctionalities),
@@ -137,11 +137,11 @@ export function MobileDock({ onMore, moreOpen = false }) {
         </NavLink>
       ))}
 
-      <button type="button" className={itemClass(moreOpen)}
-        aria-label="Más opciones" aria-expanded={moreOpen} onClick={onMore}>
+      <NavLink to="/more" aria-label="Más opciones"
+        className={({ isActive }) => itemClass(isActive)}>
         <i className="fas fa-ellipsis" aria-hidden="true" />
         <span className={styles.label}>Más</span>
-      </button>
+      </NavLink>
       </div>
     </nav>
   );

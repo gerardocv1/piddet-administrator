@@ -26,13 +26,6 @@
   padding: 2rem;
 }
 
-.overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 55;
-  background: rgba(19, 35, 63, 0.45);
-}
-
 @media (max-width: 860px) {
   /* Los laterales usan el mayor entre el margen propio y el recorte de la pantalla (notch en
      horizontal); abajo se suma la barra de gestos de la app instalada. */

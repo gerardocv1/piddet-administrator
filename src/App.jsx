@@ -52,6 +52,7 @@ import { Permissions } from './screens/Permissions.jsx';
 import { SyncFailures } from './screens/SyncFailures.jsx';
 import { SyncFailureDetail } from './screens/SyncFailureDetail.jsx';
 import { CompanyProfile } from './screens/CompanyProfile.jsx';
+import { MoreMenu } from './screens/MoreMenu.jsx';
 import { Placeholder } from './screens/Placeholder.jsx';
 import { NoModules } from './screens/NoModules.jsx';
 import { auth as authLib } from './lib/auth/index.js';
@@ -192,6 +193,9 @@ function AdminApp() {
             element={<RequirePermission path="/menus"><MenuPreview /></RequirePermission>} />
           <Route path="/" element={<Layout theme={theme} onToggleTheme={toggleTheme} onLogout={logout} />}>
             <Route index element={<Home />} />
+            {/* Menú completo en móvil (destino de «Más» en el dock); en escritorio redirige a Inicio.
+                Solo navegación: cada fila ya filtra por permisos/funcionalidades, no gatea nada. */}
+            <Route path="more" element={<MoreMenu />} />
             <Route path="products" element={<RequirePermission path="/products"><Products /></RequirePermission>} />
             <Route path="products/:itemId" element={<RequirePermission path="/products"><ProductDetail /></RequirePermission>} />
             <Route path="product-categories" element={<RequirePermission path="/product-categories"><ProductCategories /></RequirePermission>} />
