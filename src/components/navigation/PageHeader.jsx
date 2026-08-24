@@ -11,10 +11,14 @@ import styles from './PageHeader.module.css';
  * meta: [{ label, value }]  — se omiten las entradas falsy. El valor puede ser texto (se recorta
  * con ellipsis) o un nodo, p. ej. un Badge de estado (se muestra completo).
  *
+ * `onSubtitleClick` vuelve el subtítulo clicable (p. ej. el nombre del afiliado que navega a su
+ * ficha) manteniendo exactamente la misma tipografía: el enlace se descubre al tocar, sin ícono
+ * extra ni estilo aparte, para que todas las cabeceras se lean igual.
+ *
  * El `onBack` se publica al Topbar: en el teléfono la flecha se pinta allí (una sola vez, junto
  * al título de la pantalla) y el botón de aquí se oculta por CSS.
  */
-export function PageHeader({ onBack, backTitle = 'Volver', subtitle, actions, meta, note }) {
+export function PageHeader({ onBack, backTitle = 'Volver', subtitle, onSubtitleClick, actions, meta, note }) {
   useSetPageBack(onBack);
   const metaItems = Array.isArray(meta) ? meta.filter(Boolean) : [];
   const isText = (v) => typeof v === 'string' || typeof v === 'number';
@@ -26,7 +30,13 @@ export function PageHeader({ onBack, backTitle = 'Volver', subtitle, actions, me
             className={styles.back} onClick={onBack} />
         )}
         <div className={styles.text}>
-          {subtitle && <span className={styles.subtitle}>{subtitle}</span>}
+          {subtitle && (onSubtitleClick ? (
+            <button type="button" className={`${styles.subtitle} ${styles.subtitleLink}`} onClick={onSubtitleClick}>
+              {subtitle}
+            </button>
+          ) : (
+            <span className={styles.subtitle}>{subtitle}</span>
+          ))}
         </div>
         {actions && <div className={styles.actions}>{actions}</div>}
       </div>

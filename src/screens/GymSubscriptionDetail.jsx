@@ -38,10 +38,9 @@ export function GymSubscriptionDetail() {
     [plansPage],
   );
 
-  useSetPageTitle(
-    data?.member_name ? `Suscripción · ${data.member_name}` : null,
-    { shortTitle: data?.member_name ? `Suscripción · ${String(data.member_name).trim().split(/\s+/)[0]}` : null },
-  );
+  // La barra superior lleva un título fijo: el nombre del afiliado ya está en la cabecera de la
+  // ficha, justo debajo, y repetirlo arriba era ruido.
+  useSetPageTitle('Suscripción');
 
   const goBack = () => navigate(`/gym/subscriptions${params.toString() ? `?${params.toString()}` : ''}`);
 
@@ -197,34 +196,33 @@ export function GymSubscriptionDetail() {
     <div className={s.page}>
       <PageHeader
         onBack={goBack}
-        subtitle={
-          <button type="button" className={g.memberLink}
-            onClick={() => navigate(`/gym/members/${data.gym_member_id}`)}>
-            {data.member_name} <i className="fas fa-arrow-up-right-from-square" aria-hidden="true" />
-          </button>
-        }
-        actions={
+        subtitle={data.member_name}
+        onSubtitleClick={() => navigate(`/gym/members/${data.gym_member_id}`)}
+        actions={isMobile ? (
+          // En el teléfono la cabecera no lleva botones sueltos: todas las acciones (renovar,
+          // registrar pago, cancelar) viven en el menú ⋮; registrar el pago además ya es la
+          // acción de la tarjeta de Pagos.
+          <Dropdown
+            trigger={<IconButton icon="fas fa-ellipsis-vertical" variant="light" size="sm" title="Más acciones" />}
+            items={[
+              { label: 'Renovar', icon: 'fas fa-rotate', onClick: openRenew },
+              ...(isAlive ? [
+                { label: 'Registrar pago', icon: 'fas fa-dollar-sign', onClick: openPay },
+                { label: 'Cancelar suscripción', icon: 'fas fa-ban', variant: 'danger', onClick: () => setCancelOpen(true) },
+              ] : []),
+            ]}
+          />
+        ) : (
           <>
-            {/* En el teléfono la cabecera se queda con Renovar: registrar el pago ya es la acción
-                de la tarjeta de Pagos y cancelar es excepcional, así que va en el menú ⋮. */}
-            {isAlive && !isMobile && (
+            {isAlive && (
               <Button variant="outline-primary" size="sm" icon="fas fa-dollar-sign" onClick={openPay}>Registrar pago</Button>
             )}
-            {isAlive && !isMobile && (
+            {isAlive && (
               <Button variant="neutral" size="sm" icon="fas fa-ban" onClick={() => setCancelOpen(true)}>Cancelar</Button>
             )}
             <Button variant="primary" size="sm" icon="fas fa-rotate" onClick={openRenew}>Renovar</Button>
-            {isAlive && isMobile && (
-              <Dropdown
-                trigger={<IconButton icon="fas fa-ellipsis-vertical" variant="light" size="sm" title="Más acciones" />}
-                items={[
-                  { label: 'Registrar pago', icon: 'fas fa-dollar-sign', onClick: openPay },
-                  { label: 'Cancelar suscripción', icon: 'fas fa-ban', variant: 'danger', onClick: () => setCancelOpen(true) },
-                ]}
-              />
-            )}
           </>
-        }
+        )}
         meta={[
           { label: 'Plan', value: data.plan_name },
           { label: 'Vigencia', value: `${formatShortDate(data.start_date)} – ${formatShortDate(data.end_date)}` },
