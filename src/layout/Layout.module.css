@@ -29,15 +29,16 @@
 @media (max-width: 860px) {
   /* Los laterales usan el mayor entre el margen propio y el recorte de la pantalla (notch en
      horizontal); abajo se suma la barra de gestos de la app instalada. */
-  /* Abajo se reserva el alto útil del dock (icono + etiqueta) para que el final del contenido
-     no quede oculto; el degradado que lo corona sí lo cruza el contenido al desplazarse. */
+  /* Abajo se reserva el alto real del dock, que él mismo publica en `--dock-h` (cambia según
+     lleve submenú o no); el respaldo cubre el primer render. Así el final del contenido nunca
+     queda oculto tras el menú. El fade que corona la barra sí lo cruza el contenido. */
   .main {
-    padding: 0.85rem max(0.85rem, env(safe-area-inset-right)) calc(4.1rem + env(safe-area-inset-bottom)) max(0.85rem, env(safe-area-inset-left));
+    padding: 0.85rem max(0.85rem, env(safe-area-inset-right)) calc(var(--dock-h, 4rem) + 0.5rem + env(safe-area-inset-bottom)) max(0.85rem, env(safe-area-inset-left));
   }
 }
 
 @media (max-width: 480px) {
   .main {
-    padding: 0.7rem max(0.7rem, env(safe-area-inset-right)) calc(3.95rem + env(safe-area-inset-bottom)) max(0.7rem, env(safe-area-inset-left));
+    padding: 0.7rem max(0.7rem, env(safe-area-inset-right)) calc(var(--dock-h, 3.85rem) + 0.4rem + env(safe-area-inset-bottom)) max(0.7rem, env(safe-area-inset-left));
   }
 }
