@@ -5,7 +5,7 @@ import { usePermissions } from '../lib/permissions/usePermissions.js';
 import { useFunctionalities } from '../lib/permissions/useFunctionalities.js';
 import { useInstallPrompt } from '../lib/pwa.js';
 import { useIsMobile } from '../lib/useIsMobile.js';
-import { moduleTerm, routeTerm, routeIcon } from '../lib/terms.js';
+import { moduleTerm, routeTerm, routeIcon, sortModuleGroups } from '../lib/terms.js';
 import styles from './MoreMenu.module.css';
 
 const initials = (s = '') => s.split(' ').filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
@@ -51,7 +51,8 @@ export function MoreMenu() {
   // Secciones con sus módulos accesibles. Los desplegables no se aplanan del todo: conservan el
   // nombre del padre como subtítulo dentro de la tarjeta — sin él, «Reporte» de Ventas y
   // «Reporte» de Egresos serían dos filas idénticas.
-  const groups = MODULE_GROUPS
+  // Prioridad por tipo de compañía: lo más relevante para el negocio va primero.
+  const groups = sortModuleGroups(MODULE_GROUPS
     .map((g) => ({
       section: g.section,
       items: g.items
@@ -60,7 +61,7 @@ export function MoreMenu() {
           : m))
         .filter((m) => (m.children ? m.children.length > 0 : canAccess(m.to, permissions, activeFunctionalities))),
     }))
-    .filter((g) => g.items.length > 0);
+    .filter((g) => g.items.length > 0));
 
   const showPos = !POS_ITEM.func || activeFunctionalities.includes(POS_ITEM.func);
 

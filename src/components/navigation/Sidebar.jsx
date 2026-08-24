@@ -5,7 +5,7 @@ import { HOME_ITEM, POS_ITEM, MODULE_GROUPS, canAccess } from '../../lib/permiss
 import { usePermissions } from '../../lib/permissions/usePermissions.js';
 import { useFunctionalities } from '../../lib/permissions/useFunctionalities.js';
 import { useInstallPrompt } from '../../lib/pwa.js';
-import { moduleTerm, moduleIcon, routeTerm, routeIcon } from '../../lib/terms.js';
+import { moduleTerm, moduleIcon, routeTerm, routeIcon, sortModuleGroups } from '../../lib/terms.js';
 
 const initials = (s = '') => s.split(' ').filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
 
@@ -70,14 +70,15 @@ export function Sidebar({ onLogout, company, companies = [], onSwitchCompany, on
   // Solo módulos con permiso y funcionalidad activa; grupos sin módulos visibles se omiten
   // (incluida su cabecera). En items desplegables se filtran las rutas hijas y se descarta el
   // padre si queda vacío.
-  const groups = MODULE_GROUPS
+  // Prioridad por tipo de compañía: lo más relevante para el negocio va primero.
+  const groups = sortModuleGroups(MODULE_GROUPS
     .map((g) => ({
       section: g.section,
       items: g.items
         .map((m) => (m.children ? { ...m, children: m.children.filter((c) => canAccess(c.to, permissions, activeFunctionalities)) } : m))
         .filter((m) => (m.children ? m.children.length > 0 : canAccess(m.to, permissions, activeFunctionalities))),
     }))
-    .filter((g) => g.items.length > 0);
+    .filter((g) => g.items.length > 0));
 
   return (
     <nav className={styles.sidebar}>
