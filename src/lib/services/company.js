@@ -15,6 +15,8 @@ const base = () => {
 export const companyService = {
   // Empresas a las que pertenece el usuario autenticado (para el selector del sidebar).
   companies: () => http.get('/auth/me/companies'),
+  // Catálogo de tipos de negocio (restaurant, gym, store, lodging…) para el perfil de empresa.
+  companyTypes: () => http.get('/company-types'),
   // Cambia la empresa activa del usuario y la fija como predeterminada (company_default_id).
   switchCompany: (id) => http.put('/auth/me/company', { company_id: id }),
   // Perfil completo de la empresa activa (Company + CompanyDetail, con icon resuelto).

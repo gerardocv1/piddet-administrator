@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, IconButton, RefreshButton, Card, Badge, Input, Textarea, Modal, Spinner, FileUpload, Alert, useToast } from '../components';
+import { Button, IconButton, RefreshButton, Card, Badge, Input, Select, Textarea, Modal, Spinner, FileUpload, Alert, useToast } from '../components';
 import { api } from '../lib/api.js';
 import { auth as authLib } from '../lib/auth/index.js';
 import { useResource } from '../lib/useResource.js';
@@ -22,6 +22,7 @@ const RESUMEN = [
 ];
 
 const DATA_FIELDS = [
+  { key: 'company_type_name', label: 'Tipo de empresa' },
   { key: 'identification', label: 'Identificación' },
   { key: 'address', label: 'Dirección' },
   { key: 'city', label: 'Ciudad' },
@@ -40,16 +41,27 @@ export function CompanyProfile() {
   const [editing, setEditing] = React.useState(false);
 
   const onSaved = (updated) => {
-    setData(updated);
-    setEditing(false);
-    // La marca también viaja a la sesión: App reacciona al cambio y retiñe el panel al momento.
+    const prevTypeKey = authLib.getCompany()?.company_type_key ?? null;
+    // La marca y el tipo también viajan a la sesión: App reacciona al cambio (retinte del
+    // acento) y la terminología lee el tipo desde aquí.
     authLib.setCompany({
       ...authLib.getCompany(),
       name: updated.name,
       icon: updated.icon,
       brand_primary: updated.brand_primary,
       brand_secondary: updated.brand_secondary,
+      company_type_id: updated.company_type_id,
+      company_type_key: updated.company_type_key,
+      company_type_name: updated.company_type_name,
     });
+    // Cambiar el tipo re-etiqueta menú y vistas: recarga completa, el mismo patrón que cambiar
+    // de compañía, para que ninguna pantalla conserve la terminología anterior.
+    if ((updated.company_type_key ?? null) !== prevTypeKey) {
+      window.location.reload();
+      return;
+    }
+    setData(updated);
+    setEditing(false);
     reload();
   };
 
@@ -161,8 +173,11 @@ export function CompanyProfile() {
 // como `icon` junto al resto de campos.
 function CompanyEditModal({ company, onClose, onSaved }) {
   const uploaderRef = React.useRef(null);
+  // Catálogo de tipos de negocio: personaliza terminología y vistas del panel.
+  const { data: companyTypes } = useResource(api.companyTypes, [], []);
   const [form, setForm] = React.useState(() => ({
     name: company.name || '',
+    company_type_id: company.company_type_id ? String(company.company_type_id) : '',
     identification: company.identification || '',
     description: company.description || '',
     address: company.address || '',
@@ -186,6 +201,7 @@ function CompanyEditModal({ company, onClose, onSaved }) {
     try {
       const payload = {
         name,
+        company_type_id: form.company_type_id ? Number(form.company_type_id) : null,
         identification: form.identification.trim(),
         description: form.description.trim(),
         address: form.address.trim(),
@@ -216,6 +232,12 @@ function CompanyEditModal({ company, onClose, onSaved }) {
           value={company.icon}
           hint="Logo de la empresa · JPG, PNG o WEBP. Recorta o gira la imagen; se subirá al guardar." />
         <Input label="Nombre comercial" value={form.name} onChange={(e) => set('name', e.target.value)} />
+        <Select label="Tipo de empresa" icon="fas fa-shapes"
+          hint="Ajusta los nombres del menú y las vistas al negocio (carta, catálogo, ingresos…)."
+          value={form.company_type_id}
+          onChange={(e) => set('company_type_id', e.target.value)}
+          options={[{ value: '', label: 'Sin definir' },
+            ...(companyTypes || []).map((ct) => ({ value: String(ct.id), label: ct.name }))]} />
         <div className={s.formGrid}>
           <Input label="Identificación" value={form.identification} onChange={(e) => set('identification', e.target.value)} />
           <Input label="Teléfono" value={form.phone} onChange={(e) => set('phone', e.target.value)} />

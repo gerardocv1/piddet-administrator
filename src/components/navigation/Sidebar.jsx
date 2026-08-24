@@ -5,6 +5,7 @@ import { HOME_ITEM, POS_ITEM, MODULE_GROUPS, canAccess } from '../../lib/permiss
 import { usePermissions } from '../../lib/permissions/usePermissions.js';
 import { useFunctionalities } from '../../lib/permissions/useFunctionalities.js';
 import { useInstallPrompt } from '../../lib/pwa.js';
+import { moduleTerm, routeTerm } from '../../lib/terms.js';
 
 const initials = (s = '') => s.split(' ').filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
 
@@ -28,7 +29,7 @@ function NavGroup({ item }) {
       <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open}
         className={[styles.link, styles.groupBtn, childActive ? styles.parentActive : ''].filter(Boolean).join(' ')}>
         <i className={`${item.icon} ${styles.icon}`} />
-        <span className={styles.label}>{item.label}</span>
+        <span className={styles.label}>{moduleTerm(item.label)}</span>
         <i className={`fas fa-chevron-down ${styles.groupChev} ${open ? styles.open : ''}`} />
       </button>
       {open && (
@@ -37,7 +38,7 @@ function NavGroup({ item }) {
             <NavLink key={c.to} to={c.to}
               className={[styles.sublink, c === activeChild ? styles.active : ''].filter(Boolean).join(' ')}>
               <i className={`${c.icon} ${styles.icon}`} />
-              <span className={styles.label}>{c.label}</span>
+              <span className={styles.label}>{routeTerm(c.to, c.label)}</span>
             </NavLink>
           ))}
         </div>
@@ -148,7 +149,7 @@ export function Sidebar({ onLogout, company, companies = [], onSwitchCompany, on
                 <NavLink key={n.to} to={n.to}
                   className={({ isActive }) => [styles.link, isActive ? styles.active : ''].filter(Boolean).join(' ')}>
                   <i className={`${n.icon} ${styles.icon}`} />
-                  <span className={styles.label}>{n.label}</span>
+                  <span className={styles.label}>{routeTerm(n.to, n.label)}</span>
                   {n.badge != null && <span className={styles.badge}>{n.badge}</span>}
                 </NavLink>
               )

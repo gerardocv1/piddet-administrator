@@ -5,6 +5,7 @@ import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { usePermissions } from '../lib/permissions/usePermissions.js';
 import { todayIso } from '../lib/orderLabels.js';
+import { phrase } from '../lib/terms.js';
 import s from './screens.module.css';
 import t from './SalesReport.module.css';
 
@@ -188,7 +189,7 @@ export function SalesReport() {
           </div>
 
           <Card>
-            <Card.Header title="Ventas por día" />
+            <Card.Header title={phrase('Ventas por día')} />
             <Card.Body>
               <SalesByTypeChart daily={daily} loading={loading} />
             </Card.Body>
