@@ -46,6 +46,16 @@ const META = {
   '/sales-report': { title: 'Reporte de ventas', crumb: 'Ventas' },
 };
 
+// Flujos a pantalla completa con su propia barra fija de acciones (Continuar / Registrar…):
+// ahí el dock estorba —tapaba esos botones— y la navegación durante el flujo es del propio
+// asistente (Atrás/Cancelar), así que en estas rutas el dock no se pinta.
+const FLOW_ROUTES = [
+  /^\/expenses\/quick$/,
+  /^\/reservations\/new$/,
+  /^\/shifts\/[^/]+\/close$/,
+  /^\/gym\/members\/[^/]+\/checkin$/,
+];
+
 /** Chrome de la app autenticada: menú lateral + barra superior + contenido (Outlet). */
 export function Layout({ theme, onToggleTheme, onLogout }) {
   const location = useLocation();
@@ -110,8 +120,11 @@ export function Layout({ theme, onToggleTheme, onLogout }) {
           <LayoutTopbar meta={meta} isMobile={isMobile} user={user} onLogout={onLogout}
             theme={theme} onToggleTheme={onToggleTheme} />
           <main className={styles.main}><Outlet /></main>
-          {/* Navegación móvil: dock flotante (reemplaza a la hamburguesa); «Más» abre el cajón. */}
-          <MobileDock onMore={() => setNavOpen(true)} moreOpen={navOpen} />
+          {/* Navegación móvil (reemplaza a la hamburguesa); «Más» abre el cajón. En un flujo a
+              pantalla completa no se pinta: su barra fija de acciones ocupa ese borde. */}
+          {!FLOW_ROUTES.some((re) => re.test(location.pathname)) && (
+            <MobileDock onMore={() => setNavOpen(true)} moreOpen={navOpen} />
+          )}
         </div>
       </PageTitleProvider>
     </div>

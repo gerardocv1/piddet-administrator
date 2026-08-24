@@ -112,14 +112,17 @@ FontAwesome 6 por CDN (declarado en `index.html`). Se pasan como **string de cla
 
 ## Móvil: la barra de navegación deja pasar el contenido
 
-`MobileDock` es una barra inferior a lo ancho, **sin superficie propia**: su fondo es un degradado
-que va de transparente (arriba) al fondo de la app (abajo). El contenido pasa por debajo y se
-desvanece detrás en vez de chocar contra un borde; de la mitad hacia abajo el degradado ya es
-opaco, así que los iconos nunca se leen sobre el contenido. Cada destino es **solo icono** (el
-nombre lo da `aria-label`) y el activo únicamente cambia de tinte, sin píldora de fondo. Son seis:
-Inicio, cuatro módulos y «Más», que abre el cajón con el menú completo.
+`MobileDock` es una barra inferior a lo ancho, **sin superficie propia**: arriba lleva un fade
+corto por el que el contenido pasa y se desvanece, rematado por un **filete** que divide el body
+del menú; de ahí hacia abajo la barra es opaca. Cada destino es **icono con su nombre pequeño
+debajo** y el activo únicamente cambia de tinte, sin píldora de fondo. Son seis: Inicio, cuatro
+módulos y «Más», que abre el cajón con el menú completo.
 
-`Layout` reserva abajo solo el alto útil de la barra (la fila de iconos), no el del degradado.
+`Layout` reserva abajo el alto útil de la barra (iconos + nombres), no el del fade. En los
+**flujos a pantalla completa** con su propia barra fija de acciones (registrar gasto, nueva
+reserva, cerrar turno, tomar medidas) el dock **no se pinta**: tapaba los botones
+Continuar/Registrar, y durante el flujo la navegación es del propio asistente (la lista vive en
+`FLOW_ROUTES`, en `Layout.jsx`).
 
 ## Móvil: la cabecera vive en el Topbar
 
