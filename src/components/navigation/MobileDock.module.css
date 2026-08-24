@@ -1,5 +1,8 @@
-/* Dock flotante móvil — píldora translúcida con blur que flota sobre el contenido.
-   Solo existe en móvil; en escritorio la navegación es el Sidebar. Va por debajo del cajón
+/* Dock móvil — barra inferior a lo ancho, sin superficie propia: el fondo es un degradado que
+   va de transparente al fondo de la app, de modo que el contenido pasa por debajo y se
+   desvanece detrás en vez de chocar contra un borde. Solo existe en móvil; en escritorio la
+   navegación es el Sidebar. Los destinos son solo icono, como antes: lo que cambia respecto a la
+   píldora flotante anterior es el tamaño, la posición y el estilo. Va por debajo del cajón
    lateral (z 55/60) y de los modales (1050): cualquier flotante lo cubre. */
 
 .dock {
@@ -9,87 +12,64 @@
 @media (max-width: 860px) {
   .dock {
     position: fixed;
-    left: 50%;
-    bottom: calc(0.75rem + env(safe-area-inset-bottom));
-    transform: translateX(-50%);
+    left: 0;
+    right: 0;
+    bottom: 0;
     z-index: 45;
     display: flex;
-    align-items: center;
-    gap: 2px;
-    padding: 5px;
-    border-radius: var(--radius-pill);
-    background: var(--surface-card);
-    /* Flota sobre el contenido: necesita leerse SIEMPRE, también sobre fondos claros. Un
-       hairline lo recorta del fondo y la sombra en dos capas (contacto + halo difuso) le da
-       altura real, en vez de la sombra plana que lo dejaba casi invisible. */
-    border: 1px solid var(--border-color);
-    box-shadow:
-      0 2px 6px rgba(23, 43, 77, 0.10),
-      0 12px 32px -6px rgba(23, 43, 77, 0.28);
-    max-width: calc(100vw - 1.5rem);
+    align-items: flex-end;
+    justify-content: space-around;
+    gap: 0;
+    /* El aire de arriba es parte del degradado: ahí el contenido todavía se ve, difuminándose. */
+    padding: 1.5rem max(0.35rem, env(safe-area-inset-left)) calc(0.3rem + env(safe-area-inset-bottom)) max(0.35rem, env(safe-area-inset-right));
+    /* Los tramos llevan el tinte del fondo (no la palabra `transparent`, que interpola hacia
+       negro y ensucia el degradado en algunos navegadores). */
+    background: linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--bg-body) 2%, transparent) 0%,
+      color-mix(in srgb, var(--bg-body) 65%, transparent) 20%,
+      var(--bg-body) 34%     /* de aquí abajo, opaco: los rótulos nunca se leen sobre contenido */
+    );
+    pointer-events: none;   /* el degradado no intercepta toques; los destinos sí (ver .item) */
   }
 }
 
-@supports (backdrop-filter: blur(14px)) {
-  .dock {
-    /* Bastante opaco para conservar el contraste; el blur aporta el matiz translúcido. */
-    background: color-mix(in srgb, var(--surface-card) 88%, transparent);
-    backdrop-filter: blur(16px) saturate(1.6);
-    -webkit-backdrop-filter: blur(16px) saturate(1.6);
-  }
-}
-
-/* En oscuro la sombra no separa (todo es oscuro): el borde toma el relevo y la superficie
-   sube un punto respecto al fondo. */
-:global([data-theme='dark']) .dock {
-  border-color: var(--gray-300);
-  box-shadow:
-    0 2px 6px rgba(0, 0, 0, 0.45),
-    0 12px 32px -6px rgba(0, 0, 0, 0.6);
-}
-
-/* Todos los destinos son cuadrados táctiles de solo icono; el activo solo cambia de tinte. */
+/* Destino: solo icono, repartido a lo ancho. Sin píldora ni superficie — el activo únicamente
+   cambia de tinte, como en las barras nativas. El área de toque es la celda completa. */
 .item {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex: 1 1 0;
+  min-width: 0;
   height: 44px;
-  width: 44px;
-  flex: 0 0 auto;
   padding: 0;
   border: 0;
-  border-radius: var(--radius-pill);
   background: transparent;
   color: var(--gray-500);
   font-family: var(--font-sans);
-  font-size: var(--text-sm);
-  font-weight: var(--fw-bold);
+  text-decoration: none;
   cursor: pointer;
-  transition: background 0.2s ease, color 0.2s ease;
+  pointer-events: auto;
+  transition: color 0.2s ease;
 }
 
 .item i {
-  font-size: 1.05rem;
+  font-size: 1.35rem;
   flex: 0 0 auto;
 }
 
 .active,
 .item.active {
-  background: var(--color-primary-100);
-  color: var(--color-primary-700);
+  color: var(--color-primary);
 }
 
-/* Teléfonos angostos: un punto más compacto para conservar los seis destinos. */
+/* Teléfonos angostos: un punto más compacto. */
 @media (max-width: 380px) {
-  .item {
-    width: 40px;
-    height: 40px;
-  }
-  .item i { font-size: 1rem; }
+  .item { height: 42px; }
+  .item i { font-size: 1.25rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .item {
-    transition: none;
-  }
+  .item { transition: none; }
 }

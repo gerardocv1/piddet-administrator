@@ -16,15 +16,16 @@ const DOCK_SLOTS = 4;
 const isUnder = (pathname, to) => pathname === to || pathname.startsWith(`${to}/`);
 
 /**
- * MobileDock — navegación principal en móvil: píldora flotante translúcida sobre el contenido
- * (línea nativa del catálogo visual). Reemplaza a la hamburguesa.
+ * MobileDock — navegación principal en móvil: barra inferior a lo ancho, sin superficie propia.
+ * El fondo es un degradado que va de transparente (arriba) al fondo de la app (abajo), así que
+ * el contenido **pasa por debajo** y se desvanece detrás de la barra en vez de chocar con un
+ * borde. Reemplaza a la hamburguesa.
  *
- * Lleva Inicio + los primeros módulos principales (los de Oferta y Operación) como iconos, y
- * «Más», que abre el cajón lateral con el menú completo. De un módulo desplegable se toma su
- * icono y su etiqueta, y se navega a su primera ruta accesible; queda marcado activo mientras
- * se esté en cualquiera de sus pantallas. Todos los destinos son solo icono (el nombre lo da
- * `aria-label`); el activo se distingue por el tinte. Respeta permisos y funcionalidades igual
- * que el Sidebar.
+ * Lleva Inicio + los primeros módulos principales (los de Oferta y Operación), y «Más», que abre
+ * el cajón lateral con el menú completo. De un módulo desplegable se toma su icono y su etiqueta,
+ * y se navega a su primera ruta accesible; queda marcado activo mientras se esté en cualquiera de
+ * sus pantallas. Cada destino es solo icono (el nombre lo da `aria-label`) y el activo se
+ * distingue por el tinte. Respeta permisos y funcionalidades igual que el Sidebar.
  */
 export function MobileDock({ onMore, moreOpen = false }) {
   const { pathname } = useLocation();
