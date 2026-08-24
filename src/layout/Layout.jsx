@@ -7,6 +7,7 @@ import { ADMIN_BASE } from '../lib/adminBase.js';
 import { useIsMobile } from '../lib/useIsMobile.js';
 import { usePullToRefresh } from '../lib/usePullToRefresh.js';
 import { PageTitleProvider, usePageTitle } from '../lib/pageTitle.jsx';
+import { moduleTerm, titleTerm } from '../lib/terms.js';
 import styles from './Layout.module.css';
 
 // Normaliza el usuario de la sesión (formato backend o mock) a lo que pinta el Topbar.
@@ -116,15 +117,21 @@ export function Layout({ theme, onToggleTheme, onLogout }) {
   // (la propia pantalla muestra el nombre del menú en su cabecera).
   const sectionOf = (path) => {
     for (const base of ['/reservations', '/rentable-units', '/gym/plans', '/gym/members', '/gym/subscriptions', '/gym/measurements', '/expenses', '/shifts', '/invoices', '/products', '/menus']) {
-      if (path === base || path.startsWith(`${base}/`)) return META[base] || null;
+      if (path === base || path.startsWith(`${base}/`)) return META[base] ? base : null;
     }
     return null;
   };
-  const meta = META[location.pathname]
-    || sectionOf(location.pathname)
+  // La ruta base con entrada en META (si la hay) permite renombrar título y miga según el tipo
+  // de compañía (Ventas → Ingresos en un gimnasio, etc.).
+  const metaBase = META[location.pathname] ? location.pathname : sectionOf(location.pathname);
+  const rawMeta = (metaBase && META[metaBase])
     || (/^\/menus\/[^/]+$/.test(location.pathname) ? { title: 'Menú', crumb: 'Oferta' } : null)
     || (/^\/products\/[^/]+$/.test(location.pathname) ? { title: 'Producto', crumb: 'Oferta' } : null)
     || { title: 'Piddet', crumb: '' };
+  const meta = {
+    title: metaBase ? titleTerm(metaBase, rawMeta.title) : rawMeta.title,
+    crumb: moduleTerm(rawMeta.crumb),
+  };
 
   // «Más» en móvil es la pantalla /more (menú completo con su propio logo arriba): ahí la barra
   // superior sobra. En escritorio /more ni siquiera se pinta (la pantalla redirige a Inicio).

@@ -6,6 +6,7 @@ import { usePermissions } from '../lib/permissions/usePermissions.js';
 import { useFunctionalities } from '../lib/permissions/useFunctionalities.js';
 import { api } from '../lib/api.js';
 import { shiftMoney } from '../lib/shiftLabels.js';
+import { phrase } from '../lib/terms.js';
 import s from './Dashboard.module.css';
 
 const PERIOD_OPTIONS = [
@@ -30,7 +31,7 @@ const money = (v) => {
 // con la cifra que se mira de un vistazo (el total y, en ventas, el ticket promedio) y el resto
 // del detalle se sigue viendo en escritorio.
 const buildSalesKpis = ({ totals, deltas } = {}) => (totals ? [
-  { label: 'Ventas totales', value: totals.total_formatted, ...kpiDelta(deltas?.total) },
+  { label: phrase('Ventas totales'), value: totals.total_formatted, ...kpiDelta(deltas?.total) },
   { label: 'Productos', value: totals.products_formatted, ...kpiDelta(deltas?.products), desktopOnly: true },
   { label: 'Servicios', value: totals.services_formatted, ...kpiDelta(deltas?.services), desktopOnly: true },
   { label: 'Ticket promedio', value: totals.avg_ticket_formatted, ...kpiDelta(deltas?.avg_ticket) },
@@ -282,7 +283,7 @@ export function Dashboard() {
 
       {canSales && (
         <ReportCard
-          title="Ventas"
+          title={phrase('Ventas')}
           kpis={buildSalesKpis(salesKpisRes.data ?? {})}
           kpisLoading={salesKpisRes.loading}
           cmp={salesCmpRes.data}

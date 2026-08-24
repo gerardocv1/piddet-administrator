@@ -71,6 +71,10 @@ Si agregas un endpoint, agrega también su mock. Detalle en `specs/tech.md`.
   `/companies/{company}/functionalities` y se leen con `useFunctionalities().has(name)`. Se
   administran desde el perfil de empresa (`/company` → *Funcionalidades*), con el permiso
   `company-edit-functionalities`.
+- **Terminología por tipo de compañía:** las etiquetas del menú y los títulos visibles no se
+  escriben directo: pasan por `src/lib/terms.js` (`moduleTerm`/`routeTerm`/`titleTerm`/`phrase`),
+  que renombra según el `company_type_key` de la compañía activa (restaurant, gym, store,
+  lodging). Al agregar un módulo o título nuevo, decide si algún tipo lo renombra allí.
 - **Alcance `-own`:** varios módulos tienen el par `X` / `X-own`. El filtro por usuario **lo
   aplica el backend** (un recurso ajeno responde 404); el panel solo oculta el filtro por usuario.
 - **Nada se borra:** la mesa se desactiva, la factura se cancela, el gasto se anula, el turno se

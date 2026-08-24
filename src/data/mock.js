@@ -440,12 +440,22 @@ const mockPermissions = {
 };
 
 // Empresa (tenant) activa y empresas disponibles para el usuario (SaaS multi-tenant).
+// Tipos de negocio de la plataforma (catálogo /company-types). La `key` es la que usa el panel
+// para personalizar terminología y vistas.
+export const mockCompanyTypes = [
+  { id: 1, key: 'restaurant', name: 'Restaurante', description: 'Restaurantes, cafés y bares: carta, mesas, cocina y ventas.' },
+  { id: 2, key: 'gym', name: 'Gimnasio', description: 'Gimnasios y centros deportivos: afiliados, suscripciones y catálogo de ítems.' },
+  { id: 3, key: 'store', name: 'Tienda', description: 'Tiendas y comercios: catálogo de productos, inventario y ventas.' },
+  { id: 4, key: 'lodging', name: 'Hospedaje', description: 'Hoteles, cabañas y glamping: unidades, reservas y servicios.' },
+];
+
 export const mockCompany = {
   id: 'pid-001', name: 'Grupo Sabor', username: 'grupo_sabor', legal_name: 'Grupo Sabor S.A.S', plan: 'Pro', tiendas: 4,
   identification: 'NIT 900.123.456-7',
   address: 'Cra. 43A #1-50', city: 'Medellín, Colombia', phone: '+57 300 123 4567',
   email: 'hola@gruposabor.co', website: 'www.gruposabor.co',
   brand_primary: 'forest', brand_secondary: 'gold',
+  company_type_id: 1, company_type_key: 'restaurant', company_type_name: 'Restaurante',
   stores_count: 4, menus_count: 5, items_count: 86, users_count: 12,
 };
 export const mockCompanies = [
@@ -4106,6 +4116,8 @@ export function resolveMock(rawPath, opts = {}) {
 
   // Empresas del usuario (selector del sidebar): como el backend, solo las activas.
   if (path === '/auth/me/companies') return mockCompanies.filter((c) => c.status !== 0);
+  // Catálogo de tipos de negocio.
+  if (path === '/company-types') return mockCompanyTypes;
   // Cambio de empresa activa: devuelve la elegida.
   if (path === '/auth/me/company') {
     const picked = mockCompanies.find((c) => String(c.id) === String(opts.body?.company_id));
@@ -4116,7 +4128,11 @@ export function resolveMock(rawPath, opts = {}) {
   if (profileMatch) {
     const picked = mockCompanies.find((c) => String(c.id) === String(profileMatch[1]));
     const profile = { ...mockCompany, ...(picked ? { id: picked.id, name: picked.name } : {}) };
-    return opts.method === 'PUT' ? { ...profile, ...(opts.body || {}) } : profile;
+    if (opts.method !== 'PUT') return profile;
+    const updated = { ...profile, ...(opts.body || {}) };
+    // Como el backend: el perfil resuelve key/nombre del tipo a partir del company_type_id.
+    const type = mockCompanyTypes.find((t) => Number(t.id) === Number(updated.company_type_id));
+    return { ...updated, company_type_key: type?.key ?? null, company_type_name: type?.name ?? null };
   }
 
   // Pre-check-in público (sin sesión): /public/checkin/{code}…
