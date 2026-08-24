@@ -48,6 +48,14 @@ El punto de partida de la copia espejo quedó registrado en el README del catál
 origen en este repo). Si los repos se desvían, **gana el catálogo en lo visual** y gana este
 repo en lo funcional; la desviación se corrige portando en la dirección que corresponda.
 
+**Estado de la copia espejo:** sincronizada de punta a punta en el catálogo `6f96d8e` (barrido
+archivo por archivo de `tokens.css` y `src/components/`). Solo divergen a propósito el barril
+—curado allá, completo aquí— y `PageHeader.jsx`, que aquí publica su `onBack` al Topbar
+(`useSetPageBack`) y allá no, por ser un enganche de la app. Ese porteo fue en sentido
+contrario (este repo → catálogo): se había adelantado en la capa móvil (botones compactos,
+`FilterBar`, campos que siguen la escala de la interfaz, `StatStrip` con `desktopOnly` y el
+`PageHeader` sin marco).
+
 Último porteo aplicado (catálogo `212274d` → este repo): token `--shadow-header` y la sombra
 corta que el encabezado de la `Card` proyecta sobre su cuerpo (cada sección se lee aparte), más
 las fechas en ISO de la `FilterBar`.
