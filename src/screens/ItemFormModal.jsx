@@ -3,6 +3,7 @@ import { Button, Input, MoneyInput, Select, Switch, Textarea, Modal, CategoryCas
 import { api } from '../lib/api.js';
 import { SERVICE_ITEM_TYPE_ID } from '../lib/services/itemTypes.js';
 import { useFunctionalities } from '../lib/permissions/useFunctionalities.js';
+import { entityTerm, cap } from '../lib/terms.js';
 import s from './screens.module.css';
 
 // Modal de crear/editar un producto (item). Compartido por el listado (Products) y el detalle
@@ -12,6 +13,8 @@ export function ItemFormModal({ item, onClose, onSaved }) {
   const editing = !!item;
   const { has } = useFunctionalities();
   const { toast } = useToast();
+  // Terminología por tipo de compañía: el "producto" puede llamarse "ítem" o "servicio".
+  const prodT = entityTerm('product');
   const taxesOn = has('functionality_taxes');
   const reservationsOn = has('functionality_reservations');
 
@@ -81,15 +84,15 @@ export function ItemFormModal({ item, onClose, onSaved }) {
       if (editing) await api.updateItem(item.id, payload);
       else await api.createItem(payload);
       onSaved();
-      toast({ tone: 'success', title: editing ? 'Producto guardado' : 'Producto creado' });
+      toast({ tone: 'success', title: editing ? `${cap(prodT.one)} guardado` : `${cap(prodT.one)} creado` });
     } catch (e) {
-      setErr(e?.message || 'No se pudo guardar el producto.');
+      setErr(e?.message || `No se pudo guardar el ${prodT.one}.`);
     } finally { setSaving(false); }
   };
 
   return (
-    <Modal open title={editing ? 'Editar producto' : 'Nuevo producto'}
-      subtitle={editing ? item.name : 'Crea un producto del catálogo de la compañía'}
+    <Modal open title={editing ? `Editar ${prodT.one}` : `Nuevo ${prodT.one}`}
+      subtitle={editing ? item.name : `Crea un ${prodT.one} del catálogo de la compañía`}
       size="lg" onClose={onClose}
       footer={<>
         <Button variant="secondary" onClick={onClose}>Cancelar</Button>
@@ -108,7 +111,7 @@ export function ItemFormModal({ item, onClose, onSaved }) {
             onChange={(id) => set('item_category_id', id)}
           />
         )}
-        <Input label="Nombre del producto" icon="fas fa-burger" placeholder="Ej. Hamburguesa Doble"
+        <Input label={`Nombre del ${prodT.one}`} icon="fas fa-burger" placeholder="Ej. Hamburguesa Doble"
           value={form.name} onChange={(e) => set('name', e.target.value)} />
         <div className={s.formGrid}>
           <Input label="Código" icon="fas fa-barcode" placeholder="Opcional"
@@ -124,7 +127,7 @@ export function ItemFormModal({ item, onClose, onSaved }) {
           <Switch label="Disponible para reservas (se ofrece como servicio adicional al reservar hospedaje)"
             checked={form.reservable} onChange={(e) => set('reservable', e.target.checked)} />
         )}
-        <Textarea label="Descripción" placeholder="Describe el producto"
+        <Textarea label="Descripción" placeholder={`Describe el ${prodT.one}`}
           value={form.description} onChange={(e) => set('description', e.target.value)} />
         {err && <Alert tone="danger" onClose={() => setErr(null)}>{err}</Alert>}
       </div>

@@ -5,6 +5,7 @@ import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { useFunctionalities } from '../lib/permissions/useFunctionalities.js';
 import { ADMIN_BASE } from '../lib/adminBase.js';
+import { entityTerm, cap } from '../lib/terms.js';
 import s from './screens.module.css';
 import t from './MenuDetail.module.css';
 
@@ -17,6 +18,9 @@ export function MenuDetail() {
   const { menuId } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
+  // Terminología por tipo de compañía: "menú" puede ser "catálogo público"; "producto", "ítem" o "servicio".
+  const menuT = entityTerm('menu');
+  const prodT = entityTerm('product');
 
   const menuRes = useResource(React.useCallback(() => api.menu(menuId), [menuId]), null, [menuId]);
   const catsRes = useResource(React.useCallback(() => api.menuCategories(menuId), [menuId]), EMPTY_PAGE, [menuId]);
@@ -100,9 +104,9 @@ export function MenuDetail() {
       await api.deleteMenuItem(menuId, del.id);
       setDel(null);
       itemsRes.reload();
-      toast({ tone: 'neutral', title: 'Producto quitado del menú' });
+      toast({ tone: 'neutral', title: `${cap(prodT.one)} quitado del ${menuT.one}` });
     } catch (e) {
-      setActionError(e?.message || 'No se pudo quitar el producto del menú.');
+      setActionError(e?.message || `No se pudo quitar el ${prodT.one} del ${menuT.one}.`);
     } finally { setSaving(false); }
   };
 
@@ -115,10 +119,10 @@ export function MenuDetail() {
       menuRes.reload();
       toast({
         tone: activating ? 'success' : 'neutral',
-        title: activating ? 'Menú activado' : 'Menú desactivado',
+        title: activating ? `${cap(menuT.one)} activado` : `${cap(menuT.one)} desactivado`,
       });
     } catch (e) {
-      setActionError(e?.message || 'No se pudo cambiar el estado del menú.');
+      setActionError(e?.message || `No se pudo cambiar el estado del ${menuT.one}.`);
     } finally { setSaving(false); }
   };
 
@@ -130,7 +134,7 @@ export function MenuDetail() {
       setDelCat(null);
       catsRes.reload();
       itemsRes.reload();
-      toast({ tone: 'neutral', title: 'Categoría del menú eliminada' });
+      toast({ tone: 'neutral', title: `Categoría del ${menuT.one} eliminada` });
     } catch (e) {
       setActionError(e?.message || 'No se pudo eliminar la categoría.');
     } finally { setSaving(false); }
@@ -146,7 +150,7 @@ export function MenuDetail() {
   const activeCount = selectedCat != null ? (countByCat.get(selectedCat) || 0) : items.length;
 
   // Subtítulo del encabezado: descripción + resumen, separados por puntos.
-  const headerInfo = [menu?.description, plural(items.length, 'producto', 'productos'), plural(cats.length, 'categoría', 'categorías')]
+  const headerInfo = [menu?.description, plural(items.length, prodT.one, prodT.many), plural(cats.length, 'categoría', 'categorías')]
     .filter(Boolean).join(' · ');
 
   // Subcomponente: fila de producto. `handleProps` solo llega cuando el arrastre está activo
@@ -201,10 +205,10 @@ export function MenuDetail() {
     <div className={s.page}>
       {/* Encabezado: volver + nombre + descripción/resumen */}
       <div className={t.header}>
-        <IconButton icon="fas fa-arrow-left" variant="light" title="Volver a menús" onClick={() => navigate('/menus')} />
+        <IconButton icon="fas fa-arrow-left" variant="light" title={`Volver a ${menuT.many}`} onClick={() => navigate('/menus')} />
         <div className={t.headerText}>
           <div className={t.headerTitleLine}>
-            <h2 className={t.headerTitle}>{menu?.name || 'Menú'}</h2>
+            <h2 className={t.headerTitle}>{menu?.name || cap(menuT.one)}</h2>
             {menu && (
               <span className={`${t.badge} ${menu.is_active ? t.badgeOn : t.badgeOff}`}>
                 <i className={menu.is_active ? 'fas fa-circle-check' : 'fas fa-circle-pause'} />
@@ -226,15 +230,15 @@ export function MenuDetail() {
           </Button>
         )}
         <Button variant="outline-primary" size="sm" icon="fas fa-eye"
-          onClick={() => window.open(`${ADMIN_BASE}/menus/${menuId}/preview`, '_blank')}>Ver carta</Button>
+          onClick={() => window.open(`${ADMIN_BASE}/menus/${menuId}/preview`, '_blank')}>Ver {menuT.pub}</Button>
       </div>
 
       {!catsRes.loading && cats.length === 0 ? (
         <div className={t.empty}>
           <span className={t.emptyIcon} aria-hidden="true"><i className="fas fa-layer-group" /></span>
           <div className={t.emptyText}>
-            <h3 className={t.emptyTitle}>Este menú aún no tiene categorías</h3>
-            <p className={t.emptyDesc}>Crea la primera para empezar a asignar productos.</p>
+            <h3 className={t.emptyTitle}>Este {menuT.one} aún no tiene categorías</h3>
+            <p className={t.emptyDesc}>Crea la primera para empezar a asignar {prodT.many}.</p>
           </div>
           <Button variant="primary" size="sm" icon="fas fa-plus" onClick={() => setNewCat(true)}>Nueva categoría</Button>
         </div>
@@ -276,25 +280,25 @@ export function MenuDetail() {
               <div className={t.cardHead}>
                 <div className={t.cardHeadText}>
                   <h3 className={t.cardTitle}>{activeName}</h3>
-                  <p className={t.cardSub}>{plural(activeCount, 'producto', 'productos')}</p>
+                  <p className={t.cardSub}>{plural(activeCount, prodT.one, prodT.many)}</p>
                 </div>
                 <div className={t.controls}>
                   <Button variant="primary" size="sm" icon="fas fa-plus" disabled={cats.length === 0}
-                    onClick={() => setAdding(true)}>Agregar producto</Button>
+                    onClick={() => setAdding(true)}>Agregar {prodT.one}</Button>
                 </div>
               </div>
 
               <div className={t.cardBody}>
               {loading ? (
-                <Spinner center label="Cargando productos…" />
+                <Spinner center label={`Cargando ${prodT.many}…`} />
               ) : itemsRes.error ? (
-                <Alert tone="danger" title="No se pudo cargar los productos del menú">{itemsRes.error}</Alert>
+                <Alert tone="danger" title={`No se pudo cargar los ${prodT.many} del ${menuT.one}`}>{itemsRes.error}</Alert>
               ) : groups.every((g) => g.rows.length === 0) ? (
                 <div className={t.cardEmpty}>
                   <i className="fas fa-utensils" />
                   {selectedCat != null
-                    ? 'No hay productos en esta categoría.'
-                    : 'Este menú aún no tiene productos. Usa “Agregar producto”.'}
+                    ? `No hay ${prodT.many} en esta categoría.`
+                    : `Este ${menuT.one} aún no tiene ${prodT.many}. Usa “Agregar ${prodT.one}”.`}
                 </div>
               ) : (
                 groups.map((g) => (
@@ -341,7 +345,7 @@ export function MenuDetail() {
           onSaved={() => { setEditCat(null); catsRes.reload(); }} />
       )}
 
-      <Modal open={toggle} size="sm" title={menu?.is_active ? 'Desactivar menú' : 'Activar menú'}
+      <Modal open={toggle} size="sm" title={menu?.is_active ? `Desactivar ${menuT.one}` : `Activar ${menuT.one}`}
         onClose={() => setToggle(false)}
         footer={<>
           <Button variant="secondary" onClick={() => setToggle(false)}>Cancelar</Button>
@@ -353,17 +357,17 @@ export function MenuDetail() {
         </>}>
         {actionError && <Alert tone="danger" onClose={() => setActionError('')}>{actionError}</Alert>}
         {menu?.is_active
-          ? <>Al desactivar <strong>{menu?.name}</strong> dejará de mostrarse en la página pública de la empresa y su carta no podrá abrirse, ni siquiera con el enlace directo. Podrás volver a activarlo cuando quieras.</>
-          : <>Al activar <strong>{menu?.name}</strong> volverá a mostrarse en la página pública de la empresa y su carta será accesible.</>}
+          ? <>Al desactivar <strong>{menu?.name}</strong> dejará de mostrarse en la página pública de la empresa y su {menuT.pub} no podrá abrirse, ni siquiera con el enlace directo. Podrás volver a activarlo cuando quieras.</>
+          : <>Al activar <strong>{menu?.name}</strong> volverá a mostrarse en la página pública de la empresa y su {menuT.pub} será accesible.</>}
       </Modal>
 
-      <Modal open={!!del} size="sm" title="Quitar producto" onClose={() => setDel(null)}
+      <Modal open={!!del} size="sm" title={`Quitar ${prodT.one}`} onClose={() => setDel(null)}
         footer={<>
           <Button variant="secondary" onClick={() => setDel(null)}>Cancelar</Button>
           <Button variant="danger" icon="fas fa-trash" loading={saving} onClick={removeItem}>Quitar</Button>
         </>}>
         {actionError && <Alert tone="danger" onClose={() => setActionError('')}>{actionError}</Alert>}
-        ¿Quitar <strong>{del?.name}</strong> de este menú?
+        ¿Quitar <strong>{del?.name}</strong> de este {menuT.one}?
       </Modal>
 
       <Modal open={!!delCat} size="sm" title="Eliminar categoría" onClose={() => setDelCat(null)}
@@ -372,9 +376,9 @@ export function MenuDetail() {
           <Button variant="danger" icon="fas fa-trash" loading={saving} onClick={removeCat}>Eliminar</Button>
         </>}>
         {actionError && <Alert tone="danger" onClose={() => setActionError('')}>{actionError}</Alert>}
-        ¿Eliminar la categoría <strong>{delCat?.name}</strong> de este menú?
+        ¿Eliminar la categoría <strong>{delCat?.name}</strong> de este {menuT.one}?
         {(countByCat.get(delCat?.id) || 0) > 0 && (
-          <> Sus {countByCat.get(delCat?.id)} producto(s) dejarán de mostrarse en el menú.</>
+          <> Sus {countByCat.get(delCat?.id)} {prodT.one}(s) dejarán de mostrarse en el {menuT.one}.</>
         )}
       </Modal>
     </div>
@@ -385,6 +389,8 @@ export function MenuDetail() {
 function AddProductModal({ menuId, categories, defaultCat, onClose, onAdded }) {
   const { has } = useFunctionalities();
   const { toast } = useToast();
+  const menuT = entityTerm('menu');
+  const prodT = entityTerm('product');
   const menuPriceOn = has('functionality_menu_item_price');
   const [sel, setSel] = React.useState(null);
   const initialCat = defaultCat != null ? defaultCat : (categories[0] ? categories[0].id : '');
@@ -410,15 +416,15 @@ function AddProductModal({ menuId, categories, defaultCat, onClose, onAdded }) {
         ...(menuPriceOn ? { price: price.trim() ? Number(price) : null } : {}),
       });
       onAdded();
-      toast({ tone: 'success', title: 'Producto agregado al menú' });
+      toast({ tone: 'success', title: `${cap(prodT.one)} agregado al ${menuT.one}` });
     } catch (e) {
-      setErr(e?.message || 'No se pudo agregar el producto al menú.');
+      setErr(e?.message || `No se pudo agregar el ${prodT.one} al ${menuT.one}.`);
     } finally { setSaving(false); }
   };
 
   return (
-    <Modal open title="Agregar producto"
-      subtitle={menuPriceOn ? 'Busca un producto y asígnale categoría y precio' : 'Busca un producto y asígnale una categoría'}
+    <Modal open title={`Agregar ${prodT.one}`}
+      subtitle={menuPriceOn ? `Busca un ${prodT.one} y asígnale categoría y precio` : `Busca un ${prodT.one} y asígnale una categoría`}
       size="lg" onClose={onClose}
       footer={<>
         <Button variant="secondary" onClick={onClose}>Cancelar</Button>
@@ -426,7 +432,7 @@ function AddProductModal({ menuId, categories, defaultCat, onClose, onAdded }) {
       </>}>
       <div className={s.formCol}>
         <Autocomplete
-          label="Producto"
+          label={cap(prodT.one)}
           placeholder="Busca por nombre o SKU (mín. 3 letras)"
           minChars={3}
           fetcher={searchProducts}
@@ -440,14 +446,14 @@ function AddProductModal({ menuId, categories, defaultCat, onClose, onAdded }) {
               <span className={t.resultMeta}>{[p.sku, p.value_print].filter(Boolean).join(' · ')}</span>
             </>
           )}
-          noResultsText="No hay productos disponibles para agregar"
+          noResultsText={`No hay ${prodT.many} disponibles para agregar`}
         />
         <div className={s.formGrid}>
           <Select label="Categoría" value={catId} onChange={(e) => setCatId(e.target.value)}
             options={categories.map((c) => ({ value: String(c.id), label: c.name }))} />
           {menuPriceOn && (
             <MoneyInput label="Precio (opcional)" icon="fas fa-dollar-sign"
-              placeholder="Usar precio del producto" value={price} onChange={setPrice} />
+              placeholder={`Usar precio del ${prodT.one}`} value={price} onChange={setPrice} />
           )}
         </div>
         {err && <Alert tone="danger" onClose={() => setErr(null)}>{err}</Alert>}
@@ -461,6 +467,7 @@ function EditItemModal({ menuId, item, categories, onClose, onSaved }) {
   const navigate = useNavigate();
   const { has } = useFunctionalities();
   const { toast } = useToast();
+  const prodT = entityTerm('product');
   const menuPriceOn = has('functionality_menu_item_price');
   const [catId, setCatId] = React.useState(String(item.menu_category_id));
   const [price, setPrice] = React.useState('');
@@ -474,8 +481,8 @@ function EditItemModal({ menuId, item, categories, onClose, onSaved }) {
   const subtitle = (
     <span className={t.subtitleLink}>
       {item.name}
-      <button type="button" className={t.editProductBtn} onClick={goToProduct} title="Abrir la ficha del producto para editarlo">
-        <i className="fas fa-up-right-from-square" aria-hidden="true" /> Editar producto
+      <button type="button" className={t.editProductBtn} onClick={goToProduct} title={`Abrir la ficha del ${prodT.one} para editarlo`}>
+        <i className="fas fa-up-right-from-square" aria-hidden="true" /> Editar {prodT.one}
       </button>
     </span>
   );
@@ -490,14 +497,14 @@ function EditItemModal({ menuId, item, categories, onClose, onSaved }) {
         ...(menuPriceOn ? { price: price.trim() ? Number(price) : null } : {}),
       });
       onSaved();
-      toast({ tone: 'success', title: 'Producto actualizado' });
+      toast({ tone: 'success', title: `${cap(prodT.one)} actualizado` });
     } catch (e) {
-      setErr(e?.message || 'No se pudo actualizar el producto.');
+      setErr(e?.message || `No se pudo actualizar el ${prodT.one}.`);
     } finally { setSaving(false); }
   };
 
   return (
-    <Modal open title="Editar producto" subtitle={subtitle} onClose={onClose}
+    <Modal open title={`Editar ${prodT.one}`} subtitle={subtitle} onClose={onClose}
       footer={<>
         <Button variant="secondary" onClick={onClose}>Cancelar</Button>
         <Button variant="primary" loading={saving} onClick={submit}>Guardar</Button>
@@ -507,7 +514,7 @@ function EditItemModal({ menuId, item, categories, onClose, onSaved }) {
           options={categories.map((c) => ({ value: String(c.id), label: c.name }))} />
         {menuPriceOn && (
           <MoneyInput label="Precio (opcional)" icon="fas fa-dollar-sign"
-            placeholder={`Actual: ${fmtPrice(item.price)} · vacío = precio del producto`}
+            placeholder={`Actual: ${fmtPrice(item.price)} · vacío = precio del ${prodT.one}`}
             value={price} onChange={setPrice} />
         )}
         {err && <Alert tone="danger" onClose={() => setErr(null)}>{err}</Alert>}
@@ -520,6 +527,8 @@ function EditItemModal({ menuId, item, categories, onClose, onSaved }) {
 function CategoryModal({ menuId, category, onClose, onSaved }) {
   const editing = !!category;
   const { toast } = useToast();
+  const menuT = entityTerm('menu');
+  const prodT = entityTerm('product');
   const [name, setName] = React.useState(category?.name || '');
   const [description, setDescription] = React.useState(category?.description || '');
   const [saving, setSaving] = React.useState(false);
@@ -534,7 +543,7 @@ function CategoryModal({ menuId, category, onClose, onSaved }) {
       if (editing) await api.updateMenuCategory(menuId, category.id, { name: n, description });
       else await api.createMenuCategory(menuId, { name: n, description });
       onSaved();
-      toast({ tone: 'success', title: editing ? 'Categoría del menú actualizada' : 'Categoría del menú creada' });
+      toast({ tone: 'success', title: editing ? `Categoría del ${menuT.one} actualizada` : `Categoría del ${menuT.one} creada` });
     } catch (e) {
       setErr(e?.message || 'No se pudo guardar la categoría.');
     } finally { setSaving(false); }
@@ -542,7 +551,7 @@ function CategoryModal({ menuId, category, onClose, onSaved }) {
 
   return (
     <Modal open title={editing ? 'Editar categoría' : 'Nueva categoría'}
-      subtitle="Las categorías pertenecen a este menú y definen cómo se agrupan sus productos" onClose={onClose}
+      subtitle={`Las categorías pertenecen a este ${menuT.one} y definen cómo se agrupan sus ${prodT.many}`} onClose={onClose}
       footer={<>
         <Button variant="secondary" onClick={onClose}>Cancelar</Button>
         <Button variant="primary" loading={saving} onClick={submit}>Guardar</Button>

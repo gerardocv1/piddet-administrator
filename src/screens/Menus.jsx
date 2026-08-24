@@ -6,6 +6,7 @@ import { auth } from '../lib/auth/index.js';
 import { useResource } from '../lib/useResource.js';
 import { slugifyUsername } from '../lib/slug.js';
 import { ADMIN_BASE } from '../lib/adminBase.js';
+import { entityTerm, cap } from '../lib/terms.js';
 import s from './screens.module.css';
 import t from './Menus.module.css';
 
@@ -14,6 +15,10 @@ const EMPTY = { items: [], pagination: null };
 export function Menus() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  // Terminología por tipo de compañía: aquí el "menú" puede llamarse "catálogo público"
+  // (gimnasio/tienda/hospedaje) y el "producto", "ítem" o "servicio".
+  const menuT = entityTerm('menu');
+  const prodT = entityTerm('product');
   const [page, setPage] = React.useState(1);
   const [q, setQ] = React.useState('');
   const [search, setSearch] = React.useState('');
@@ -75,9 +80,9 @@ export function Menus() {
       else await api.createMenu({ name, username, description: form.description });
       setForm(null);
       reload();
-      toast({ tone: 'success', title: form.id ? 'Menú actualizado' : 'Menú creado' });
+      toast({ tone: 'success', title: form.id ? `${cap(menuT.one)} actualizado` : `${cap(menuT.one)} creado` });
     } catch (e) {
-      setActionError(e?.message || 'No se pudo guardar el menú.');
+      setActionError(e?.message || `No se pudo guardar el ${menuT.one}.`);
     } finally { setSaving(false); }
   };
 
@@ -87,9 +92,9 @@ export function Menus() {
       await api.deleteMenu(del.id);
       setDel(null);
       reload();
-      toast({ tone: 'neutral', title: 'Menú eliminado' });
+      toast({ tone: 'neutral', title: `${cap(menuT.one)} eliminado` });
     } catch (e) {
-      setActionError(e?.message || 'No se pudo eliminar el menú.');
+      setActionError(e?.message || `No se pudo eliminar el ${menuT.one}.`);
     } finally { setSaving(false); }
   };
 
@@ -102,10 +107,10 @@ export function Menus() {
       reload();
       toast({
         tone: activating ? 'success' : 'neutral',
-        title: activating ? 'Menú activado' : 'Menú desactivado',
+        title: activating ? `${cap(menuT.one)} activado` : `${cap(menuT.one)} desactivado`,
       });
     } catch (e) {
-      setActionError(e?.message || 'No se pudo cambiar el estado del menú.');
+      setActionError(e?.message || `No se pudo cambiar el estado del ${menuT.one}.`);
     } finally { setSaving(false); }
   };
 
@@ -114,27 +119,27 @@ export function Menus() {
       <div className={s.toolbar}>
         <div className={t.search}>
           <i className="fas fa-search" />
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar menú" />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={`Buscar ${menuT.one}`} />
         </div>
         <div className={s.spacer} />
         <RefreshButton loading={loading} onClick={reload} />
-        <Button variant="primary" size="sm" icon="fas fa-plus" onClick={openNew}>Nuevo menú</Button>
+        <Button variant="primary" size="sm" icon="fas fa-plus" onClick={openNew}>Nuevo {menuT.one}</Button>
       </div>
 
       {loading ? (
-        <Spinner center label="Cargando menús…" />
+        <Spinner center label={`Cargando ${menuT.many}…`} />
       ) : error ? (
-        <Alert tone="danger" title="No se pudo cargar los menús">{error}</Alert>
+        <Alert tone="danger" title={`No se pudo cargar los ${menuT.many}`}>{error}</Alert>
       ) : menus.length === 0 ? (
         <div className={t.empty}>
           <i className="fas fa-book-open" />
-          {search ? 'No hay menús que coincidan con la búsqueda.' : 'Aún no has creado menús.'}
+          {search ? `No hay ${menuT.many} que coincidan con la búsqueda.` : `Aún no has creado ${menuT.many}.`}
         </div>
       ) : (
         <div className={t.tableCard}>
           <div className={`${t.row} ${t.headRow}`}>
-            <span>Menú</span>
-            <span className={t.colNum}>Productos</span>
+            <span>{cap(menuT.one)}</span>
+            <span className={t.colNum}>{cap(prodT.many)}</span>
             <span className={t.colActions} />
           </div>
           {menus.map((m) => (
@@ -157,7 +162,7 @@ export function Menus() {
               <span className={t.colNum}>
                 <span className={t.count}>
                   <i className="fas fa-burger" />
-                  {m.items_count ?? 0} {m.items_count === 1 ? 'producto' : 'productos'}
+                  {m.items_count ?? 0} {m.items_count === 1 ? prodT.one : prodT.many}
                 </span>
               </span>
               {/* stopPropagation evita que las acciones disparen la navegación de la fila. */}
@@ -166,8 +171,8 @@ export function Menus() {
                   trigger={<IconButton icon="fas fa-ellipsis-vertical" variant="light" size="sm" title="Acciones" />}
                   items={[
                     { label: 'Administrar', icon: 'fas fa-sliders', onClick: () => navigate(`/menus/${m.id}`) },
-                    { label: 'Generar menú (carta)', icon: 'fas fa-eye', onClick: () => window.open(`${ADMIN_BASE}/menus/${m.id}/preview`, '_blank') },
-                    { label: 'Ver carta pública', icon: 'fas fa-share-nodes', onClick: () => window.open(publicUrl(m.username), '_blank') },
+                    { label: menuT.pub === menuT.one ? `Generar ${menuT.one}` : `Generar ${menuT.one} (${menuT.pub})`, icon: 'fas fa-eye', onClick: () => window.open(`${ADMIN_BASE}/menus/${m.id}/preview`, '_blank') },
+                    { label: `Ver ${menuT.pubFull}`, icon: 'fas fa-share-nodes', onClick: () => window.open(publicUrl(m.username), '_blank') },
                     { label: 'Copiar enlace público', icon: 'fas fa-link', onClick: () => copyPublicUrl(m) },
                     {
                       label: m.is_active ? 'Desactivar' : 'Activar',
@@ -189,8 +194,8 @@ export function Menus() {
       )}
 
       {/* Crear / editar menú */}
-      <Modal open={!!form} title={form?.id ? 'Editar menú' : 'Nuevo menú'}
-        subtitle={form?.id ? 'Actualiza los datos del menú' : 'Crea un menú para un momento o aplicación'}
+      <Modal open={!!form} title={form?.id ? `Editar ${menuT.one}` : `Nuevo ${menuT.one}`}
+        subtitle={form?.id ? `Actualiza los datos del ${menuT.one}` : `Crea un ${menuT.one} para un momento o aplicación`}
         onClose={() => setForm(null)}
         footer={<>
           <Button variant="secondary" onClick={() => setForm(null)}>Cancelar</Button>
@@ -199,11 +204,11 @@ export function Menus() {
         {form && (
           <div className={s.formCol}>
             {errorBlock}
-            <Input label="Nombre del menú" icon="fas fa-book-open" placeholder="Ej. Carta principal"
+            <Input label={`Nombre del ${menuT.one}`} icon="fas fa-book-open" placeholder={`Ej. ${menuT.sample}`}
               value={form.name} onChange={onNameChange} />
             <Input label="Identificador (URL)" icon="fas fa-link" placeholder="Ej. carta_principal"
               value={form.username} onChange={onUsernameChange}
-              hint={form.username ? `Carta pública: ${publicUrl(form.username)}` : 'Se usará en la URL pública del menú; se genera del nombre.'} />
+              hint={form.username ? `${cap(menuT.pubFull)}: ${publicUrl(form.username)}` : `Se usará en la URL pública del ${menuT.one}; se genera del nombre.`} />
             {form.username && (
               <Button variant="secondary" size="sm" icon="fas fa-copy"
                 onClick={() => copyPublicUrl(form)}>Copiar enlace público</Button>
@@ -215,7 +220,7 @@ export function Menus() {
       </Modal>
 
       {/* Activar / desactivar menú */}
-      <Modal open={!!toggle} size="sm" title={toggle?.is_active ? 'Desactivar menú' : 'Activar menú'}
+      <Modal open={!!toggle} size="sm" title={toggle?.is_active ? `Desactivar ${menuT.one}` : `Activar ${menuT.one}`}
         onClose={() => setToggle(null)}
         footer={<>
           <Button variant="secondary" onClick={() => setToggle(null)}>Cancelar</Button>
@@ -227,12 +232,12 @@ export function Menus() {
         </>}>
         {errorBlock}
         {toggle?.is_active
-          ? <>Al desactivar <strong>{toggle?.name}</strong> dejará de mostrarse en la página pública de la empresa y su carta no podrá abrirse, ni siquiera con el enlace directo. Podrás volver a activarlo cuando quieras.</>
-          : <>Al activar <strong>{toggle?.name}</strong> volverá a mostrarse en la página pública de la empresa y su carta será accesible.</>}
+          ? <>Al desactivar <strong>{toggle?.name}</strong> dejará de mostrarse en la página pública de la empresa y su {menuT.pub} no podrá abrirse, ni siquiera con el enlace directo. Podrás volver a activarlo cuando quieras.</>
+          : <>Al activar <strong>{toggle?.name}</strong> volverá a mostrarse en la página pública de la empresa y su {menuT.pub} será accesible.</>}
       </Modal>
 
       {/* Eliminar menú */}
-      <Modal open={!!del} size="sm" title="Eliminar menú" onClose={() => setDel(null)}
+      <Modal open={!!del} size="sm" title={`Eliminar ${menuT.one}`} onClose={() => setDel(null)}
         footer={<>
           <Button variant="secondary" onClick={() => setDel(null)}>Cancelar</Button>
           <Button variant="danger" icon="fas fa-trash" loading={saving} onClick={remove}>Eliminar</Button>

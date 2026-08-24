@@ -5,7 +5,7 @@ import { usePermissions } from '../lib/permissions/usePermissions.js';
 import { useFunctionalities } from '../lib/permissions/useFunctionalities.js';
 import { useInstallPrompt } from '../lib/pwa.js';
 import { useIsMobile } from '../lib/useIsMobile.js';
-import { moduleTerm, routeTerm } from '../lib/terms.js';
+import { moduleTerm, routeTerm, routeIcon } from '../lib/terms.js';
 import styles from './MoreMenu.module.css';
 
 const initials = (s = '') => s.split(' ').filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
@@ -14,7 +14,7 @@ const initials = (s = '') => s.split(' ').filter(Boolean).slice(0, 2).map((w) =>
 function MenuRow({ item }) {
   return (
     <NavLink to={item.to} className={styles.row}>
-      <span className={styles.rowIcon}><i className={item.icon} aria-hidden="true" /></span>
+      <span className={styles.rowIcon}><i className={routeIcon(item.to, item.icon)} aria-hidden="true" /></span>
       <span className={styles.rowLabel}>{routeTerm(item.to, item.label)}</span>
       <i className={`fas fa-chevron-right ${styles.rowChev}`} aria-hidden="true" />
     </NavLink>

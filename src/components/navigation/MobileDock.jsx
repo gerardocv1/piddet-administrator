@@ -3,7 +3,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { HOME_ITEM, MODULE_GROUPS, canAccess } from '../../lib/permissions/modules.js';
 import { usePermissions } from '../../lib/permissions/usePermissions.js';
 import { useFunctionalities } from '../../lib/permissions/useFunctionalities.js';
-import { moduleTerm, routeTerm } from '../../lib/terms.js';
+import { moduleTerm, moduleIcon, routeTerm, routeIcon } from '../../lib/terms.js';
 import styles from './MobileDock.module.css';
 
 // Secciones cuyos módulos son "los principales" y merecen atajo en el dock; el resto del menú
@@ -133,8 +133,8 @@ export function MobileDock() {
       {items.map((m) => (
         <NavLink key={m.label} to={m.to} aria-label={m.isGroup ? moduleTerm(m.label) : routeTerm(m.to, m.label)}
           className={itemClass(m.routes.some((to) => isUnder(pathname, to)))}>
-          <i className={m.icon} aria-hidden="true" />
-          {/* Un módulo padre se renombra como módulo; un destino suelto (Mesas), como ruta. */}
+          {/* Un módulo padre se renombra (etiqueta e icono) como módulo; un destino suelto (Mesas), como ruta. */}
+          <i className={m.isGroup ? moduleIcon(m.label, m.icon) : routeIcon(m.to, m.icon)} aria-hidden="true" />
           <span className={styles.label}>{m.isGroup ? moduleTerm(m.label) : routeTerm(m.to, m.label)}</span>
         </NavLink>
       ))}

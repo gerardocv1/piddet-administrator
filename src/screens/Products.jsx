@@ -4,6 +4,7 @@ import { Button, IconButton, RefreshButton, Badge, Switch, Modal, Spinner, Pagin
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { ItemFormModal } from './ItemFormModal.jsx';
+import { entityTerm, cap } from '../lib/terms.js';
 import s from './screens.module.css';
 import t from './Products.module.css';
 
@@ -22,6 +23,8 @@ function ProductThumb({ src, alt }) {
 
 export function Products() {
   const navigate = useNavigate();
+  // Terminología por tipo de compañía: el "producto" puede llamarse "ítem" o "servicio".
+  const prodT = entityTerm('product');
   const { toast } = useToast();
   const [page, setPage] = React.useState(1);
   const [q, setQ] = React.useState('');
@@ -85,11 +88,11 @@ export function Products() {
     try {
       await api.setItemStatus(it.id, next);
       toast(next === STATUS_ACTIVE
-        ? { tone: 'success', title: 'Producto activado' }
-        : { tone: 'neutral', title: 'Producto desactivado' });
+        ? { tone: 'success', title: `${cap(prodT.one)} activado` }
+        : { tone: 'neutral', title: `${cap(prodT.one)} desactivado` });
     } catch (e) {
       setData({ ...data, items: items.map((x) => (x.id === it.id ? { ...x, item_status_id: it.item_status_id } : x)) });
-      setActionError(e?.message || 'No se pudo cambiar el estado del producto.');
+      setActionError(e?.message || `No se pudo cambiar el estado del ${prodT.one}.`);
     }
   };
 
@@ -100,9 +103,9 @@ export function Products() {
       await api.deleteItem(del.id);
       setDel(null);
       reload();
-      toast({ tone: 'neutral', title: 'Producto eliminado' });
+      toast({ tone: 'neutral', title: `${cap(prodT.one)} eliminado` });
     } catch (e) {
-      setActionError(e?.message || 'No se pudo eliminar el producto.');
+      setActionError(e?.message || `No se pudo eliminar el ${prodT.one}.`);
     } finally { setSaving(false); }
   };
 
@@ -119,7 +122,7 @@ export function Products() {
         searchable
         searchValue={q}
         onSearchChange={setQ}
-        searchPlaceholder="Buscar producto"
+        searchPlaceholder={`Buscar ${prodT.one}`}
         filters={filterDefs}
         values={filters}
         onChange={onFilters}
@@ -130,25 +133,25 @@ export function Products() {
             trigger={<IconButton icon="fas fa-ellipsis-vertical" variant="light" size="sm" title="Más acciones" />}
             items={[{ label: 'Categorías', icon: 'fas fa-tags', onClick: () => navigate('/product-categories') }]}
           />
-          <Button variant="primary" size="sm" icon="fas fa-plus" onClick={() => setForm({})}>Nuevo producto</Button>
+          <Button variant="primary" size="sm" icon="fas fa-plus" onClick={() => setForm({})}>Nuevo {prodT.one}</Button>
         </>}
       />
 
       {errorBlock}
 
       {loading ? (
-        <Spinner center label="Cargando productos…" />
+        <Spinner center label={`Cargando ${prodT.many}…`} />
       ) : error ? (
-        <Alert tone="danger" title="No se pudieron cargar los productos">{error}</Alert>
+        <Alert tone="danger" title={`No se pudieron cargar los ${prodT.many}`}>{error}</Alert>
       ) : items.length === 0 ? (
         <div className={t.empty}>
           <i className="fas fa-burger" />
-          {filtered ? 'No hay productos que coincidan con los filtros.' : 'Aún no has creado productos.'}
+          {filtered ? `No hay ${prodT.many} que coincidan con los filtros.` : `Aún no has creado ${prodT.many}.`}
         </div>
       ) : (
         <div className={t.tableCard}>
           <div className={`${t.row} ${t.headRow}`}>
-            <span>Producto</span>
+            <span>{cap(prodT.one)}</span>
             <span className={t.colCat}>Categoría</span>
             <span className={t.colNum}>Precio</span>
             <span className={t.colStatus}>Estado</span>
@@ -196,7 +199,7 @@ export function Products() {
           onClose={() => setForm(null)} onSaved={() => { setForm(null); reload(); }} />
       )}
 
-      <Modal open={!!del} size="sm" title="Eliminar producto" onClose={() => setDel(null)}
+      <Modal open={!!del} size="sm" title={`Eliminar ${prodT.one}`} onClose={() => setDel(null)}
         footer={<>
           <Button variant="secondary" onClick={() => setDel(null)}>Cancelar</Button>
           <Button variant="danger" icon="fas fa-trash" loading={saving} onClick={remove}>Eliminar</Button>

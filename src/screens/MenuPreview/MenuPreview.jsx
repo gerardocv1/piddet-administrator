@@ -4,6 +4,7 @@ import { Button, Select, Checkbox, Spinner } from '../../components';
 import { api } from '../../lib/api.js';
 import { auth } from '../../lib/auth/index.js';
 import { useResource } from '../../lib/useResource.js';
+import { entityTerm } from '../../lib/terms.js';
 import { LAYOUTS, DEFAULT_LAYOUT } from './layouts/index.js';
 import { CATEGORY_FRAMES, DEFAULT_FRAME } from './frames/index.js';
 import { ACCENT_PALETTES, BACKGROUNDS, DEFAULT_ACCENT, DEFAULT_BACKGROUND, buildTheme } from './palettes.js';
@@ -18,6 +19,9 @@ import s from './MenuPreview.module.css';
 // productos ya agrupados por categoría, con descripción e imagen resuelta. El render visual lo
 // delega al diseño elegido (registry en ./layouts). Conserva el guard de permisos desde App.jsx.
 export function MenuPreview() {
+  // Terminología por tipo de compañía ("carta" puede ser "catálogo público", etc.).
+  const menuT = entityTerm('menu');
+  const prodT = entityTerm('product');
   const { menuId } = useParams();
   const navigate = useNavigate();
 
@@ -189,12 +193,12 @@ export function MenuPreview() {
 
       <div className={s.canvas}>
         {loading ? (
-          <Spinner center label="Generando carta…" />
+          <Spinner center label={`Generando ${menuT.pub}…`} />
         ) : error ? (
           <div className={s.state}><i className="fas fa-triangle-exclamation" /> {error}</div>
         ) : groups.length === 0 ? (
           <div className={s.state}>
-            <i className="fas fa-utensils" /> Este menú aún no tiene productos para mostrar.
+            <i className="fas fa-utensils" /> Este {menuT.one} aún no tiene {prodT.many} para mostrar.
           </div>
         ) : (
           <Layout menu={menu} company={company} groups={groups} theme={theme} show={show}
