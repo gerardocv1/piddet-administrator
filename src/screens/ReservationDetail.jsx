@@ -1,12 +1,12 @@
 import React from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Card, Badge, Button, IconButton, RefreshButton, Avatar, Spinner, Modal, ConfirmDialog, Alert, useToast, Input, Select, MoneyInput, Autocomplete, PageHeader, Dropdown, DatePicker, DateRangePicker } from '../components';
+import { Card, Badge, Button, IconButton, RefreshButton, Avatar, Spinner, Modal, ConfirmDialog, Alert, useToast, Input, Select, MoneyInput, Autocomplete, PageHeader, Dropdown, DatePicker, DateRangePicker, LineList } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { usePermissions } from '../lib/permissions/usePermissions.js';
 import { useIsMobile } from '../lib/useIsMobile.js';
 import { reservationMoney, reservationStatusMeta, arrivalSlotLabel, idTypeLabel, RESERVATION_STATUS } from '../lib/reservationLabels.js';
-import { formatStayRange } from '../lib/dates.js';
+import { formatStayRange, formatStayRangeLong } from '../lib/dates.js';
 import { useSetPageTitle } from '../lib/pageTitle.jsx';
 import s from './screens.module.css';
 import t from './ReservationDetail.module.css';
@@ -320,7 +320,7 @@ export function ReservationDetail() {
       <PageHeader
         onBack={goBack}
         backTitle="Volver a reservas"
-        subtitle={`${formatStayRange(data.check_in_date, data.check_out_date)} · ${data.nights} ${Number(data.nights) === 1 ? 'noche' : 'noches'}`}
+        subtitle={formatStayRangeLong(data.check_in_date, data.check_out_date)}
         actions={<>
           {/* En el teléfono la fila se queda solo con la acción principal del estado y el menú:
               actualizar y el enlace de pre-check-in viven dentro de `menuItems`. */}
@@ -351,8 +351,8 @@ export function ReservationDetail() {
           {
             label: 'Personas',
             value: Number(extraInfo.count) > 0
-              ? `${guestsCount} · ${includedGuests} en tarifa + ${extraInfo.count} adicional${Number(extraInfo.count) === 1 ? '' : 'es'}`
-              : `${guestsCount} (titular incluido)`,
+              ? `${guestsCount} (${extraInfo.count} ad.)`
+              : String(guestsCount),
           },
           { label: 'Llegada estimada', value: arrivalSlotLabel(data.expected_arrival_time) },
           // Quién registró la reserva es dato de escritorio: en el teléfono no cabe en la
@@ -476,28 +476,21 @@ export function ReservationDetail() {
                 isOpen ? <Button variant="secondary" size="sm" icon="fas fa-plus" onClick={() => setServiceOpen(true)}>Agregar</Button> : null
               } />
               <Card.Body>
-                {data.services.length === 0 ? <p className={s.faint}>Sin servicios adicionales.</p> : (
-                  <ul className={t.lines}>
-                    {data.services.map((sv) => (
-                      <li key={sv.id} className={t.line}>
-                        <span className={t.lineName}>
-                          {sv.name} {sv.quantity > 1 && <span className={s.muted}>×{sv.quantity}</span>}
-                          {sv.is_extra_guest && <span className={s.muted}> · personas adicionales</span>}
-                        </span>
-                        <span className={t.linePrice}>{reservationMoney(sv.total)}</span>
-                        {/* La línea de adicionales la calcula el sistema: se cambia el número de
-                            personas, no se borra a mano. */}
-                        {isOpen && !sv.is_extra_guest && (
-                          <IconButton icon="fas fa-trash" variant="light" title="Quitar" onClick={() => removeService(sv.id)} />
-                        )}
-                        {isOpen && sv.is_extra_guest && (
-                          <IconButton icon="fas fa-lock" variant="light" disabled
+                <LineList empty="Sin servicios adicionales.">
+                  {data.services.map((sv) => (
+                    <LineList.Item key={sv.id} price={reservationMoney(sv.total)}
+                      /* La línea de adicionales la calcula el sistema: se cambia el número de
+                         personas, no se borra a mano. */
+                      action={!isOpen ? null : sv.is_extra_guest
+                        ? <IconButton icon="fas fa-lock" variant="light" disabled
                             title="La calcula el sistema — cambia el número de personas de la reserva" />
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                )}
+                        : <IconButton icon="fas fa-trash" variant="light" title="Quitar" onClick={() => removeService(sv.id)} />}>
+                      {sv.name}
+                      {sv.quantity > 1 && <LineList.Muted>×{sv.quantity}</LineList.Muted>}
+                      {sv.is_extra_guest && <LineList.Muted>· personas adicionales</LineList.Muted>}
+                    </LineList.Item>
+                  ))}
+                </LineList>
               </Card.Body>
             </Card>
           </div>
@@ -543,19 +536,15 @@ export function ReservationDetail() {
                 isOpen ? <Button variant="secondary" size="sm" icon="fas fa-plus" onClick={() => setChargeOpen(true)}>Agregar ítem</Button> : null
               } />
               <Card.Body>
-                {charges.length === 0 ? (
-                  <p className={s.faint}>Sin cargos en la cuenta. Agrega los platos, productos o servicios que consuma el huésped; se facturan en el checkout.</p>
-                ) : (
-                  <ul className={t.lines}>
-                    {charges.map((ch) => (
-                      <li key={ch.id} className={t.line}>
-                        <span className={t.lineName}>{ch.name} {ch.quantity > 1 && <span className={s.muted}>×{ch.quantity}</span>}</span>
-                        <span className={t.linePrice}>{reservationMoney(ch.total)}</span>
-                        {isOpen && <IconButton icon="fas fa-trash" variant="light" title="Quitar" onClick={() => removeCharge(ch.id)} />}
-                      </li>
-                    ))}
-                  </ul>
-                )}
+                <LineList compact empty="Sin cargos en la cuenta. Agrega los platos, productos o servicios que consuma el huésped; se facturan en el checkout.">
+                  {charges.map((ch) => (
+                    <LineList.Item key={ch.id} price={reservationMoney(ch.total)}
+                      action={isOpen ? <IconButton icon="fas fa-trash" variant="light" title="Quitar" onClick={() => removeCharge(ch.id)} /> : null}>
+                      {ch.name}
+                      {ch.quantity > 1 && <LineList.Muted>×{ch.quantity}</LineList.Muted>}
+                    </LineList.Item>
+                  ))}
+                </LineList>
               </Card.Body>
             </Card>
 
@@ -565,18 +554,15 @@ export function ReservationDetail() {
               <Card>
                 <Card.Header title="Consumos desde el POS" />
                 <Card.Body>
-                  <ul className={t.lines}>
+                  <LineList compact>
                     {consumptions.map((o) => (
-                      <li key={o.id} className={t.line}>
-                        <span className={t.lineName}>
-                          {o.order_number ? `#${o.order_number}` : 'Consumo'}
-                          <span className={s.muted}> · {String(o.date).slice(0, 10)}</span>
-                          {o.status_payment !== 'PAID' && <span className={`${t.lineStatus} ${t.lineStatusWarn}`}>Por pagar</span>}
-                        </span>
-                        <span className={t.linePrice}>{reservationMoney(o.total)}</span>
-                      </li>
+                      <LineList.Item key={o.id} price={reservationMoney(o.total)}>
+                        {o.order_number ? `#${o.order_number}` : 'Consumo'}
+                        <LineList.Muted>· {String(o.date).slice(0, 10)}</LineList.Muted>
+                        {o.status_payment !== 'PAID' && <LineList.Status tone="warning">Por pagar</LineList.Status>}
+                      </LineList.Item>
                     ))}
-                  </ul>
+                  </LineList>
                 </Card.Body>
               </Card>
             )}
@@ -587,27 +573,22 @@ export function ReservationDetail() {
                 isOpen ? <Button variant="secondary" size="sm" icon="fas fa-plus" onClick={() => setPayOpen(true)}>Registrar pago</Button> : null
               } />
               <Card.Body>
-                {data.payments.length === 0 ? <p className={s.faint}>Sin pagos registrados.</p> : (
-                  <ul className={t.lines}>
-                    {data.payments.map((p) => {
-                      const active = Number(p.status) === 1;
-                      return (
-                        <li key={p.id} className={`${t.line} ${!active ? t.lineAnnulled : ''}`}>
-                          <span className={t.lineName}>
-                            {p.payment_method_name || p.payment_method}
-                            <span className={s.muted}> · {p.payment_date}</span>
-                            {p.order_id && <i className="fas fa-file-invoice" title="Abono con factura" />}
-                            {!active && <span className={`${t.lineStatus} ${t.lineStatusOff}`}>Anulado</span>}
-                          </span>
-                          <span className={t.linePrice}>{reservationMoney(p.value)}</span>
-                          {active && isOpen && !p.consolidated_at && can('reservation-payment-annul') && (
-                            <IconButton icon="fas fa-ban" variant="light" title="Anular pago (cancela su factura de abono)" onClick={() => annulPayment(p.id)} />
-                          )}
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
+                <LineList empty="Sin pagos registrados.">
+                  {data.payments.map((p) => {
+                    const active = Number(p.status) === 1;
+                    return (
+                      <LineList.Item key={p.id} annulled={!active} price={reservationMoney(p.value)}
+                        action={active && isOpen && !p.consolidated_at && can('reservation-payment-annul')
+                          ? <IconButton icon="fas fa-ban" variant="light" title="Anular pago (cancela su factura de abono)" onClick={() => annulPayment(p.id)} />
+                          : null}>
+                        {p.payment_method_name || p.payment_method}
+                        <LineList.Muted>· {p.payment_date}</LineList.Muted>
+                        {p.order_id && <i className="fas fa-file-invoice" title="Abono con factura" />}
+                        {!active && <LineList.Status tone="off">Anulado</LineList.Status>}
+                      </LineList.Item>
+                    );
+                  })}
+                </LineList>
               </Card.Body>
             </Card>
 
@@ -615,41 +596,25 @@ export function ReservationDetail() {
             <Card>
               <Card.Header title="Facturas de la reserva" />
               <Card.Body>
-                {(linkedOrders || []).length === 0 ? (
-                  <p className={s.faint}>Aún no hay facturas. Los abonos, los consumos POS y el checkout generan las facturas de la reserva.</p>
-                ) : (
-                  <ul className={t.lines}>
-                    {(linkedOrders || []).map((o) => {
-                      const kind = orderKind(o);
-                      const label = kind === 'checkout' ? 'Factura de cierre' : kind === 'advance' ? 'Factura de abono' : 'Consumo POS';
-                      const row = (
-                        <>
-                          <span className={t.lineName}>
-                            {label}
-                            {o.order_number ? <span className={s.muted}> · #{o.order_number}</span> : null}
-                            <span className={s.muted}> · {String(o.date).slice(0, 10)}</span>
-                            {o.status === 'CANCELLED'
-                              ? <span className={`${t.lineStatus} ${t.lineStatusOff}`}>Cancelada</span>
-                              : o.status_payment === 'PAID'
-                                ? <span className={`${t.lineStatus} ${t.lineStatusMuted}`}>Pagada</span>
-                                : <span className={`${t.lineStatus} ${t.lineStatusWarn}`}>Por pagar</span>}
-                          </span>
-                          <span className={t.linePrice}>{reservationMoney(o.total)}</span>
-                        </>
-                      );
-                      return (
-                        <li key={o.id} className={t.line}>
-                          {can('api-module-orders') ? (
-                            <button type="button" className={t.invoiceLink} title="Ver factura" onClick={() => navigate(`/invoices/${o.id}`)}>
-                              {row}
-                              <i className={`fas fa-chevron-right ${t.guestChevron}`} />
-                            </button>
-                          ) : row}
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
+                <LineList empty="Aún no hay facturas. Los abonos, los consumos POS y el checkout generan las facturas de la reserva.">
+                  {(linkedOrders || []).map((o) => {
+                    const kind = orderKind(o);
+                    const label = kind === 'checkout' ? 'Factura de cierre' : kind === 'advance' ? 'Factura de abono' : 'Consumo POS';
+                    return (
+                      <LineList.Item key={o.id} price={reservationMoney(o.total)} title="Ver factura"
+                        onClick={can('api-module-orders') ? () => navigate(`/invoices/${o.id}`) : null}>
+                        {label}
+                        {o.order_number ? <LineList.Muted>· #{o.order_number}</LineList.Muted> : null}
+                        <LineList.Muted>· {String(o.date).slice(0, 10)}</LineList.Muted>
+                        {o.status === 'CANCELLED'
+                          ? <LineList.Status tone="off">Cancelada</LineList.Status>
+                          : o.status_payment === 'PAID'
+                            ? <LineList.Status tone="muted">Pagada</LineList.Status>
+                            : <LineList.Status tone="warning">Por pagar</LineList.Status>}
+                      </LineList.Item>
+                    );
+                  })}
+                </LineList>
               </Card.Body>
             </Card>
           </div>

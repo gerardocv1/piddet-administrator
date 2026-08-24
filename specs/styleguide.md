@@ -48,7 +48,12 @@ El punto de partida de la copia espejo quedó registrado en el README del catál
 origen en este repo). Si los repos se desvían, **gana el catálogo en lo visual** y gana este
 repo en lo funcional; la desviación se corrige portando en la dirección que corresponda.
 
-Último porteo aplicado (catálogo `13b0211` → este repo): primario de acción azul petróleo con
+Último porteo aplicado (catálogo `201888c` → este repo): componente nuevo `LineList`
+(`src/components/data/`), el listado de líneas nombre · precio de las cuentas — fragmentos
+`Muted`/`Status`, acción al final, fila navegable, `annulled` y variante `compact` — usado
+primero en el detalle de reserva.
+
+Porteo anterior (catálogo `13b0211` → este repo): primario de acción azul petróleo con
 el naranja como firma de marca (`--brand-piddet` en logo e ítem activo del menú), verde de
 éxito esmeralda, capa móvil nativa (tarjetas sin marco, campos rellenos), cierres con Escape
 en todos los flotantes, fuentes/iconos no bloqueantes en `index.html`, y el chasis móvil nuevo:
