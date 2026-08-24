@@ -42,7 +42,14 @@ export function CompanyProfile() {
   const onSaved = (updated) => {
     setData(updated);
     setEditing(false);
-    authLib.setCompany({ ...authLib.getCompany(), name: updated.name, icon: updated.icon });
+    // La marca también viaja a la sesión: App reacciona al cambio y retiñe el panel al momento.
+    authLib.setCompany({
+      ...authLib.getCompany(),
+      name: updated.name,
+      icon: updated.icon,
+      brand_primary: updated.brand_primary,
+      brand_secondary: updated.brand_secondary,
+    });
     reload();
   };
 
@@ -131,8 +138,8 @@ export function CompanyProfile() {
           )} />
         <Card.Body>
           <p className={t.brandHint}>
-            Colores con los que se pintan las páginas públicas de la empresa (portada, hospedaje):
-            botones, enlaces y realces.
+            Colores con los que se pintan este panel y las páginas públicas de la empresa
+            (portada, hospedaje): botones, enlaces y realces.
           </p>
           <BrandPreview primary={company.brand_primary} secondary={company.brand_secondary}
             name={company.name} />
@@ -219,7 +226,7 @@ function CompanyEditModal({ company, onClose, onSaved }) {
 
         <div className={t.brandFields}>
           <BrandColorPicker label="Color primario"
-            hint="Manda en botones, enlaces y precios de las páginas públicas."
+            hint="Manda en botones, enlaces y realces del panel y de las páginas públicas."
             value={form.brand_primary} onChange={(v) => set('brand_primary', v)} />
           <BrandColorPicker label="Color secundario"
             hint="Acompaña al primario en el degradado del logo."
