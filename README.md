@@ -49,6 +49,62 @@ npm run build      # genera /dist
 npm run preview    # sirve /dist localmente
 ```
 
+## Despliegue (Laravel Forge)
+
+El panel es un sitio **estático**: Forge no ejecuta nada en el servidor, solo compila y sirve
+`/dist`. Cuatro ajustes en el sitio, una sola vez:
+
+**1 · Web Directory** → `/dist`
+Forge lo trae en `/public` (por Laravel). Está en *Site → App / Meta → Web Directory*.
+
+**2 · Environment** (*Site → Environment*), que Vite lee **al compilar**:
+```
+VITE_API_URL=https://api.piddet.com
+```
+Si queda vacío, la app arranca en modo demo con datos de ejemplo. `.env` está en `.gitignore`,
+así que el `git pull` del despliegue no lo pisa.
+
+**3 · Deploy Script** (*Site → Deployments*), reemplazando el de Laravel:
+```bash
+cd /home/forge/TU-DOMINIO
+git pull origin master
+
+npm ci
+npm run build
+```
+`npm ci` exige `package-lock.json` (está versionado) y Node 18+ en el servidor (Vite 5).
+El build tarda unos segundos durante los cuales `/dist` está a medias; para evitarlo, compila
+aparte y cambia de golpe:
+```bash
+npm run build -- --outDir dist_new --emptyOutDir
+rm -rf dist_old && mv dist dist_old && mv dist_new dist
+```
+
+**4 · Nginx** (*Site → Edit Files → Nginx Configuration*). Es el paso que más se olvida: **toda**
+ruta tiene que devolver el mismo `index.html`, porque el panel (`/admin/...`) y las páginas
+públicas (`/checkin`, `/{empresa}`) las resuelve el router de React. Sin esto, recargar en
+cualquier pantalla da 404:
+```nginx
+location / {
+    try_files $uri $uri/ /index.html;
+}
+
+# Los assets llevan hash en el nombre: se pueden cachear para siempre.
+location /assets/ {
+    expires 1y;
+    add_header Cache-Control "public, immutable";
+}
+
+# El shell y el service worker, nunca: son los que traen cada versión nueva.
+location = /index.html { add_header Cache-Control "no-cache"; }
+location = /sw.js      { add_header Cache-Control "no-cache"; }
+```
+
+Con **Quick Deploy** activado, cada merge a `master` dispara el script y publica solo.
+
+> Mergear a `master` **no publica nada** por sí mismo: sin Quick Deploy hay que darle a *Deploy
+> Now* en Forge, o compilar y subir `/dist` a mano.
+
 ## Subir a GitHub (primer push)
 Desde la carpeta del proyecto:
 ```bash
