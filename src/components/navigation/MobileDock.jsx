@@ -82,6 +82,15 @@ export function MobileDock({ onMore, moreOpen = false }) {
     [pathname, permissions, activeFunctionalities],
   );
 
+  // Solo se marca la hermana MÁS específica: `/expenses` es prefijo de `/expenses/summary`, así
+  // que sin esto en el Reporte quedaban activas «Gastos» y «Reporte» a la vez.
+  const activeSub = React.useMemo(
+    () => subItems
+      .filter((c) => isUnder(pathname, c.to))
+      .reduce((best, c) => (!best || c.to.length > best.length ? c.to : best), null),
+    [subItems, pathname],
+  );
+
   // El alto del dock cambia según lleve submenú o no; el Layout lo lee para reservar abajo el
   // espacio justo y que ninguna barra de acciones quede debajo del menú.
   const ref = React.useRef(null);
@@ -106,7 +115,7 @@ export function MobileDock({ onMore, moreOpen = false }) {
         <div className={styles.sub} aria-label="Secciones del módulo">
           {subItems.map((c) => (
             <NavLink key={c.to} to={c.to}
-              className={({ isActive }) => [styles.subItem, isActive || isUnder(pathname, c.to) ? styles.subActive : ''].filter(Boolean).join(' ')}>
+              className={[styles.subItem, c.to === activeSub ? styles.subActive : ''].filter(Boolean).join(' ')}>
               {c.label}
             </NavLink>
           ))}
