@@ -36,9 +36,10 @@
   min-height: 4.5rem;
 }
 
-/* Evita el zoom automático de Safari iOS al enfocar (mínimo 16px). */
+/* El texto sigue la escala de la interfaz; el zoom automático de Safari al enfocar lo suprime
+   el `maximum-scale=1` del viewport (index.html). */
 @media (max-width: 860px) {
-  .textarea { font-size: 16px; }
+  .textarea { font-size: var(--text-md); }
 }
 
 .hint {

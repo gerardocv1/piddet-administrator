@@ -46,10 +46,14 @@ el modo oscuro. Usa siempre tokens.
 
 ## Campos de formulario: una sola escala en el teléfono
 
-En móvil **el texto de cualquier campo mide 16px**, no un token. No es un capricho de diseño:
-por debajo de 16px Safari iOS hace zoom al enfocar y no lo deshace al salir. La regla la
-cumplen `Input`, `Select`, `Textarea`, `Autocomplete`, el buscador de `FilterBar` y el
-disparador de `DatePicker`.
+En móvil **todos los campos usan `--text-md`** (15px en tablet, 14 en teléfono): `Input`,
+`Select`, `Textarea`, `Autocomplete`, el buscador de `FilterBar` y el disparador de `DatePicker`.
+Uno solo, la misma escala para todos.
+
+Puede bajar de 16px **porque el viewport declara `maximum-scale=1`** (en `index.html`), que es lo
+que suprime el zoom automático de Safari iOS al enfocar un campo. Si algún día se quita esa
+declaración del viewport, los campos tienen que volver a 16px o el iPhone hará zoom al tocarlos
+y no lo deshará al salir.
 
 De ahí se sigue una consecuencia práctica: **una pantalla no debe imponer el tamaño de letra de
 un campo**. La barra de filtros del inicio lo hacía (`font-size: var(--text-sm)` sobre

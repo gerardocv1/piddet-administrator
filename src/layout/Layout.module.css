@@ -1,8 +1,12 @@
+/* Alto FIJO, no mínimo: es lo que convierte a <main> en el único contenedor con scroll. Con
+   `min-height` el shell crecía con el contenido, `flex: 1` no acotaba nada y quien desplazaba era
+   el documento — así que la barra superior, que no es sticky, se iba hacia arriba al bajar. */
 .shell {
   display: flex;
-  min-height: 100vh;
+  height: 100vh;
   /* dvh sigue a las barras del navegador móvil: evita el salto de alto al hacer scroll. */
-  min-height: 100dvh;
+  height: 100dvh;
+  overflow: hidden;
   background: var(--bg-body);
 }
 
@@ -17,6 +21,7 @@
 
 .main {
   flex: 1;
+  min-height: 0;          /* sin esto un hijo alto estira el flex y vuelve a fugarse el scroll */
   overflow-y: auto;
   padding: 2rem;
 }

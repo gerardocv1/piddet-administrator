@@ -2,8 +2,8 @@
    (Chrome exige un worker con manejador de `fetch`); el cacheo es deliberadamente conservador
    para que un despliegue nuevo nunca quede servido desde una versión vieja. */
 
-const SHELL_CACHE = 'piddet-shell-v1';
-const ASSET_CACHE = 'piddet-assets-v1';
+const SHELL_CACHE = 'piddet-shell-v2';
+const ASSET_CACHE = 'piddet-assets-v2';
 const CURRENT_CACHES = [SHELL_CACHE, ASSET_CACHE];
 const ADMIN_START = '/admin/';
 const MAX_ASSET_ENTRIES = 24;
@@ -39,9 +39,13 @@ function cacheQuietly(cacheName, key, response) {
     .catch(() => {});
 }
 
+// `cache: 'no-store'` es la parte importante: sin él, este fetch pasa por la caché HTTP del
+// navegador y Safari puede devolver el shell viejo (más aún si el servidor no manda
+// `Cache-Control: no-cache` para index.html). Es lo que dejaba la app instalada anclada a una
+// versión antigua aunque el despliegue ya estuviera hecho.
 async function networkFirstNavigation(request) {
   try {
-    const response = await fetch(request);
+    const response = await fetch(request, { cache: 'no-store' });
     cacheQuietly(SHELL_CACHE, ADMIN_START, response);
     return response;
   } catch (error) {
@@ -58,6 +62,13 @@ async function cacheFirst(request, cacheName) {
   cacheQuietly(cacheName, request, response);
   return response;
 }
+
+// La app avisa cuando detecta una versión nueva: se tiran las cachés para que el arranque
+// siguiente baje todo de la red.
+self.addEventListener('message', (event) => {
+  if (event.data !== 'piddet:flush-caches') return;
+  event.waitUntil(caches.keys().then((names) => Promise.all(names.map((n) => caches.delete(n)))));
+});
 
 self.addEventListener('fetch', (event) => {
   const { request } = event;
