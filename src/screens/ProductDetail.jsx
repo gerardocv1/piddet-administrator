@@ -5,6 +5,7 @@ import { SortableList, FileUpload } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { ItemFormModal } from './ItemFormModal.jsx';
+import { entityTerm } from '../lib/terms.js';
 import s from './screens.module.css';
 import t from './ProductDetail.module.css';
 
@@ -21,6 +22,8 @@ function rulesText(g) {
 }
 
 export function ProductDetail() {
+  // Terminología por tipo de compañía: el "producto" puede llamarse "ítem" o "servicio".
+  const prodT = entityTerm('product');
   const { itemId } = useParams();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -112,7 +115,7 @@ export function ProductDetail() {
   return (
     <div className={s.page}>
       <div className={t.header}>
-        <IconButton icon="fas fa-arrow-left" variant="light" title="Volver a productos" onClick={() => navigate('/products')} />
+        <IconButton icon="fas fa-arrow-left" variant="light" title={`Volver a ${prodT.many}`} onClick={() => navigate('/products')} />
         <div className={s.spacer} />
         <RefreshButton
           loading={itemRes.loading || groupsRes.loading || optsRes.loading}
@@ -138,12 +141,12 @@ export function ProductDetail() {
             </div>
           </div>
           <IconButton className={t.heroEdit} icon="fas fa-pen" variant="ghost" size="sm"
-            title="Editar producto" onClick={() => setEditItem(true)} />
+            title={`Editar ${prodT.one}`} onClick={() => setEditItem(true)} />
         </div>
       ) : itemRes.loading ? (
-        <div className={t.hero}><Spinner label="Cargando producto…" /></div>
+        <div className={t.hero}><Spinner label={`Cargando ${prodT.one}…`} /></div>
       ) : itemRes.error ? (
-        <Alert tone="danger" title="No se pudo cargar el producto">{itemRes.error}</Alert>
+        <Alert tone="danger" title={`No se pudo cargar el ${prodT.one}`}>{itemRes.error}</Alert>
       ) : null}
 
       <div className={t.card}>
@@ -163,7 +166,7 @@ export function ProductDetail() {
           ) : groups.length === 0 ? (
             <div className={t.empty}>
               <i className="fas fa-list-check" />
-              Este producto aún no tiene grupos de opciones. Usa “Nuevo grupo”.
+              Este {prodT.one} aún no tiene grupos de opciones. Usa “Nuevo grupo”.
             </div>
           ) : (
             <SortableList items={groups} onReorder={reorderGroups} renderItem={(g, { handleProps }) => {
@@ -259,6 +262,7 @@ export function ProductDetail() {
 // La imagen se edita (recorte/giro) y solo al Guardar se sube a S3 (pública, para renderizarla por
 // URL); luego se guarda su `name` en el producto.
 function ProductImageModal({ item, onClose, onSaved }) {
+  const prodT = entityTerm('product');
   const { toast } = useToast();
   const uploaderRef = React.useRef(null);
   const [hasImage, setHasImage] = React.useState(false);
@@ -274,12 +278,12 @@ function ProductImageModal({ item, onClose, onSaved }) {
       onSaved();
       toast({ tone: 'success', title: 'Imagen actualizada' });
     } catch (e) {
-      setErr(e?.message || 'No se pudo guardar la imagen del producto.');
+      setErr(e?.message || `No se pudo guardar la imagen del ${prodT.one}.`);
     } finally { setSaving(false); }
   };
 
   return (
-    <Modal open title="Foto del producto" subtitle={item.name} size="lg" onClose={onClose}
+    <Modal open title={`Foto del ${prodT.one}`} subtitle={item.name} size="lg" onClose={onClose}
       footer={<>
         <Button variant="secondary" onClick={onClose}>Cancelar</Button>
         <Button variant="primary" loading={saving} disabled={!hasImage} onClick={save}>Guardar</Button>

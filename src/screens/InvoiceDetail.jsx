@@ -7,6 +7,7 @@ import { usePermissions } from '../lib/permissions/usePermissions.js';
 import { orderStatusOf, paymentStatusOf, serviceTypeLabel, originLabel, timeOf } from '../lib/orderLabels.js';
 import { formatShortDate } from '../lib/dates.js';
 import { useSetPageTitle } from '../lib/pageTitle.jsx';
+import { phrase } from '../lib/terms.js';
 import s from './screens.module.css';
 import t from './InvoiceDetail.module.css';
 
@@ -202,7 +203,7 @@ export function InvoiceDetail() {
         reason="required" reasonLabel="Motivo de la cancelación"
         reasonPlaceholder="Describe por qué se cancela esta factura…"
         onConfirm={doCancel} onClose={() => setCancelOpen(false)}>
-        <p>La factura quedará cancelada y saldrá de las métricas de ventas. Esta acción no se puede deshacer.</p>
+        <p>La factura quedará cancelada y saldrá de las métricas de {phrase('ventas')}. Esta acción no se puede deshacer.</p>
         {actionError && <Alert tone="danger" onClose={() => setActionError('')}>{actionError}</Alert>}
       </ConfirmDialog>
     </div>

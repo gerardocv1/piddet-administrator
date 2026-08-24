@@ -126,7 +126,7 @@ export function SalesReport() {
             )}
             {totals != null && (
               <p className={s.toolbarText}>
-                {totals.orders_count === 0 ? 'Sin ventas en el rango' : `${quantity(totals.orders_count)} factura${totals.orders_count === 1 ? '' : 's'}`}
+                {totals.orders_count === 0 ? phrase('Sin ventas en el rango') : `${quantity(totals.orders_count)} factura${totals.orders_count === 1 ? '' : 's'}`}
               </p>
             )}
           </>
@@ -183,7 +183,7 @@ export function SalesReport() {
                 rows={topItems}
                 rowKey="item_id"
                 loading={loading}
-                empty="No hay ventas en el rango seleccionado."
+                empty={phrase('No hay ventas en el rango seleccionado.')}
               />
             </Card>
           </div>

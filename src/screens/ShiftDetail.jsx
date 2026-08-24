@@ -6,6 +6,7 @@ import { useResource } from '../lib/useResource.js';
 import { usePermissions } from '../lib/permissions/usePermissions.js';
 import { shiftMoney, shiftDateTime, SHIFT_TYPE_LABELS, MOVEMENT_TYPE_LABELS } from '../lib/shiftLabels.js';
 import { useSetPageTitle } from '../lib/pageTitle.jsx';
+import { phrase } from '../lib/terms.js';
 import s from './screens.module.css';
 import t from './ShiftDetail.module.css';
 
@@ -204,7 +205,7 @@ export function ShiftDetail() {
                   <strong>{shiftMoney(balance.base_amount)}</strong>
                 </div>
                 <div className={t.balanceRow}>
-                  <span>Ventas ({balance.sales?.count ?? 0})</span>
+                  <span>{phrase('Ventas')} ({balance.sales?.count ?? 0})</span>
                   <strong className={t.income}>+ {shiftMoney(balance.sales?.total)}</strong>
                 </div>
                 <MethodBreakdown rows={balance.sales?.by_method} />
@@ -267,7 +268,7 @@ export function ShiftDetail() {
       >
         <p>
           Esta acción es <strong>irreversible</strong>: el turno quedará cancelado, dejará de
-          registrar ventas y gastos, y no contará para el arqueo de caja.
+          registrar {phrase('ventas')} y gastos, y no contará para el arqueo de caja.
         </p>
       </ConfirmDialog>
     </div>
