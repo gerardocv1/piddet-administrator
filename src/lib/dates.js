@@ -1,4 +1,5 @@
 const SHORT_MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+const LONG_MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 
 function parseDate(value) {
   if (!value) return null;
@@ -28,4 +29,21 @@ export function formatStayRange(from, to) {
   if (!a || !b) return [formatShortDate(from), formatShortDate(to)].join(' → ');
   const start = a.year === b.year ? formatDayMonth(from) : formatShortDate(from);
   return `${start} → ${formatShortDate(to)}`;
+}
+
+// Rango en prosa, con lo repetido dicho una sola vez:
+// "2026-08-23", "2026-08-24" → "23 al 24 de agosto de 2026"
+// "2026-08-28", "2026-09-02" → "28 de agosto al 2 de septiembre de 2026"
+// si cruza de año, ambos extremos van completos.
+export function formatStayRangeLong(from, to) {
+  const a = parseDate(from);
+  const b = parseDate(to);
+  if (!a || !b) return [formatShortDate(from), formatShortDate(to)].join(' al ');
+  if (a.year === b.year && a.month === b.month) {
+    return `${a.day} al ${b.day} de ${LONG_MONTHS[b.month - 1]} de ${b.year}`;
+  }
+  if (a.year === b.year) {
+    return `${a.day} de ${LONG_MONTHS[a.month - 1]} al ${b.day} de ${LONG_MONTHS[b.month - 1]} de ${b.year}`;
+  }
+  return `${a.day} de ${LONG_MONTHS[a.month - 1]} de ${a.year} al ${b.day} de ${LONG_MONTHS[b.month - 1]} de ${b.year}`;
 }

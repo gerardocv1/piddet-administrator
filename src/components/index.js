@@ -30,6 +30,7 @@ export { SalesComparisonChart } from './data/SalesComparisonChart.jsx';
 export { BodyMeasuresChart } from './data/BodyMeasuresChart.jsx';
 export { BodyMap, BODY_MAP_KEYS } from './data/BodyMap.jsx';
 export { Pagination } from './data/Pagination.jsx';
+export { LineList } from './data/LineList.jsx';
 export { SortableList } from './data/SortableList.jsx';
 // feedback
 export { Modal } from './feedback/Modal.jsx';
