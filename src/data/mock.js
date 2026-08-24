@@ -449,9 +449,11 @@ export const mockCompany = {
   stores_count: 4, menus_count: 5, items_count: 86, users_count: 12,
 };
 export const mockCompanies = [
-  { id: 'pid-001', name: 'Grupo Sabor', plan: 'Pro', tiendas: 4 },
-  { id: 'pid-002', name: 'Cocinas del Norte', plan: 'Básico', tiendas: 2 },
-  { id: 'pid-003', name: 'Antojitos S.A.', plan: 'Pro', tiendas: 7 },
+  { id: 'pid-001', name: 'Grupo Sabor', plan: 'Pro', tiendas: 4, status: 1, brand_primary: 'forest', brand_secondary: 'gold' },
+  { id: 'pid-002', name: 'Cocinas del Norte', plan: 'Básico', tiendas: 2, status: 1, brand_primary: 'wine', brand_secondary: 'cocoa' },
+  { id: 'pid-003', name: 'Antojitos S.A.', plan: 'Pro', tiendas: 7, status: 1 },
+  // Inactiva: el backend no la lista en /auth/me/companies (el selector solo muestra activas).
+  { id: 'pid-004', name: 'Sabores del Ayer', plan: 'Básico', tiendas: 0, status: 0 },
 ];
 
 // Tokens de agentes de IA de la compañía (el listado nunca incluye el token completo).
@@ -4102,8 +4104,8 @@ export function resolveMock(rawPath, opts = {}) {
   // Permisos del usuario en la compañía activa: /companies/{company}/me/permissions
   if (/^\/companies\/[^/]+\/me\/permissions$/.test(path)) return mockPermissions;
 
-  // Empresas del usuario (selector del sidebar).
-  if (path === '/auth/me/companies') return mockCompanies;
+  // Empresas del usuario (selector del sidebar): como el backend, solo las activas.
+  if (path === '/auth/me/companies') return mockCompanies.filter((c) => c.status !== 0);
   // Cambio de empresa activa: devuelve la elegida.
   if (path === '/auth/me/company') {
     const picked = mockCompanies.find((c) => String(c.id) === String(opts.body?.company_id));

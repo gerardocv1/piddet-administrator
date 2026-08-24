@@ -61,6 +61,7 @@ import { RequirePermission } from './lib/permissions/RequirePermission.jsx';
 import { usePermissions } from './lib/permissions/usePermissions.js';
 import { canAccess, firstAccessible } from './lib/permissions/modules.js';
 import { ADMIN_BASE } from './lib/adminBase.js';
+import { applyCompanyBrand } from './lib/brand/applyCompanyBrand.js';
 
 // Patrón de la URL pública de una carta: /{username-compañía}/m/{username-menú}. Se sirve fuera
 // del panel admin (sin sesión ni permisos), por eso se detecta antes de montar el router.
@@ -171,6 +172,15 @@ function AdminApp() {
 
   // Cierre de sesión forzado (refresh fallido / 401 definitivo) → expulsa a /login.
   React.useEffect(() => authLib.onSessionExpired(() => setAuth(false)), []);
+
+  // El color primario del panel sigue a la identidad de la compañía activa (perfil → Identidad
+  // visual); sin sesión (o sin color elegido) rige el azul petróleo de tokens.css. Se reaplica
+  // al cambiar de compañía o al guardar el perfil (ambos reescriben la compañía de la sesión).
+  React.useEffect(() => {
+    const apply = () => applyCompanyBrand(auth ? authLib.getCompany() : null);
+    apply();
+    return authLib.onCompanyChange(apply);
+  }, [auth]);
 
   // Al (re)entrar con sesión, carga permisos (si el caché venció) y funcionalidades (si no hay).
   React.useEffect(() => { if (auth) { authLib.loadPermissions(); authLib.loadFunctionalities(); } }, [auth]);

@@ -41,6 +41,12 @@ const mix = (from, to, ratio) => {
   return `#${hex.join('')}`;
 };
 
+// Veladura translúcida del color (tintes 100/050 y focus ring, como los define tokens.css).
+const alpha = (hex, a) => {
+  const [r, g, b] = channels(hex);
+  return `rgba(${r}, ${g}, ${b}, ${a})`;
+};
+
 /**
  * Variables CSS con los colores de una compañía, para aplicarlas sobre el contenedor de sus
  * páginas públicas (mismo mecanismo que el tema de la carta). Redefine la escala completa de
@@ -58,8 +64,33 @@ export function buildBrandTheme(primaryKey, secondaryKey) {
     '--color-primary-300': primary.onSoft,
     '--color-primary-100': mix(primary.soft, primary.onSoft, 0.3),
     '--color-primary-050': primary.soft,
+    '--ring-primary': `0 0 0 3px ${alpha(primary.accent, 0.25)}`,
     '--color-secondary': secondary.accent,
     '--gradient-primary': `linear-gradient(87deg, ${primary.accent} 0%, ${secondary.accent} 100%)`,
+  };
+}
+
+/**
+ * La misma escala pero para el tema oscuro, con las relaciones que fija tokens.css: el acento
+ * sube un punto de luz para no apagarse sobre la superficie oscura, la 700 se invierte a un tono
+ * claro legible (ahí es texto/realce, no fondo) y los tintes 100/050 pasan a veladuras
+ * translúcidas del acento.
+ */
+export function buildBrandThemeDark(primaryKey, secondaryKey) {
+  const primary = findPalette(primaryKey);
+  const secondary = findPalette(secondaryKey, DEFAULT_BRAND_SECONDARY);
+  const accent = mix(primary.accent, '#ffffff', 0.12);
+
+  return {
+    '--color-primary': accent,
+    '--color-primary-600': primary.accent,
+    '--color-primary-700': mix(primary.accent, '#ffffff', 0.55),
+    '--color-primary-300': mix(primary.accent, '#ffffff', 0.28),
+    '--color-primary-100': alpha(accent, 0.24),
+    '--color-primary-050': alpha(accent, 0.13),
+    '--ring-primary': `0 0 0 3px ${alpha(mix(primary.accent, '#ffffff', 0.3), 0.35)}`,
+    '--color-secondary': secondary.accent,
+    '--gradient-primary': `linear-gradient(87deg, ${accent} 0%, ${secondary.accent} 100%)`,
   };
 }
 
