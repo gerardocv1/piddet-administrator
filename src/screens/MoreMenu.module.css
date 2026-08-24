@@ -161,9 +161,9 @@
   color: var(--text-muted);
 }
 
-/* Fila: icono en pastilla del acento de compañía + etiqueta + chevron. El glyph va en la
-   variante oscura del acento sobre el tinte suave: icono y pastilla nunca en el mismo tono.
-   Alto cómodo para el pulgar. */
+/* Fila: icono en pastilla neutra + etiqueta + chevron. La pastilla va en gris (--gray-100) y
+   solo el glyph lleva el acento de la compañía: con una tarjeta llena de filas, repetir el
+   tinte de color en cada pastilla pesaba demasiado. Alto cómodo para el pulgar. */
 .row {
   display: flex;
   align-items: center;
@@ -189,7 +189,7 @@
   width: 32px;
   height: 32px;
   border-radius: var(--radius-lg);
-  background: var(--company-accent-soft);
+  background: var(--gray-100);
   color: var(--company-accent-strong);
   font-size: 0.85rem;
 }
