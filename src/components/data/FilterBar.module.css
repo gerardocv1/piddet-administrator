@@ -395,8 +395,11 @@
 
 @media (max-width: 860px) {
   /* Buscador a lo ancho en su propia fila; debajo, controles compactos: "Filtros" deja de
-     estirarse para que la fila la mande la acción principal de la pantalla. */
-  .search { flex: 1 1 100%; height: 40px; }
+     estirarse para que la fila la mande la acción principal de la pantalla. El texto del
+     buscador sigue la misma regla que los demás campos: 16px, para que no convivan dos escalas
+     y para que Safari iOS no haga zoom al enfocar. */
+  .search { flex: 1 1 100%; height: 44px; }
+  .search input { font-size: 16px; }
   .filterBtn { height: 36px; padding: 0 0.8rem; font-size: var(--text-sm); }
   .chipBtn, .dateBtn, .rangeBtn { height: 36px; font-size: var(--text-sm); }
 }

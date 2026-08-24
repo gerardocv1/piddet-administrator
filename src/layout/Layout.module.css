@@ -11,6 +11,8 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
+  /* Ancla del indicador de "tirar para actualizar". */
+  position: relative;
 }
 
 .main {
@@ -41,4 +43,34 @@
   .main {
     padding: 0.7rem max(0.7rem, env(safe-area-inset-right)) calc(var(--dock-h, 3.85rem) + 0.4rem + env(safe-area-inset-bottom)) max(0.7rem, env(safe-area-inset-left));
   }
+}
+
+/* ── Tirar hacia abajo para actualizar (solo móvil) ──────────────────────────
+   El indicador vive fuera de <main> para no desplazarse con él: se coloca bajo la barra
+   superior y baja acompañando al dedo. `main` se traslada a la vez, así que el gesto se
+   siente elástico en vez de "saltar". */
+.pullHint {
+  position: absolute;
+  top: calc(var(--topbar-h) + env(safe-area-inset-top));
+  left: 50%;
+  z-index: 20;
+  margin-left: -18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--surface-card);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-xs);
+  color: var(--color-primary);
+  font-size: 0.9rem;
+  pointer-events: none;
+}
+.pullSpin { animation: pullSpin 0.7s linear infinite; }
+@keyframes pullSpin { to { transform: rotate(360deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .pullSpin { animation-duration: 2s; }
 }

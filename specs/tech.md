@@ -213,3 +213,15 @@ contenido) y usa `100dvh`, porque a pantalla completa el sistema dibuja sobre la
 - `CLAUDE.md` — hoja de ruta: comandos, reglas innegociables y tabla de referencias a `specs/`.
 - Repos hermanos: `backend-piddet` (API, fuente de verdad) y `piddet-pos` (POS/KDS).
 - `README.md` — pendientes de marca conocidos.
+
+## Tirar hacia abajo para actualizar (móvil)
+
+`usePullToRefresh` (en `src/lib/`) implementa el gesto sobre `<main>`, que es quien tiene el
+scroll: por eso el gesto nativo del navegador no aplica, y en la app instalada directamente no
+existe. Solo entra cuando el contenedor está arriba del todo y el arrastre es claramente vertical
+hacia abajo; en cualquier otro caso deja pasar el scroll.
+
+Al soltar pasado el umbral emite el evento global `piddet:refresh`, que **escucha cada
+`useResource` montado**: se releen los datos de la pantalla —todos, aunque cargue varias cosas a
+la vez— sin recargar la aplicación, que en un teléfono cuesta segundos. Para forzarlo desde
+código: `requestRefresh()`.

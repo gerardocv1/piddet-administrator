@@ -121,7 +121,9 @@ Inicio, cuatro módulos y «Más», que abre el cajón con el menú completo.
 Cuando la pantalla activa pertenece a un módulo con varias secciones (Egresos → Gastos · Reporte ·
 Categorías), encima de los destinos aparece un **submenú horizontal** con esas hermanas,
 desplazable si no caben. Son **textos, no píldoras**: el activo se marca con color y peso, y solo
-se marca la ruta más específica (`/expenses` es prefijo de `/expenses/summary`). Se calcula sobre
+se marca la ruta más específica (`/expenses` es prefijo de `/expenses/summary`). La fila va
+**centrada** y sobre un gris un punto más claro que el fondo, que es lo que la separa de los
+destinos. Se calcula sobre
 `MODULE_GROUPS` completo, así que también lo tienen los módulos a los que se llega desde «Más».
 
 > El `nav` lleva `pointer-events: none` para que el fade no intercepte toques: **toda zona

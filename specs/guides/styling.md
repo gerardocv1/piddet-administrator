@@ -43,3 +43,19 @@ el modo oscuro. Usa siempre tokens.
 2. [ ] Colores/espaciados/tipografías vía `var(--...)`, no valores fijos.
 3. [ ] Si necesitas un token nuevo, lo defines en `tokens.css` (y su variante dark si aplica).
 4. [ ] Verificado en claro y oscuro.
+
+## Campos de formulario: una sola escala en el teléfono
+
+En móvil **el texto de cualquier campo mide 16px**, no un token. No es un capricho de diseño:
+por debajo de 16px Safari iOS hace zoom al enfocar y no lo deshace al salir. La regla la
+cumplen `Input`, `Select`, `Textarea`, `Autocomplete`, el buscador de `FilterBar` y el
+disparador de `DatePicker`.
+
+De ahí se sigue una consecuencia práctica: **una pantalla no debe imponer el tamaño de letra de
+un campo**. La barra de filtros del inicio lo hacía (`font-size: var(--text-sm)` sobre
+`input, select`) y el resultado era que la fecha salía a 12px y el selector a 16px —empataban en
+especificidad y ganaba uno u otro—, que es como convivían dos escalas en la misma fila. Si un
+control necesita ser más compacto, se usa la variante del componente (`size="sm"`), no un
+`font-size` desde la pantalla.
+
+En escritorio los campos siguen la escala de tokens (`--text-base`).
