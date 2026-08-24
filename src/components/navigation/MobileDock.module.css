@@ -103,7 +103,7 @@
   transition: color 0.2s ease;
 }
 .subActive {
-  color: var(--color-primary);
+  color: var(--company-accent);
   font-weight: var(--fw-semibold, 600);
 }
 
@@ -147,9 +147,10 @@
   white-space: nowrap;
 }
 
+/* El destino activo lleva el acento de la compañía (por defecto, el primario). */
 .active,
 .item.active {
-  color: var(--color-primary);
+  color: var(--company-accent);
 }
 
 /* Teléfonos angostos: el nombre se encoge antes que el icono. */

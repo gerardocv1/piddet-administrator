@@ -173,9 +173,10 @@ function AdminApp() {
   // Cierre de sesión forzado (refresh fallido / 401 definitivo) → expulsa a /login.
   React.useEffect(() => authLib.onSessionExpired(() => setAuth(false)), []);
 
-  // El color primario del panel sigue a la identidad de la compañía activa (perfil → Identidad
-  // visual); sin sesión (o sin color elegido) rige el azul petróleo de tokens.css. Se reaplica
-  // al cambiar de compañía o al guardar el perfil (ambos reescriben la compañía de la sesión).
+  // El acento de compañía (--company-accent*: iconos de menú, pastillas, accesos rápidos)
+  // sigue a la identidad de la compañía activa (perfil → Identidad visual); sin sesión (o sin
+  // color elegido) rigen los valores por defecto de tokens.css. Se reaplica al cambiar de
+  // compañía o al guardar el perfil (ambos reescriben la compañía de la sesión).
   React.useEffect(() => {
     const apply = () => applyCompanyBrand(auth ? authLib.getCompany() : null);
     apply();

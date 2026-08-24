@@ -23,6 +23,16 @@
      piddet (wordmark) en las páginas públicas de cualquier empresa. */
   --brand-piddet: #ff7c00;
 
+  /* ---- Acento de compañía ----
+     La identidad de la compañía activa asoma SOLO en la navegación y los realces decorativos
+     (iconos del menú, pastillas de módulo, accesos rápidos); nunca en botones de acción, foco
+     ni en el logo. Por defecto sigue al primario (y a la firma naranja sobre el panel oscuro
+     del sidebar); `applyCompanyBrand` los reescribe cuando la compañía eligió color. */
+  --company-accent: var(--color-primary);
+  --company-accent-strong: var(--color-primary-600);
+  --company-accent-soft: var(--color-primary-050);
+  --company-accent-on-dark: var(--brand-piddet);
+
   /* Verde de WhatsApp (marca externa): `--brand-whatsapp` es su verde de icono y
      `--brand-whatsapp-fg` el tono oscuro que sí se lee como texto sobre fondo blanco. */
   --brand-whatsapp: #25d366;

@@ -1,10 +1,11 @@
-// Retiñe el PANEL con el color primario que la compañía activa eligió en su perfil (Identidad
-// visual): la misma paleta curada de las páginas públicas, aplicada aquí a la escala completa de
-// `--color-primary` en claro y oscuro. Se inyecta como hoja de estilo al final de <head> para
-// ganarle a tokens.css con la misma especificidad; sin color elegido se retira y el panel vuelve
-// al azul petróleo por defecto.
+// La identidad de la compañía activa (perfil → Identidad visual) asoma en el PANEL solo como
+// ACENTO: las variables `--company-accent*` que consumen la navegación y los realces
+// decorativos (iconos del menú, pastillas de módulo, accesos rápidos). El primario de acción
+// (botones, enlaces, foco) y el logo no se tocan. Se inyecta como hoja de estilo al final de
+// <head> para ganarle a tokens.css con la misma especificidad; sin color elegido se retira y
+// rigen los valores por defecto (primario petróleo y firma naranja en el sidebar).
 
-import { buildBrandTheme, buildBrandThemeDark } from './palettes.js';
+import { buildCompanyAccent, buildCompanyAccentDark } from './palettes.js';
 
 const STYLE_ID = 'company-brand-theme';
 const block = (vars) => Object.entries(vars).map(([k, v]) => `${k}: ${v};`).join(' ');
@@ -16,8 +17,8 @@ export function applyCompanyBrand(company) {
     return;
   }
   // El bloque oscuro va después del claro: misma especificidad (0,1,0), gana el último.
-  const css = `:root { ${block(buildBrandTheme(company.brand_primary, company.brand_secondary))} }\n`
-    + `[data-theme="dark"] { ${block(buildBrandThemeDark(company.brand_primary, company.brand_secondary))} }`;
+  const css = `:root { ${block(buildCompanyAccent(company.brand_primary))} }\n`
+    + `[data-theme="dark"] { ${block(buildCompanyAccentDark(company.brand_primary))} }`;
   const el = current || document.createElement('style');
   el.id = STYLE_ID;
   el.textContent = css;

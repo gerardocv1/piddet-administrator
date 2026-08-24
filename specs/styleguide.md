@@ -48,7 +48,13 @@ El punto de partida de la copia espejo quedó registrado en el README del catál
 origen en este repo). Si los repos se desvían, **gana el catálogo en lo visual** y gana este
 repo en lo funcional; la desviación se corrige portando en la dirección que corresponda.
 
-Último porteo aplicado (catálogo `201888c` → este repo): componente nuevo `LineList`
+Último porteo aplicado (catálogo `8464c0d` → este repo): tokens de acento de compañía
+(`--company-accent`, `-strong`, `-soft`, `-on-dark` en `tokens.css`) — la identidad de la
+compañía activa asoma solo en navegación y realces decorativos (dock móvil, menú «Más»,
+iconos de módulo, accesos rápidos del dashboard, icono activo del sidebar); botones de
+acción, foco y logo no se retiñen.
+
+Porteo anterior (catálogo `201888c` → este repo): componente nuevo `LineList`
 (`src/components/data/`), el listado de líneas nombre · precio de las cuentas — fragmentos
 `Muted`/`Status`, acción al final, fila navegable, `annulled` y variante `compact` — usado
 primero en el detalle de reserva.
