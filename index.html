@@ -15,7 +15,10 @@
     <meta name="theme-color" content="#fbfbfc" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <!-- black-translucent: instalada en iOS la app pinta borde a borde (toda la pantalla, con la
+         hora sobre el propio fondo). Activa los env(safe-area-inset-*) que el CSS ya reserva en
+         topbar, dock, login y wizards; con "default" iOS meta una barra opaca del sistema. -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Piddet" />
     <meta name="application-name" content="Piddet" />
     <title>Piddet · Panel de administración</title>
