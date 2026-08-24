@@ -54,6 +54,26 @@
   color: var(--gray-400);
 }
 
+/* Resumen del perfil: pares etiqueta/valor apilados; las notas pueden ocupar varias líneas. */
+.profileList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.profileList li + li { border-top: 1px solid var(--border-color); }
+.profileRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 40px;
+  padding: 9px 0;
+}
+.profileLabel { flex: 0 0 auto; font-size: var(--text-sm); color: var(--gray-500); }
+.profileValue { min-width: 0; font-weight: 600; color: var(--gray-800); text-align: right; overflow-wrap: anywhere; }
+
 /* Historial de mediciones: filas apiladas y tappables (abren el detalle en un modal). */
 .historyTitle {
   margin: 0 0 4px;

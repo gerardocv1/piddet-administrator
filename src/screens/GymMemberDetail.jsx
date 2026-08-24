@@ -7,7 +7,7 @@ import {
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { useIsMobile } from '../lib/useIsMobile.js';
-import { gymMemberStatusMeta, GYM_MEMBER_STATUS, GYM_SEX_OPTIONS, gymMoney, gymSubscriptionStatusMeta, GYM_SUBSCRIPTION_STATUS } from '../lib/gymLabels.js';
+import { gymMemberStatusMeta, GYM_MEMBER_STATUS, GYM_SEX_OPTIONS, gymSexLabel, gymMoney, gymSubscriptionStatusMeta, GYM_SUBSCRIPTION_STATUS } from '../lib/gymLabels.js';
 import { ID_TYPES } from '../lib/reservationLabels.js';
 import { formatShortDate } from '../lib/dates.js';
 import { useSetPageTitle } from '../lib/pageTitle.jsx';
@@ -37,8 +37,9 @@ function CollapsibleCard({ title, action, defaultOpen = true, children }) {
 // Ficha del afiliado, en orden de uso móvil: primero su suscripción (resumen compacto — el
 // detalle transaccional con los pagos vive en /gym/subscriptions/:id), luego su progreso
 // físico (todas las medidas configuradas en una gráfica, ocultables desde la leyenda, con el
-// historial de mediciones debajo) y al final el perfil, plegado por defecto. Suscripción y
-// perfil se pueden minimizar/maximizar. Registrar medidas abre el asistente paso a paso.
+// historial de mediciones debajo) y al final el perfil como resumen de solo lectura, abierto
+// por defecto; su edición vive en un modal. Suscripción y perfil se pueden minimizar/maximizar.
+// Registrar medidas abre el asistente paso a paso.
 export function GymMemberDetail() {
   const { memberId } = useParams();
   const navigate = useNavigate();
@@ -66,12 +67,9 @@ export function GymMemberDetail() {
     [paymentMethods],
   );
 
-  // En el teléfono la barra superior lleva solo el nombre de pila: el nombre completo ya está
-  // en la ficha, justo debajo, y el título largo se cortaba con "…".
-  useSetPageTitle(
-    data?.member_name ? `Afiliado · ${data.member_name}` : null,
-    { shortTitle: data?.member_name ? String(data.member_name).trim().split(/\s+/)[0] : null },
-  );
+  // La barra superior lleva un título fijo: el nombre completo ya está en la ficha, justo
+  // debajo, y repetirlo arriba era ruido (además de cortarse con "…" en el teléfono).
+  useSetPageTitle('Afiliado');
 
   const goBack = () => navigate(`/gym/members${params.toString() ? `?${params.toString()}` : ''}`);
 
@@ -220,28 +218,30 @@ export function GymMemberDetail() {
   }
   if (bmi) progressStats.push({ label: 'IMC', value: bmi.toFixed(1) });
 
-  // ── Perfil editable (objetivo cerrado: se elige del catálogo) ────────────
+  // ── Perfil (objetivo cerrado: se elige del catálogo). En la ficha solo va el resumen de
+  // lectura; el formulario vive en un modal que se precarga al abrirlo. ──
   const { data: goals } = useResource(api.gymGoals, [], []);
   const goalOptions = React.useMemo(
     () => [{ value: '', label: 'Sin objetivo' }, ...(goals || []).map((goal) => ({ value: String(goal.id), label: goal.label }))],
     [goals],
   );
 
+  const [profileOpen, setProfileOpen] = React.useState(false);
   const [form, setForm] = React.useState(null);
   const [saving, setSaving] = React.useState(false);
   const [saveError, setSaveError] = React.useState('');
 
-  React.useEffect(() => {
-    if (data) {
-      setForm({
-        sex: data.sex || '',
-        height_cm: data.height_cm ?? '',
-        goal_id: data.goal_id ? String(data.goal_id) : '',
-        health_notes: data.health_notes || '',
-        active: Number(data.status) === GYM_MEMBER_STATUS.ACTIVE,
-      });
-    }
-  }, [data]);
+  const openProfile = () => {
+    setForm({
+      sex: data.sex || '',
+      height_cm: data.height_cm ?? '',
+      goal_id: data.goal_id ? String(data.goal_id) : '',
+      health_notes: data.health_notes || '',
+      active: Number(data.status) === GYM_MEMBER_STATUS.ACTIVE,
+    });
+    setSaveError('');
+    setProfileOpen(true);
+  };
 
   const dirty = form && data && (
     form.sex !== (data.sex || '') ||
@@ -265,6 +265,7 @@ export function GymMemberDetail() {
       });
       setData(updated);
       toast({ tone: 'success', title: 'Afiliado actualizado' });
+      setProfileOpen(false);
     } catch (e) {
       setSaveError(e?.message || 'No se pudo guardar los cambios.');
     } finally {
@@ -402,31 +403,31 @@ export function GymMemberDetail() {
         </Card.Body>
       </Card>
 
-      {/* ── Perfil (plegado por defecto: se consulta poco y ocupa pantalla en móvil) ── */}
-      {saveError && <Alert tone="danger" title="No se pudo completar la acción" onClose={() => setSaveError('')}>{saveError}</Alert>}
-      <CollapsibleCard title="Perfil" defaultOpen={false}>
-        {form && (
-          <div className={s.formCol}>
-            <div className={s.formGrid}>
-              <Select label="Sexo" icon="fas fa-venus-mars" value={form.sex}
-                hint="Decide la silueta de la vista de progreso."
-                onChange={(e) => setForm({ ...form, sex: e.target.value })}
-                options={[{ value: '', label: 'Sin definir' }, ...GYM_SEX_OPTIONS]} />
-              <Input label="Talla (cm)" type="number" inputMode="decimal" min="0" icon="fas fa-ruler-vertical"
-                hint="Se usa para calcular el IMC."
-                value={form.height_cm} onChange={(e) => setForm({ ...form, height_cm: e.target.value })} />
-            </div>
-            <Select label="Objetivo" icon="fas fa-bullseye" value={form.goal_id}
-              onChange={(e) => setForm({ ...form, goal_id: e.target.value })} options={goalOptions} />
-            <Textarea label="Notas de salud" placeholder="Lesiones, condiciones a tener en cuenta…"
-              value={form.health_notes} onChange={(e) => setForm({ ...form, health_notes: e.target.value })} />
-            <Switch label="Afiliado activo" checked={form.active}
-              onChange={(e) => setForm({ ...form, active: e.target.checked })} />
-            <div className={s.actions}>
-              <Button variant="primary" loading={saving} disabled={!dirty} onClick={save}>Guardar cambios</Button>
-            </div>
-          </div>
-        )}
+      {/* ── Perfil: resumen de solo lectura, abierto por defecto; la edición abre un modal ── */}
+      <CollapsibleCard title="Perfil" defaultOpen
+        action={
+          <Button variant="secondary" size="sm" icon="fas fa-pen" onClick={openProfile}>
+            Editar
+          </Button>
+        }>
+        <ul className={g.profileList}>
+          <li className={g.profileRow}>
+            <span className={g.profileLabel}>Sexo</span>
+            <span className={g.profileValue}>{gymSexLabel(data.sex) || 'Sin definir'}</span>
+          </li>
+          <li className={g.profileRow}>
+            <span className={g.profileLabel}>Talla</span>
+            <span className={g.profileValue}>{data.height_cm ? `${data.height_cm} cm` : '—'}</span>
+          </li>
+          <li className={g.profileRow}>
+            <span className={g.profileLabel}>Objetivo</span>
+            <span className={g.profileValue}>{data.goal || 'Sin objetivo'}</span>
+          </li>
+          <li className={g.profileRow}>
+            <span className={g.profileLabel}>Notas de salud</span>
+            <span className={g.profileValue}>{data.health_notes || '—'}</span>
+          </li>
+        </ul>
       </CollapsibleCard>
 
       {/* Detalle de una medición del historial */}
@@ -447,6 +448,35 @@ export function GymMemberDetail() {
               ))}
             </ul>
             {openCheckin.notes && <p className={s.faint}>{openCheckin.notes}</p>}
+          </div>
+        )}
+      </Modal>
+
+      {/* Perfil del afiliado (sexo, talla, objetivo, notas y estado): la ficha solo muestra el
+          resumen; los cambios se hacen aquí. */}
+      <Modal open={profileOpen} title="Editar perfil" onClose={() => setProfileOpen(false)}
+        footer={<>
+          <Button variant="secondary" onClick={() => setProfileOpen(false)}>Cancelar</Button>
+          <Button variant="primary" loading={saving} disabled={!dirty} onClick={save}>Guardar</Button>
+        </>}>
+        {form && (
+          <div className={s.formCol}>
+            <div className={s.formGrid}>
+              <Select label="Sexo" icon="fas fa-venus-mars" value={form.sex}
+                hint="Decide la silueta de la vista de progreso."
+                onChange={(e) => setForm({ ...form, sex: e.target.value })}
+                options={[{ value: '', label: 'Sin definir' }, ...GYM_SEX_OPTIONS]} />
+              <Input label="Talla (cm)" type="number" inputMode="decimal" min="0" icon="fas fa-ruler-vertical"
+                hint="Se usa para calcular el IMC."
+                value={form.height_cm} onChange={(e) => setForm({ ...form, height_cm: e.target.value })} />
+            </div>
+            <Select label="Objetivo" icon="fas fa-bullseye" value={form.goal_id}
+              onChange={(e) => setForm({ ...form, goal_id: e.target.value })} options={goalOptions} />
+            <Textarea label="Notas de salud" placeholder="Lesiones, condiciones a tener en cuenta…"
+              value={form.health_notes} onChange={(e) => setForm({ ...form, health_notes: e.target.value })} />
+            <Switch label="Afiliado activo" checked={form.active}
+              onChange={(e) => setForm({ ...form, active: e.target.checked })} />
+            {saveError && <Alert tone="danger" onClose={() => setSaveError('')}>{saveError}</Alert>}
           </div>
         )}
       </Modal>
