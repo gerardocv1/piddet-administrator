@@ -119,9 +119,13 @@ debajo** (texto fino) y el activo únicamente cambia de tinte, sin píldora de f
 Inicio, cuatro módulos y «Más», que abre el cajón con el menú completo.
 
 Cuando la pantalla activa pertenece a un módulo con varias secciones (Egresos → Gastos · Reporte ·
-Categorías), encima de los destinos aparece un **submenú horizontal** compacto con esas hermanas,
-desplazable si no caben. Se calcula sobre `MODULE_GROUPS` completo, así que también lo tienen los
-módulos a los que se llega desde «Más».
+Categorías), encima de los destinos aparece un **submenú horizontal** con esas hermanas,
+desplazable si no caben. Son **textos, no píldoras**: el activo se marca con color y peso, y solo
+se marca la ruta más específica (`/expenses` es prefijo de `/expenses/summary`). Se calcula sobre
+`MODULE_GROUPS` completo, así que también lo tienen los módulos a los que se llega desde «Más».
+
+> El `nav` lleva `pointer-events: none` para que el fade no intercepte toques: **toda zona
+> interactiva que se añada dentro tiene que recuperarlos** con `pointer-events: auto`.
 
 El dock **publica su alto real en `--dock-h`** (cambia según lleve submenú o no) y `Layout` lo usa
 para reservar abajo el espacio justo — así ninguna barra de acciones queda debajo del menú. En los
