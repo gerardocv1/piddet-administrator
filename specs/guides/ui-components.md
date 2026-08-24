@@ -110,6 +110,17 @@ FontAwesome 6 por CDN (declarado en `index.html`). Se pasan como **string de cla
 <Button icon="fas fa-plus">Nuevo</Button>
 ```
 
+## Móvil: la barra de navegación deja pasar el contenido
+
+`MobileDock` es una barra inferior a lo ancho, **sin superficie propia**: su fondo es un degradado
+que va de transparente (arriba) al fondo de la app (abajo). El contenido pasa por debajo y se
+desvanece detrás en vez de chocar contra un borde; de la mitad hacia abajo el degradado ya es
+opaco, así que los rótulos nunca se leen sobre el contenido. Cada destino es icono + etiqueta y el
+activo solo cambia de tinte (sin píldora). Caben cinco: Inicio, tres módulos y «Más», que abre el
+cajón con el menú completo.
+
+`Layout` reserva abajo solo el alto útil de la barra (icono + etiqueta), no el del degradado.
+
 ## Móvil: la cabecera vive en el Topbar
 
 En el teléfono la barra superior es la cabecera de la pantalla: lleva el **título** y la **flecha

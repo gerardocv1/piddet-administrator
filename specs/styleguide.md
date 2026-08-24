@@ -52,5 +52,5 @@ repo en lo funcional; la desviación se corrige portando en la dirección que co
 el naranja como firma de marca (`--brand-piddet` en logo e ítem activo del menú), verde de
 éxito esmeralda, capa móvil nativa (tarjetas sin marco, campos rellenos), cierres con Escape
 en todos los flotantes, fuentes/iconos no bloqueantes en `index.html`, y el chasis móvil nuevo:
-topbar limpio sin división (crumb como eyebrow) y `MobileDock` flotante en vez de hamburguesa
+topbar limpio sin división (crumb como eyebrow) y `MobileDock` en vez de hamburguesa
 («Más» abre el cajón completo).
