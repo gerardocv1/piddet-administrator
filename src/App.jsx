@@ -62,6 +62,7 @@ import { usePermissions } from './lib/permissions/usePermissions.js';
 import { canAccess, firstAccessible } from './lib/permissions/modules.js';
 import { ADMIN_BASE } from './lib/adminBase.js';
 import { applyCompanyBrand } from './lib/brand/applyCompanyBrand.js';
+import { applyCompanyPwa } from './lib/brand/applyCompanyPwa.js';
 
 // Patrón de la URL pública de una carta: /{username-compañía}/m/{username-menú}. Se sirve fuera
 // del panel admin (sin sesión ni permisos), por eso se detecta antes de montar el router.
@@ -176,9 +177,15 @@ function AdminApp() {
   // El acento de compañía (--company-accent*: iconos de menú, pastillas, accesos rápidos)
   // sigue a la identidad de la compañía activa (perfil → Identidad visual); sin sesión (o sin
   // color elegido) rigen los valores por defecto de tokens.css. Se reaplica al cambiar de
-  // compañía o al guardar el perfil (ambos reescriben la compañía de la sesión).
+  // compañía o al guardar el perfil (ambos reescriben la compañía de la sesión). La identidad
+  // instalable (manifest + metas iOS: nombre e icono con inicial y color de la compañía) sigue
+  // a la misma señal.
   React.useEffect(() => {
-    const apply = () => applyCompanyBrand(auth ? authLib.getCompany() : null);
+    const apply = () => {
+      const company = auth ? authLib.getCompany() : null;
+      applyCompanyBrand(company);
+      applyCompanyPwa(company);
+    };
     apply();
     return authLib.onCompanyChange(apply);
   }, [auth]);

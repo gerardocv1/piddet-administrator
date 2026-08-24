@@ -189,13 +189,21 @@ Entrypoint: `index.html` → `src/main.jsx`. Variable de entorno: `VITE_API_URL`
 ## PWA (instalable en Android/iOS)
 
 El panel se instala como aplicación desde Chrome ("Instalar app" / "Agregar a pantalla de
-inicio") y se abre sin barra del navegador (`display: standalone`). Piezas:
+inicio") y se abre a pantalla completa, sin barra del navegador (`display: standalone`; en iOS
+además `apple-mobile-web-app-status-bar-style: black-translucent`, que pinta la app borde a
+borde con la hora sobre el propio fondo). Piezas:
 
 | Archivo | Rol |
 |---|---|
-| `public/manifest.webmanifest` | Identidad de la app: `id`/`start_url`/`scope` = `/admin/`, iconos 192/384/512 + `maskable`, colores de splash. |
+| `public/manifest.webmanifest` | Identidad de la app **por defecto** (sin sesión): `id`/`start_url`/`scope` = `/admin/`, iconos 192/384/512 + `maskable`, colores de splash. |
 | `public/sw.js` | Service worker: red primero para el shell del panel, caché para assets con hash e iconos; nunca cachea `/api` ni otros orígenes. Requisito de Chrome para ofrecer la instalación. |
 | `src/lib/pwa.js` | `registerServiceWorker()` (solo en build de producción) y `useInstallPrompt()`, que alimenta el botón "Instalar app" del pie del menú lateral (escritorio) y de la pantalla «Más» (móvil). |
+| `src/lib/brand/applyCompanyPwa.js` | Identidad instalable **por compañía**: con sesión, reescribe el `<link rel="manifest">` (blob con rutas absolutas) y las metas/iconos `apple-*` con el nombre de la compañía activa y un icono dibujado en canvas (inicial del nombre sobre su color de marca, `brand_primary`). Se aplica desde el mismo efecto de `App.jsx` que `applyCompanyBrand` y se restaura al cerrar sesión. |
+
+Quien instala con sesión iniciada se lleva a la pantalla de inicio el nombre y el color de su
+compañía; la identidad instalada es la del momento de instalar (Android congela el manifest de
+ese instante e iOS lee las metas al abrir "Agregar a inicio"). El `id` del manifest no cambia
+por compañía: es la misma app instalada aunque se cambie de compañía activa después.
 
 Requisitos de despliegue: **HTTPS** y que `/manifest.webmanifest` y `/sw.js` se sirvan desde la
 raíz del dominio (el scope del worker debe cubrir `/admin/`). Instalada de verdad —no como acceso
