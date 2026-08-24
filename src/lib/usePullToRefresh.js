@@ -8,15 +8,19 @@ export function requestRefresh() {
   window.dispatchEvent(new Event(REFRESH_EVENT));
 }
 
-const THRESHOLD = 68;   // px que hay que arrastrar para que cuente
-const MAX_PULL = 96;    // tope del arrastre, para que el indicador no baje sin fin
+const THRESHOLD = 90;   // px (ya con resistencia) que hay que arrastrar para que cuente
+const MAX_PULL = 120;   // tope del arrastre, para que el indicador no baje sin fin
 const RESIST = 0.55;    // el dedo recorre más de lo que baja el indicador (tacto elástico)
+const SLOP = 24;        // zona muerta: hasta no bajar esto, el gesto no es un "pull"
 
 /**
  * Tirar hacia abajo para actualizar, sobre un contenedor con scroll propio.
  *
  * Solo entra cuando el contenedor ya está arriba del todo y el gesto es claramente vertical
- * hacia abajo; si no, deja pasar el scroll normal. Al soltar pasado el umbral emite
+ * hacia abajo, con una zona muerta inicial para no dispararse con roces al hacer scroll o al
+ * tocar controles. Un gesto que empieza dentro de un modal (los modales se renderizan dentro
+ * de <main>, así que sus toques burbujean hasta aquí) nunca es un "pull": ahí el arrastre es
+ * del formulario o de la hoja, no de la pantalla. Al soltar pasado el umbral emite
  * `piddet:refresh`, que releen todos los `useResource` montados: se refrescan los datos de la
  * pantalla sin recargar la app entera (que en el teléfono cuesta segundos).
  *
@@ -40,6 +44,8 @@ export function usePullToRefresh(ref, { enabled = true } = {}) {
       if (refreshing || e.touches.length !== 1) return;
       // Solo desde el tope: si la pantalla está desplazada, el gesto es scroll normal.
       if (el.scrollTop > 0) return;
+      // Dentro de un diálogo/hoja el arrastre es del modal, nunca de la pantalla de fondo.
+      if (e.target instanceof Element && e.target.closest('[role="dialog"], [data-no-pull]')) return;
       const t = e.touches[0];
       state.current = { startY: t.clientY, startX: t.clientX, tracking: true, decided: false };
     };
@@ -53,12 +59,19 @@ export function usePullToRefresh(ref, { enabled = true } = {}) {
 
       if (!st.decided) {
         // Un gesto horizontal (carrusel, deslizar una fila) o hacia arriba no es un "pull".
-        if (dy <= 0 || Math.abs(dx) > Math.abs(dy)) { st.tracking = false; return; }
+        if (dy < 0 || Math.abs(dx) > Math.abs(dy)) { st.tracking = false; return; }
+        // Zona muerta: hasta no bajar SLOP píxeles claramente en vertical (el doble de lo que se
+        // movió a lo ancho), no se captura el gesto — así un roce corto no dispara nada.
+        if (dy < SLOP) return;
+        if (Math.abs(dx) > dy / 2) { st.tracking = false; return; }
+        // El arrastre se mide desde aquí: la zona muerta no cuenta para el indicador.
+        st.startY = t.clientY;
         st.decided = true;
+        return;
       }
       // Ya es nuestro: se corta el rebote del contenedor para que el indicador mande.
       if (e.cancelable) e.preventDefault();
-      setPull(Math.min(MAX_PULL, dy * RESIST));
+      setPull(Math.max(0, Math.min(MAX_PULL, dy * RESIST)));
     };
 
     const finish = () => {

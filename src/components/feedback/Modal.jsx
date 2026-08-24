@@ -31,7 +31,9 @@ export function Modal({ open = true, title, subtitle, children, footer, onClose,
   const maxW = width || WIDTHS[size] || WIDTHS.md;
 
   return (
-    <div onClick={onClose} className={styles.overlay} data-sheet={asSheet}>
+    // data-no-pull: con un modal abierto, ningún arrastre (ni sobre el fondo oscurecido) debe
+    // disparar el "tirar para actualizar" de la pantalla que quedó detrás.
+    <div onClick={onClose} className={styles.overlay} data-sheet={asSheet} data-no-pull="">
       <div onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" className={styles.panel} data-sheet={asSheet} style={{ maxWidth: maxW, ...style }} {...rest}>
         {asSheet && <div className={styles.grabber}><span /></div>}
         {(title || onClose) && (

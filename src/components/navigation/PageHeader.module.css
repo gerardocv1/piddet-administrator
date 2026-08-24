@@ -12,6 +12,16 @@
 .top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .text { flex: 1; min-width: 0; }
 .subtitle { color: var(--gray-700); font-size: var(--text-base); font-weight: 600; }
+/* Subtítulo clicable: misma tipografía que el normal, solo cambia que responde al toque. */
+.subtitleLink {
+  border: none;
+  background: transparent;
+  padding: 0;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  text-align: left;
+}
+.subtitleLink:active { opacity: 0.7; }
 .actions { display: inline-flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 
 /* En móvil las acciones (badges + botones) no caben junto al subtítulo: van a su propia
