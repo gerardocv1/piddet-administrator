@@ -3,7 +3,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { HOME_ITEM, MODULE_GROUPS, canAccess } from '../../lib/permissions/modules.js';
 import { usePermissions } from '../../lib/permissions/usePermissions.js';
 import { useFunctionalities } from '../../lib/permissions/useFunctionalities.js';
-import { moduleTerm, moduleIcon, routeTerm, routeIcon } from '../../lib/terms.js';
+import { moduleTerm, moduleIcon, routeTerm, routeIcon, sortModules } from '../../lib/terms.js';
 import styles from './MobileDock.module.css';
 
 // Secciones cuyos módulos son "los principales" y merecen atajo en el dock; el resto del menú
@@ -62,8 +62,9 @@ export function MobileDock() {
     // Si las secciones se renombran, es preferible un dock con los primeros módulos que uno vacío.
     const groups = primary.length ? primary : MODULE_GROUPS;
 
-    return groups
-      .flatMap((g) => g.items)
+    // Prioridad por tipo de compañía SIN secciones: en el dock cuenta la relevancia global
+    // (p. ej. gimnasio: Gimnasio, Ingresos, Gastos, Catálogo).
+    return sortModules(groups.flatMap((g) => g.items))
       .map((m) => {
         // De un desplegable se muestran icono y etiqueta del padre; el destino es su primera
         // ruta accesible, y cualquiera de ellas lo marca activo.

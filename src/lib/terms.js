@@ -8,6 +8,9 @@
 //   routeIcons  → icono de la ruta cuando cambia con la etiqueta
 //   titles      → títulos de pantalla del topbar (META del Layout), por path
 //   phrases     → frases sueltas dentro de las vistas ('Ventas totales', 'Ventas por día'…)
+//   moduleOrder → prioridad de los módulos en el menú (etiquetas DECLARADAS, antes del
+//                 renombre): lo más relevante para ese negocio va primero. Lo no listado
+//                 conserva su orden declarado, al final.
 //   entities    → cómo se llama la ENTIDAD dentro de su módulo (botones, modales, toasts):
 //                 { one, many, pub, pubFull, sample }. Todos los nombres son masculinos
 //                 (menú, catálogo público, ítem, producto, servicio), así los participios
@@ -59,6 +62,7 @@ export const COMPANY_TYPE_TERMS = {
       'No hay ventas en el período seleccionado.': 'No hay ingresos en el período seleccionado.',
     },
     entities: { menu: CATALOG_MENU, product: { one: 'ítem', many: 'ítems' } },
+    moduleOrder: ['Gimnasio', 'Ventas', 'Egresos', 'Menús', 'Turnos', 'Mesas', 'Hospedaje'],
   },
   store: {
     modules: { 'Menús': 'Catálogo', 'Egresos': 'Gastos' },
@@ -67,6 +71,7 @@ export const COMPANY_TYPE_TERMS = {
     routeIcons: { '/menus': 'fas fa-share-nodes' },
     titles: { '/menus': 'Catálogos públicos' },
     entities: { menu: CATALOG_MENU },
+    moduleOrder: ['Menús', 'Ventas', 'Egresos', 'Turnos', 'Mesas', 'Hospedaje', 'Gimnasio'],
   },
   lodging: {
     modules: { 'Menús': 'Servicios', 'Ventas': 'Ingresos', 'Egresos': 'Gastos' },
@@ -89,6 +94,7 @@ export const COMPANY_TYPE_TERMS = {
       'No hay ventas en el período seleccionado.': 'No hay ingresos en el período seleccionado.',
     },
     entities: { menu: CATALOG_MENU, product: { one: 'servicio', many: 'servicios' } },
+    moduleOrder: ['Hospedaje', 'Ventas', 'Egresos', 'Menús', 'Turnos', 'Mesas', 'Gimnasio'],
   },
 };
 
@@ -111,6 +117,32 @@ export const titleTerm = (path, fallback) => dict()?.titles?.[path] ?? fallback;
 
 /** Frase suelta de una vista ('Ventas totales'…) según el tipo de compañía. */
 export const phrase = (text) => dict()?.phrases?.[text] ?? text;
+
+// Posición de un módulo en la prioridad del tipo; lo no listado queda al final, en su orden.
+const moduleRank = (order, label) => {
+  const i = order.indexOf(label);
+  return i === -1 ? order.length : i;
+};
+
+/** Ordena una lista plana de módulos por la prioridad del tipo (dock móvil). Sin prioridad
+ *  declarada, el orden es el de modules.js. El sort es estable: los no listados no se mueven. */
+export function sortModules(items) {
+  const order = dict()?.moduleOrder;
+  if (!order) return items;
+  return [...items].sort((a, b) => moduleRank(order, a.label) - moduleRank(order, b.label));
+}
+
+/** Ordena los grupos del menú (sidebar y «Más»): los módulos dentro de cada sección por la
+ *  prioridad del tipo, y las secciones por su mejor módulo (Configuración, sin módulos
+ *  priorizados, se queda al final). */
+export function sortModuleGroups(groups) {
+  const order = dict()?.moduleOrder;
+  if (!order) return groups;
+  const best = (g) => Math.min(...g.items.map((m) => moduleRank(order, m.label)), order.length);
+  return groups
+    .map((g) => ({ ...g, items: sortModules(g.items) }))
+    .sort((a, b) => best(a) - best(b));
+}
 
 /** Nombres de una entidad ('menu' | 'product') según el tipo de compañía, con los defaults
  *  de restaurante como base. Las pantallas componen sus textos con esto. */
