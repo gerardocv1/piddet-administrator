@@ -95,6 +95,15 @@ export function Layout({ theme, onToggleTheme, onLogout }) {
 
   const openCompanyProfile = () => navigate('/company');
 
+  // Sin dock (flujo a pantalla completa) el contenido no debe reservar espacio abajo: el
+  // asistente trae su propia barra fija. Con dock, el alto real lo publica él mismo.
+  const showDock = !FLOW_ROUTES.some((re) => re.test(location.pathname));
+  React.useEffect(() => {
+    if (showDock) return undefined;
+    document.documentElement.style.setProperty('--dock-h', '0px');
+    return () => document.documentElement.style.removeProperty('--dock-h');
+  }, [showDock]);
+
   // La administración de un menú (/menus/:id) no tiene entrada exacta: usa un título genérico
   // (la propia pantalla muestra el nombre del menú en su cabecera).
   const sectionOf = (path) => {
@@ -122,9 +131,7 @@ export function Layout({ theme, onToggleTheme, onLogout }) {
           <main className={styles.main}><Outlet /></main>
           {/* Navegación móvil (reemplaza a la hamburguesa); «Más» abre el cajón. En un flujo a
               pantalla completa no se pinta: su barra fija de acciones ocupa ese borde. */}
-          {!FLOW_ROUTES.some((re) => re.test(location.pathname)) && (
-            <MobileDock onMore={() => setNavOpen(true)} moreOpen={navOpen} />
-          )}
+          {showDock && <MobileDock onMore={() => setNavOpen(true)} moreOpen={navOpen} />}
         </div>
       </PageTitleProvider>
     </div>

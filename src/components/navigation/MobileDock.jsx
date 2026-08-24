@@ -16,6 +16,23 @@ const DOCK_SLOTS = 4;
 const isUnder = (pathname, to) => pathname === to || pathname.startsWith(`${to}/`);
 
 /**
+ * Módulo desplegable al que pertenece la ruta actual, con sus rutas accesibles. Se busca en TODOS
+ * los grupos —no solo en los del dock— para que un módulo al que se llega desde «Más» (Egresos,
+ * por ejemplo) también ofrezca su submenú.
+ */
+function subItemsFor(pathname, permissions, activeFunctionalities) {
+  for (const group of MODULE_GROUPS) {
+    for (const m of group.items) {
+      if (!m.children) continue;
+      const routes = m.children.filter((c) => c.to && canAccess(c.to, permissions, activeFunctionalities));
+      // Solo tiene sentido con dos o más hermanas: con una, el submenú repetiría el destino.
+      if (routes.length > 1 && routes.some((c) => isUnder(pathname, c.to))) return routes;
+    }
+  }
+  return [];
+}
+
+/**
  * MobileDock — navegación principal en móvil: barra inferior a lo ancho, sin superficie propia.
  * El fondo es un degradado que va de transparente (arriba) al fondo de la app (abajo), así que
  * el contenido **pasa por debajo** y se desvanece detrás de la barra en vez de chocar con un
@@ -26,6 +43,10 @@ const isUnder = (pathname, to) => pathname === to || pathname.startsWith(`${to}/
  * y se navega a su primera ruta accesible; queda marcado activo mientras se esté en cualquiera de
  * sus pantallas. Cada destino es icono con su nombre pequeño debajo y el activo se distingue
  * por el tinte. Respeta permisos y funcionalidades igual que el Sidebar.
+ *
+ * Cuando la pantalla activa pertenece a un módulo con varias secciones (Egresos → Gastos,
+ * Reporte, Categorías), encima de los destinos aparece un submenú horizontal compacto con esas
+ * hermanas: se salta entre ellas sin pasar por «Más».
  */
 export function MobileDock({ onMore, moreOpen = false }) {
   const { pathname } = useLocation();
@@ -56,8 +77,43 @@ export function MobileDock({ onMore, moreOpen = false }) {
   const itemClass = (active) =>
     [styles.item, active && !moreOpen ? styles.active : ''].filter(Boolean).join(' ');
 
+  const subItems = React.useMemo(
+    () => subItemsFor(pathname, permissions, activeFunctionalities),
+    [pathname, permissions, activeFunctionalities],
+  );
+
+  // El alto del dock cambia según lleve submenú o no; el Layout lo lee para reservar abajo el
+  // espacio justo y que ninguna barra de acciones quede debajo del menú.
+  const ref = React.useRef(null);
+  React.useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof ResizeObserver === 'undefined') return undefined;
+    const publish = () => {
+      document.documentElement.style.setProperty('--dock-h', `${Math.round(el.offsetHeight)}px`);
+    };
+    publish();
+    const ro = new ResizeObserver(publish);
+    ro.observe(el);
+    return () => {
+      ro.disconnect();
+      document.documentElement.style.removeProperty('--dock-h');
+    };
+  }, []);
+
   return (
-    <nav className={styles.dock} aria-label="Navegación principal">
+    <nav ref={ref} className={styles.dock} aria-label="Navegación principal">
+      {subItems.length > 0 && (
+        <div className={styles.sub} aria-label="Secciones del módulo">
+          {subItems.map((c) => (
+            <NavLink key={c.to} to={c.to}
+              className={({ isActive }) => [styles.subItem, isActive || isUnder(pathname, c.to) ? styles.subActive : ''].filter(Boolean).join(' ')}>
+              {c.label}
+            </NavLink>
+          ))}
+        </div>
+      )}
+
+      <div className={styles.items}>
       <NavLink to={HOME_ITEM.to} end aria-label={HOME_ITEM.label}
         className={({ isActive }) => itemClass(isActive)}>
         <i className={HOME_ITEM.icon} aria-hidden="true" />
@@ -77,6 +133,7 @@ export function MobileDock({ onMore, moreOpen = false }) {
         <i className="fas fa-ellipsis" aria-hidden="true" />
         <span className={styles.label}>Más</span>
       </button>
+      </div>
     </nav>
   );
 }

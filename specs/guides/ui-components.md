@@ -115,12 +115,18 @@ FontAwesome 6 por CDN (declarado en `index.html`). Se pasan como **string de cla
 `MobileDock` es una barra inferior a lo ancho, **sin superficie propia**: arriba lleva un fade
 corto por el que el contenido pasa y se desvanece, rematado por un **filete** que divide el body
 del menú; de ahí hacia abajo la barra es opaca. Cada destino es **icono con su nombre pequeño
-debajo** y el activo únicamente cambia de tinte, sin píldora de fondo. Son seis: Inicio, cuatro
-módulos y «Más», que abre el cajón con el menú completo.
+debajo** (texto fino) y el activo únicamente cambia de tinte, sin píldora de fondo. Son seis:
+Inicio, cuatro módulos y «Más», que abre el cajón con el menú completo.
 
-`Layout` reserva abajo el alto útil de la barra (iconos + nombres), no el del fade. En los
-**flujos a pantalla completa** con su propia barra fija de acciones (registrar gasto, nueva
-reserva, cerrar turno, tomar medidas) el dock **no se pinta**: tapaba los botones
+Cuando la pantalla activa pertenece a un módulo con varias secciones (Egresos → Gastos · Reporte ·
+Categorías), encima de los destinos aparece un **submenú horizontal** compacto con esas hermanas,
+desplazable si no caben. Se calcula sobre `MODULE_GROUPS` completo, así que también lo tienen los
+módulos a los que se llega desde «Más».
+
+El dock **publica su alto real en `--dock-h`** (cambia según lleve submenú o no) y `Layout` lo usa
+para reservar abajo el espacio justo — así ninguna barra de acciones queda debajo del menú. En los
+**flujos a pantalla completa** con su propia barra fija (registrar gasto, nueva reserva, cerrar
+turno, tomar medidas) el dock **no se pinta** y `--dock-h` vale `0px`: tapaba los botones
 Continuar/Registrar, y durante el flujo la navegación es del propio asistente (la lista vive en
 `FLOW_ROUTES`, en `Layout.jsx`).
 

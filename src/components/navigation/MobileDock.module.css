@@ -1,8 +1,9 @@
 /* Dock móvil — barra inferior a lo ancho, sin superficie propia: el fondo es un degradado que
    va de transparente al fondo de la app, de modo que el contenido pasa por debajo y se
    desvanece detrás en vez de chocar contra un borde. Solo existe en móvil; en escritorio la
-   navegación es el Sidebar. Un filete al terminar el fade separa el body del menú. Va por
-   debajo del cajón lateral (z 55/60) y de los modales (1050): cualquier flotante lo cubre. */
+   navegación es el Sidebar. Un filete al terminar el fade separa el body del menú, y encima de
+   los destinos puede ir un submenú horizontal con las secciones del módulo activo. Va por debajo
+   del cajón lateral (z 55/60) y de los modales (1050): cualquier flotante lo cubre. */
 
 .dock {
   display: none;
@@ -16,19 +17,18 @@
     bottom: 0;
     z-index: 45;
     display: flex;
-    align-items: flex-end;
-    justify-content: space-around;
+    flex-direction: column;
     gap: 0;
     /* El aire de arriba es un fade corto: ahí el contenido todavía se ve, difuminándose, y al
        terminar lo remata el filete divisorio (::before). De ahí hacia abajo la barra es opaca,
        así que iconos y nombres nunca se leen sobre el contenido. */
-    padding: 1.35rem max(0.35rem, env(safe-area-inset-left)) calc(0.3rem + env(safe-area-inset-bottom)) max(0.35rem, env(safe-area-inset-right));
+    padding: 1rem max(0.35rem, env(safe-area-inset-left)) calc(0.2rem + env(safe-area-inset-bottom)) max(0.35rem, env(safe-area-inset-right));
     /* Los tramos llevan el tinte del fondo (no la palabra `transparent`, que interpola hacia
        negro y ensucia el degradado en algunos navegadores). */
     background: linear-gradient(
       to bottom,
       color-mix(in srgb, var(--bg-body) 2%, transparent) 0,
-      var(--bg-body) 1rem
+      var(--bg-body) 0.75rem
     );
     pointer-events: none;   /* el degradado no intercepta toques; los destinos sí (ver .item) */
   }
@@ -39,12 +39,54 @@
   .dock::before {
     content: '';
     position: absolute;
-    top: 1rem;
+    top: 0.75rem;
     left: 0;
     right: 0;
     height: 1px;
     background: var(--border-color);
   }
+}
+
+/* Fila de destinos. */
+.items {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-around;
+  width: 100%;
+}
+
+/* Submenú horizontal: las secciones hermanas del módulo activo (Gastos · Reporte · Categorías).
+   Compacto y desplazable en horizontal si no caben, sin barra visible. */
+.sub {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 2px 2px 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.sub::-webkit-scrollbar { display: none; }
+
+.subItem {
+  flex: 0 0 auto;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--gray-100);
+  color: var(--gray-600);
+  font-family: var(--font-sans);
+  font-size: 0.6875rem;
+  font-weight: var(--fw-regular, 400);
+  line-height: 1.4;
+  white-space: nowrap;
+  text-decoration: none;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+.subActive {
+  background: var(--color-primary-100);
+  color: var(--color-primary-700);
+  font-weight: var(--fw-semibold, 600);
 }
 
 /* Destino: icono con su nombre pequeño debajo, repartido a lo ancho. Sin píldora ni superficie
@@ -55,17 +97,17 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 3px;
   flex: 1 1 0;
   min-width: 0;
-  min-height: 48px;
+  min-height: 42px;
   padding: 2px 2px 0;
   border: 0;
   background: transparent;
   color: var(--gray-500);
   font-family: var(--font-sans);
   font-size: 0.625rem;
-  font-weight: var(--fw-semibold, 600);
+  font-weight: var(--fw-regular, 400);
   line-height: 1.1;
   letter-spacing: 0.01em;
   text-decoration: none;
@@ -75,7 +117,7 @@
 }
 
 .item i {
-  font-size: 1.25rem;
+  font-size: 1.05rem;
   flex: 0 0 auto;
 }
 
@@ -94,8 +136,9 @@
 
 /* Teléfonos angostos: el nombre se encoge antes que el icono. */
 @media (max-width: 380px) {
-  .item { font-size: 0.5625rem; gap: 3px; }
-  .item i { font-size: 1.15rem; }
+  .item { font-size: 0.5625rem; gap: 2px; min-height: 40px; }
+  .item i { font-size: 1rem; }
+  .subItem { font-size: 0.625rem; padding: 3px 9px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
