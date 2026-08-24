@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button, MoneyInput, Textarea, Spinner, Alert } from '../../components';
 import { api } from '../../lib/api.js';
+import { phrase } from '../../lib/terms.js';
 import { useResource } from '../../lib/useResource.js';
 import { shiftMoney, SHIFT_TYPE_LABELS } from '../../lib/shiftLabels.js';
 import t from './ShiftCloseWizard.module.css';
@@ -154,7 +155,7 @@ export function ShiftCloseWizard() {
               <>
                 <div className={t.summary}>
                   <div><span>Base</span><strong>{shiftMoney(balance.base_amount)}</strong></div>
-                  <div><span>Ventas ({balance.sales?.count ?? 0})</span><strong className={t.income}>+ {shiftMoney(balance.sales?.total)}</strong></div>
+                  <div><span>{phrase('Ventas')} ({balance.sales?.count ?? 0})</span><strong className={t.income}>+ {shiftMoney(balance.sales?.total)}</strong></div>
                   <MethodRows rows={balance.sales?.by_method} />
                   <div><span>Gastos ({balance.expenses?.count ?? 0})</span><strong className={t.outcome}>− {shiftMoney(balance.expenses?.total)}</strong></div>
                   <MethodRows rows={balance.expenses?.by_method} />

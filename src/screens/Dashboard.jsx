@@ -289,8 +289,8 @@ export function Dashboard() {
           cmp={salesCmpRes.data}
           cmpLoading={salesCmpRes.loading}
           cmpError={salesCmpRes.error}
-          chartLoadingLabel="Cargando ventas…"
-          chartEmptyLabel="No hay ventas en el período seleccionado."
+          chartLoadingLabel={phrase('Cargando ventas…')}
+          chartEmptyLabel={phrase('No hay ventas en el período seleccionado.')}
         />
       )}
 
