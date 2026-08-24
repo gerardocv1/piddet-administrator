@@ -1,4 +1,5 @@
 import React from 'react';
+import { REFRESH_EVENT } from './usePullToRefresh.js';
 
 /**
  * Carga datos de la API con estados unificados de carga/error y recarga.
@@ -28,6 +29,14 @@ export function useResource(fetcher, initial = [], deps = []) {
   }, deps);
 
   React.useEffect(load, [load]);
+
+  // Tirar hacia abajo para actualizar: relee sin recargar la app. Como escucha cada recurso
+  // montado, la pantalla entera se refresca aunque cargue varias cosas a la vez.
+  React.useEffect(() => {
+    const onRefresh = () => { load(); };
+    window.addEventListener(REFRESH_EVENT, onRefresh);
+    return () => window.removeEventListener(REFRESH_EVENT, onRefresh);
+  }, [load]);
 
   return { data, setData, loading, error, reload: load };
 }

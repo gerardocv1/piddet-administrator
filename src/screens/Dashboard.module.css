@@ -29,9 +29,11 @@
   height: 38px;
   padding: 0 0.6rem;
 }
+/* El tamaño de letra lo pone el componente (Input/Select), no la pantalla: forzarlo aquí dejaba
+   la fecha a 12px y el selector a 16px —empataban en especificidad y ganaba uno u otro—, que es
+   justo la mezcla de tamaños que se veía en el inicio. */
 .toolbar .ctrl :is(input, select) {
   height: 100%;
-  font-size: var(--text-sm);
   min-width: 0;
 }
 .refreshBtn { flex: 0 0 auto; position: relative; overflow: hidden; touch-action: none; user-select: none; }

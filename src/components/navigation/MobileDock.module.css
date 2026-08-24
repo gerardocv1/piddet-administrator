@@ -65,9 +65,16 @@
 .sub {
   display: flex;
   align-items: center;
+  /* Centrado: con pocas secciones queda a mitad de pantalla; si se llenan, `justify-content`
+     deja de mandar y la fila se desplaza desde el inicio. */
+  justify-content: center;
   gap: 18px;
   width: 100%;
-  padding: 0 4px 2px;
+  padding: 3px 12px;
+  margin-bottom: 2px;
+  /* Un tono más claro que el fondo del menú: separa el submenú de la fila de destinos sin
+     necesidad de otro filete. */
+  background: var(--gray-100);
   overflow-x: auto;
   scrollbar-width: none;
   -ms-overflow-style: none;
@@ -78,6 +85,7 @@
 .subItem {
   display: inline-flex;
   align-items: center;
+  /* `0 0 auto` para que el centrado reparta el sobrante y no se estiren. */
   flex: 0 0 auto;
   /* Alto cómodo para el pulgar aunque el texto sea pequeño. */
   min-height: 34px;

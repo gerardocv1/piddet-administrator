@@ -5,6 +5,7 @@ import { api } from '../lib/api.js';
 import { auth as authLib } from '../lib/auth/index.js';
 import { ADMIN_BASE } from '../lib/adminBase.js';
 import { useIsMobile } from '../lib/useIsMobile.js';
+import { usePullToRefresh } from '../lib/usePullToRefresh.js';
 import { PageTitleProvider, usePageTitle } from '../lib/pageTitle.jsx';
 import styles from './Layout.module.css';
 
@@ -95,6 +96,15 @@ export function Layout({ theme, onToggleTheme, onLogout }) {
 
   const openCompanyProfile = () => navigate('/company');
 
+  // Tirar hacia abajo para actualizar (solo en el teléfono: quien desplaza es <main>, así que el
+  // gesto nativo del navegador no aplica, y en la app instalada no existe).
+  const mainRef = React.useRef(null);
+  const { pull, refreshing } = usePullToRefresh(mainRef, { enabled: isMobile });
+  const pullStyle = pull > 0 ? { transform: `translateY(${pull}px)` } : undefined;
+  // Al soltar, `pull` vuelve a 0 y el contenido sube; durante el arrastre no hay transición
+  // para que siga al dedo sin retraso.
+  const pullTransition = pull === 0 ? 'transform .2s ease' : 'none';
+
   // Sin dock (flujo a pantalla completa) el contenido no debe reservar espacio abajo: el
   // asistente trae su propia barra fija. Con dock, el alto real lo publica él mismo.
   const showDock = !FLOW_ROUTES.some((re) => re.test(location.pathname));
@@ -128,7 +138,16 @@ export function Layout({ theme, onToggleTheme, onLogout }) {
         <div className={styles.contentCol}>
           <LayoutTopbar meta={meta} isMobile={isMobile} user={user} onLogout={onLogout}
             theme={theme} onToggleTheme={onToggleTheme} />
-          <main className={styles.main}><Outlet /></main>
+          {/* Indicador del gesto: asoma bajo la barra superior mientras se arrastra y gira
+              mientras se releen los datos. */}
+          {(pull > 0 || refreshing) && (
+            <div className={styles.pullHint} style={{ transform: `translateY(${pull}px)` }} aria-hidden="true">
+              <i className={`fas fa-arrow-rotate-right ${refreshing ? styles.pullSpin : ''}`}
+                style={refreshing ? undefined : { transform: `rotate(${pull * 3}deg)` }} />
+            </div>
+          )}
+          <main ref={mainRef} className={styles.main}
+            style={{ ...pullStyle, transition: pullTransition }}><Outlet /></main>
           {/* Navegación móvil (reemplaza a la hamburguesa); «Más» abre el cajón. En un flujo a
               pantalla completa no se pinta: su barra fija de acciones ocupa ese borde. */}
           {showDock && <MobileDock onMore={() => setNavOpen(true)} moreOpen={navOpen} />}
