@@ -32,12 +32,12 @@
   /* Abajo se reserva el alto útil del dock (icono + etiqueta) para que el final del contenido
      no quede oculto; el degradado que lo corona sí lo cruza el contenido al desplazarse. */
   .main {
-    padding: 0.85rem max(0.85rem, env(safe-area-inset-right)) calc(4.25rem + env(safe-area-inset-bottom)) max(0.85rem, env(safe-area-inset-left));
+    padding: 0.85rem max(0.85rem, env(safe-area-inset-right)) calc(3.75rem + env(safe-area-inset-bottom)) max(0.85rem, env(safe-area-inset-left));
   }
 }
 
 @media (max-width: 480px) {
   .main {
-    padding: 0.7rem max(0.7rem, env(safe-area-inset-right)) calc(4.1rem + env(safe-area-inset-bottom)) max(0.7rem, env(safe-area-inset-left));
+    padding: 0.7rem max(0.7rem, env(safe-area-inset-right)) calc(3.6rem + env(safe-area-inset-bottom)) max(0.7rem, env(safe-area-inset-left));
   }
 }

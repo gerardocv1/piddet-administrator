@@ -1,8 +1,9 @@
 /* Dock móvil — barra inferior a lo ancho, sin superficie propia: el fondo es un degradado que
    va de transparente al fondo de la app, de modo que el contenido pasa por debajo y se
    desvanece detrás en vez de chocar contra un borde. Solo existe en móvil; en escritorio la
-   navegación es el Sidebar. Va por debajo del cajón lateral (z 55/60) y de los modales (1050):
-   cualquier flotante lo cubre. */
+   navegación es el Sidebar. Los destinos son solo icono, como antes: lo que cambia respecto a la
+   píldora flotante anterior es el tamaño, la posición y el estilo. Va por debajo del cajón
+   lateral (z 55/60) y de los modales (1050): cualquier flotante lo cubre. */
 
 .dock {
   display: none;
@@ -20,7 +21,7 @@
     justify-content: space-around;
     gap: 0;
     /* El aire de arriba es parte del degradado: ahí el contenido todavía se ve, difuminándose. */
-    padding: 1.75rem max(0.5rem, env(safe-area-inset-left)) calc(0.35rem + env(safe-area-inset-bottom)) max(0.5rem, env(safe-area-inset-right));
+    padding: 1.5rem max(0.35rem, env(safe-area-inset-left)) calc(0.3rem + env(safe-area-inset-bottom)) max(0.35rem, env(safe-area-inset-right));
     /* Los tramos llevan el tinte del fondo (no la palabra `transparent`, que interpola hacia
        negro y ensucia el degradado en algunos navegadores). */
     background: linear-gradient(
@@ -33,26 +34,20 @@
   }
 }
 
-/* Destino: icono arriba, etiqueta debajo. Sin píldora ni superficie — el activo solo cambia de
-   tinte, como en las barras nativas. */
+/* Destino: solo icono, repartido a lo ancho. Sin píldora ni superficie — el activo únicamente
+   cambia de tinte, como en las barras nativas. El área de toque es la celda completa. */
 .item {
   display: inline-flex;
-  flex-direction: column;
   align-items: center;
-  justify-content: flex-end;
-  gap: 4px;
+  justify-content: center;
   flex: 1 1 0;
   min-width: 0;
-  min-height: 46px;
-  padding: 4px 2px;
+  height: 44px;
+  padding: 0;
   border: 0;
   background: transparent;
   color: var(--gray-500);
   font-family: var(--font-sans);
-  font-size: 0.625rem;
-  font-weight: var(--fw-semibold, 600);
-  line-height: 1.1;
-  letter-spacing: 0.01em;
   text-decoration: none;
   cursor: pointer;
   pointer-events: auto;
@@ -60,16 +55,8 @@
 }
 
 .item i {
-  font-size: 1.15rem;
+  font-size: 1.35rem;
   flex: 0 0 auto;
-}
-
-/* La etiqueta nunca empuja a las vecinas: se recorta antes de desbordar. */
-.label {
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .active,
@@ -77,10 +64,10 @@
   color: var(--color-primary);
 }
 
-/* Teléfonos angostos: la etiqueta se encoge antes que el icono. */
+/* Teléfonos angostos: un punto más compacto. */
 @media (max-width: 380px) {
-  .item { font-size: 0.5625rem; gap: 3px; }
-  .item i { font-size: 1.05rem; }
+  .item { height: 42px; }
+  .item i { font-size: 1.25rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {

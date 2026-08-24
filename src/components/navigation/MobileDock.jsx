@@ -9,9 +9,8 @@ import styles from './MobileDock.module.css';
 // (Configuración, enlaces) vive tras «Más».
 const PRIMARY_SECTIONS = ['Oferta', 'Operación'];
 
-// Cuántos módulos principales acompañan a Inicio. Con etiqueta debajo del icono, cinco destinos
-// (Inicio + 3 + «Más») son los que caben sin apretarse en un teléfono; el resto vive tras «Más».
-const DOCK_SLOTS = 3;
+// Cuántos módulos principales acompañan a Inicio. Con más, el dock deja de caber en un teléfono.
+const DOCK_SLOTS = 4;
 
 // ¿La ruta activa cae dentro de este destino? (el detalle /expenses/8 sigue siendo Egresos)
 const isUnder = (pathname, to) => pathname === to || pathname.startsWith(`${to}/`);
@@ -25,8 +24,8 @@ const isUnder = (pathname, to) => pathname === to || pathname.startsWith(`${to}/
  * Lleva Inicio + los primeros módulos principales (los de Oferta y Operación), y «Más», que abre
  * el cajón lateral con el menú completo. De un módulo desplegable se toma su icono y su etiqueta,
  * y se navega a su primera ruta accesible; queda marcado activo mientras se esté en cualquiera de
- * sus pantallas. Cada destino es icono + etiqueta y el activo se distingue por el tinte. Respeta
- * permisos y funcionalidades igual que el Sidebar.
+ * sus pantallas. Cada destino es solo icono (el nombre lo da `aria-label`) y el activo se
+ * distingue por el tinte. Respeta permisos y funcionalidades igual que el Sidebar.
  */
 export function MobileDock({ onMore, moreOpen = false }) {
   const { pathname } = useLocation();
@@ -62,21 +61,18 @@ export function MobileDock({ onMore, moreOpen = false }) {
       <NavLink to={HOME_ITEM.to} end aria-label={HOME_ITEM.label}
         className={({ isActive }) => itemClass(isActive)}>
         <i className={HOME_ITEM.icon} aria-hidden="true" />
-        <span className={styles.label}>{HOME_ITEM.label}</span>
       </NavLink>
 
       {items.map((m) => (
         <NavLink key={m.label} to={m.to} aria-label={m.label}
           className={itemClass(m.routes.some((to) => isUnder(pathname, to)))}>
           <i className={m.icon} aria-hidden="true" />
-          <span className={styles.label}>{m.label}</span>
         </NavLink>
       ))}
 
       <button type="button" className={itemClass(moreOpen)}
         aria-label="Más opciones" aria-expanded={moreOpen} onClick={onMore}>
         <i className="fas fa-ellipsis" aria-hidden="true" />
-        <span className={styles.label}>Más</span>
       </button>
     </nav>
   );
