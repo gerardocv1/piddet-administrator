@@ -138,8 +138,9 @@ export function CompanyProfile() {
           )} />
         <Card.Body>
           <p className={t.brandHint}>
-            Colores con los que se pintan este panel y las páginas públicas de la empresa
-            (portada, hospedaje): botones, enlaces y realces.
+            Colores con los que se pintan las páginas públicas de la empresa (portada, hospedaje).
+            En este panel asoman como acento del menú y los iconos de módulo; los botones de
+            acción y el logo de piddet no cambian.
           </p>
           <BrandPreview primary={company.brand_primary} secondary={company.brand_secondary}
             name={company.name} />
@@ -226,7 +227,7 @@ function CompanyEditModal({ company, onClose, onSaved }) {
 
         <div className={t.brandFields}>
           <BrandColorPicker label="Color primario"
-            hint="Manda en botones, enlaces y realces del panel y de las páginas públicas."
+            hint="Manda en las páginas públicas y acentúa el menú y los iconos del panel."
             value={form.brand_primary} onChange={(v) => set('brand_primary', v)} />
           <BrandColorPicker label="Color secundario"
             hint="Acompaña al primario en el degradado del logo."

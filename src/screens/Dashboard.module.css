@@ -94,14 +94,15 @@
   .quickRow > * { flex: 1; min-width: 0; max-width: 360px; }
 }
 
-/* Acción rápida: tarjeta tappable ancha en móvil, compartiendo la fila en desktop */
+/* Acción rápida: tarjeta tappable ancha en móvil, compartiendo la fila en desktop. Lleva el
+   acento de la compañía (por defecto, el primario petróleo): es realce decorativo, no botón. */
 .quickExpense {
   display: flex;
   align-items: center;
   gap: 10px;
   width: 100%;
   padding: 10px 14px;
-  border: 1px solid color-mix(in srgb, var(--calendar-accent) 35%, var(--border-color));
+  border: 1px solid color-mix(in srgb, var(--company-accent) 35%, var(--border-color));
   border-radius: var(--radius-lg);
   background: var(--surface-card);
   cursor: pointer;
@@ -109,7 +110,7 @@
   text-align: left;
   transition: border-color 0.15s, background 0.15s;
 }
-.quickExpense:hover { border-color: var(--calendar-accent); background: var(--calendar-accent-soft); }
+.quickExpense:hover { border-color: var(--company-accent); background: var(--company-accent-soft); }
 /* Móvil: sin superficie propia — el borde de acento basta para leerla como tappable y así no
    se ve el corte contra el fondo de la pantalla. */
 @media (max-width: 860px) {
@@ -123,8 +124,8 @@
   height: 34px;
   flex: 0 0 auto;
   border-radius: 50%;
-  background: var(--calendar-accent-soft);
-  color: var(--calendar-accent);
+  background: var(--company-accent-soft);
+  color: var(--company-accent-strong);
   font-size: 0.85rem;
 }
 .quickText { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }

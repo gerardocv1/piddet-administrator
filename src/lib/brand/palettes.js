@@ -71,26 +71,34 @@ export function buildBrandTheme(primaryKey, secondaryKey) {
 }
 
 /**
- * La misma escala pero para el tema oscuro, con las relaciones que fija tokens.css: el acento
- * sube un punto de luz para no apagarse sobre la superficie oscura, la 700 se invierte a un tono
- * claro legible (ahí es texto/realce, no fondo) y los tintes 100/050 pasan a veladuras
- * translúcidas del acento.
+ * Acento de compañía para el PANEL: no toca el primario de acción (botones, enlaces, foco);
+ * solo las variables `--company-accent*` que consumen la navegación y los realces decorativos
+ * (iconos del menú, pastillas de módulo, accesos rápidos). El glyph usa `strong` (más oscuro)
+ * sobre la pastilla `soft` para que icono y fondo no queden en el mismo tono.
  */
-export function buildBrandThemeDark(primaryKey, secondaryKey) {
-  const primary = findPalette(primaryKey);
-  const secondary = findPalette(secondaryKey, DEFAULT_BRAND_SECONDARY);
-  const accent = mix(primary.accent, '#ffffff', 0.12);
+export function buildCompanyAccent(primaryKey) {
+  const p = findPalette(primaryKey);
 
   return {
-    '--color-primary': accent,
-    '--color-primary-600': primary.accent,
-    '--color-primary-700': mix(primary.accent, '#ffffff', 0.55),
-    '--color-primary-300': mix(primary.accent, '#ffffff', 0.28),
-    '--color-primary-100': alpha(accent, 0.24),
-    '--color-primary-050': alpha(accent, 0.13),
-    '--ring-primary': `0 0 0 3px ${alpha(mix(primary.accent, '#ffffff', 0.3), 0.35)}`,
-    '--color-secondary': secondary.accent,
-    '--gradient-primary': `linear-gradient(87deg, ${accent} 0%, ${secondary.accent} 100%)`,
+    '--company-accent': p.accent,
+    '--company-accent-strong': mix(p.accent, p.strong, 0.5),
+    '--company-accent-soft': p.soft,
+    // Sobre el panel oscuro del sidebar el acento sube de luz para no apagarse.
+    '--company-accent-on-dark': mix(p.accent, '#ffffff', 0.3),
+  };
+}
+
+/** El mismo acento en tema oscuro: acento más luminoso, glyph claro legible y pastilla como
+ *  veladura translúcida, con las relaciones que fija tokens.css para su escala oscura. */
+export function buildCompanyAccentDark(primaryKey) {
+  const p = findPalette(primaryKey);
+  const accent = mix(p.accent, '#ffffff', 0.12);
+
+  return {
+    '--company-accent': accent,
+    '--company-accent-strong': mix(p.accent, '#ffffff', 0.55),
+    '--company-accent-soft': alpha(accent, 0.16),
+    '--company-accent-on-dark': mix(p.accent, '#ffffff', 0.3),
   };
 }
 
