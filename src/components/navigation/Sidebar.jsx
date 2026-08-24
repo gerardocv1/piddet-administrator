@@ -12,7 +12,7 @@ const matchesRoute = (pathname, to) => pathname === to || pathname.startsWith(`$
 
 /** Grupo desplegable del menú: el padre expande/colapsa y agrupa rutas hijas. Al navegar
  * solo queda abierto el grupo con la ruta activa; los demás se colapsan. */
-function NavGroup({ item, onClose }) {
+function NavGroup({ item }) {
   const { pathname } = useLocation();
   // Entre hijos anidados (p. ej. /expenses y /expenses/summary) solo se resalta el más
   // específico, para que la subruta no marque también a su padre.
@@ -34,7 +34,7 @@ function NavGroup({ item, onClose }) {
       {open && (
         <div className={styles.subnav}>
           {item.children.map((c) => (
-            <NavLink key={c.to} to={c.to} onClick={onClose}
+            <NavLink key={c.to} to={c.to}
               className={[styles.sublink, c === activeChild ? styles.active : ''].filter(Boolean).join(' ')}>
               <i className={`${c.icon} ${styles.icon}`} />
               <span className={styles.label}>{c.label}</span>
@@ -46,9 +46,10 @@ function NavGroup({ item, onClose }) {
   );
 }
 
-/** Menú lateral oscuro fijo, con selector de EMPRESA (tenant SaaS), secciones
- * y resaltado naranja del activo. En móvil funciona como cajón deslizante. */
-export function Sidebar({ onLogout, open = false, onClose, company, companies = [], onSwitchCompany, onOpenProfile }) {
+/** Menú lateral oscuro fijo, con selector de EMPRESA (tenant SaaS), secciones y resaltado
+ * naranja del activo. Solo escritorio: en móvil la navegación es el MobileDock y la pantalla
+ * «Más» (/more), así que el Layout ni siquiera lo monta ahí. */
+export function Sidebar({ onLogout, company, companies = [], onSwitchCompany, onOpenProfile }) {
   const [picker, setPicker] = React.useState(false);
   const multi = companies.length > 1;
   const { permissions } = usePermissions();
@@ -59,7 +60,7 @@ export function Sidebar({ onLogout, open = false, onClose, company, companies = 
   // y desaparecer medio segundo después.
   const activeFunctionalities = ready ? activeNames : [];
 
-  const openProfile = () => { onClose && onClose(); onOpenProfile && onOpenProfile(); };
+  const openProfile = () => { onOpenProfile && onOpenProfile(); };
 
   // El enlace externo al POS también depende de la funcionalidad de la compañía: sin ella no se
   // muestra el enlace ni la sección «Enlaces» que lo contiene.
@@ -78,10 +79,9 @@ export function Sidebar({ onLogout, open = false, onClose, company, companies = 
     .filter((g) => g.items.length > 0);
 
   return (
-    <nav className={[styles.sidebar, open ? styles.open : ''].filter(Boolean).join(' ')}>
+    <nav className={styles.sidebar}>
       <div className={styles.head}>
         <span className={styles.logo}>pid<b>det</b></span>
-        <button onClick={onClose} aria-label="Cerrar menú" className={styles.closeBtn}><i className="fas fa-times" /></button>
       </div>
 
       {/* ── Empresa activa: el tile abre el perfil; el chevron despliega el selector (solo multi) ── */}
@@ -133,7 +133,7 @@ export function Sidebar({ onLogout, open = false, onClose, company, companies = 
       )}
 
       <div className={styles.nav}>
-        <NavLink to={HOME_ITEM.to} end={HOME_ITEM.end} onClick={onClose}
+        <NavLink to={HOME_ITEM.to} end={HOME_ITEM.end}
           className={({ isActive }) => [styles.link, isActive ? styles.active : ''].filter(Boolean).join(' ')}>
           <i className={`${HOME_ITEM.icon} ${styles.icon}`} />
           <span className={styles.label}>{HOME_ITEM.label}</span>
@@ -143,9 +143,9 @@ export function Sidebar({ onLogout, open = false, onClose, company, companies = 
             <div className={styles.section}>{g.section}</div>
             {g.items.map((n) => (
               n.children ? (
-                <NavGroup key={n.label} item={n} onClose={onClose} />
+                <NavGroup key={n.label} item={n} />
               ) : (
-                <NavLink key={n.to} to={n.to} onClick={onClose}
+                <NavLink key={n.to} to={n.to}
                   className={({ isActive }) => [styles.link, isActive ? styles.active : ''].filter(Boolean).join(' ')}>
                   <i className={`${n.icon} ${styles.icon}`} />
                   <span className={styles.label}>{n.label}</span>
@@ -158,7 +158,7 @@ export function Sidebar({ onLogout, open = false, onClose, company, companies = 
         {showPos && (
           <>
             <div className={styles.section}>Enlaces</div>
-            <a href={POS_ITEM.href} target="_blank" rel="noopener noreferrer" onClick={onClose} className={styles.link}>
+            <a href={POS_ITEM.href} target="_blank" rel="noopener noreferrer" className={styles.link}>
               <i className={`${POS_ITEM.icon} ${styles.icon}`} />
               <span className={styles.label}>{POS_ITEM.label}</span>
               <i className={`fas fa-arrow-up-right-from-square ${styles.ext}`} />

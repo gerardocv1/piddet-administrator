@@ -53,4 +53,4 @@ el naranja como firma de marca (`--brand-piddet` en logo e ítem activo del men�
 éxito esmeralda, capa móvil nativa (tarjetas sin marco, campos rellenos), cierres con Escape
 en todos los flotantes, fuentes/iconos no bloqueantes en `index.html`, y el chasis móvil nuevo:
 topbar limpio sin división (crumb como eyebrow) y `MobileDock` en vez de hamburguesa
-(«Más» abre el cajón completo).
+(«Más» navega a la pantalla de menú completo `/more`, con el dock siempre visible).

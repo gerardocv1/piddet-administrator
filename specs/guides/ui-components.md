@@ -116,7 +116,13 @@ FontAwesome 6 por CDN (declarado en `index.html`). Se pasan como **string de cla
 corto por el que el contenido pasa y se desvanece, rematado por un **filete** que divide el body
 del menú; de ahí hacia abajo la barra es opaca. Cada destino es **icono con su nombre pequeño
 debajo** (texto fino) y el activo únicamente cambia de tinte, sin píldora de fondo. Son seis:
-Inicio, cuatro módulos y «Más», que abre el cajón con el menú completo.
+Inicio, cuatro módulos y «Más», que navega a la pantalla de menú completo (`/more`) — no abre
+ningún cajón: en móvil el `Sidebar` ni se monta. La pantalla (`MoreMenu`) es superficie clara con
+el logo arriba, la empresa activa (tap → perfil; con varias, selector), los módulos accesibles
+agrupados por sección en tarjetas de filas (los desplegables conservan el nombre del padre como
+subtítulo: «Reporte» de Ventas ≠ «Reporte» de Egresos), el enlace al POS, instalar la app y
+salir. El dock sigue visible abajo con «Más» activo, y en `/more` el Layout oculta el topbar (la
+pantalla trae su propia cabecera con el logo).
 
 Cuando la pantalla activa pertenece a un módulo con varias secciones (Egresos → Gastos · Reporte ·
 Categorías), encima de los destinos aparece un **submenú horizontal** con esas hermanas,
@@ -125,6 +131,7 @@ se marca la ruta más específica (`/expenses` es prefijo de `/expenses/summary`
 **centrada** y sobre un gris un punto más claro que el fondo, que es lo que la separa de los
 destinos. Se calcula sobre
 `MODULE_GROUPS` completo, así que también lo tienen los módulos a los que se llega desde «Más».
+La propia `/more` no tiene submenú: no pertenece a ningún módulo.
 
 > El `nav` lleva `pointer-events: none` para que el fade no intercepte toques: **toda zona
 > interactiva que se añada dentro tiene que recuperarlos** con `pointer-events: auto`.

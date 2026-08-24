@@ -45,6 +45,7 @@ const META = {
   '/shifts': { title: 'Turnos', crumb: 'Operación' },
   '/invoices': { title: 'Facturas', crumb: 'Ventas' },
   '/sales-report': { title: 'Reporte de ventas', crumb: 'Ventas' },
+  '/more': { title: 'Más', crumb: '' },
 };
 
 // Flujos a pantalla completa con su propia barra fija de acciones (Continuar / Registrar…):
@@ -57,12 +58,12 @@ const FLOW_ROUTES = [
   /^\/gym\/members\/[^/]+\/checkin$/,
 ];
 
-/** Chrome de la app autenticada: menú lateral + barra superior + contenido (Outlet). */
+/** Chrome de la app autenticada: menú lateral (escritorio) + barra superior + contenido (Outlet)
+ * + dock inferior (móvil). */
 export function Layout({ theme, onToggleTheme, onLogout }) {
   const location = useLocation();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
-  const [navOpen, setNavOpen] = React.useState(false);
   // Usuario y empresa vienen de la sesión guardada en el login (no hay endpoint /me en backend).
   const [user] = React.useState(() => displayUser(authLib.getUser()));
   const [company, setCompany] = React.useState(() => authLib.getCompany());
@@ -73,9 +74,6 @@ export function Layout({ theme, onToggleTheme, onLogout }) {
 
   // El perfil de la empresa (nombre/logo) puede cambiar fuera del Layout: refleja la activa persistida.
   React.useEffect(() => authLib.onCompanyChange(() => setCompany(authLib.getCompany())), []);
-
-  // Cierra el cajón al cambiar de ruta en móvil.
-  React.useEffect(() => { setNavOpen(false); }, [location.pathname]);
 
   const switchCompany = async (c) => {
     // El backend persiste company_default_id y devuelve la compañía completa (perfil + detalle);
@@ -128,16 +126,24 @@ export function Layout({ theme, onToggleTheme, onLogout }) {
     || (/^\/products\/[^/]+$/.test(location.pathname) ? { title: 'Producto', crumb: 'Oferta' } : null)
     || { title: 'Piddet', crumb: '' };
 
+  // «Más» en móvil es la pantalla /more (menú completo con su propio logo arriba): ahí la barra
+  // superior sobra. En escritorio /more ni siquiera se pinta (la pantalla redirige a Inicio).
+  const onMoreScreen = isMobile && location.pathname === '/more';
+
   return (
     <div className={styles.shell}>
-      {isMobile && navOpen && <div className={styles.overlay} onClick={() => setNavOpen(false)} />}
-      <Sidebar onLogout={onLogout} open={navOpen} onClose={() => setNavOpen(false)}
-        company={company} companies={companies} onSwitchCompany={switchCompany}
-        onOpenProfile={openCompanyProfile} />
+      {/* El menú lateral es solo de escritorio: en móvil la navegación es el dock + /more. */}
+      {!isMobile && (
+        <Sidebar onLogout={onLogout}
+          company={company} companies={companies} onSwitchCompany={switchCompany}
+          onOpenProfile={openCompanyProfile} />
+      )}
       <PageTitleProvider>
         <div className={styles.contentCol}>
-          <LayoutTopbar meta={meta} isMobile={isMobile} user={user} onLogout={onLogout}
-            theme={theme} onToggleTheme={onToggleTheme} />
+          {!onMoreScreen && (
+            <LayoutTopbar meta={meta} isMobile={isMobile} user={user} onLogout={onLogout}
+              theme={theme} onToggleTheme={onToggleTheme} />
+          )}
           {/* Indicador del gesto: asoma bajo la barra superior mientras se arrastra y gira
               mientras se releen los datos. */}
           {(pull > 0 || refreshing) && (
@@ -147,10 +153,15 @@ export function Layout({ theme, onToggleTheme, onLogout }) {
             </div>
           )}
           <main ref={mainRef} className={styles.main}
-            style={{ ...pullStyle, transition: pullTransition }}><Outlet /></main>
-          {/* Navegación móvil (reemplaza a la hamburguesa); «Más» abre el cajón. En un flujo a
-              pantalla completa no se pinta: su barra fija de acciones ocupa ese borde. */}
-          {showDock && <MobileDock onMore={() => setNavOpen(true)} moreOpen={navOpen} />}
+            style={{ ...pullStyle, transition: pullTransition }}>
+            {/* La pantalla /more (menú móvil) toma de aquí la empresa activa y las acciones de
+                cuenta, que de otro modo solo conoce el Layout. */}
+            <Outlet context={{ company, companies, onSwitchCompany: switchCompany, onLogout }} />
+          </main>
+          {/* Navegación móvil (reemplaza a la hamburguesa); «Más» navega al menú completo (/more).
+              En un flujo a pantalla completa no se pinta: su barra fija de acciones ocupa ese
+              borde. */}
+          {showDock && <MobileDock />}
         </div>
       </PageTitleProvider>
     </div>
