@@ -38,7 +38,10 @@ export function GymSubscriptionDetail() {
     [plansPage],
   );
 
-  useSetPageTitle(data?.member_name ? `Suscripción · ${data.member_name}` : null);
+  useSetPageTitle(
+    data?.member_name ? `Suscripción · ${data.member_name}` : null,
+    { shortTitle: data?.member_name ? `Suscripción · ${String(data.member_name).trim().split(/\s+/)[0]}` : null },
+  );
 
   const goBack = () => navigate(`/gym/subscriptions${params.toString() ? `?${params.toString()}` : ''}`);
 

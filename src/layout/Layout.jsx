@@ -107,7 +107,7 @@ export function Layout({ theme, onToggleTheme, onLogout }) {
         onOpenProfile={openCompanyProfile} />
       <PageTitleProvider>
         <div className={styles.contentCol}>
-          <LayoutTopbar meta={meta} user={user} onLogout={onLogout}
+          <LayoutTopbar meta={meta} isMobile={isMobile} user={user} onLogout={onLogout}
             theme={theme} onToggleTheme={onToggleTheme} />
           <main className={styles.main}><Outlet /></main>
           {/* Navegación móvil: dock flotante (reemplaza a la hamburguesa); «Más» abre el cajón. */}
@@ -120,7 +120,13 @@ export function Layout({ theme, onToggleTheme, onLogout }) {
 
 // El título dinámico (fijado por la pantalla activa vía useSetPageTitle) tiene prioridad
 // sobre el título por ruta; al desmontarse la pantalla vuelve el título de la sección.
-function LayoutTopbar({ meta, ...rest }) {
-  const { title } = usePageTitle();
-  return <Topbar title={title || meta.title} crumb={title ? '' : meta.crumb} {...rest} />;
+// En el teléfono manda la versión corta del título (si la pantalla la declaró) y la barra recoge
+// el "volver" que publica su PageHeader: así la flecha se pinta una sola vez, arriba.
+function LayoutTopbar({ meta, isMobile, ...rest }) {
+  const { title, shortTitle, onBack } = usePageTitle();
+  const shown = (isMobile && shortTitle) || title || meta.title;
+  return (
+    <Topbar title={shown} crumb={title ? '' : meta.crumb}
+      onBack={isMobile ? onBack : null} {...rest} />
+  );
 }

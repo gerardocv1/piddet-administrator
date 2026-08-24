@@ -37,4 +37,8 @@
   }
   .header { padding: 0.7rem 0.9rem 0.55rem; }
   .body { padding: 0.25rem 0.9rem 0.9rem; }
+  /* Sin marco, dos secciones seguidas se leían como un solo bloque de datos sueltos. Un filete
+     entre hermanas devuelve el corte —dónde termina una y empieza la otra— sin volver a pintar
+     cajas: es el dibujo de una lista de app, no de una pila de tarjetas. */
+  .card + .card { border-top: 1px solid var(--gray-100); padding-top: 2px; }
 }

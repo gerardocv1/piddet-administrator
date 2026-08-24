@@ -110,6 +110,25 @@ FontAwesome 6 por CDN (declarado en `index.html`). Se pasan como **string de cla
 <Button icon="fas fa-plus">Nuevo</Button>
 ```
 
+## Móvil: la cabecera vive en el Topbar
+
+En el teléfono la barra superior es la cabecera de la pantalla: lleva el **título** y la **flecha
+de volver**, que ya no se repite dentro del contenido. `PageHeader` publica su `onBack` al Topbar
+(vía `useSetPageBack`, que llama solo) y oculta su propio botón en ≤ 860 px — las pantallas no
+tienen que hacer nada.
+
+El título largo se corta en un teléfono, así que `useSetPageTitle` acepta una versión corta que
+solo se usa ahí:
+
+```jsx
+useSetPageTitle(`Afiliado · ${member.name}`, { shortTitle: firstName });
+```
+
+Los **metadatos** de `PageHeader` (`meta`) se pintan en escritorio como rejilla (etiqueta arriba,
+valor abajo) y en móvil como filas etiqueta→valor separadas por un filete: se lee de un vistazo
+qué es cada dato, sin bloques sueltos. Entre secciones (`Card` hermanas) también hay filete: sin
+marco, el aire solo no dejaba claro dónde termina una y empieza la otra.
+
 ## Móvil: una acción visible por sección, el resto en el menú ⋮
 
 En el teléfono los botones son compactos (`Button` baja su alto y tipografía en ≤ 860 px) y **no

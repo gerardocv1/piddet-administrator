@@ -1,5 +1,6 @@
 import React from 'react';
 import { IconButton } from '../core/IconButton.jsx';
+import { useSetPageBack } from '../../lib/pageTitle.jsx';
 import styles from './PageHeader.module.css';
 
 /**
@@ -9,14 +10,21 @@ import styles from './PageHeader.module.css';
  *
  * meta: [{ label, value }]  — se omiten las entradas falsy. El valor puede ser texto (se recorta
  * con ellipsis) o un nodo, p. ej. un Badge de estado (se muestra completo).
+ *
+ * El `onBack` se publica al Topbar: en el teléfono la flecha se pinta allí (una sola vez, junto
+ * al título de la pantalla) y el botón de aquí se oculta por CSS.
  */
 export function PageHeader({ onBack, backTitle = 'Volver', subtitle, actions, meta, note }) {
+  useSetPageBack(onBack);
   const metaItems = Array.isArray(meta) ? meta.filter(Boolean) : [];
   const isText = (v) => typeof v === 'string' || typeof v === 'number';
   return (
     <div className={styles.card}>
       <div className={styles.top}>
-        {onBack && <IconButton icon="fas fa-arrow-left" variant="light" title={backTitle} onClick={onBack} />}
+        {onBack && (
+          <IconButton icon="fas fa-arrow-left" variant="light" title={backTitle}
+            className={styles.back} onClick={onBack} />
+        )}
         <div className={styles.text}>
           {subtitle && <span className={styles.subtitle}>{subtitle}</span>}
         </div>
