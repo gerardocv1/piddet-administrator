@@ -34,10 +34,11 @@
      `.top` las envuelve y `margin-left: auto` las mantiene a la derecha. Lo secundario se
      agrupa en el menú ⋮ de cada pantalla. */
   .actions { margin-left: auto; gap: 8px; }
+  /* La flecha de volver la pinta el Topbar en el teléfono: aquí sobra. */
+  .back { display: none; }
   /* Sin marco, el aire es lo único que separa: se ajusta para que la cabecera no empuje lo
      operativo fuera de la primera pantalla. */
-  .card { gap: 10px; }
-  .meta { padding-top: 10px; gap: 8px 20px; }
+  .card { gap: 8px; }
 }
 
 .meta {
@@ -78,10 +79,34 @@
 }
 .note i { color: var(--color-danger); }
 
-/* Móvil: en dos columnas estrechas un valor largo (un rango de fechas) se cortaba con "…".
-   Mejor que envuelva a dos líneas: el dato completo importa más que la línea perfecta.
-   Va al final del archivo a propósito: `.meta dd` de arriba fija `nowrap` con la misma
-   especificidad, así que solo gana declarándose después. */
+/* Móvil: los metadatos dejan de ser una rejilla de bloques sueltos (etiqueta arriba, valor
+   abajo, con huecos entre columnas) y pasan a filas etiqueta→valor separadas por un filete: se
+   lee de un vistazo qué es cada dato, en el orden natural de lectura y sin aire de sobra.
+   Un valor largo (un rango de fechas) envuelve en vez de cortarse con "…".
+
+   Va al final del archivo a propósito: las reglas de `.meta` de arriba tienen la misma
+   especificidad, así que estas solo ganan declarándose después. */
 @media (max-width: 860px) {
-  .meta dd { white-space: normal; overflow: visible; }
+  .meta {
+    grid-template-columns: 1fr;
+    gap: 0;
+    padding-top: 6px;
+  }
+  .meta > div {
+    flex-direction: row;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--gray-100);
+  }
+  .meta > div:last-child { border-bottom: 0; padding-bottom: 0; }
+  .meta dt {
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 500;
+    color: var(--gray-600);
+    flex: 0 0 auto;
+  }
+  .meta dd { text-align: right; white-space: normal; overflow: visible; }
 }

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Avatar } from '../core/Avatar.jsx';
+import { IconButton } from '../core/IconButton.jsx';
 import { Notifications } from '../feedback/Notifications.jsx';
 import { SessionsModal } from '../feedback/SessionsModal.jsx';
 import { ChangePasswordModal } from '../feedback/ChangePasswordModal.jsx';
@@ -11,8 +12,11 @@ import styles from './Topbar.module.css';
  * La barra no lleva botones sueltos: notificaciones y cambio de tema viven dentro del menú de
  * usuario, junto a sesiones y contraseña. En móvil no hay hamburguesa — la navegación es el
  * MobileDock — y la barra se funde con el fondo (ver CSS).
+ *
+ * `onBack` (solo lo pasa el Layout en el teléfono) pinta aquí la flecha de volver de la pantalla
+ * activa: así hay una sola, arriba, en vez de repetirla en la cabecera de la pantalla.
  */
-export function Topbar({ title, crumb, user = {}, onLogout, theme = 'light', onToggleTheme }) {
+export function Topbar({ title, crumb, onBack, user = {}, onLogout, theme = 'light', onToggleTheme }) {
   const [menuOpen, setMenuOpen] = React.useState(false);
   const [notisOpen, setNotisOpen] = React.useState(false);
   const [sessionsOpen, setSessionsOpen] = React.useState(false);
@@ -26,6 +30,10 @@ export function Topbar({ title, crumb, user = {}, onLogout, theme = 'light', onT
 
   return (
     <header className={styles.topbar}>
+      {onBack && (
+        <IconButton icon="fas fa-arrow-left" variant="light" size="sm" title="Volver"
+          className={styles.back} onClick={onBack} />
+      )}
       <div className={styles.titleWrap}>
         <h1 className={styles.title}>{title}</h1>
         {crumb && <span className={styles.crumb}>{crumb}</span>}

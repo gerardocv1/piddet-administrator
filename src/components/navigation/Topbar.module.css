@@ -101,6 +101,9 @@
     border-bottom: 0;
   }
   .userText, .userChev, .crumb { display: none; }
+  /* La flecha de la pantalla activa (la publica su PageHeader): pegada al título, como en una
+     app nativa, en vez de repetirse dentro del contenido. */
+  .back { margin-left: -6px; flex: 0 0 auto; }
   .title {
     font-size: var(--text-xl);
     font-weight: var(--fw-heavy);

@@ -66,7 +66,12 @@ export function GymMemberDetail() {
     [paymentMethods],
   );
 
-  useSetPageTitle(data?.member_name ? `Afiliado · ${data.member_name}` : null);
+  // En el teléfono la barra superior lleva solo el nombre de pila: el nombre completo ya está
+  // en la ficha, justo debajo, y el título largo se cortaba con "…".
+  useSetPageTitle(
+    data?.member_name ? `Afiliado · ${data.member_name}` : null,
+    { shortTitle: data?.member_name ? String(data.member_name).trim().split(/\s+/)[0] : null },
+  );
 
   const goBack = () => navigate(`/gym/members${params.toString() ? `?${params.toString()}` : ''}`);
 

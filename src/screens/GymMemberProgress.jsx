@@ -102,7 +102,10 @@ export function GymMemberProgress() {
   const [picked, setPicked] = React.useState('');
   const selectedKey = picked || withData[0] || (types[0]?.key ?? '');
 
-  useSetPageTitle(member?.member_name ? `Progreso · ${member.member_name}` : null);
+  useSetPageTitle(
+    member?.member_name ? `Progreso · ${member.member_name}` : null,
+    { shortTitle: member?.member_name ? `Progreso · ${String(member.member_name).trim().split(/\s+/)[0]}` : null },
+  );
 
   // Sexo: define la silueta. Si el afiliado no lo tiene, se elige aquí y se guarda en su ficha.
   const [savingSex, setSavingSex] = React.useState(false);
