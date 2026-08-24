@@ -225,3 +225,21 @@ Al soltar pasado el umbral emite el evento global `piddet:refresh`, que **escuch
 `useResource` montado**: se releen los datos de la pantalla —todos, aunque cargue varias cosas a
 la vez— sin recargar la aplicación, que en un teléfono cuesta segundos. Para forzarlo desde
 código: `requestRefresh()`.
+
+## La app instalada y las versiones nuevas
+
+Tres piezas trabajan juntas para que un despliegue llegue al teléfono:
+
+1. **El service worker pide el shell con `cache: 'no-store'`.** Sin eso, ese `fetch` pasa por la
+   caché HTTP del navegador y Safari puede devolver el shell antiguo — que es lo que dejaba la app
+   instalada anclada a una versión vieja aunque el despliegue ya estuviera hecho.
+2. **`watchForUpdates()`** (`src/lib/appUpdate.js`) compara el bundle que está corriendo con el
+   que referencia el shell publicado (el hash del nombre hace de número de versión). Comprueba al
+   volver del segundo plano, al recuperar red y al recibir el foco, como mucho una vez por minuto.
+   Si difieren, pide al service worker que tire sus cachés y recarga. Hace falta porque una app
+   instalada puede quedarse abierta días sin arrancar de cero.
+3. **Las cabeceras del servidor**: `index.html` y `sw.js` con `Cache-Control: no-cache`; los
+   assets, que llevan hash, cacheables para siempre. Ver el README (despliegue en Forge).
+
+Al cambiar el contenido de `public/sw.js` conviene subir el número de las cachés
+(`piddet-shell-vN`): el `activate` borra las que no estén en la lista actual.

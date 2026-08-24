@@ -126,7 +126,7 @@
 /* Móvil nativo: campo relleno sin borde (misma línea que Input). El texto sube a 16px por la
    misma razón que en Input: por debajo, Safari iOS hace zoom al enfocar y no lo deshace. */
 @media (max-width: 860px) {
-  .input { font-size: 16px; }
+  .input { font-size: var(--text-md); }
   .wrap {
     background: var(--gray-100);
     border-color: transparent;
