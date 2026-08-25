@@ -1,13 +1,14 @@
 import React from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
-  Card, Badge, Button, IconButton, Dropdown, Spinner, Alert, Select, MoneyInput, DatePicker,
+  Card, Badge, Button, IconButton, Dropdown, Spinner, Alert, Select, MoneyInput, DatePicker, Checkbox,
   Modal, ConfirmDialog, PageHeader, useToast,
 } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { useIsMobile } from '../lib/useIsMobile.js';
 import { gymMoney, gymSubscriptionStatusMeta, GYM_SUBSCRIPTION_STATUS } from '../lib/gymLabels.js';
+import { todayIso } from '../lib/orderLabels.js';
 import { formatShortDate } from '../lib/dates.js';
 import { useSetPageTitle } from '../lib/pageTitle.jsx';
 import s from './screens.module.css';
@@ -48,7 +49,7 @@ export function GymSubscriptionDetail() {
   const isAlive = status === GYM_SUBSCRIPTION_STATUS.ACTIVE || status === GYM_SUBSCRIPTION_STATUS.GRACE;
 
   // ── Registrar pago ───────────────────────────────────────────────────────
-  const emptyPayForm = { payment_method: '', value: '', payment_date: '', notes: '' };
+  const emptyPayForm = { payment_method: '', value: '', payment_date: '', notes: '', registers_income: true };
   const [payOpen, setPayOpen] = React.useState(false);
   const [payForm, setPayForm] = React.useState(emptyPayForm);
   const [payBusy, setPayBusy] = React.useState(false);
@@ -71,6 +72,7 @@ export function GymSubscriptionDetail() {
         value: payForm.value,
         payment_date: payForm.payment_date || undefined,
         notes: payForm.notes.trim() || undefined,
+        registers_income: payForm.registers_income,
       });
       setData(updated);
       toast({ tone: 'success', title: 'Pago registrado' });
@@ -126,7 +128,7 @@ export function GymSubscriptionDetail() {
 
   // ── Renovar (crea una suscripción nueva encadenada y navega a ella) ──────
   // El pago va incluido si se eligió un método ("Sin pago por ahora" = solo renovar).
-  const emptyRenewForm = { plan_id: '', payment_method: '', value: '', payment_date: '' };
+  const emptyRenewForm = { plan_id: '', start_date: todayIso(), payment_method: '', value: '', payment_date: '', registers_income: true };
   const [renewOpen, setRenewOpen] = React.useState(false);
   const [renewForm, setRenewForm] = React.useState(emptyRenewForm);
   const [renewBusy, setRenewBusy] = React.useState(false);
@@ -161,10 +163,14 @@ export function GymSubscriptionDetail() {
     try {
       const created = await api.createGymSubscription(data.gym_member_id, {
         plan_id: Number(renewForm.plan_id),
+        // Encadenada a una suscripción viva, la fecha la decide el vencimiento anterior y el
+        // backend la ignora: ni se manda.
+        start_date: isAlive ? undefined : renewForm.start_date,
         payment: withPayment ? {
           payment_method: renewForm.payment_method,
           value: renewForm.value,
           payment_date: renewForm.payment_date || undefined,
+          registers_income: renewForm.registers_income,
         } : undefined,
       });
       toast({ tone: 'success', title: 'Suscripción renovada' });
@@ -259,6 +265,7 @@ export function GymSubscriptionDetail() {
                         </span>
                         <span className={g.payMeta}>
                           {formatShortDate(p.payment_date)} · {p.payment_method_name || '—'}
+                          {p.registers_income === false && ' · sin factura'}
                         </span>
                         {annulled && p.annulment_reason && (
                           <span className={g.payReason}>Anulado: {p.annulment_reason}</span>
@@ -288,7 +295,6 @@ export function GymSubscriptionDetail() {
           <Button variant="primary" loading={payBusy} disabled={!payForm.payment_method || !payForm.value} onClick={submitPay}>Registrar</Button>
         </>}>
         <div className={s.formCol}>
-          <p className={s.muted}>El pago genera su factura en la fecha indicada.</p>
           <Select label="Método de pago" icon="fas fa-wallet" value={payForm.payment_method}
             onChange={(e) => setPayForm((f) => ({ ...f, payment_method: e.target.value }))}
             options={[{ value: '', label: 'Selecciona…' }, ...methodOptions]} />
@@ -296,6 +302,14 @@ export function GymSubscriptionDetail() {
             value={payForm.value} onChange={(v) => setPayForm((f) => ({ ...f, value: v }))} />
           <DatePicker label="Fecha del pago (opcional)" value={payForm.payment_date}
             onChange={(iso) => setPayForm((f) => ({ ...f, payment_date: iso }))} />
+          <Checkbox label="Registrar el cobro como ingreso"
+            checked={payForm.registers_income}
+            onChange={(e) => setPayForm((f) => ({ ...f, registers_income: e.target.checked }))} />
+          <p className={s.faint}>
+            {payForm.registers_income
+              ? 'El pago genera su factura en la fecha indicada.'
+              : 'El pago queda registrado en la suscripción, pero sin factura: no entra a la caja. Es lo que corresponde a un dinero que se cobró antes de usar la plataforma.'}
+          </p>
           {payError && <Alert tone="danger" onClose={() => setPayError('')}>{payError}</Alert>}
         </div>
       </Modal>
@@ -312,6 +326,13 @@ export function GymSubscriptionDetail() {
           <Select label="Plan" icon="fas fa-id-card" value={renewForm.plan_id}
             onChange={(e) => pickRenewPlan(e.target.value)}
             options={[{ value: '', label: planOptions.length ? 'Selecciona…' : 'No hay planes activos' }, ...planOptions]} />
+          {/* Solo cuando la vigencia arranca aquí: encadenada, la fecha la decide la anterior. */}
+          {!isAlive && (
+            <DatePicker label="Inicio de la vigencia" icon="fas fa-calendar-day"
+              hint="El vencimiento se calcula desde esta fecha."
+              value={renewForm.start_date}
+              onChange={(d) => setRenewForm((f) => ({ ...f, start_date: d }))} />
+          )}
           <div className={s.formGrid}>
             <Select label="Método de pago" icon="fas fa-wallet" value={renewForm.payment_method}
               onChange={(e) => setRenewForm((f) => ({ ...f, payment_method: e.target.value }))}
@@ -319,7 +340,22 @@ export function GymSubscriptionDetail() {
             <MoneyInput label="Valor" icon="fas fa-dollar-sign"
               value={renewForm.value} onChange={(v) => setRenewForm((f) => ({ ...f, value: v }))} />
           </div>
-          <p className={s.faint}>Con método de pago seleccionado, el cobro se registra y factura en la misma operación.</p>
+          {!renewForm.payment_method ? (
+            <p className={s.faint}>Con método de pago seleccionado, el cobro se registra y factura en la misma operación.</p>
+          ) : (
+            <>
+              <DatePicker label="Fecha del pago (opcional)" value={renewForm.payment_date}
+                onChange={(iso) => setRenewForm((f) => ({ ...f, payment_date: iso }))} />
+              <Checkbox label="Registrar el cobro como ingreso"
+                checked={renewForm.registers_income}
+                onChange={(e) => setRenewForm((f) => ({ ...f, registers_income: e.target.checked }))} />
+              <p className={s.faint}>
+                {renewForm.registers_income
+                  ? 'Se genera la factura del cobro y entra a la caja.'
+                  : 'El pago queda registrado en la suscripción, pero sin factura: no entra a la caja.'}
+              </p>
+            </>
+          )}
           {renewError && <Alert tone="danger" onClose={() => setRenewError('')}>{renewError}</Alert>}
         </div>
       </Modal>
@@ -333,7 +369,9 @@ export function GymSubscriptionDetail() {
       <ConfirmDialog open={!!annulTarget} title="Anular pago" reason="required"
         reasonLabel="Motivo de la anulación" loading={annulBusy} error={annulError}
         onConfirm={submitAnnul} onClose={() => setAnnulTarget(null)}>
-        Esta acción es irreversible: se cancela también la factura de este pago.
+        {annulTarget?.registers_income === false
+          ? 'Esta acción es irreversible. Este pago no generó factura, así que no hay nada que cancelar en la caja.'
+          : 'Esta acción es irreversible: se cancela también la factura de este pago.'}
       </ConfirmDialog>
     </div>
   );

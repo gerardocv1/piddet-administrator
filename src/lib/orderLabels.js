@@ -35,6 +35,13 @@ export const todayIso = () => {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 };
 
+/** La misma fecha de hoy hace `years` años, en YYYY-MM-DD (tope inferior de una fecha de nacimiento). */
+export const yearsAgoIso = (years) => {
+  const d = new Date();
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear() - years}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+};
+
 /** Hora HH:mm a partir del `created_date` del backend ("YYYY-MM-DD HH:mm:ss"). */
 export const timeOf = (createdDate) => (createdDate || '').slice(11, 16) || '—';
 

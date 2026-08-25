@@ -3562,18 +3562,32 @@ const mockGymGoals = [
 ];
 
 let mockGymMembers = [
-  { id: 1, user_id: 5001, member_code: 'M00001', member_name: 'Laura Gómez', document_snapshot: '1017234567', sex: 'F', email: 'laura.gomez@example.com', phone_number: '3001234567', id_type_id: 1, height_cm: '165.0', goal_id: 4, goal: 'Tonificar', health_notes: '', status: 1, joined_at: '2026-05-02' },
-  { id: 2, user_id: 5002, member_code: 'M00002', member_name: 'Carlos Restrepo', document_snapshot: '1098765432', sex: 'M', email: 'carlos.restrepo@example.com', phone_number: '3007654321', id_type_id: 1, height_cm: '178.0', goal_id: 3, goal: 'Aumentar masa muscular', health_notes: 'Molestia leve en rodilla derecha', status: 1, joined_at: '2026-05-10' },
-  { id: 3, user_id: 5003, member_code: 'M00003', member_name: 'Daniela Ríos', document_snapshot: '1023456789', sex: 'F', email: null, phone_number: '3012223344', id_type_id: 1, height_cm: '160.0', goal_id: 1, goal: 'Bajar de peso', health_notes: '', status: 1, joined_at: '2026-06-01' },
-  { id: 4, user_id: 5004, member_code: 'M00004', member_name: 'Andrés Mejía', document_snapshot: '1076543210', sex: 'M', email: null, phone_number: '3019876543', id_type_id: 1, height_cm: '182.0', goal_id: null, goal: null, health_notes: '', status: 0, joined_at: '2026-04-15' },
-  { id: 5, user_id: 5005, member_code: 'M00005', member_name: 'Miguel Torres', document_snapshot: '1055443322', sex: null, email: null, phone_number: '3025556677', id_type_id: 1, height_cm: null, goal_id: 6, goal: 'Salud general', health_notes: '', status: 1, joined_at: '2026-08-18' },
+  { id: 1, user_id: 5001, member_code: 'M00001', member_name: 'Laura Gómez', document_snapshot: '1017234567', sex: 'F', birthdate: '1994-03-12', email: 'laura.gomez@example.com', phone_number: '3001234567', id_type_id: 1, height_cm: '165.0', goal_id: 4, goal: 'Tonificar', health_notes: '', status: 1, joined_at: '2026-05-02' },
+  { id: 2, user_id: 5002, member_code: 'M00002', member_name: 'Carlos Restrepo', document_snapshot: '1098765432', sex: 'M', birthdate: '1988-11-30', email: 'carlos.restrepo@example.com', phone_number: '3007654321', id_type_id: 1, height_cm: '178.0', goal_id: 3, goal: 'Aumentar masa muscular', health_notes: 'Molestia leve en rodilla derecha', status: 1, joined_at: '2026-05-10' },
+  { id: 3, user_id: 5003, member_code: 'M00003', member_name: 'Daniela Ríos', document_snapshot: '1023456789', sex: 'F', birthdate: '2001-06-04', email: null, phone_number: '3012223344', id_type_id: 1, height_cm: '160.0', goal_id: 1, goal: 'Bajar de peso', health_notes: '', status: 1, joined_at: '2026-06-01' },
+  { id: 4, user_id: 5004, member_code: 'M00004', member_name: 'Andrés Mejía', document_snapshot: '1076543210', sex: 'M', birthdate: '1979-02-21', email: null, phone_number: '3019876543', id_type_id: 1, height_cm: '182.0', goal_id: null, goal: null, health_notes: '', status: 0, joined_at: '2026-04-15' },
+  // Miguel va sin sexo y sin fecha de nacimiento a propósito: hace visible el estado "Sin definir"
+  // de la ficha y el aviso de sexo de la vista de progreso.
+  { id: 5, user_id: 5005, member_code: 'M00005', member_name: 'Miguel Torres', document_snapshot: '1055443322', sex: null, birthdate: null, email: null, phone_number: '3025556677', id_type_id: 1, height_cm: null, goal_id: 6, goal: 'Salud general', health_notes: '', status: 1, joined_at: '2026-08-18' },
 ];
+
+// Años cumplidos hoy: el backend manda la edad calculada junto a la fecha.
+const ageFrom = (iso) => {
+  if (!iso) return null;
+  const [y, m, d] = String(iso).split('-').map(Number);
+  const today = new Date();
+  let age = today.getFullYear() - y;
+  const monthDiff = today.getMonth() + 1 - m;
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < d)) age -= 1;
+  return age;
+};
 
 // Personas que YA tienen cuenta en la plataforma (clientes de reservas, pedidos…) pero que aún no
 // están afiliadas al gimnasio: es lo que hace visible la búsqueda previa por celular o correo.
 const mockPlatformPeople = [
-  { user_id: 4101, first_name: 'Valentina', last_name: 'Ospina', email: 'valentina.ospina@example.com', phone_code: '57', phone_number: '3134445566', id_type_id: 1, id_number: '1032998877' },
-  { user_id: 4102, first_name: 'Julián', last_name: 'Castaño', email: 'julian.castano@example.com', phone_code: '57', phone_number: '3145556677', id_type_id: 1, id_number: null },
+  { user_id: 4101, first_name: 'Valentina', last_name: 'Ospina', email: 'valentina.ospina@example.com', phone_code: '57', phone_number: '3134445566', id_type_id: 1, id_number: '1032998877', birthdate: '1996-09-08' },
+  // Sin fecha de nacimiento: al afiliarlo, el formulario la pide y su cuenta la estrena.
+  { user_id: 4102, first_name: 'Julián', last_name: 'Castaño', email: 'julian.castano@example.com', phone_code: '57', phone_number: '3145556677', id_type_id: 1, id_number: null, birthdate: null },
 ];
 
 // El listado de afiliados lleva la suscripción más reciente de cada uno (espejo del backend):
@@ -3588,8 +3602,16 @@ const gymMemberPersonal = (m) => {
     phone_number: m.phone_number || null,
     id_type_id: m.id_type_id || null,
     id_number: m.document_snapshot || null,
+    birthdate: m.birthdate || null,
   };
 };
+
+// Ficha del afiliado: la edad viaja calculada al lado de la fecha, como la manda el backend.
+const gymMemberDetailPresent = (m) => ({
+  ...m,
+  age: ageFrom(m.birthdate),
+  personal: gymMemberPersonal(m),
+});
 
 const gymMemberListPresent = (m) => {
   const latest = mockGymSubscriptions
@@ -3616,7 +3638,7 @@ let mockGymSubscriptions = [
     start_date: isoDay(10), end_date: isoDay(-20), grace_ends_at: isoDay(-23),
     status: 1, is_renewal: false, previous_subscription_id: null, cancelled_at: null, cancellation_reason: null,
     payments: [
-      { id: 'gpay-1', value: '90000.00', payment_method: 'nequi', payment_method_name: 'Nequi', payment_date: isoDay(10), notes: null, order_id: 'ord-gym-1', status: 1, created_by_name: 'Gerardo', annulled_at: null, annulment_reason: null },
+      { id: 'gpay-1', registers_income: true, value: '90000.00', payment_method: 'nequi', payment_method_name: 'Nequi', payment_date: isoDay(10), notes: null, order_id: 'ord-gym-1', status: 1, created_by_name: 'Gerardo', annulled_at: null, annulment_reason: null },
     ],
   },
   {
@@ -3625,7 +3647,7 @@ let mockGymSubscriptions = [
     start_date: isoDay(31), end_date: isoDay(1), grace_ends_at: isoDay(-2),
     status: 2, is_renewal: false, previous_subscription_id: null, cancelled_at: null, cancellation_reason: null,
     payments: [
-      { id: 'gpay-2', value: '90000.00', payment_method: 'cash', payment_method_name: 'Efectivo', payment_date: isoDay(31), notes: null, order_id: 'ord-gym-2', status: 1, created_by_name: 'Gerardo', annulled_at: null, annulment_reason: null },
+      { id: 'gpay-2', registers_income: true, value: '90000.00', payment_method: 'cash', payment_method_name: 'Efectivo', payment_date: isoDay(31), notes: null, order_id: 'ord-gym-2', status: 1, created_by_name: 'Gerardo', annulled_at: null, annulment_reason: null },
     ],
   },
   {
@@ -3634,7 +3656,7 @@ let mockGymSubscriptions = [
     start_date: isoDay(70), end_date: isoDay(40), grace_ends_at: isoDay(37),
     status: 3, is_renewal: false, previous_subscription_id: null, cancelled_at: null, cancellation_reason: null,
     payments: [
-      { id: 'gpay-3a', value: '90000.00', payment_method: 'datafono', payment_method_name: 'Datafono', payment_date: isoDay(70), notes: null, order_id: 'ord-gym-3a', status: 1, created_by_name: 'Gerardo', annulled_at: null, annulment_reason: null },
+      { id: 'gpay-3a', registers_income: false, value: '90000.00', payment_method: 'datafono', payment_method_name: 'Datafono', payment_date: isoDay(70), notes: 'Cobrado antes de usar la plataforma', order_id: null, status: 1, created_by_name: 'Gerardo', annulled_at: null, annulment_reason: null },
     ],
   },
   {
@@ -3643,7 +3665,7 @@ let mockGymSubscriptions = [
     start_date: isoDay(39), end_date: isoDay(9), grace_ends_at: isoDay(6),
     status: 3, is_renewal: true, previous_subscription_id: 'gsub-3a', cancelled_at: null, cancellation_reason: null,
     payments: [
-      { id: 'gpay-3b', value: '90000.00', payment_method: 'datafono', payment_method_name: 'Datafono', payment_date: isoDay(39), notes: null, order_id: 'ord-gym-3b', status: 1, created_by_name: 'Gerardo', annulled_at: null, annulment_reason: null },
+      { id: 'gpay-3b', registers_income: true, value: '90000.00', payment_method: 'datafono', payment_method_name: 'Datafono', payment_date: isoDay(39), notes: null, order_id: 'ord-gym-3b', status: 1, created_by_name: 'Gerardo', annulled_at: null, annulment_reason: null },
     ],
   },
   {
@@ -3653,7 +3675,7 @@ let mockGymSubscriptions = [
     status: 4, is_renewal: false, previous_subscription_id: null,
     cancelled_at: isoDay(50), cancellation_reason: 'El afiliado se mudó de ciudad',
     payments: [
-      { id: 'gpay-4', value: '240000.00', payment_method: 'bancolombia', payment_method_name: 'Ahorro a la mano Bancolombia', payment_date: isoDay(95), notes: null, order_id: 'ord-gym-4', status: 0, created_by_name: 'Gerardo', annulled_at: isoDay(50), annulment_reason: 'Cancelación de la suscripción' },
+      { id: 'gpay-4', registers_income: true, value: '240000.00', payment_method: 'bancolombia', payment_method_name: 'Ahorro a la mano Bancolombia', payment_date: isoDay(95), notes: null, order_id: 'ord-gym-4', status: 0, created_by_name: 'Gerardo', annulled_at: isoDay(50), annulment_reason: 'Cancelación de la suscripción' },
     ],
   },
 ];
@@ -3821,6 +3843,9 @@ function resolveGymMock(path, query, { method = 'GET', body } = {}) {
         phone_number: phone || null,
         id_type_id: account?.id_type_id || (body.id_type_id ? Number(body.id_type_id) : null),
         sex: body.sex || null,
+        // La cuenta que ya existe manda: su fecha no se pisa con la del formulario, solo se
+        // rellena si le faltaba (espejo de PassiveUserResolverService::fillProfileIfMissing).
+        birthdate: account?.birthdate || body.birthdate || null,
         height_cm: body.height_cm || null,
         goal_id: body.goal_id ? Number(body.goal_id) : null,
         goal: mockGymGoals.find((gl) => gl.id === Number(body.goal_id))?.label || null,
@@ -3862,10 +3887,11 @@ function resolveGymMock(path, query, { method = 'GET', body } = {}) {
       member.document_snapshot = idNumber;
       if (body.id_type_id) member.id_type_id = Number(body.id_type_id);
     }
+    if ('birthdate' in body) member.birthdate = body.birthdate || null;
     mockGymSubscriptions.forEach((sub2) => {
       if (sub2.gym_member_id === member.id) sub2.member_name = member.member_name;
     });
-    return { ...member, personal: gymMemberPersonal(member) };
+    return gymMemberDetailPresent(member);
   }
 
   const memberMatch = sub.match(/^members\/(\d+)$/);
@@ -3873,6 +3899,7 @@ function resolveGymMock(path, query, { method = 'GET', body } = {}) {
     const member = mockGymMembers.find((m) => m.id === Number(memberMatch[1]));
     if (!member) return null;
     if (method === 'PUT') {
+      // La fecha de nacimiento es de la persona: se edita por /personal, no por aquí.
       ['sex', 'height_cm', 'health_notes', 'status'].forEach((key) => {
         if (key in body) member[key] = key === 'status' ? Number(body[key]) : body[key];
       });
@@ -3882,7 +3909,7 @@ function resolveGymMock(path, query, { method = 'GET', body } = {}) {
         member.goal = goal ? goal.label : null;
       }
     }
-    return { ...member, personal: gymMemberPersonal(member) };
+    return gymMemberDetailPresent(member);
   }
 
   const memberSubsMatch = sub.match(/^members\/(\d+)\/subscriptions$/);
@@ -3900,9 +3927,14 @@ function resolveGymMock(path, query, { method = 'GET', body } = {}) {
       const previous = forMember[0] || null;
       const isRenewal = !!previous && [1, 2].includes(previous.status);
 
-      const startDate = isRenewal ? addDaysIso(previous.end_date, 1) : todayIso();
+      // Encadenada arranca al día siguiente de la anterior y `start_date` se ignora; si no, la
+      // decide el formulario (por defecto hoy, retroactiva para quien ya venía pagando).
+      const startDate = isRenewal ? addDaysIso(previous.end_date, 1) : (body.start_date || todayIso());
       const endDate = addDaysIso(startDate, plan.duration_days - 1);
       const graceEndsAt = addDaysIso(endDate, plan.grace_period_days);
+      // Con fecha retroactiva la suscripción puede nacer en gracia o vencida.
+      const today = todayIso();
+      const status = today > graceEndsAt ? 3 : (today > endDate ? 2 : 1);
 
       const subscription = {
         id: 'gsub-' + ((mockGymSubscriptions.length || 0) + 1) + '-' + Date.now().toString(36),
@@ -3916,7 +3948,7 @@ function resolveGymMock(path, query, { method = 'GET', body } = {}) {
         start_date: startDate,
         end_date: endDate,
         grace_ends_at: graceEndsAt,
-        status: 1,
+        status,
         is_renewal: isRenewal,
         previous_subscription_id: isRenewal ? previous.id : null,
         cancelled_at: null,
@@ -3924,6 +3956,8 @@ function resolveGymMock(path, query, { method = 'GET', body } = {}) {
         payments: [],
       };
       if (body.payment && body.payment.value) {
+        // Sin ingreso registrado no hay factura: el pago nace sin `order_id`.
+        const registersIncome = body.payment.registers_income !== false;
         subscription.payments.push({
           id: 'gpay-' + Date.now().toString(36),
           value: body.payment.value,
@@ -3931,7 +3965,8 @@ function resolveGymMock(path, query, { method = 'GET', body } = {}) {
           payment_method_name: paymentMethodName(body.payment.payment_method),
           payment_date: body.payment.payment_date || todayIso(),
           notes: body.payment.notes || null,
-          order_id: 'ord-gym-' + Date.now().toString(36),
+          order_id: registersIncome ? 'ord-gym-' + Date.now().toString(36) : null,
+          registers_income: registersIncome,
           status: 1,
           created_by_name: 'Gerardo',
           annulled_at: null,
@@ -4067,6 +4102,8 @@ function resolveGymMock(path, query, { method = 'GET', body } = {}) {
   if (subPaymentsMatch) {
     const subscription = mockGymSubscriptions.find((s) => s.id === subPaymentsMatch[1]);
     if (!subscription) return null;
+    // Sin ingreso registrado no hay factura: el pago nace sin `order_id`.
+    const registersIncome = body.registers_income !== false;
     subscription.payments.push({
       id: 'gpay-' + Date.now().toString(36),
       value: body.value,
@@ -4074,7 +4111,8 @@ function resolveGymMock(path, query, { method = 'GET', body } = {}) {
       payment_method_name: paymentMethodName(body.payment_method),
       payment_date: body.payment_date || todayIso(),
       notes: body.notes || null,
-      order_id: 'ord-gym-' + Date.now().toString(36),
+      order_id: registersIncome ? 'ord-gym-' + Date.now().toString(36) : null,
+      registers_income: registersIncome,
       status: 1,
       created_by_name: 'Gerardo',
       annulled_at: null,

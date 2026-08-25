@@ -2,13 +2,14 @@ import React from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Card, DataTable, Badge, Button, FilterBar, Pagination, RefreshButton,
-  Modal, Input, Textarea, Select, Alert, Spinner, useToast,
+  Modal, Input, Textarea, Select, DatePicker, Alert, Spinner, useToast,
 } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { gymSubscriptionStatusMeta, GYM_SUBSCRIPTION_STATUS, GYM_SEX_OPTIONS } from '../lib/gymLabels.js';
 import { ID_TYPES } from '../lib/reservationLabels.js';
-import { formatShortDate } from '../lib/dates.js';
+import { todayIso, yearsAgoIso } from '../lib/orderLabels.js';
+import { formatShortDate, ageFromBirthdate } from '../lib/dates.js';
 import s from './screens.module.css';
 import gl from './GymLists.module.css';
 
@@ -23,8 +24,12 @@ const STATUS_OPTIONS = [
 
 const emptyForm = {
   first_name: '', last_name: '', phone_number: '', email: '',
-  id_type_id: '1', id_number: '', sex: '', height_cm: '', goal_id: '', health_notes: '',
+  id_type_id: '1', id_number: '', sex: '', birthdate: '', height_cm: '', goal_id: '', health_notes: '',
 };
+
+// Tope inferior del calendario de nacimiento: 100 años atrás cubre a cualquier afiliado y acota
+// el desplegable de años a una lista manejable.
+const OLDEST_BIRTHDATE = () => yearsAgoIso(100);
 
 // Afiliados del gimnasio: personas registradas como usuarios reales de la plataforma (el backend
 // las resuelve como "pasivas" al registrarlas — find-or-create por documento o celular — y las
@@ -85,6 +90,10 @@ export function GymMembers() {
 
   const closeWizard = () => { setWiz(null); setFormError(''); };
 
+  // Eco de la edad mientras se elige el día: confirma de un vistazo que la fecha es la correcta.
+  const birthdateAge = ageFromBirthdate(wiz?.form?.birthdate);
+  const birthdateHint = birthdateAge === null ? undefined : `Tiene ${birthdateAge} años.`;
+
   const setForm = (patch) => setWiz((w) => ({ ...w, form: { ...w.form, ...patch } }));
 
   // Un solo campo para no hacer elegir al mostrador: con "@" se busca por correo, si no por celular.
@@ -121,6 +130,7 @@ export function GymMembers() {
           email: account?.email || (byEmail ? contact : ''),
           id_type_id: account?.id_type_id ? String(account.id_type_id) : '1',
           id_number: account?.id_number || '',
+          birthdate: account?.birthdate || '',
         },
       }));
     } catch (e) {
@@ -146,6 +156,7 @@ export function GymMembers() {
     try {
       const gymData = {
         sex: form.sex,
+        birthdate: form.birthdate || null,
         height_cm: form.height_cm || null,
         goal_id: form.goal_id ? Number(form.goal_id) : null,
         health_notes: form.health_notes.trim() || null,
@@ -398,6 +409,12 @@ export function GymMembers() {
               <Input label="Talla (cm, opcional)" type="number" inputMode="decimal" min="0" icon="fas fa-ruler-vertical"
                 value={wiz.form.height_cm} onChange={(e) => setForm({ height_cm: e.target.value })} />
             </div>
+            {/* Se guarda la fecha, no la edad: así los años que tiene el afiliado salen solos
+                cada vez que se mira su ficha. */}
+            <DatePicker label="Fecha de nacimiento (opcional)" icon="fas fa-cake-candles"
+              captionLayout="dropdown" min={OLDEST_BIRTHDATE()} max={todayIso()}
+              hint={birthdateHint}
+              value={wiz.form.birthdate} onChange={(d) => setForm({ birthdate: d })} />
             <Select label="Objetivo (opcional)" icon="fas fa-bullseye" value={wiz.form.goal_id}
               onChange={(e) => setForm({ goal_id: e.target.value })} options={goalOptions} />
             <Textarea label="Notas de salud (opcional)" placeholder="Lesiones, condiciones a tener en cuenta…"

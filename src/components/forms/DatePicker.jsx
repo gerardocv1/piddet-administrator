@@ -27,10 +27,14 @@ const PANEL_HEIGHT = 320; // altura estimada del calendario, para decidir si abr
  * cierra de inmediato (sin botón "Aplicar"). El panel se posiciona con position:fixed para no
  * quedar recortado por el overflow de la Card contenedora.
  *
- * Props: label, icon, value (ISO string), onChange(isoString), max?, min?
+ * Props: label, icon, hint, value (ISO string), onChange(isoString), max?, min?
  *   variant: 'input' (formulario, por defecto) | 'chip' (filtros)
+ *   captionLayout: 'dropdown' cambia el mes y el año del encabezado por desplegables. Para fechas
+ *     lejanas al presente (una fecha de nacimiento) es la única forma usable: mes a mes son
+ *     cientos de toques. El rango de los desplegables sale de min/max, así que con 'dropdown'
+ *     ambos son obligatorios en la práctica.
  */
-export function DatePicker({ label, icon, value, onChange, max, min, variant = 'input' }) {
+export function DatePicker({ label, icon, hint, value, onChange, max, min, variant = 'input', captionLayout }) {
   const [open, setOpen] = React.useState(false);
   const [coords, setCoords] = React.useState(null);
   const triggerRef = React.useRef(null);
@@ -108,6 +112,8 @@ export function DatePicker({ label, icon, value, onChange, max, min, variant = '
           onSelect={handleSelect}
           defaultMonth={selected}
           disabled={disabledDays}
+          captionLayout={captionLayout}
+          {...(captionLayout ? { startMonth: parseIsoDate(min), endMonth: parseIsoDate(max) } : {})}
         />
       </div>
     </>
@@ -121,6 +127,7 @@ export function DatePicker({ label, icon, value, onChange, max, min, variant = '
     <div className={styles.field}>
       {label && <span className={styles.label}>{label}</span>}
       {trigger}
+      {hint && <span className={styles.hint}>{hint}</span>}
       {panel}
     </div>
   );
