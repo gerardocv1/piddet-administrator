@@ -15,6 +15,19 @@ export function formatShortDate(value) {
   return `${d.day} ${SHORT_MONTHS[d.month - 1]} ${d.year}`;
 }
 
+// Años cumplidos hoy a partir de una fecha de nacimiento; null si no hay fecha o es futura.
+// El backend manda la edad ya calculada en la ficha; esto es para el eco inmediato en el
+// formulario, mientras la persona todavía está eligiendo el día.
+export function ageFromBirthdate(value) {
+  const d = parseDate(value);
+  if (!d) return null;
+  const today = new Date();
+  let age = today.getFullYear() - Number(d.year);
+  const monthDiff = today.getMonth() + 1 - d.month;
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < d.day)) age -= 1;
+  return age >= 0 ? age : null;
+}
+
 // "2026-07-02" → "2 jul"
 export function formatDayMonth(value) {
   const d = parseDate(value);

@@ -2,20 +2,23 @@ import React from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   Card, Badge, Button, IconButton, Dropdown, Spinner, Alert, Input, Textarea, Switch, Select,
-  MoneyInput, Modal, PageHeader, StatStrip, DataTable, useToast,
+  MoneyInput, DatePicker, Checkbox, Modal, PageHeader, StatStrip, DataTable, useToast,
 } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { useIsMobile } from '../lib/useIsMobile.js';
 import { gymMemberStatusMeta, GYM_MEMBER_STATUS, GYM_SEX_OPTIONS, gymSexLabel, gymMoney, gymSubscriptionStatusMeta, GYM_SUBSCRIPTION_STATUS } from '../lib/gymLabels.js';
 import { ID_TYPES } from '../lib/reservationLabels.js';
-import { formatShortDate } from '../lib/dates.js';
+import { todayIso, yearsAgoIso } from '../lib/orderLabels.js';
+import { formatShortDate, ageFromBirthdate } from '../lib/dates.js';
 import { useSetPageTitle } from '../lib/pageTitle.jsx';
 import s from './screens.module.css';
 import g from './GymMemberDetail.module.css';
 
 const EMPTY_SUBS = [];
 const SIDE_LABEL = { L: 'izq.', R: 'der.' };
+// 100 años atrás cubre a cualquier afiliado y acota el desplegable de años del calendario.
+const OLDEST_BIRTHDATE = () => yearsAgoIso(100);
 
 // Tarjeta plegable: el título es el interruptor (tocar minimiza/maximiza); la acción del header
 // queda siempre visible, así "Renovar" sigue a un toque aunque la tarjeta esté plegada.
@@ -74,7 +77,7 @@ export function GymMemberDetail() {
   const goBack = () => navigate(`/gym/members${params.toString() ? `?${params.toString()}` : ''}`);
 
   // ── Suscripción: alta/renovación (con pago si se elige método) ───────────
-  const emptySubscribeForm = { plan_id: '', payment_method: '', value: '' };
+  const emptySubscribeForm = { plan_id: '', start_date: todayIso(), payment_method: '', value: '', registers_income: true };
   const [subscribeOpen, setSubscribeOpen] = React.useState(false);
   const [subscribeForm, setSubscribeForm] = React.useState(emptySubscribeForm);
   const [subscribeBusy, setSubscribeBusy] = React.useState(false);
@@ -86,8 +89,10 @@ export function GymMemberDetail() {
     const samePlan = current ? (plansPage.items || []).find((p) => p.id === current.plan_id) : null;
     setSubscribeForm({
       plan_id: samePlan ? String(samePlan.id) : '',
+      start_date: todayIso(),
       payment_method: '',
       value: samePlan ? samePlan.price : '',
+      registers_income: true,
     });
     setSubscribeError('');
     setSubscribeOpen(true);
@@ -123,9 +128,13 @@ export function GymMemberDetail() {
     try {
       const created = await api.createGymSubscription(memberId, {
         plan_id: Number(subscribeForm.plan_id),
+        // En una renovación encadenada el backend ignora la fecha: la vigencia arranca al día
+        // siguiente de la anterior, así que ni se manda.
+        start_date: currentIsAlive ? undefined : subscribeForm.start_date,
         payment: withPayment ? {
           payment_method: subscribeForm.payment_method,
           value: subscribeForm.value,
+          registers_income: subscribeForm.registers_income,
         } : undefined,
       });
       toast({ tone: 'success', title: currentIsAlive ? 'Suscripción renovada' : 'Suscripción registrada' });
@@ -155,10 +164,14 @@ export function GymMemberDetail() {
       email: per.email || '',
       id_type_id: per.id_type_id ? String(per.id_type_id) : '1',
       id_number: per.id_number || data?.document_snapshot || '',
+      birthdate: per.birthdate || '',
     });
     setPersonalError('');
     setPersonalOpen(true);
   };
+
+  // Eco de la edad mientras se elige el día, para confirmar que la fecha es la correcta.
+  const personalAge = ageFromBirthdate(personalForm?.birthdate);
 
   const submitPersonal = async () => {
     if (personalBusy) return;
@@ -175,6 +188,7 @@ export function GymMemberDetail() {
         email: personalForm.email.trim() || null,
         id_type_id: personalForm.id_type_id ? Number(personalForm.id_type_id) : null,
         id_number: personalForm.id_number.trim() || null,
+        birthdate: personalForm.birthdate || null,
       });
       setData(updated);
       toast({ tone: 'success', title: 'Datos personales actualizados' });
@@ -189,12 +203,75 @@ export function GymMemberDetail() {
   // ── Medidas: peso/IMC de un vistazo y la tabla de mediciones (el análisis con la figura
   // corporal y las gráficas vive en /gym/members/:id/progress) ──
   const progressFetcher = React.useCallback(() => api.gymMemberProgress(memberId, { types: ['weight'] }), [memberId]);
-  const { data: progress } = useResource(progressFetcher, {}, [memberId]);
+  const { data: progress, reload: reloadProgress } = useResource(progressFetcher, {}, [memberId]);
 
   const checkinsFetcher = React.useCallback(() => api.gymMemberCheckins(memberId, { perPage: 10 }), [memberId]);
-  const { data: checkinsPage, loading: checkinsLoading } = useResource(checkinsFetcher, { items: [] }, [memberId]);
-  // Al tocar una fila de la tabla se abre el detalle de esa medición.
+  const { data: checkinsPage, loading: checkinsLoading, reload: reloadCheckins } = useResource(checkinsFetcher, { items: [] }, [memberId]);
+  // Al tocar una fila de la tabla se abre el detalle de esa medición. El mismo modal sirve para
+  // corregirla: `checkinForm` deja de ser null y las medidas pasan a campos editables. Es el
+  // camino para las medidas cargadas con la fecha equivocada, o con un número mal digitado.
   const [openCheckin, setOpenCheckin] = React.useState(null);
+  const [checkinForm, setCheckinForm] = React.useState(null);
+  const [checkinBusy, setCheckinBusy] = React.useState(false);
+  const [checkinError, setCheckinError] = React.useState('');
+
+  const closeCheckin = () => { setOpenCheckin(null); setCheckinForm(null); setCheckinError(''); };
+
+  const editCheckin = () => {
+    setCheckinForm({
+      measured_at: openCheckin.measured_at,
+      notes: openCheckin.notes || '',
+      values: (openCheckin.values || []).map((v) => ({
+        measurement_type_id: v.measurement_type_id,
+        side: v.side || null,
+        label: v.label || v.key,
+        unit: v.unit,
+        value: String(v.value ?? ''),
+      })),
+    });
+    setCheckinError('');
+  };
+
+  const setCheckinValue = (index, raw) => {
+    setCheckinForm((f) => ({
+      ...f,
+      values: f.values.map((v, i) => (i === index ? { ...v, value: raw.replace(',', '.') } : v)),
+    }));
+  };
+
+  const submitCheckin = async () => {
+    if (checkinBusy) return;
+    // Una medida que se deja en blanco desaparece del chequeo: el PUT reemplaza la lista entera.
+    const values = checkinForm.values
+      .filter((v) => String(v.value).trim() !== '')
+      .map((v) => ({
+        measurement_type_id: v.measurement_type_id,
+        ...(v.side ? { side: v.side } : {}),
+        value: v.value,
+      }));
+    if (!values.length) {
+      setCheckinError('Deja al menos una medida con valor.');
+      return;
+    }
+    setCheckinBusy(true);
+    setCheckinError('');
+    try {
+      const updated = await api.updateGymCheckin(openCheckin.id, {
+        measured_at: checkinForm.measured_at,
+        notes: checkinForm.notes.trim() || null,
+        values,
+      });
+      toast({ tone: 'success', title: 'Medición actualizada' });
+      setOpenCheckin(updated);
+      setCheckinForm(null);
+      reloadCheckins();
+      reloadProgress();
+    } catch (e) {
+      setCheckinError(e?.message || 'No se pudo guardar la medición.');
+    } finally {
+      setCheckinBusy(false);
+    }
+  };
 
   const checkinColumns = [
     { key: 'measured_at', header: 'Fecha', width: 110, render: (c) => <span className={s.cellStrong}>{formatShortDate(c.measured_at)}</span> },
@@ -415,6 +492,13 @@ export function GymMemberDetail() {
             <span className={g.profileLabel}>Sexo</span>
             <span className={g.profileValue}>{gymSexLabel(data.sex) || 'Sin definir'}</span>
           </li>
+          {/* La edad la calcula el backend desde la fecha de nacimiento; se edita en "Editar datos". */}
+          <li className={g.profileRow}>
+            <span className={g.profileLabel}>Edad</span>
+            <span className={g.profileValue}>
+              {data.age == null ? 'Sin definir' : `${data.age} años · ${formatShortDate(data.birthdate)}`}
+            </span>
+          </li>
           <li className={g.profileRow}>
             <span className={g.profileLabel}>Talla</span>
             <span className={g.profileValue}>{data.height_cm ? `${data.height_cm} cm` : '—'}</span>
@@ -430,11 +514,22 @@ export function GymMemberDetail() {
         </ul>
       </CollapsibleCard>
 
-      {/* Detalle de una medición del historial */}
-      <Modal open={!!openCheckin} title={openCheckin ? `Medición del ${formatShortDate(openCheckin.measured_at)}` : ''}
-        onClose={() => setOpenCheckin(null)}
-        footer={<Button variant="secondary" onClick={() => setOpenCheckin(null)}>Cerrar</Button>}>
-        {openCheckin && (
+      {/* Detalle de una medición del historial, y su corrección en el mismo modal */}
+      <Modal open={!!openCheckin}
+        title={openCheckin ? (checkinForm ? 'Corregir medición' : `Medición del ${formatShortDate(openCheckin.measured_at)}`) : ''}
+        onClose={closeCheckin}
+        footer={checkinForm ? (
+          <>
+            <Button variant="secondary" onClick={() => { setCheckinForm(null); setCheckinError(''); }}>Cancelar</Button>
+            <Button variant="primary" loading={checkinBusy} onClick={submitCheckin}>Guardar</Button>
+          </>
+        ) : (
+          <>
+            <Button variant="secondary" onClick={closeCheckin}>Cerrar</Button>
+            <Button variant="primary" icon="fas fa-pen" onClick={editCheckin}>Editar</Button>
+          </>
+        )}>
+        {openCheckin && !checkinForm && (
           <div className={s.formCol}>
             <p className={g.checkinBy}>Registrada por {openCheckin.measured_by_name}</p>
             <ul className={g.valueList}>
@@ -448,6 +543,26 @@ export function GymMemberDetail() {
               ))}
             </ul>
             {openCheckin.notes && <p className={s.faint}>{openCheckin.notes}</p>}
+          </div>
+        )}
+        {checkinForm && (
+          <div className={s.formCol}>
+            <DatePicker label="Fecha de la medición" icon="fas fa-calendar" max={todayIso()}
+              value={checkinForm.measured_at}
+              onChange={(d) => setCheckinForm((f) => ({ ...f, measured_at: d }))} />
+            <div className={s.formGrid}>
+              {checkinForm.values.map((v, i) => (
+                <Input key={`${v.measurement_type_id}_${v.side || ''}`}
+                  label={`${v.label}${v.side ? ` (${SIDE_LABEL[v.side] || v.side})` : ''} (${v.unit})`}
+                  type="text" inputMode="decimal" value={v.value}
+                  onChange={(e) => setCheckinValue(i, e.target.value)} />
+              ))}
+            </div>
+            <Textarea label="Notas" placeholder="Condiciones de la toma, observaciones…"
+              value={checkinForm.notes}
+              onChange={(e) => setCheckinForm((f) => ({ ...f, notes: e.target.value }))} />
+            <p className={s.faint}>Una medida que dejes en blanco se quita de esta medición.</p>
+            {checkinError && <Alert tone="danger" onClose={() => setCheckinError('')}>{checkinError}</Alert>}
           </div>
         )}
       </Modal>
@@ -503,6 +618,11 @@ export function GymMemberDetail() {
               <Input label="Número de documento" icon="fas fa-hashtag" inputMode="numeric"
                 value={personalForm.id_number} onChange={(e) => setPersonalForm({ ...personalForm, id_number: e.target.value })} />
             </div>
+            {/* Se guarda la fecha, no la edad: los años salen calculados en la ficha. */}
+            <DatePicker label="Fecha de nacimiento" icon="fas fa-cake-candles"
+              captionLayout="dropdown" min={OLDEST_BIRTHDATE()} max={todayIso()}
+              hint={personalAge === null ? undefined : `Tiene ${personalAge} años.`}
+              value={personalForm.birthdate} onChange={(d) => setPersonalForm({ ...personalForm, birthdate: d })} />
             <p className={s.faint}>
               El celular{data.personal?.phone_number ? ` (${data.personal.phone_number})` : ''} no se edita aquí:
               es el acceso de la cuenta de la persona.
@@ -524,6 +644,14 @@ export function GymMemberDetail() {
           <Select label="Plan" icon="fas fa-id-card" value={subscribeForm.plan_id}
             onChange={(e) => pickSubscribePlan(e.target.value)}
             options={[{ value: '', label: planOptions.length ? 'Selecciona…' : 'No hay planes activos' }, ...planOptions]} />
+          {/* En la renovación encadenada la fecha la decide el vencimiento anterior (arriba se
+              explica), así que el campo solo aparece cuando la vigencia sí arranca aquí. */}
+          {!currentIsAlive && (
+            <DatePicker label="Inicio de la vigencia" icon="fas fa-calendar-day"
+              hint="El vencimiento se calcula desde esta fecha. Cámbiala si el afiliado ya venía pagando de antes."
+              value={subscribeForm.start_date}
+              onChange={(d) => setSubscribeForm((f) => ({ ...f, start_date: d }))} />
+          )}
           <div className={s.formGrid}>
             <Select label="Método de pago" icon="fas fa-wallet" value={subscribeForm.payment_method}
               onChange={(e) => setSubscribeForm((f) => ({ ...f, payment_method: e.target.value }))}
@@ -531,7 +659,20 @@ export function GymMemberDetail() {
             <MoneyInput label="Valor" icon="fas fa-dollar-sign"
               value={subscribeForm.value} onChange={(v) => setSubscribeForm((f) => ({ ...f, value: v }))} />
           </div>
-          <p className={s.faint}>Con método de pago seleccionado, el cobro se registra y factura en la misma operación.</p>
+          {!subscribeForm.payment_method ? (
+            <p className={s.faint}>Con método de pago seleccionado, el cobro se registra y factura en la misma operación.</p>
+          ) : (
+            <>
+              <Checkbox label="Registrar el cobro como ingreso"
+                checked={subscribeForm.registers_income}
+                onChange={(e) => setSubscribeForm((f) => ({ ...f, registers_income: e.target.checked }))} />
+              <p className={s.faint}>
+                {subscribeForm.registers_income
+                  ? 'Se genera la factura del cobro y entra a la caja.'
+                  : 'El pago queda registrado en la suscripción, pero sin factura: no entra a la caja. Es lo que corresponde a un dinero que se cobró antes de usar la plataforma.'}
+              </p>
+            </>
+          )}
           {subscribeError && <Alert tone="danger" onClose={() => setSubscribeError('')}>{subscribeError}</Alert>}
         </div>
       </Modal>

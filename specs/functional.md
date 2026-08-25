@@ -210,8 +210,8 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
   busca por correo, si no por celular) contra `GET /gym/members/lookup`, y según lo que responda,
   (a) si ya está afiliada a esta compañía no se duplica nada —se ofrece abrir su ficha—, (b) si ya
   tiene cuenta en la plataforma (por otra compañía, una reserva o un pedido) **se reutiliza**: sus
-  datos personales los manda su cuenta y el segundo paso solo pide lo del gimnasio (sexo, talla,
-  objetivo, notas; el documento solo si su cuenta aún no lo tiene), o (c) si no existe, el segundo
+  datos personales los manda su cuenta y el segundo paso solo pide lo del gimnasio (sexo, fecha de
+  nacimiento, talla, objetivo, notas; el documento solo si su cuenta aún no lo tiene), o (c) si no existe, el segundo
   paso pide la ficha completa y el backend crea su usuario. En cualquier caso el backend resuelve
   a la persona como usuario real de la plataforma —por `user_id`, documento o celular— antes de
   crear su ficha con un código de afiliado autogenerado (`M00001`, `M00002`…). **El listado de afiliados
@@ -225,11 +225,15 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
   por frecuencia de uso, con tarjetas **plegables**: primero la **suscripción como resumen
   compacto** (abierta por defecto; renovar en el sitio, el resumen abre el detalle), luego
   **Medidas** (peso/IMC y la tabla de mediciones — fecha, cuántas medidas, quién las registró;
-  cada fila abre su detalle en un modal) y al final el **perfil** editable (sexo, talla,
-  objetivo del catálogo, notas de salud, estado), plegado por defecto. **"Editar datos"** (en la
+  cada fila abre su detalle en un modal, y ese mismo modal la **corrige**: fecha, valores y notas)
+  y al final el **perfil** editable (sexo, talla, objetivo del catálogo, notas de salud, estado),
+  plegado por defecto; el perfil muestra además la **edad**, que no se guarda ni se escribe: la
+  calcula el backend desde la fecha de nacimiento. **"Editar datos"** (en la
   cabecera de la ficha) corrige los datos personales de la persona —nombres, correo, tipo y
-  número de documento—, actualizando su usuario de plataforma y los snapshots del gimnasio; el
-  **celular no se edita** porque es la credencial con la que inicia sesión. El análisis visual
+  número de documento, **fecha de nacimiento**—, actualizando su usuario de plataforma y los
+  snapshots del gimnasio; el **celular no se edita** porque es la credencial con la que inicia
+  sesión. La fecha de nacimiento es de la persona, no de la compañía: vive en su perfil de
+  plataforma y se comparte con los demás módulos. El análisis visual
   vive en la **vista de progreso** (`/gym/members/:memberId/progress`). El detalle de la suscripción
   (`/gym/subscriptions/:subscriptionId`) es la vista transaccional: sus pagos (registrar con el
   precio precargado, anular), renovar y cancelar; el nombre del afiliado arriba navega a su
@@ -243,11 +247,20 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
 - **Suscripciones:** la verdad son las fechas (inicio, fin, fin de gracia); el estado
   (`computed_status`: activa / en gracia / vencida / cancelada) se deriva de ellas. Renovar
   **nunca** muta la suscripción vigente: crea una fila nueva encadenada, que empieza el día
-  siguiente al vencimiento de la anterior. Cancelar es irreversible y pide motivo.
+  siguiente al vencimiento de la anterior. Cuando la vigencia sí arranca en esta operación
+  (afiliado sin membresía al día), el formulario pide el **inicio de la vigencia** —hoy por
+  defecto, retroactivo para quien ya venía pagando antes de usar la plataforma— y de esa fecha
+  salen el vencimiento y el fin de gracia; con fecha retroactiva la suscripción puede nacer ya en
+  gracia o vencida. Encadenada, ese campo no aparece: la fecha la decide la anterior.
+  Cancelar es irreversible y pide motivo.
 - **Pagos:** cada pago manual (efectivo, tarjeta…) genera su propia factura en el módulo de
   Facturas (origen "Gimnasio", numeración propia), compartiendo la misma infraestructura de
   facturación que el resto de la plataforma. Anular un pago cancela también su factura;
-  irreversible, pide motivo.
+  irreversible, pide motivo. La casilla **"Registrar el cobro como ingreso"** (marcada por
+  defecto) permite la excepción: al desmarcarla el pago queda registrado en la suscripción —consta
+  que la persona pagó— pero **no genera factura y no entra a la caja**. Es lo que corresponde al
+  dinero cobrado antes de usar la plataforma, que no puede aparecer como ingreso de hoy; esos
+  pagos se listan con la marca "sin factura" y anularlos no cancela nada en la caja.
 - **Medidas físicas:** un chequeo agrupa varios valores tomados el mismo día. **Cada compañía
   configura en `/gym/measurements` qué medidas pide** (peso, % de grasa, circunferencias…; sin
   selección guardada se piden todas); el catálogo distingue las que admiten lado
