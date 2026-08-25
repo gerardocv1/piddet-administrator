@@ -1,11 +1,12 @@
 import React from 'react';
-import { BRAND_PALETTES, findPalette, DEFAULT_BRAND_SECONDARY } from '../lib/brand/palettes.js';
+import { BRAND_PALETTES, findPalette, findIconBackground, DEFAULT_BRAND_SECONDARY } from '../lib/brand/palettes.js';
 import t from './CompanyBrandColors.module.css';
 
 // Selector de un color de marca: rejilla de muestras del catálogo (las mismas del diseño de la
 // carta). Presentacional puro; el valor es la CLAVE de la paleta.
-export function BrandColorPicker({ label, hint, value, fallback, onChange }) {
-  const selected = findPalette(value, fallback);
+/** `options` permite usar otro catálogo (p. ej. los fondos del icono, que añaden el blanco). */
+export function BrandColorPicker({ label, hint, value, fallback, onChange, options = BRAND_PALETTES, find = findPalette }) {
+  const selected = find(value, fallback);
 
   return (
     <div className={t.picker}>
@@ -15,7 +16,7 @@ export function BrandColorPicker({ label, hint, value, fallback, onChange }) {
       </div>
       {hint && <p className={t.hint}>{hint}</p>}
       <div className={t.swatches}>
-        {BRAND_PALETTES.map((p) => {
+        {options.map((p) => {
           const active = p.key === selected.key;
           return (
             <button
@@ -52,6 +53,27 @@ export function BrandPreview({ primary, secondary, name = '' }) {
       </span>
       <span className={t.previewBtn} style={{ background: p.accent }}>Botón principal</span>
       <span className={t.previewChip} style={{ background: p.soft, color: p.strong }}>Realce</span>
+    </div>
+  );
+}
+
+/**
+ * Vista previa del icono con el que la app queda instalada en la pantalla de inicio. Reproduce lo
+ * que compone el backend (`AppIconRenderer`): fondo de un solo color y el logo centrado, o la
+ * inicial si la compañía no tiene logo. La tinta de la inicial sigue al fondo, igual que allí.
+ */
+export function AppIconPreview({ background, logo, name = '', fallbackBackground }) {
+  const bg = findIconBackground(background, fallbackBackground);
+  const initial = (name.trim()[0] || '?').toUpperCase();
+
+  return (
+    <div className={t.iconPreview}>
+      <span className={t.iconTile} style={{ background: bg.accent }}>
+        {logo
+          ? <img className={t.iconLogo} src={logo} alt="" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+          : <span className={t.iconLetter} style={{ color: bg.key === 'white' ? '#2d2d2d' : '#ffffff' }}>{initial}</span>}
+      </span>
+      <span className={t.iconCaption}>{name.trim() || 'Nombre de la app'}</span>
     </div>
   );
 }

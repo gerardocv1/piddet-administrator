@@ -6,8 +6,8 @@ import { useResource } from '../lib/useResource.js';
 import { usePermissions } from '../lib/permissions/usePermissions.js';
 import { AiTokensCard } from './CompanyAiTokens.jsx';
 import { FunctionalitiesCard } from './CompanyFunctionalities.jsx';
-import { BrandColorPicker, BrandPreview } from './CompanyBrandColors.jsx';
-import { DEFAULT_BRAND_PRIMARY, DEFAULT_BRAND_SECONDARY } from '../lib/brand/palettes.js';
+import { BrandColorPicker, BrandPreview, AppIconPreview } from './CompanyBrandColors.jsx';
+import { DEFAULT_BRAND_PRIMARY, DEFAULT_BRAND_SECONDARY, ICON_BACKGROUNDS, findIconBackground } from '../lib/brand/palettes.js';
 import s from './screens.module.css';
 import t from './CompanyProfile.module.css';
 
@@ -50,6 +50,8 @@ export function CompanyProfile() {
       icon: updated.icon,
       brand_primary: updated.brand_primary,
       brand_secondary: updated.brand_secondary,
+      app_name: updated.app_name,
+      app_icon_bg: updated.app_icon_bg,
       company_type_id: updated.company_type_id,
       company_type_key: updated.company_type_key,
       company_type_name: updated.company_type_name,
@@ -186,6 +188,9 @@ function CompanyEditModal({ company, onClose, onSaved }) {
     website: company.website || '',
     brand_primary: company.brand_primary || DEFAULT_BRAND_PRIMARY,
     brand_secondary: company.brand_secondary || DEFAULT_BRAND_SECONDARY,
+    app_name: company.app_name || '',
+    // Sin fondo elegido, el icono sigue al color primario: se refleja igual en la vista previa.
+    app_icon_bg: company.app_icon_bg || '',
   }));
   const [saving, setSaving] = React.useState(false);
   const [err, setErr] = React.useState(null);
@@ -210,6 +215,8 @@ function CompanyEditModal({ company, onClose, onSaved }) {
         website: form.website.trim(),
         brand_primary: form.brand_primary,
         brand_secondary: form.brand_secondary,
+        app_name: form.app_name.trim() || null,
+        app_icon_bg: form.app_icon_bg || null,
       };
       const logo = await uploaderRef.current?.upload();
       if (logo?.name) payload.icon = logo.name;
@@ -228,9 +235,6 @@ function CompanyEditModal({ company, onClose, onSaved }) {
         <Button variant="primary" loading={saving} onClick={submit}>Guardar cambios</Button>
       </>}>
       <div className={s.formCol}>
-        <FileUpload ref={uploaderRef} folder="logos" visibility="public" aspect={1}
-          value={company.icon}
-          hint="Logo de la empresa · JPG, PNG o WEBP. Recorta o gira la imagen; se subirá al guardar." />
         <Input label="Nombre comercial" value={form.name} onChange={(e) => set('name', e.target.value)} />
         <Select label="Tipo de empresa" icon="fas fa-shapes"
           hint="Ajusta los nombres del menú y las vistas al negocio (carta, catálogo, ingresos…)."
@@ -248,6 +252,27 @@ function CompanyEditModal({ company, onClose, onSaved }) {
         <Textarea label="Descripción" rows={3} value={form.description} onChange={(e) => set('description', e.target.value)} />
 
         <div className={t.brandFields}>
+          <span className={t.sectionTitle}>Logo</span>
+          <p className={t.brandHint}>
+            Con esto queda la app en la pantalla de inicio del teléfono cuando alguien la instala.
+          </p>
+          <FileUpload ref={uploaderRef} folder="logos" visibility="public" aspect={1}
+            value={company.icon}
+            hint="Logo de la empresa · JPG, PNG o WEBP. Recorta o gira la imagen; se subirá al guardar." />
+          <Input label="Nombre de la app" maxLength={60}
+            hint="El que se lee bajo el icono. Caben pocas letras: si lo dejas vacío se usa el nombre comercial."
+            value={form.app_name} onChange={(e) => set('app_name', e.target.value)} />
+          <BrandColorPicker label="Fondo del icono"
+            hint="Un solo color detrás del logo. El blanco es el que va bien con logos oscuros."
+            options={ICON_BACKGROUNDS} find={findIconBackground}
+            value={form.app_icon_bg} fallback={form.brand_primary}
+            onChange={(v) => set('app_icon_bg', v)} />
+          <AppIconPreview background={form.app_icon_bg} fallbackBackground={form.brand_primary}
+            logo={company.icon} name={form.app_name.trim() || form.name} />
+        </div>
+
+        <div className={t.brandFields}>
+          <span className={t.sectionTitle}>Identidad visual</span>
           <BrandColorPicker label="Color primario"
             hint="Manda en las páginas públicas y acentúa el menú y los iconos del panel."
             value={form.brand_primary} onChange={(v) => set('brand_primary', v)} />

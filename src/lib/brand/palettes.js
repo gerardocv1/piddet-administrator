@@ -21,6 +21,22 @@ export const BRAND_PALETTES = [
   { key: 'rose', label: 'Rosa frambuesa', accent: '#c2456b', strong: '#933350', soft: '#fbe8ee', onSoft: '#dd8aa3' },
 ];
 
+/**
+ * Fondos del icono de la app instalada (perfil de empresa → Logo). Son las paletas de marca más
+ * un blanco: el logo va sin placa detrás, así que uno oscuro sobre fondo oscuro se perdería y
+ * hace falta una opción clara. Debe coincidir con CompanyDetail::APP_ICON_BACKGROUNDS del backend.
+ */
+export const ICON_BACKGROUNDS = [
+  { key: 'white', label: 'Blanco', accent: '#ffffff', strong: '#e6e6e6', soft: '#ffffff', onSoft: '#cccccc' },
+  ...BRAND_PALETTES,
+];
+
+/** Fondo del icono por clave; sin coincidencia, el que se pase como `fallback`. */
+export const findIconBackground = (key, fallback = DEFAULT_BRAND_PRIMARY) =>
+  ICON_BACKGROUNDS.find((b) => b.key === key)
+  || ICON_BACKGROUNDS.find((b) => b.key === fallback)
+  || ICON_BACKGROUNDS[1];
+
 // Naranja piddet: es el color de la plataforma y el que ve una compañía que no eligió el suyo.
 export const DEFAULT_BRAND_PRIMARY = 'orange';
 export const DEFAULT_BRAND_SECONDARY = 'gold';

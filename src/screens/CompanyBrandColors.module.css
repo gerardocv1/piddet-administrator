@@ -64,3 +64,33 @@
   display: inline-flex;
   align-items: center;
 }
+
+/* ── Vista previa del icono de la app instalada ── */
+.iconPreview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.iconTile {
+  width: 72px;
+  height: 72px;
+  border-radius: 22%;
+  border: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+/* 66% del lado: el mismo hueco que le deja el backend al logo. */
+.iconLogo { width: 66%; height: 66%; object-fit: contain; }
+.iconLetter { font-size: 2.4rem; font-weight: 700; line-height: 1; }
+.iconCaption {
+  max-width: 96px;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
