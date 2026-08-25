@@ -152,6 +152,7 @@
 .tokenWarn i { margin-right: 6px; }
 
 /* ── Identidad visual (colores de marca) ── */
+.sectionTitle { font-size: var(--text-sm); font-weight: 700; color: var(--text-strong); }
 .brandHint { margin: 0 0 12px; font-size: var(--text-sm); color: var(--text-muted); }
 .brandFields {
   display: flex;

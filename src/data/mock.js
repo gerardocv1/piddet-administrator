@@ -455,6 +455,7 @@ export const mockCompany = {
   address: 'Cra. 43A #1-50', city: 'Medellín, Colombia', phone: '+57 300 123 4567',
   email: 'hola@gruposabor.co', website: 'www.gruposabor.co',
   brand_primary: 'forest', brand_secondary: 'gold',
+  app_name: 'Sabor', app_icon_bg: 'white',
   company_type_id: 1, company_type_key: 'restaurant', company_type_name: 'Restaurante',
   stores_count: 4, menus_count: 5, items_count: 86, users_count: 12,
 };
@@ -629,6 +630,7 @@ const publicUnitCard = (u) => ({
 const publicCompanyBrand = () => ({
   name: mockCompany.name, username: mockCompany.username, icon: mockCompany.icon ?? null,
   brand_primary: mockCompany.brand_primary ?? null, brand_secondary: mockCompany.brand_secondary ?? null,
+  app_name: mockCompany.app_name ?? null, app_icon_bg: mockCompany.app_icon_bg ?? null,
 });
 
 const publicFiles = (files) => files.filter((f) => f.url).map((f) => ({ url: f.url, thumbnail_url: f.thumbnail_url }));

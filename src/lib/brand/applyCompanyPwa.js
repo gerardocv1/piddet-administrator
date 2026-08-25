@@ -54,7 +54,8 @@ const link = (rel) => document.querySelector(`link[rel="${rel}"]`);
  */
 function iconUrl(company, size, maskable) {
   if (!API || !company.username) return null;
-  const version = `${company.icon || ''}${company.brand_primary || ''}`.replace(/\W/g, '').slice(-12);
+  const version = `${company.icon || ''}${company.app_icon_bg || company.brand_primary || ''}`
+    .replace(/\W/g, '').slice(-12);
   const query = `${maskable ? 'maskable=1&' : ''}v=${encodeURIComponent(version)}`;
 
   return `${API}/public/${encodeURIComponent(company.username)}/app-icon-${size}.png?${query}`;
@@ -103,9 +104,12 @@ function manifestIcons(company, origin) {
   ];
 }
 
+/** Nombre con el que la app queda instalada: el configurado en el perfil, o el comercial. */
+const appNameOf = (company) => (company.app_name || '').trim() || company.name.trim();
+
 /** Publica manifest y metas con la identidad de la compañía. */
 function applyIdentity(company) {
-  const name = company.name.trim();
+  const name = appNameOf(company);
 
   // El manifest vive en un blob: sin URL base, sus rutas deben ser absolutas. El `id` se mantiene
   // fijo (misma app instalada aunque cambie la compañía activa: la identidad que queda es la del

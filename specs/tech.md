@@ -193,7 +193,16 @@ Safari ("Agregar a Inicio") y se abre a pantalla completa, sin barra del navegad
 (`display: standalone`; en iOS además `apple-mobile-web-app-status-bar-style: black-translucent`,
 que pinta la app borde a borde con la hora sobre el propio fondo).
 
-Instalada con sesión iniciada, toma el **nombre y el icono de la compañía activa**. Piezas:
+Instalada con sesión iniciada, toma el **nombre y el icono de la compañía activa**, que se
+configuran en el perfil de empresa (sección *Logo*):
+
+| Campo | Qué es |
+|---|---|
+| `icon` | El logo de la compañía. Va centrado en el icono, sin placa detrás. |
+| `app_name` | El nombre bajo el icono. Vacío = el nombre comercial. Caben pocas letras, por eso se separa de `name`. |
+| `app_icon_bg` | Fondo del icono: **un solo color**, del catálogo `ICON_BACKGROUNDS` (las paletas de marca más blanco). Vacío = sigue a `brand_primary`. El blanco existe porque un logo oscuro sobre fondo oscuro se perdería. |
+
+Piezas:
 
 | Archivo | Rol |
 |---|---|
@@ -202,7 +211,8 @@ Instalada con sesión iniciada, toma el **nombre y el icono de la compañía act
 | `src/lib/pwa.js` | `registerServiceWorker()` y `useInstallPrompt()`, que alimenta el botón "Instalar app". |
 | **Script en línea al final del `<head>`** (`index.html`) | Nombre, `<title>` y `apple-touch-icon` de la compañía, durante el parseo del documento. Es la ruta crítica de iOS. |
 | `src/lib/brand/applyCompanyPwa.js` | Publica el manifest (blob) con el nombre y los iconos de la compañía, y reaplica la identidad al cambiar de compañía o guardar el perfil. |
-| **backend** `GET /public/{compañía}/app-icon-{tamaño}.png` | Sirve el icono ya compuesto: logo de la compañía sobre su color de marca, o la inicial del nombre. |
+| **backend** `GET /public/{compañía}/app-icon-{tamaño}.png` | Sirve el icono ya compuesto: el logo centrado sobre el color de fondo elegido, o la inicial del nombre. |
+| `src/screens/CompanyBrandColors.jsx` | `AppIconPreview`, la vista previa del icono en el perfil. Reproduce las reglas del backend, incluida la tinta de la inicial según el fondo. |
 
 ### Por qué el icono lo sirve el backend
 
@@ -229,6 +239,12 @@ nombre de la compañía pero rigen los iconos de Piddet.
 |---|---|---|
 | Chrome / Android | En `beforeinstallprompt`, que dispara al registrarse el service worker | `applyStoredCompanyPwa()`, primera línea de `main.jsx`, **antes** de `registerServiceWorker()` |
 | Safari / iOS | El **nombre**, al cargar el documento, antes de que corra el bundle (el `href` del `apple-touch-icon` sí lo relee en vivo) | El **script en línea** del `<head>`, durante el parseo |
+
+En ese script el **nombre va primero y sin depender de nada más**. Es la única pieza que Safari no
+relee después, y el icono —que sí necesita el backend y el `username`— puede fallar sin arrastrar
+al nombre consigo. Tenerlo al revés dejaba el nombre sin poner cuando el build no traía
+`VITE_API_URL` sustituido.
+
 
 Aplicarla más tarde —desde un efecto de React, por ejemplo— llega tarde en ambas: el diálogo
 sigue proponiendo «Piddet» aunque el manifest ya sea el de la compañía. El script en línea repite
