@@ -42,6 +42,41 @@
         href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&display=swap" />
       <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
     </noscript>
+    <!-- Identidad instalable de la compañía activa, lo ANTES posible. iOS fija el nombre y el
+         icono de «Agregar a Inicio» al cargar el documento, antes de que corra el bundle, así que
+         esto no puede esperar a main.jsx: va en línea y al final del <head>, cuando las metas de
+         arriba ya existen. Repite a propósito la lectura de la sesión (src/lib/auth/storage.js)
+         para no arrastrar el bundle hasta aquí; el resto lo reaplica applyCompanyPwa.js. -->
+    <script>
+      (function () {
+        try {
+          var api = '%VITE_API_URL%';
+          if (!api || api.charAt(0) === '%') return; // modo demo: sin backend no hay iconos
+          var persistent = localStorage.getItem('piddet_persist') === '1';
+          var store = persistent ? localStorage : sessionStorage;
+          var company = JSON.parse(store.getItem('piddet_company') || 'null');
+          if (!company || !company.name || !company.username) return;
+
+          // El título original queda anotado para que applyCompanyPwa.js pueda restaurarlo al
+          // cerrar sesión: cuando ese módulo arranca, esta línea ya lo habrá cambiado.
+          document.documentElement.dataset.defaultTitle = document.title;
+          document.title = company.name + ' · Panel de administración';
+          ['apple-mobile-web-app-title', 'application-name'].forEach(function (name) {
+            var tag = document.querySelector('meta[name="' + name + '"]');
+            if (tag) tag.setAttribute('content', company.name);
+          });
+
+          var icon = document.querySelector('link[rel="apple-touch-icon"]');
+          if (icon) {
+            var version = ((company.icon || '') + (company.brand_primary || '')).replace(/\W/g, '').slice(-12);
+            icon.href = api + '/public/' + encodeURIComponent(company.username)
+              + '/app-icon-180.png?maskable=1&v=' + encodeURIComponent(version);
+          }
+        } catch (e) {
+          /* sin sesión, sin storage o en modo privado: queda la identidad Piddet */
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
