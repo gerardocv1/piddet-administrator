@@ -206,12 +206,18 @@ Instalada con sesión iniciada, toma el **nombre y el icono de la compañía act
 
 ### Por qué el icono lo sirve el backend
 
-**iOS no acepta un `data:` URI como `apple-touch-icon`.** Dibujar el icono en un canvas y colgarlo
-del documento funciona en Android y deja a iOS con el icono genérico, que fue exactamente el
-síntoma reportado. Por eso los iconos son URLs reales servidas por la API
-(`backend-piddet`: `PublicCompanyAppController` + `AppIconRenderer`), y el panel solo construye
-esas URLs. Llevan un `v` derivado del logo y el color, para que cambiar cualquiera de los dos
-estrene URL en vez de dejar servido el icono anterior desde la caché del teléfono.
+**No es por compatibilidad:** un `data:` URI como `apple-touch-icon` sí funciona en iOS (se
+comprobó en un iPhone, con el icono de inicial correcto). La razón es que componer el logo en el
+navegador exige que el almacenamiento mande cabeceras **CORS**: `crossOrigin="anonymous"` es
+obligatorio para poder exportar el canvas, y sin esas cabeceras el lienzo queda contaminado,
+`toDataURL` falla y el icono cae a la inicial aunque la compañía tenga logo. En el servidor el
+logo se lee del disco y no hay CORS de por medio.
+
+De paso el panel se queda sin canvas, sin caché de iconos en `localStorage` y sin esperar a la
+fuente del CDN, y el PNG pesa un tercio que el base64 equivalente. Los iconos son URLs reales
+servidas por la API (`backend-piddet`: `PublicCompanyAppController` + `AppIconRenderer`) y el
+panel solo las construye; llevan un `v` derivado del logo y el color, para que cambiar cualquiera
+de los dos estrene URL en vez de dejar servido el icono anterior desde la caché del teléfono.
 
 El **manifest**, en cambio, sigue siendo un blob local: su `scope` y su `start_url` deben ser del
 mismo origen que él, y la API puede estar en otro. En modo demo (sin `VITE_API_URL`) se aplica el
@@ -222,7 +228,7 @@ nombre de la compañía pero rigen los iconos de Piddet.
 | Plataforma | Cuándo fija la identidad | Quién la pone a tiempo |
 |---|---|---|
 | Chrome / Android | En `beforeinstallprompt`, que dispara al registrarse el service worker | `applyStoredCompanyPwa()`, primera línea de `main.jsx`, **antes** de `registerServiceWorker()` |
-| Safari / iOS | Al cargar el documento, antes de que corra el bundle | El **script en línea** del `<head>`, durante el parseo |
+| Safari / iOS | El **nombre**, al cargar el documento, antes de que corra el bundle (el `href` del `apple-touch-icon` sí lo relee en vivo) | El **script en línea** del `<head>`, durante el parseo |
 
 Aplicarla más tarde —desde un efecto de React, por ejemplo— llega tarde en ambas: el diálogo
 sigue proponiendo «Piddet» aunque el manifest ya sea el de la compañía. El script en línea repite

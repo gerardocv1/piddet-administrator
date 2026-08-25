@@ -2,18 +2,24 @@
 // de inicio siguen a la compañía activa.
 //
 // Los iconos NO se dibujan aquí: los sirve el backend en URLs reales
-// (`/public/{compañía}/app-icon-{tamaño}.png`). Es un requisito de iOS, que no acepta un `data:`
-// URI como `apple-touch-icon`; dibujarlos en un canvas funcionaba en Android y dejaba a iOS con
-// el icono genérico. El manifest sí sigue siendo un blob local porque su `scope` y su
-// `start_url` deben ser del mismo origen que él, y el backend puede estar en otro.
+// (`/public/{compañía}/app-icon-{tamaño}.png`). No es por compatibilidad —un `data:` URI como
+// `apple-touch-icon` sí funciona en iOS—, sino porque componer el logo en el navegador exige que
+// el almacenamiento mande cabeceras CORS: sin ellas el canvas queda contaminado, `toDataURL`
+// falla y el icono cae a la inicial aunque la compañía tenga logo. En el servidor el logo se lee
+// del disco y no hay CORS de por medio; de paso el cliente se queda sin canvas, sin caché de
+// iconos y sin esperar a la fuente del CDN, y el PNG pesa un tercio que el base64.
+//
+// El manifest sí sigue siendo un blob local, porque su `scope` y su `start_url` deben ser del
+// mismo origen que él y el backend puede estar en otro.
 //
 // EL MOMENTO IMPORTA, y por partida doble:
 //   - Chrome congela los datos del diálogo de instalación en `beforeinstallprompt`, que dispara
 //     al registrarse el service worker. De ahí que main.jsx llame a `applyStoredCompanyPwa()`
 //     antes de registrarlo.
-//   - iOS fija el nombre de «Agregar a Inicio» al cargar el documento, antes incluso de que
-//     corra este bundle. Por eso el nombre y el `apple-touch-icon` los pone además un script en
-//     línea al final del <head> de index.html; esto los reaplica para los cambios en caliente.
+//   - Safari fija el NOMBRE de «Agregar a Inicio» al cargar el documento, antes de que corra
+//     este bundle: cambiar la meta después no le llega (el `href` del apple-touch-icon, en
+//     cambio, sí lo relee en vivo). Por eso el nombre lo pone además un script en línea al final
+//     del <head> de index.html; esto lo reaplica para los cambios en caliente.
 
 import { readSession } from '../auth/storage.js';
 import { ADMIN_BASE } from '../adminBase.js';
