@@ -177,13 +177,13 @@ export function Layout({ theme, onToggleTheme, onLogout }) {
 
 // El título dinámico (fijado por la pantalla activa vía useSetPageTitle) tiene prioridad
 // sobre el título por ruta; al desmontarse la pantalla vuelve el título de la sección.
-// En el teléfono manda la versión corta del título (si la pantalla la declaró) y la barra recoge
-// el "volver" que publica su PageHeader: así la flecha se pinta una sola vez, arriba.
+// En el teléfono manda la versión corta del título (si la pantalla la declaró). La barra recoge
+// el "volver" que publica su PageHeader en ambas líneas: la flecha se pinta una sola vez,
+// arriba, junto al título.
 function LayoutTopbar({ meta, isMobile, ...rest }) {
   const { title, shortTitle, onBack } = usePageTitle();
   const shown = (isMobile && shortTitle) || title || meta.title;
   return (
-    <Topbar title={shown} crumb={title ? '' : meta.crumb}
-      onBack={isMobile ? onBack : null} {...rest} />
+    <Topbar title={shown} crumb={title ? '' : meta.crumb} onBack={onBack} {...rest} />
   );
 }

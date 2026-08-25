@@ -1,17 +1,17 @@
 import React from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
-  Card, Badge, Button, IconButton, Dropdown, Spinner, Alert, Input, Textarea, Switch, Select,
-  MoneyInput, DatePicker, Checkbox, Modal, PageHeader, StatStrip, DataTable, useToast,
+  Panel, Badge, Button, Spinner, Alert, Input, Textarea, Switch, Select,
+  MoneyInput, DatePicker, Checkbox, Modal, InfoCard, Avatar, StatStrip, DataTable, useToast,
 } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { useIsMobile } from '../lib/useIsMobile.js';
-import { gymMemberStatusMeta, GYM_MEMBER_STATUS, GYM_SEX_OPTIONS, gymSexLabel, gymMoney, gymSubscriptionStatusMeta, GYM_SUBSCRIPTION_STATUS } from '../lib/gymLabels.js';
+import { gymMemberStatusMeta, GYM_MEMBER_STATUS, GYM_SEX_OPTIONS, gymSexLabel, gymMoney, gymSubscriptionStatusMeta, gymPeriodStatusMeta, gymSubscriptionPending, GYM_SUBSCRIPTION_STATUS, GYM_PERIOD_STATUS } from '../lib/gymLabels.js';
 import { ID_TYPES } from '../lib/reservationLabels.js';
 import { todayIso, yearsAgoIso } from '../lib/orderLabels.js';
 import { formatShortDate, ageFromBirthdate } from '../lib/dates.js';
-import { useSetPageTitle } from '../lib/pageTitle.jsx';
+import { useSetPageTitle, useSetPageBack } from '../lib/pageTitle.jsx';
 import s from './screens.module.css';
 import g from './GymMemberDetail.module.css';
 
@@ -20,28 +20,10 @@ const SIDE_LABEL = { L: 'izq.', R: 'der.' };
 // 100 años atrás cubre a cualquier afiliado y acota el desplegable de años del calendario.
 const OLDEST_BIRTHDATE = () => yearsAgoIso(100);
 
-// Tarjeta plegable: el título es el interruptor (tocar minimiza/maximiza); la acción del header
-// queda siempre visible, así "Renovar" sigue a un toque aunque la tarjeta esté plegada.
-function CollapsibleCard({ title, action, defaultOpen = true, children }) {
-  const [open, setOpen] = React.useState(defaultOpen);
-  return (
-    <Card>
-      <Card.Header action={action} className={open ? '' : g.collapsedHeader}>
-        <button type="button" className={g.collapseToggle} onClick={() => setOpen((o) => !o)} aria-expanded={open}>
-          {title}
-          <i className={`fas fa-chevron-down ${g.collapseChevron} ${open ? g.chevronOpen : ''}`} aria-hidden="true" />
-        </button>
-      </Card.Header>
-      {open && <Card.Body>{children}</Card.Body>}
-    </Card>
-  );
-}
-
-// Ficha del afiliado, en orden de uso móvil: primero su suscripción (resumen compacto — el
-// detalle transaccional con los pagos vive en /gym/subscriptions/:id), luego su progreso
-// físico (todas las medidas configuradas en una gráfica, ocultables desde la leyenda, con el
-// historial de mediciones debajo) y al final el perfil como resumen de solo lectura, abierto
-// por defecto; su edición vive en un modal. Suscripción y perfil se pueden minimizar/maximizar.
+// Ficha del afiliado, en orden de uso móvil: arriba su identidad y todos sus datos en el
+// InfoCard plegable (se editan juntos desde "Editar datos"), luego la suscripción como Panel
+// compacto (el detalle transaccional con los pagos vive en /gym/subscriptions/:id) y las
+// medidas en otro Panel (el análisis visual vive en /gym/members/:id/progress).
 // Registrar medidas abre el asistente paso a paso.
 export function GymMemberDetail() {
   const { memberId } = useParams();
@@ -55,9 +37,11 @@ export function GymMemberDetail() {
 
   const subsFetcher = React.useCallback(() => api.gymMemberSubscriptions(memberId), [memberId]);
   const { data: subscriptions, reload: reloadSubs } = useResource(subsFetcher, EMPTY_SUBS, [memberId]);
-  const current = subscriptions[0] || null;
-  const currentStatus = current ? Number(current.computed_status ?? current.status) : null;
-  const currentIsAlive = currentStatus === GYM_SUBSCRIPTION_STATUS.ACTIVE || currentStatus === GYM_SUBSCRIPTION_STATUS.GRACE;
+  // La suscripción es continua: solo puede haber una activa; si no hay, se muestra la última
+  // (cancelada) como historial de solo lectura.
+  const current = subscriptions.find((sub) => Number(sub.status) === GYM_SUBSCRIPTION_STATUS.ACTIVE)
+    || subscriptions[0] || null;
+  const currentIsActive = current ? Number(current.status) === GYM_SUBSCRIPTION_STATUS.ACTIVE : false;
 
   const { data: plansPage } = useResource(React.useCallback(() => api.gymPlans({ status: '1', perPage: 100 }), []), { items: [] }, []);
   const planOptions = React.useMemo(
@@ -75,8 +59,11 @@ export function GymMemberDetail() {
   useSetPageTitle('Afiliado');
 
   const goBack = () => navigate(`/gym/members${params.toString() ? `?${params.toString()}` : ''}`);
+  // La cabecera de esta ficha es un InfoCard (sin PageHeader), así que el "volver" del Topbar
+  // se publica directo desde la pantalla.
+  useSetPageBack(goBack);
 
-  // ── Suscripción: alta/renovación (con pago si se elige método) ───────────
+  // ── Suscribir (solo si el afiliado no tiene una suscripción activa) ──────
   const emptySubscribeForm = { plan_id: '', start_date: todayIso(), payment_method: '', value: '', registers_income: true };
   const [subscribeOpen, setSubscribeOpen] = React.useState(false);
   const [subscribeForm, setSubscribeForm] = React.useState(emptySubscribeForm);
@@ -84,30 +71,21 @@ export function GymMemberDetail() {
   const [subscribeError, setSubscribeError] = React.useState('');
 
   const openSubscribe = React.useCallback(() => {
-    // Preselecciona el plan de la suscripción vigente y precarga su precio: el caso típico es
-    // renovar lo mismo y cobrar completo.
-    const samePlan = current ? (plansPage.items || []).find((p) => p.id === current.plan_id) : null;
-    setSubscribeForm({
-      plan_id: samePlan ? String(samePlan.id) : '',
-      start_date: todayIso(),
-      payment_method: '',
-      value: samePlan ? samePlan.price : '',
-      registers_income: true,
-    });
+    setSubscribeForm(emptySubscribeForm);
     setSubscribeError('');
     setSubscribeOpen(true);
-  }, [current, plansPage]);
+  }, []);
 
-  // ?action=renew (acción rápida desde el listado): abre el formulario apenas hay datos.
-  const wantsRenew = params.get('action') === 'renew';
+  // ?action=subscribe (acción rápida desde el listado): abre el formulario apenas hay datos.
+  const wantsSubscribe = params.get('action') === 'subscribe';
   React.useEffect(() => {
-    if (wantsRenew && data && !subscribeOpen) {
+    if (wantsSubscribe && data && !currentIsActive && !subscribeOpen) {
       openSubscribe();
       const q = new URLSearchParams(params);
       q.delete('action');
       setParams(q, { replace: true });
     }
-  }, [wantsRenew, data]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [wantsSubscribe, data, currentIsActive]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const pickSubscribePlan = (planId) => {
     const plan = (plansPage.items || []).find((p) => String(p.id) === planId);
@@ -128,16 +106,14 @@ export function GymMemberDetail() {
     try {
       const created = await api.createGymSubscription(memberId, {
         plan_id: Number(subscribeForm.plan_id),
-        // En una renovación encadenada el backend ignora la fecha: la vigencia arranca al día
-        // siguiente de la anterior, así que ni se manda.
-        start_date: currentIsAlive ? undefined : subscribeForm.start_date,
+        start_date: subscribeForm.start_date,
         payment: withPayment ? {
           payment_method: subscribeForm.payment_method,
           value: subscribeForm.value,
           registers_income: subscribeForm.registers_income,
         } : undefined,
       });
-      toast({ tone: 'success', title: currentIsAlive ? 'Suscripción renovada' : 'Suscripción registrada' });
+      toast({ tone: 'success', title: 'Suscripción registrada' });
       setSubscribeOpen(false);
       reloadSubs();
       if (created?.id) navigate(`/gym/subscriptions/${created.id}`);
@@ -148,55 +124,70 @@ export function GymMemberDetail() {
     }
   };
 
-  // ── Datos personales de la persona (nombres, correo, documento). El celular no se edita:
-  // es la credencial con la que inicia sesión. ──
-  const [personalOpen, setPersonalOpen] = React.useState(false);
-  const [personalForm, setPersonalForm] = React.useState(null);
-  const [personalBusy, setPersonalBusy] = React.useState(false);
-  const [personalError, setPersonalError] = React.useState('');
+  // ── Editar datos: un solo formulario (dividido en dos apartados) que junta los datos
+  // personales de la persona (nombres, correo, documento, nacimiento) y el perfil del afiliado
+  // (sexo, talla, objetivo, notas, estado). Son dos recursos del backend (usuario y afiliado),
+  // así que se guardan con dos llamadas encadenadas, pero para quien edita es una sola acción.
+  // El celular no se edita: es la credencial con la que la persona inicia sesión.
+  const [editOpen, setEditOpen] = React.useState(false);
+  const [editForm, setEditForm] = React.useState(null);
+  const [editBusy, setEditBusy] = React.useState(false);
+  const [editError, setEditError] = React.useState('');
 
-  const openPersonal = () => {
+  const openEdit = () => {
     const per = data?.personal || {};
     const nameParts = (data?.member_name || '').trim().split(/\s+/);
-    setPersonalForm({
+    setEditForm({
       first_name: per.first_name || nameParts[0] || '',
       last_name: per.last_name || nameParts.slice(1).join(' '),
       email: per.email || '',
       id_type_id: per.id_type_id ? String(per.id_type_id) : '1',
       id_number: per.id_number || data?.document_snapshot || '',
       birthdate: per.birthdate || '',
+      sex: data.sex || '',
+      height_cm: data.height_cm ?? '',
+      goal_id: data.goal_id ? String(data.goal_id) : '',
+      health_notes: data.health_notes || '',
+      active: Number(data.status) === GYM_MEMBER_STATUS.ACTIVE,
     });
-    setPersonalError('');
-    setPersonalOpen(true);
+    setEditError('');
+    setEditOpen(true);
   };
 
   // Eco de la edad mientras se elige el día, para confirmar que la fecha es la correcta.
-  const personalAge = ageFromBirthdate(personalForm?.birthdate);
+  const editAge = ageFromBirthdate(editForm?.birthdate);
 
-  const submitPersonal = async () => {
-    if (personalBusy) return;
-    if (!personalForm.first_name.trim() || !personalForm.last_name.trim()) {
-      setPersonalError('Nombres y apellidos son obligatorios.');
+  const submitEdit = async () => {
+    if (editBusy) return;
+    if (!editForm.first_name.trim() || !editForm.last_name.trim()) {
+      setEditError('Nombres y apellidos son obligatorios.');
       return;
     }
-    setPersonalBusy(true);
-    setPersonalError('');
+    setEditBusy(true);
+    setEditError('');
     try {
-      const updated = await api.updateGymMemberPersonal(data.id, {
-        first_name: personalForm.first_name.trim(),
-        last_name: personalForm.last_name.trim(),
-        email: personalForm.email.trim() || null,
-        id_type_id: personalForm.id_type_id ? Number(personalForm.id_type_id) : null,
-        id_number: personalForm.id_number.trim() || null,
-        birthdate: personalForm.birthdate || null,
+      await api.updateGymMemberPersonal(data.id, {
+        first_name: editForm.first_name.trim(),
+        last_name: editForm.last_name.trim(),
+        email: editForm.email.trim() || null,
+        id_type_id: editForm.id_type_id ? Number(editForm.id_type_id) : null,
+        id_number: editForm.id_number.trim() || null,
+        birthdate: editForm.birthdate || null,
+      });
+      const updated = await api.updateGymMember(data.id, {
+        sex: editForm.sex || null,
+        height_cm: editForm.height_cm === '' ? null : editForm.height_cm,
+        goal_id: editForm.goal_id === '' ? null : Number(editForm.goal_id),
+        health_notes: editForm.health_notes.trim() || null,
+        status: editForm.active ? GYM_MEMBER_STATUS.ACTIVE : GYM_MEMBER_STATUS.INACTIVE,
       });
       setData(updated);
-      toast({ tone: 'success', title: 'Datos personales actualizados' });
-      setPersonalOpen(false);
+      toast({ tone: 'success', title: 'Datos del afiliado actualizados' });
+      setEditOpen(false);
     } catch (e) {
-      setPersonalError(e?.message || 'No se pudieron guardar los datos.');
+      setEditError(e?.message || 'No se pudieron guardar los datos.');
     } finally {
-      setPersonalBusy(false);
+      setEditBusy(false);
     }
   };
 
@@ -295,60 +286,12 @@ export function GymMemberDetail() {
   }
   if (bmi) progressStats.push({ label: 'IMC', value: bmi.toFixed(1) });
 
-  // ── Perfil (objetivo cerrado: se elige del catálogo). En la ficha solo va el resumen de
-  // lectura; el formulario vive en un modal que se precarga al abrirlo. ──
+  // El objetivo es cerrado: se elige del catálogo, tanto para mostrarlo como para editarlo.
   const { data: goals } = useResource(api.gymGoals, [], []);
   const goalOptions = React.useMemo(
     () => [{ value: '', label: 'Sin objetivo' }, ...(goals || []).map((goal) => ({ value: String(goal.id), label: goal.label }))],
     [goals],
   );
-
-  const [profileOpen, setProfileOpen] = React.useState(false);
-  const [form, setForm] = React.useState(null);
-  const [saving, setSaving] = React.useState(false);
-  const [saveError, setSaveError] = React.useState('');
-
-  const openProfile = () => {
-    setForm({
-      sex: data.sex || '',
-      height_cm: data.height_cm ?? '',
-      goal_id: data.goal_id ? String(data.goal_id) : '',
-      health_notes: data.health_notes || '',
-      active: Number(data.status) === GYM_MEMBER_STATUS.ACTIVE,
-    });
-    setSaveError('');
-    setProfileOpen(true);
-  };
-
-  const dirty = form && data && (
-    form.sex !== (data.sex || '') ||
-    (form.height_cm || '') !== (data.height_cm ?? '') ||
-    form.goal_id !== (data.goal_id ? String(data.goal_id) : '') ||
-    form.health_notes !== (data.health_notes || '') ||
-    form.active !== (Number(data.status) === GYM_MEMBER_STATUS.ACTIVE)
-  );
-
-  const save = async () => {
-    if (saving || !form) return;
-    setSaving(true);
-    setSaveError('');
-    try {
-      const updated = await api.updateGymMember(data.id, {
-        sex: form.sex || null,
-        height_cm: form.height_cm === '' ? null : form.height_cm,
-        goal_id: form.goal_id === '' ? null : Number(form.goal_id),
-        health_notes: form.health_notes.trim() || null,
-        status: form.active ? GYM_MEMBER_STATUS.ACTIVE : GYM_MEMBER_STATUS.INACTIVE,
-      });
-      setData(updated);
-      toast({ tone: 'success', title: 'Afiliado actualizado' });
-      setProfileOpen(false);
-    } catch (e) {
-      setSaveError(e?.message || 'No se pudo guardar los cambios.');
-    } finally {
-      setSaving(false);
-    }
-  };
 
   if (loading) return <Spinner center label="Cargando afiliado…" />;
   if (error || !data) {
@@ -360,43 +303,50 @@ export function GymMemberDetail() {
   }
 
   const meta = gymMemberStatusMeta(data.status);
-  const subMeta = current ? gymSubscriptionStatusMeta(currentStatus) : null;
+  // Con una activa cuyo período está en gracia, el badge advierte eso; si no, el estado de
+  // la suscripción (activa/cancelada).
+  const subMeta = current
+    ? (currentIsActive && Number(current.current_period?.computed_status ?? current.current_period?.status) === GYM_PERIOD_STATUS.GRACE
+      ? gymPeriodStatusMeta(GYM_PERIOD_STATUS.GRACE)
+      : gymSubscriptionStatusMeta(current.status))
+    : null;
 
   return (
     <div className={s.page}>
-      <PageHeader
-        onBack={goBack}
-        subtitle={data.member_name}
-        actions={isMobile ? (
-          // En el teléfono la cabecera no lleva botones sueltos: editar los datos y ver el
-          // progreso son secundarios frente a cobrar y tomar medidas, y viven en el menú.
-          <Dropdown
-            trigger={<IconButton icon="fas fa-ellipsis-vertical" variant="light" size="sm" title="Más acciones" />}
-            items={[
-              { label: 'Editar datos', icon: 'fas fa-pen', onClick: openPersonal },
-              { label: 'Ver progreso', icon: 'fas fa-chart-line', onClick: () => navigate(`/gym/members/${memberId}/progress`) },
-            ]}
-          />
-        ) : (
-          <Button variant="secondary" size="sm" icon="fas fa-pen" onClick={openPersonal}>
-            Editar datos
-          </Button>
-        )}
-        meta={[
-          { label: 'Código', value: data.member_code },
-          { label: 'Documento', value: data.document_snapshot || '—' },
-          { label: 'Ingreso', value: formatShortDate(data.joined_at) },
-          { label: 'Estado', value: <Badge variant={meta.variant} dot>{meta.label}</Badge> },
+      {/* La identidad del afiliado como InfoCard: avatar + nombre + teléfono, acciones en el
+          ⋮ y el resto de datos (personales y de perfil) en el detalle plegable — un solo lugar,
+          se editan juntos desde "Editar datos". */}
+      <InfoCard
+        media={<Avatar name={data.member_name} size="lg" />}
+        title={data.member_name}
+        description={data.phone_number
+          ? <><i className="fas fa-phone" aria-hidden="true" /> {data.phone_number}</>
+          : data.member_code}
+        actions={[
+          { label: 'Editar datos', icon: 'fas fa-pen', onClick: openEdit },
+          { label: 'Ver progreso', icon: 'fas fa-chart-line', onClick: () => navigate(`/gym/members/${memberId}/progress`) },
         ]}
-      />
+      >
+        <InfoCard.Field label="Código">{data.member_code}</InfoCard.Field>
+        <InfoCard.Field label="Documento">{data.document_snapshot || '—'}</InfoCard.Field>
+        <InfoCard.Field label="Sexo">{gymSexLabel(data.sex) || 'Sin definir'}</InfoCard.Field>
+        <InfoCard.Field label="Edad">
+          {data.age == null ? 'Sin definir' : `${data.age} años · ${formatShortDate(data.birthdate)}`}
+        </InfoCard.Field>
+        <InfoCard.Field label="Talla">{data.height_cm ? `${data.height_cm} cm` : '—'}</InfoCard.Field>
+        <InfoCard.Field label="Objetivo">{data.goal || 'Sin objetivo'}</InfoCard.Field>
+        <InfoCard.Field label="Ingreso">{formatShortDate(data.joined_at)}</InfoCard.Field>
+        <InfoCard.Field label="Estado"><Badge variant={meta.variant} dot>{meta.label}</Badge></InfoCard.Field>
+        {data.health_notes && <p className={g.healthNotes}><i className="fas fa-notes-medical" aria-hidden="true" /> {data.health_notes}</p>}
+      </InfoCard>
 
-      {/* ── Suscripción: resumen compacto; el detalle (pagos) vive en su propia vista ── */}
-      <CollapsibleCard title="Suscripción" defaultOpen
-        action={
-          <Button variant="primary" size="sm" icon={currentIsAlive ? 'fas fa-rotate' : 'fas fa-plus'} onClick={openSubscribe}>
-            {currentIsAlive ? 'Renovar' : 'Nueva suscripción'}
+      {/* ── Suscripción: resumen compacto; el detalle (períodos y pagos) vive en su propia vista ── */}
+      <Panel title="Suscripción"
+        action={!currentIsActive ? (
+          <Button variant="outline-primary" size="sm" icon="fas fa-plus" onClick={openSubscribe}>
+            Suscribir
           </Button>
-        }>
+        ) : null}>
         {!current ? (
           <p className={s.faint}>Este afiliado todavía no tiene una suscripción.</p>
         ) : (
@@ -405,10 +355,15 @@ export function GymMemberDetail() {
             <div className={g.subInfo}>
               <span className={g.subPlan}>{current.plan_name}</span>
               <span className={g.subDates}>
-                {currentStatus === GYM_SUBSCRIPTION_STATUS.EXPIRED || currentStatus === GYM_SUBSCRIPTION_STATUS.CANCELLED
-                  ? `Venció el ${formatShortDate(current.end_date)}`
-                  : `Vence el ${formatShortDate(current.end_date)}`}
-                {' · '}{gymMoney(current.price)}
+                {current.current_period ? (
+                  Number(current.current_period.computed_status ?? current.current_period.status) === GYM_PERIOD_STATUS.GRACE
+                    ? `Venció el ${formatShortDate(current.current_period.end_date)}`
+                    : `Vence el ${formatShortDate(current.current_period.end_date)}`
+                ) : 'Sin período vigente'}
+                {' · '}{gymMoney(current.current_period?.price)}
+                {currentIsActive && gymSubscriptionPending(current) > 0 && (
+                  <span className={g.subSaldo}> · saldo {gymMoney(gymSubscriptionPending(current))}</span>
+                )}
               </span>
             </div>
             <span className={g.subRight}>
@@ -422,27 +377,25 @@ export function GymMemberDetail() {
             {subscriptions.length - 1} suscripción{subscriptions.length - 1 === 1 ? '' : 'es'} anterior{subscriptions.length - 1 === 1 ? '' : 'es'} — se abren desde el listado de suscripciones.
           </p>
         )}
-      </CollapsibleCard>
+      </Panel>
 
       {/* ── Medidas: tabla de mediciones; el análisis visual vive en la vista de progreso ── */}
-      <Card>
-        <Card.Header title="Medidas"
-          action={
-            <span className={g.headerActions}>
-              {!isMobile && (
-                <Button variant="secondary" size="sm" icon="fas fa-chart-line"
-                  onClick={() => navigate(`/gym/members/${memberId}/progress`)}>
-                  Ver progreso
-                </Button>
-              )}
-              <Button variant="primary" size="sm" icon="fas fa-plus"
-                onClick={() => navigate(`/gym/members/${memberId}/checkin`)}>
-                Tomar medidas
+      <Panel title="Medidas"
+        action={
+          <span className={g.headerActions}>
+            {!isMobile && (
+              <Button variant="secondary" size="sm" icon="fas fa-chart-line"
+                onClick={() => navigate(`/gym/members/${memberId}/progress`)}>
+                Ver progreso
               </Button>
-            </span>
-          } />
-        <Card.Body>
-          <div className={s.formCol}>
+            )}
+            <Button variant="outline-primary" size="sm" icon="fas fa-plus"
+              onClick={() => navigate(`/gym/members/${memberId}/checkin`)}>
+              Medidas
+            </Button>
+          </span>
+        }>
+        <div className={s.formCol}>
             {progressStats.length > 0 && <StatStrip stats={progressStats} />}
             <div className={s.desktopList}>
               <DataTable
@@ -477,42 +430,7 @@ export function GymMemberDetail() {
               )}
             </div>
           </div>
-        </Card.Body>
-      </Card>
-
-      {/* ── Perfil: resumen de solo lectura, abierto por defecto; la edición abre un modal ── */}
-      <CollapsibleCard title="Perfil" defaultOpen
-        action={
-          <Button variant="secondary" size="sm" icon="fas fa-pen" onClick={openProfile}>
-            Editar
-          </Button>
-        }>
-        <ul className={g.profileList}>
-          <li className={g.profileRow}>
-            <span className={g.profileLabel}>Sexo</span>
-            <span className={g.profileValue}>{gymSexLabel(data.sex) || 'Sin definir'}</span>
-          </li>
-          {/* La edad la calcula el backend desde la fecha de nacimiento; se edita en "Editar datos". */}
-          <li className={g.profileRow}>
-            <span className={g.profileLabel}>Edad</span>
-            <span className={g.profileValue}>
-              {data.age == null ? 'Sin definir' : `${data.age} años · ${formatShortDate(data.birthdate)}`}
-            </span>
-          </li>
-          <li className={g.profileRow}>
-            <span className={g.profileLabel}>Talla</span>
-            <span className={g.profileValue}>{data.height_cm ? `${data.height_cm} cm` : '—'}</span>
-          </li>
-          <li className={g.profileRow}>
-            <span className={g.profileLabel}>Objetivo</span>
-            <span className={g.profileValue}>{data.goal || 'Sin objetivo'}</span>
-          </li>
-          <li className={g.profileRow}>
-            <span className={g.profileLabel}>Notas de salud</span>
-            <span className={g.profileValue}>{data.health_notes || '—'}</span>
-          </li>
-        </ul>
-      </CollapsibleCard>
+      </Panel>
 
       {/* Detalle de una medición del historial, y su corrección en el mismo modal */}
       <Modal open={!!openCheckin}
@@ -567,91 +485,76 @@ export function GymMemberDetail() {
         )}
       </Modal>
 
-      {/* Perfil del afiliado (sexo, talla, objetivo, notas y estado): la ficha solo muestra el
-          resumen; los cambios se hacen aquí. */}
-      <Modal open={profileOpen} title="Editar perfil" onClose={() => setProfileOpen(false)}
+      {/* Editar datos: un solo formulario para todo el afiliado, dividido en dos apartados
+          (datos personales del backend `users` + perfil del afiliado), que se guardan en dos
+          llamadas encadenadas pero como una sola acción del punto de vista de quien edita. */}
+      <Modal open={editOpen} title="Editar datos" onClose={() => setEditOpen(false)}
         footer={<>
-          <Button variant="secondary" onClick={() => setProfileOpen(false)}>Cancelar</Button>
-          <Button variant="primary" loading={saving} disabled={!dirty} onClick={save}>Guardar</Button>
+          <Button variant="secondary" onClick={() => setEditOpen(false)}>Cancelar</Button>
+          <Button variant="primary" loading={editBusy} onClick={submitEdit}>Guardar</Button>
         </>}>
-        {form && (
+        {editForm && (
           <div className={s.formCol}>
+            <span className={g.formSectionTitle}>Datos personales</span>
             <div className={s.formGrid}>
-              <Select label="Sexo" icon="fas fa-venus-mars" value={form.sex}
-                hint="Decide la silueta de la vista de progreso."
-                onChange={(e) => setForm({ ...form, sex: e.target.value })}
-                options={[{ value: '', label: 'Sin definir' }, ...GYM_SEX_OPTIONS]} />
-              <Input label="Talla (cm)" type="number" inputMode="decimal" min="0" icon="fas fa-ruler-vertical"
-                hint="Se usa para calcular el IMC."
-                value={form.height_cm} onChange={(e) => setForm({ ...form, height_cm: e.target.value })} />
-            </div>
-            <Select label="Objetivo" icon="fas fa-bullseye" value={form.goal_id}
-              onChange={(e) => setForm({ ...form, goal_id: e.target.value })} options={goalOptions} />
-            <Textarea label="Notas de salud" placeholder="Lesiones, condiciones a tener en cuenta…"
-              value={form.health_notes} onChange={(e) => setForm({ ...form, health_notes: e.target.value })} />
-            <Switch label="Afiliado activo" checked={form.active}
-              onChange={(e) => setForm({ ...form, active: e.target.checked })} />
-            {saveError && <Alert tone="danger" onClose={() => setSaveError('')}>{saveError}</Alert>}
-          </div>
-        )}
-      </Modal>
-
-      {/* Datos personales de la persona (users + perfil): el celular queda fuera a propósito. */}
-      <Modal open={personalOpen} title="Editar datos personales" onClose={() => setPersonalOpen(false)}
-        footer={<>
-          <Button variant="secondary" onClick={() => setPersonalOpen(false)}>Cancelar</Button>
-          <Button variant="primary" loading={personalBusy} onClick={submitPersonal}>Guardar</Button>
-        </>}>
-        {personalForm && (
-          <div className={s.formCol}>
-            <div className={s.formGrid}>
-              <Input label="Nombres" icon="fas fa-user" value={personalForm.first_name}
-                onChange={(e) => setPersonalForm({ ...personalForm, first_name: e.target.value })} />
-              <Input label="Apellidos" icon="fas fa-user" value={personalForm.last_name}
-                onChange={(e) => setPersonalForm({ ...personalForm, last_name: e.target.value })} />
+              <Input label="Nombres" icon="fas fa-user" value={editForm.first_name}
+                onChange={(e) => setEditForm({ ...editForm, first_name: e.target.value })} />
+              <Input label="Apellidos" icon="fas fa-user" value={editForm.last_name}
+                onChange={(e) => setEditForm({ ...editForm, last_name: e.target.value })} />
             </div>
             <Input label="Correo" icon="fas fa-envelope" type="email" inputMode="email" placeholder="Opcional"
-              value={personalForm.email} onChange={(e) => setPersonalForm({ ...personalForm, email: e.target.value })} />
+              value={editForm.email} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} />
             <div className={s.formGrid}>
-              <Select label="Tipo de documento" icon="fas fa-id-card" value={personalForm.id_type_id}
-                onChange={(e) => setPersonalForm({ ...personalForm, id_type_id: e.target.value })} options={ID_TYPES} />
+              <Select label="Tipo de documento" icon="fas fa-id-card" value={editForm.id_type_id}
+                onChange={(e) => setEditForm({ ...editForm, id_type_id: e.target.value })} options={ID_TYPES} />
               <Input label="Número de documento" icon="fas fa-hashtag" inputMode="numeric"
-                value={personalForm.id_number} onChange={(e) => setPersonalForm({ ...personalForm, id_number: e.target.value })} />
+                value={editForm.id_number} onChange={(e) => setEditForm({ ...editForm, id_number: e.target.value })} />
             </div>
             {/* Se guarda la fecha, no la edad: los años salen calculados en la ficha. */}
             <DatePicker label="Fecha de nacimiento" icon="fas fa-cake-candles"
               captionLayout="dropdown" min={OLDEST_BIRTHDATE()} max={todayIso()}
-              hint={personalAge === null ? undefined : `Tiene ${personalAge} años.`}
-              value={personalForm.birthdate} onChange={(d) => setPersonalForm({ ...personalForm, birthdate: d })} />
+              hint={editAge === null ? undefined : `Tiene ${editAge} años.`}
+              value={editForm.birthdate} onChange={(d) => setEditForm({ ...editForm, birthdate: d })} />
             <p className={s.faint}>
               El celular{data.personal?.phone_number ? ` (${data.personal.phone_number})` : ''} no se edita aquí:
               es el acceso de la cuenta de la persona.
             </p>
-            {personalError && <Alert tone="danger" onClose={() => setPersonalError('')}>{personalError}</Alert>}
+
+            <span className={g.formSectionTitle}>Perfil</span>
+            <div className={s.formGrid}>
+              <Select label="Sexo" icon="fas fa-venus-mars" value={editForm.sex}
+                hint="Decide la silueta de la vista de progreso."
+                onChange={(e) => setEditForm({ ...editForm, sex: e.target.value })}
+                options={[{ value: '', label: 'Sin definir' }, ...GYM_SEX_OPTIONS]} />
+              <Input label="Talla (cm)" type="number" inputMode="decimal" min="0" icon="fas fa-ruler-vertical"
+                hint="Se usa para calcular el IMC."
+                value={editForm.height_cm} onChange={(e) => setEditForm({ ...editForm, height_cm: e.target.value })} />
+            </div>
+            <Select label="Objetivo" icon="fas fa-bullseye" value={editForm.goal_id}
+              onChange={(e) => setEditForm({ ...editForm, goal_id: e.target.value })} options={goalOptions} />
+            <Textarea label="Notas de salud" placeholder="Lesiones, condiciones a tener en cuenta…"
+              value={editForm.health_notes} onChange={(e) => setEditForm({ ...editForm, health_notes: e.target.value })} />
+            <Switch label="Afiliado activo" checked={editForm.active}
+              onChange={(e) => setEditForm({ ...editForm, active: e.target.checked })} />
+
+            {editError && <Alert tone="danger" onClose={() => setEditError('')}>{editError}</Alert>}
           </div>
         )}
       </Modal>
 
-      <Modal open={subscribeOpen} title={currentIsAlive ? 'Renovar suscripción' : 'Nueva suscripción'} onClose={() => setSubscribeOpen(false)}
+      <Modal open={subscribeOpen} title="Nueva suscripción" onClose={() => setSubscribeOpen(false)}
         footer={<>
           <Button variant="secondary" onClick={() => setSubscribeOpen(false)}>Cancelar</Button>
           <Button variant="primary" loading={subscribeBusy} disabled={!subscribeForm.plan_id} onClick={submitSubscribe}>Guardar</Button>
         </>}>
         <div className={s.formCol}>
-          {currentIsAlive && (
-            <p className={s.faint}>La nueva vigencia empieza el día siguiente al vencimiento actual ({formatShortDate(current.end_date)}).</p>
-          )}
           <Select label="Plan" icon="fas fa-id-card" value={subscribeForm.plan_id}
             onChange={(e) => pickSubscribePlan(e.target.value)}
             options={[{ value: '', label: planOptions.length ? 'Selecciona…' : 'No hay planes activos' }, ...planOptions]} />
-          {/* En la renovación encadenada la fecha la decide el vencimiento anterior (arriba se
-              explica), así que el campo solo aparece cuando la vigencia sí arranca aquí. */}
-          {!currentIsAlive && (
-            <DatePicker label="Inicio de la vigencia" icon="fas fa-calendar-day"
-              hint="El vencimiento se calcula desde esta fecha. Cámbiala si el afiliado ya venía pagando de antes."
-              value={subscribeForm.start_date}
-              onChange={(d) => setSubscribeForm((f) => ({ ...f, start_date: d }))} />
-          )}
+          <DatePicker label="Inicio de la vigencia" icon="fas fa-calendar-day"
+            hint="El vencimiento se calcula desde esta fecha. Cámbiala si el afiliado ya venía pagando de antes."
+            value={subscribeForm.start_date}
+            onChange={(d) => setSubscribeForm((f) => ({ ...f, start_date: d }))} />
           <div className={s.formGrid}>
             <Select label="Método de pago" icon="fas fa-wallet" value={subscribeForm.payment_method}
               onChange={(e) => setSubscribeForm((f) => ({ ...f, payment_method: e.target.value }))}

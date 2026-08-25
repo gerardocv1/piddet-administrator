@@ -13,8 +13,9 @@ import styles from './Topbar.module.css';
  * usuario, junto a sesiones y contraseña. En móvil no hay hamburguesa — la navegación es el
  * MobileDock — y la barra se funde con el fondo (ver CSS).
  *
- * `onBack` (solo lo pasa el Layout en el teléfono) pinta aquí la flecha de volver de la pantalla
- * activa: así hay una sola, arriba, en vez de repetirla en la cabecera de la pantalla.
+ * `onBack` (lo publica el PageHeader de la pantalla activa vía el Layout) pinta aquí la flecha
+ * de volver, junto al título, en escritorio y en móvil: así hay una sola, arriba, en vez de
+ * repetirla en la cabecera de la pantalla.
  */
 export function Topbar({ title, crumb, onBack, user = {}, onLogout, theme = 'light', onToggleTheme }) {
   const [menuOpen, setMenuOpen] = React.useState(false);

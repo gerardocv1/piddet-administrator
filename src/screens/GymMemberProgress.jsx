@@ -145,7 +145,7 @@ export function GymMemberProgress() {
     <div className={s.page}>
       <PageHeader
         onBack={() => navigate(`/gym/members/${memberId}`)}
-        subtitle={member.member_name}
+        title={member.member_name}
         meta={[
           { label: 'Código', value: member.member_code },
           // "Vista: Progreso físico" repite el título de la pantalla: en el teléfono estorba.

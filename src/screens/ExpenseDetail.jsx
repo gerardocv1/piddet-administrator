@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Card, Badge, Button, RefreshButton, Spinner, ConfirmDialog, MultiImageUpload, PageHeader, Alert, useToast } from '../components';
+import { Card, Badge, Button, Spinner, ConfirmDialog, MultiImageUpload, PageHeader, Alert, useToast } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { usePermissions } from '../lib/permissions/usePermissions.js';
@@ -124,20 +124,22 @@ export function ExpenseDetail() {
     <div className={s.page}>
       <PageHeader
         onBack={goBack}
-        backTitle="Volver a gastos"
-        subtitle={formatShortDate(data.expense_date)}
-        actions={<>
-          <RefreshButton loading={loading} onClick={reload} />
-          {active
-            ? <Badge variant="success" dot>Activo</Badge>
-            : <Badge variant="danger" dot>Anulado</Badge>}
-          {active && can('expense-annul') && (
-            <Button variant="danger" size="sm" icon="fas fa-ban" onClick={() => setConfirming(true)}>
-              Anular
-            </Button>
-          )}
-        </>}
+        title={formatShortDate(data.expense_date)}
+        action={active && can('expense-annul') ? (
+          <Button variant="danger" size="sm" icon="fas fa-ban" onClick={() => setConfirming(true)}>
+            Anular
+          </Button>
+        ) : null}
+        menu={[
+          { label: 'Actualizar', icon: 'fas fa-rotate-right', disabled: loading, onClick: reload },
+        ]}
         meta={[
+          {
+            label: 'Estado',
+            value: active
+              ? <Badge variant="success" dot>Activo</Badge>
+              : <Badge variant="danger" dot>Anulado</Badge>,
+          },
           { label: 'Proveedor', value: data.supplier?.name || '—' },
           { label: 'Método de pago', value: data.payment_method_name || '—' },
           { label: 'Registrado por', value: data.created_by_name || '—' },

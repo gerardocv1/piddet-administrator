@@ -1,29 +1,29 @@
 import React from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
-  Card, Badge, Button, IconButton, Dropdown, Spinner, Alert, Select, MoneyInput, DatePicker, Checkbox,
+  Panel, Badge, Button, Spinner, Alert, Select, MoneyInput, DatePicker, Checkbox,
   Modal, ConfirmDialog, PageHeader, useToast,
 } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
-import { useIsMobile } from '../lib/useIsMobile.js';
-import { gymMoney, gymSubscriptionStatusMeta, GYM_SUBSCRIPTION_STATUS } from '../lib/gymLabels.js';
-import { todayIso } from '../lib/orderLabels.js';
-import { formatShortDate } from '../lib/dates.js';
+import {
+  gymMoney, gymSubscriptionStatusMeta, gymPeriodStatusMeta, gymPendingBalance,
+  gymSubscriptionPending, GYM_SUBSCRIPTION_STATUS, GYM_PERIOD_STATUS,
+} from '../lib/gymLabels.js';
+import { formatShortDate, formatStayRangeShort } from '../lib/dates.js';
 import { useSetPageTitle } from '../lib/pageTitle.jsx';
 import s from './screens.module.css';
 import g from './GymSubscriptionDetail.module.css';
 
-// Detalle de UNA suscripción, enfocado en lo transaccional: el plan, su vigencia y sus pagos.
-// El nombre del afiliado (arriba) navega a su perfil; las acciones de aquí son las de la
-// suscripción: registrar pago, anular un pago, renovar y cancelar. Mobile-first: los pagos son
-// filas apiladas, no tabla.
+// Detalle de LA suscripción continua del afiliado: su estado y el historial de períodos de
+// cobro que el sistema genera solo, cada uno con sus pagos (abonos) y su saldo. No hay
+// "renovar": el período siguiente aparece automáticamente; si uno agota su gracia sin ningún
+// abono, la suscripción entera se cancela sola.
 export function GymSubscriptionDetail() {
   const { subscriptionId } = useParams();
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const { toast } = useToast();
-  const isMobile = useIsMobile();
 
   const fetcher = React.useCallback(() => api.gymSubscription(subscriptionId), [subscriptionId]);
   const { data, setData, loading, error } = useResource(fetcher, null, [subscriptionId]);
@@ -33,11 +33,6 @@ export function GymSubscriptionDetail() {
     () => (paymentMethods || []).map((m) => ({ value: m.id, label: m.name })),
     [paymentMethods],
   );
-  const { data: plansPage } = useResource(React.useCallback(() => api.gymPlans({ status: '1', perPage: 100 }), []), { items: [] }, []);
-  const planOptions = React.useMemo(
-    () => (plansPage.items || []).map((p) => ({ value: String(p.id), label: `${p.name} · ${gymMoney(p.price)}` })),
-    [plansPage],
-  );
 
   // La barra superior lleva un título fijo: el nombre del afiliado ya está en la cabecera de la
   // ficha, justo debajo, y repetirlo arriba era ruido.
@@ -45,10 +40,20 @@ export function GymSubscriptionDetail() {
 
   const goBack = () => navigate(`/gym/subscriptions${params.toString() ? `?${params.toString()}` : ''}`);
 
-  const status = data ? Number(data.computed_status ?? data.status) : null;
-  const isAlive = status === GYM_SUBSCRIPTION_STATUS.ACTIVE || status === GYM_SUBSCRIPTION_STATUS.GRACE;
+  const status = data ? Number(data.status) : null;
+  const isActive = status === GYM_SUBSCRIPTION_STATUS.ACTIVE;
 
-  // ── Registrar pago ───────────────────────────────────────────────────────
+  // El abono siempre se aplica al período más antiguo con saldo (regla del backend): se calcula
+  // aquí solo para precargar el valor y nombrarlo en el modal.
+  const periodsAsc = React.useMemo(
+    () => [...(data?.periods || [])].sort((a, b) => a.number - b.number),
+    [data],
+  );
+  const payTarget = periodsAsc.find(
+    (p) => Number(p.status) !== GYM_PERIOD_STATUS.CANCELLED && gymPendingBalance(p) > 0,
+  );
+
+  // ── Registrar pago (abono al período pendiente más antiguo) ──────────────
   const emptyPayForm = { payment_method: '', value: '', payment_date: '', notes: '', registers_income: true };
   const [payOpen, setPayOpen] = React.useState(false);
   const [payForm, setPayForm] = React.useState(emptyPayForm);
@@ -56,8 +61,7 @@ export function GymSubscriptionDetail() {
   const [payError, setPayError] = React.useState('');
 
   const openPay = () => {
-    // Precarga el precio de la suscripción: el caso típico es cobrar la mensualidad completa.
-    setPayForm({ ...emptyPayForm, value: data?.price ?? '' });
+    setPayForm({ ...emptyPayForm, value: payTarget ? gymPendingBalance(payTarget) : '' });
     setPayError('');
     setPayOpen(true);
   };
@@ -126,63 +130,6 @@ export function GymSubscriptionDetail() {
     }
   };
 
-  // ── Renovar (crea una suscripción nueva encadenada y navega a ella) ──────
-  // El pago va incluido si se eligió un método ("Sin pago por ahora" = solo renovar).
-  const emptyRenewForm = { plan_id: '', start_date: todayIso(), payment_method: '', value: '', payment_date: '', registers_income: true };
-  const [renewOpen, setRenewOpen] = React.useState(false);
-  const [renewForm, setRenewForm] = React.useState(emptyRenewForm);
-  const [renewBusy, setRenewBusy] = React.useState(false);
-  const [renewError, setRenewError] = React.useState('');
-
-  const openRenew = () => {
-    // Preselecciona el mismo plan de esta suscripción (el caso típico es renovar igual).
-    const samePlan = (plansPage.items || []).find((p) => p.id === data?.plan_id);
-    setRenewForm({
-      ...emptyRenewForm,
-      plan_id: samePlan ? String(samePlan.id) : '',
-      value: samePlan ? samePlan.price : '',
-    });
-    setRenewError('');
-    setRenewOpen(true);
-  };
-
-  const pickRenewPlan = (planId) => {
-    const plan = (plansPage.items || []).find((p) => String(p.id) === planId);
-    setRenewForm((f) => ({ ...f, plan_id: planId, value: plan ? plan.price : f.value }));
-  };
-
-  const submitRenew = async () => {
-    if (renewBusy || !renewForm.plan_id) return;
-    const withPayment = !!renewForm.payment_method;
-    if (withPayment && !renewForm.value) {
-      setRenewError('Indica el valor del pago, o quita el método para renovar sin cobro.');
-      return;
-    }
-    setRenewBusy(true);
-    setRenewError('');
-    try {
-      const created = await api.createGymSubscription(data.gym_member_id, {
-        plan_id: Number(renewForm.plan_id),
-        // Encadenada a una suscripción viva, la fecha la decide el vencimiento anterior y el
-        // backend la ignora: ni se manda.
-        start_date: isAlive ? undefined : renewForm.start_date,
-        payment: withPayment ? {
-          payment_method: renewForm.payment_method,
-          value: renewForm.value,
-          payment_date: renewForm.payment_date || undefined,
-          registers_income: renewForm.registers_income,
-        } : undefined,
-      });
-      toast({ tone: 'success', title: 'Suscripción renovada' });
-      setRenewOpen(false);
-      navigate(`/gym/subscriptions/${created.id}`, { replace: true });
-    } catch (e) {
-      setRenewError(e?.message || 'No se pudo renovar la suscripción.');
-    } finally {
-      setRenewBusy(false);
-    }
-  };
-
   if (loading) return <Spinner center label="Cargando suscripción…" />;
   if (error || !data) {
     return (
@@ -192,102 +139,108 @@ export function GymSubscriptionDetail() {
     );
   }
 
-  const meta = gymSubscriptionStatusMeta(status);
-  const payments = data.payments || [];
-  const activeTotal = payments
-    .filter((p) => Number(p.status) === 1)
-    .reduce((sum, p) => sum + Number(p.value || 0), 0);
+  const pendingTotal = gymSubscriptionPending(data);
+  const currentPeriod = data.current_period;
+  const currentStatus = currentPeriod ? Number(currentPeriod.computed_status ?? currentPeriod.status) : null;
+  const currentInGrace = isActive && currentStatus === GYM_PERIOD_STATUS.GRACE;
+  const currentUnpaid = currentPeriod && Number(currentPeriod.paid_total || 0) === 0;
+
+  // Con una activa cuyo período está en gracia, el badge lo advierte; si no, manda el estado
+  // de la suscripción.
+  const headerMeta = currentInGrace
+    ? gymPeriodStatusMeta(GYM_PERIOD_STATUS.GRACE)
+    : gymSubscriptionStatusMeta(status);
 
   return (
     <div className={s.page}>
       <PageHeader
         onBack={goBack}
-        subtitle={data.member_name}
-        onSubtitleClick={() => navigate(`/gym/members/${data.gym_member_id}`)}
-        actions={isMobile ? (
-          // En el teléfono la cabecera no lleva botones sueltos: todas las acciones (renovar,
-          // registrar pago, cancelar) viven en el menú ⋮; registrar el pago además ya es la
-          // acción de la tarjeta de Pagos.
-          <Dropdown
-            trigger={<IconButton icon="fas fa-ellipsis-vertical" variant="light" size="sm" title="Más acciones" />}
-            items={[
-              { label: 'Renovar', icon: 'fas fa-rotate', onClick: openRenew },
-              ...(isAlive ? [
-                { label: 'Registrar pago', icon: 'fas fa-dollar-sign', onClick: openPay },
-                { label: 'Cancelar suscripción', icon: 'fas fa-ban', variant: 'danger', onClick: () => setCancelOpen(true) },
-              ] : []),
-            ]}
-          />
-        ) : (
-          <>
-            {isAlive && (
-              <Button variant="outline-primary" size="sm" icon="fas fa-dollar-sign" onClick={openPay}>Registrar pago</Button>
-            )}
-            {isAlive && (
-              <Button variant="neutral" size="sm" icon="fas fa-ban" onClick={() => setCancelOpen(true)}>Cancelar</Button>
-            )}
-            <Button variant="primary" size="sm" icon="fas fa-rotate" onClick={openRenew}>Renovar</Button>
-          </>
-        )}
+        title={data.member_name}
+        onTitleClick={() => navigate(`/gym/members/${data.gym_member_id}`)}
+        subtitle={data.plan_name}
+        menu={isActive ? [
+          ...(pendingTotal > 0 ? [{ label: 'Registrar pago', icon: 'fas fa-dollar-sign', onClick: openPay }] : []),
+          { label: 'Cancelar suscripción', icon: 'fas fa-ban', variant: 'danger', onClick: () => setCancelOpen(true) },
+        ] : []}
         meta={[
-          { label: 'Plan', value: data.plan_name },
-          { label: 'Vigencia', value: `${formatShortDate(data.start_date)} – ${formatShortDate(data.end_date)}` },
-          { label: 'Precio', value: gymMoney(data.price) },
-          { label: 'Estado', value: <Badge variant={meta.variant} dot>{meta.label}</Badge> },
+          { label: 'Suscrito desde', value: formatShortDate(data.subscribed_at) },
+          { label: 'Estado', value: <Badge variant={headerMeta.variant} dot>{headerMeta.label}</Badge> },
+          {
+            label: 'Pago',
+            value: pendingTotal > 0
+              ? <Badge variant="warning" dot>Saldo {gymMoney(pendingTotal)}</Badge>
+              : <Badge variant="success" dot>Al día</Badge>,
+          },
         ]}
-        note={data.cancellation_reason ? `Cancelada: ${data.cancellation_reason}` : undefined}
+        note={status === GYM_SUBSCRIPTION_STATUS.CANCELLED && data.cancellation_reason
+          ? `Cancelada${data.cancelled_automatically ? ' automáticamente' : ''}: ${data.cancellation_reason}`
+          : undefined}
       />
 
-      {status === GYM_SUBSCRIPTION_STATUS.GRACE && (
-        <Alert tone="warning" title="En período de gracia">
-          Venció el {formatShortDate(data.end_date)}; el acceso termina el {formatShortDate(data.grace_ends_at)}. Renueva para no interrumpirlo.
+      {currentInGrace && (
+        <Alert tone="warning" title="Período en gracia">
+          {currentUnpaid ? (
+            <>El período venció el {formatShortDate(currentPeriod.end_date)} sin ningún abono:
+              si no se registra un pago antes del {formatShortDate(currentPeriod.grace_ends_at)},
+              la suscripción se cancelará automáticamente.</>
+          ) : (
+            <>El período venció el {formatShortDate(currentPeriod.end_date)} con un saldo de{' '}
+              {gymMoney(gymPendingBalance(currentPeriod))}; el acceso termina el{' '}
+              {formatShortDate(currentPeriod.grace_ends_at)}.</>
+          )}
         </Alert>
       )}
 
-      <Card>
-        <Card.Header title="Pagos"
-          action={isAlive
-            ? <Button variant="primary" size="sm" icon="fas fa-plus" onClick={openPay}>Registrar pago</Button>
-            : undefined} />
-        <Card.Body>
-          {payments.length === 0 ? (
-            <p className={s.faint}>Esta suscripción no tiene pagos registrados.</p>
-          ) : (
-            <>
+      {/* ── Historial de períodos de cobro (el más reciente primero) ── */}
+      {(data.periods || []).map((p) => {
+        const pStatus = Number(p.computed_status ?? p.status);
+        const pMeta = gymPeriodStatusMeta(pStatus);
+        const pending = Number(p.status) === GYM_PERIOD_STATUS.CANCELLED ? 0 : gymPendingBalance(p);
+        const payments = p.payments || [];
+        return (
+          <Panel key={p.id}
+            title={`Período ${p.number} · ${formatStayRangeShort(p.start_date, p.end_date)}`}
+            action={<Badge variant={pMeta.variant} dot>{pMeta.label}</Badge>}>
+            {payments.length === 0 ? (
+              <p className={s.faint}>Sin pagos en este período.</p>
+            ) : (
               <ul className={g.payList}>
-                {payments.map((p) => {
-                  const annulled = Number(p.status) !== 1;
+                {payments.map((pay) => {
+                  const annulled = Number(pay.status) !== 1;
                   return (
-                    <li key={p.id} className={g.payRow}>
+                    <li key={pay.id} className={g.payRow}>
                       <div className={g.payInfo}>
                         <span className={[g.payValue, annulled ? g.payAnnulled : ''].filter(Boolean).join(' ')}>
-                          {gymMoney(p.value)}
+                          {gymMoney(pay.value)}
                         </span>
                         <span className={g.payMeta}>
-                          {formatShortDate(p.payment_date)} · {p.payment_method_name || '—'}
-                          {p.registers_income === false && ' · sin factura'}
+                          {formatShortDate(pay.payment_date)} · {pay.payment_method_name || '—'}
+                          {pay.registers_income === false && ' · sin factura'}
                         </span>
-                        {annulled && p.annulment_reason && (
-                          <span className={g.payReason}>Anulado: {p.annulment_reason}</span>
+                        {annulled && pay.annulment_reason && (
+                          <span className={g.payReason}>Anulado: {pay.annulment_reason}</span>
                         )}
                       </div>
                       {annulled ? (
                         <Badge variant="neutral" dot>Anulado</Badge>
                       ) : (
-                        <Button variant="outline-primary" size="sm" onClick={() => setAnnulTarget(p)}>Anular</Button>
+                        <Button variant="outline-primary" size="sm" onClick={() => setAnnulTarget(pay)}>Anular</Button>
                       )}
                     </li>
                   );
                 })}
               </ul>
-              <div className={g.payTotal}>
-                <span>Total pagado</span>
-                <strong>{gymMoney(activeTotal)}</strong>
-              </div>
-            </>
-          )}
-        </Card.Body>
-      </Card>
+            )}
+            <div className={g.payTotal}>
+              <span>Total pagado</span>
+              <span className={g.payTotalRight}>
+                <strong>{gymMoney(p.paid_total)}</strong>
+                {pending > 0 && <Badge variant="danger" dot>Pendiente {gymMoney(pending)}</Badge>}
+              </span>
+            </div>
+          </Panel>
+        );
+      })}
 
       <Modal open={payOpen} title="Registrar pago" onClose={() => setPayOpen(false)}
         footer={<>
@@ -295,6 +248,13 @@ export function GymSubscriptionDetail() {
           <Button variant="primary" loading={payBusy} disabled={!payForm.payment_method || !payForm.value} onClick={submitPay}>Registrar</Button>
         </>}>
         <div className={s.formCol}>
+          {payTarget && (
+            <p className={s.faint}>
+              El abono se aplica al período {payTarget.number}{' '}
+              ({formatStayRangeShort(payTarget.start_date, payTarget.end_date)}) · saldo{' '}
+              <strong>{gymMoney(gymPendingBalance(payTarget))}</strong>.
+            </p>
+          )}
           <Select label="Método de pago" icon="fas fa-wallet" value={payForm.payment_method}
             onChange={(e) => setPayForm((f) => ({ ...f, payment_method: e.target.value }))}
             options={[{ value: '', label: 'Selecciona…' }, ...methodOptions]} />
@@ -314,56 +274,11 @@ export function GymSubscriptionDetail() {
         </div>
       </Modal>
 
-      <Modal open={renewOpen} title="Renovar suscripción" onClose={() => setRenewOpen(false)}
-        footer={<>
-          <Button variant="secondary" onClick={() => setRenewOpen(false)}>Cancelar</Button>
-          <Button variant="primary" loading={renewBusy} disabled={!renewForm.plan_id} onClick={submitRenew}>Renovar</Button>
-        </>}>
-        <div className={s.formCol}>
-          {isAlive && (
-            <p className={s.faint}>La nueva vigencia empieza el día siguiente al vencimiento actual ({formatShortDate(data.end_date)}).</p>
-          )}
-          <Select label="Plan" icon="fas fa-id-card" value={renewForm.plan_id}
-            onChange={(e) => pickRenewPlan(e.target.value)}
-            options={[{ value: '', label: planOptions.length ? 'Selecciona…' : 'No hay planes activos' }, ...planOptions]} />
-          {/* Solo cuando la vigencia arranca aquí: encadenada, la fecha la decide la anterior. */}
-          {!isAlive && (
-            <DatePicker label="Inicio de la vigencia" icon="fas fa-calendar-day"
-              hint="El vencimiento se calcula desde esta fecha."
-              value={renewForm.start_date}
-              onChange={(d) => setRenewForm((f) => ({ ...f, start_date: d }))} />
-          )}
-          <div className={s.formGrid}>
-            <Select label="Método de pago" icon="fas fa-wallet" value={renewForm.payment_method}
-              onChange={(e) => setRenewForm((f) => ({ ...f, payment_method: e.target.value }))}
-              options={[{ value: '', label: 'Sin pago por ahora' }, ...methodOptions]} />
-            <MoneyInput label="Valor" icon="fas fa-dollar-sign"
-              value={renewForm.value} onChange={(v) => setRenewForm((f) => ({ ...f, value: v }))} />
-          </div>
-          {!renewForm.payment_method ? (
-            <p className={s.faint}>Con método de pago seleccionado, el cobro se registra y factura en la misma operación.</p>
-          ) : (
-            <>
-              <DatePicker label="Fecha del pago (opcional)" value={renewForm.payment_date}
-                onChange={(iso) => setRenewForm((f) => ({ ...f, payment_date: iso }))} />
-              <Checkbox label="Registrar el cobro como ingreso"
-                checked={renewForm.registers_income}
-                onChange={(e) => setRenewForm((f) => ({ ...f, registers_income: e.target.checked }))} />
-              <p className={s.faint}>
-                {renewForm.registers_income
-                  ? 'Se genera la factura del cobro y entra a la caja.'
-                  : 'El pago queda registrado en la suscripción, pero sin factura: no entra a la caja.'}
-              </p>
-            </>
-          )}
-          {renewError && <Alert tone="danger" onClose={() => setRenewError('')}>{renewError}</Alert>}
-        </div>
-      </Modal>
-
       <ConfirmDialog open={cancelOpen} title="Cancelar suscripción" reason="required"
         reasonLabel="Motivo de la cancelación" loading={cancelBusy} error={cancelError}
         onConfirm={submitCancel} onClose={() => setCancelOpen(false)}>
-        Esta acción es irreversible: el afiliado perderá el acceso vigente. Para que vuelva a tener suscripción habrá que registrar una nueva.
+        Esta acción es irreversible: se cancelan también los períodos pendientes y el afiliado
+        pierde el acceso. Para que vuelva a tener membresía habrá que suscribirlo de nuevo.
       </ConfirmDialog>
 
       <ConfirmDialog open={!!annulTarget} title="Anular pago" reason="required"

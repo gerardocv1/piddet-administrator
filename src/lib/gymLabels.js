@@ -41,17 +41,30 @@ export const gymPlanDurationLabel = (days) => {
 };
 
 // Estados de una suscripción (deben coincidir con las constantes del modelo GymSubscription).
-// La verdad son las fechas: el backend expone tanto `status` (materializado por el cron diario)
-// como `computed_status` (calculado en vivo); el panel siempre pinta `computed_status`.
-export const GYM_SUBSCRIPTION_STATUS = { ACTIVE: 1, GRACE: 2, EXPIRED: 3, CANCELLED: 4, PAUSED: 5 };
+// La suscripción es CONTINUA (una por afiliado): solo está activa o cancelada. La cancelación
+// puede ser manual o automática (corte por no pago del período).
+export const GYM_SUBSCRIPTION_STATUS = { ACTIVE: 1, CANCELLED: 2 };
 
 export const gymSubscriptionStatusMeta = (status) => {
   switch (Number(status)) {
     case GYM_SUBSCRIPTION_STATUS.ACTIVE: return { label: 'Activa', variant: 'success' };
-    case GYM_SUBSCRIPTION_STATUS.GRACE: return { label: 'En gracia', variant: 'warning' };
-    case GYM_SUBSCRIPTION_STATUS.EXPIRED: return { label: 'Vencida', variant: 'danger' };
     case GYM_SUBSCRIPTION_STATUS.CANCELLED: return { label: 'Cancelada', variant: 'neutral' };
-    case GYM_SUBSCRIPTION_STATUS.PAUSED: return { label: 'Pausada', variant: 'info' };
+    default: return { label: '—', variant: 'neutral' };
+  }
+};
+
+// Cada ciclo de cobro es un PERÍODO que el sistema genera solo: vigente → en gracia (ventana
+// para pagar antes del corte) → cerrado (gracia agotada CON pagos; el saldo parcial persiste) o
+// cancelado (corte sin pagos, o cancelación de la suscripción). El backend expone `status`
+// (materializado por el cron) y `computed_status` (en vivo); el panel pinta `computed_status`.
+export const GYM_PERIOD_STATUS = { CURRENT: 1, GRACE: 2, CLOSED: 3, CANCELLED: 4 };
+
+export const gymPeriodStatusMeta = (status) => {
+  switch (Number(status)) {
+    case GYM_PERIOD_STATUS.CURRENT: return { label: 'Vigente', variant: 'success' };
+    case GYM_PERIOD_STATUS.GRACE: return { label: 'En gracia', variant: 'warning' };
+    case GYM_PERIOD_STATUS.CLOSED: return { label: 'Cerrado', variant: 'neutral' };
+    case GYM_PERIOD_STATUS.CANCELLED: return { label: 'Cancelado', variant: 'neutral' };
     default: return { label: '—', variant: 'neutral' };
   }
 };
@@ -61,3 +74,22 @@ export const gymPaymentStatusMeta = (status) =>
   (Number(status) === 1
     ? { label: 'Activo', variant: 'success' }
     : { label: 'Anulado', variant: 'neutral' });
+
+// Saldo pendiente de un período: precio menos pagos no anulados. Acepta el agregado
+// `paid_total`/`pending` que expone el backend o la lista `payments` del detalle;
+// sin información de pagos asume el período pagado (mejor no acusar deuda a ciegas).
+export const gymPendingBalance = (period) => {
+  if (!period) return 0;
+  if (period.pending != null) return Math.max(0, Number(period.pending));
+  const price = Number(period.price || 0);
+  const paid = period.paid_total != null
+    ? Number(period.paid_total)
+    : (Array.isArray(period.payments)
+      ? period.payments.filter((p) => Number(p.status) === 1).reduce((sum, p) => sum + Number(p.value || 0), 0)
+      : price);
+  return Math.max(0, price - paid);
+};
+
+// Saldo pendiente total de la suscripción (suma de los períodos no cancelados), tal como lo
+// agrega el backend en `pending_total`.
+export const gymSubscriptionPending = (sub) => Math.max(0, Number(sub?.pending_total ?? 0));

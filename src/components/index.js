@@ -6,6 +6,7 @@ export { RefreshButton } from './core/RefreshButton.jsx';
 export { Badge } from './core/Badge.jsx';
 export { Avatar } from './core/Avatar.jsx';
 export { Card } from './core/Card.jsx';
+export { Panel } from './core/Panel.jsx';
 export { Spinner } from './core/Spinner.jsx';
 export { Dropdown } from './core/Dropdown.jsx';
 // forms
@@ -31,6 +32,7 @@ export { BodyMeasuresChart } from './data/BodyMeasuresChart.jsx';
 export { BodyMap, BODY_MAP_KEYS } from './data/BodyMap.jsx';
 export { Pagination } from './data/Pagination.jsx';
 export { LineList } from './data/LineList.jsx';
+export { InfoCard } from './data/InfoCard.jsx';
 export { SortableList } from './data/SortableList.jsx';
 // feedback
 export { Modal } from './feedback/Modal.jsx';

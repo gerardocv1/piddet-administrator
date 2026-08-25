@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, DataTable, Badge, FilterBar, Pagination, RefreshButton, Spinner, Alert } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
-import { gymMoney, gymSubscriptionStatusMeta, GYM_SUBSCRIPTION_STATUS } from '../lib/gymLabels.js';
+import { gymMoney, gymSubscriptionStatusMeta, gymPeriodStatusMeta, gymSubscriptionPending, GYM_SUBSCRIPTION_STATUS, GYM_PERIOD_STATUS } from '../lib/gymLabels.js';
 import { formatShortDate } from '../lib/dates.js';
 import s from './screens.module.css';
 import gl from './GymLists.module.css';
@@ -12,10 +12,18 @@ const EMPTY = { items: [], pagination: null };
 
 const STATUS_OPTIONS = [
   { value: String(GYM_SUBSCRIPTION_STATUS.ACTIVE), label: 'Activa' },
-  { value: String(GYM_SUBSCRIPTION_STATUS.GRACE), label: 'En gracia' },
-  { value: String(GYM_SUBSCRIPTION_STATUS.EXPIRED), label: 'Vencida' },
   { value: String(GYM_SUBSCRIPTION_STATUS.CANCELLED), label: 'Cancelada' },
 ];
+
+// El badge de una suscripción activa refleja además su período vigente: "En gracia" es el aviso
+// de que el corte automático está cerca.
+const subscriptionBadge = (r) => {
+  if (Number(r.status) === GYM_SUBSCRIPTION_STATUS.ACTIVE
+    && Number(r.current_period?.computed_status ?? r.current_period?.status) === GYM_PERIOD_STATUS.GRACE) {
+    return gymPeriodStatusMeta(GYM_PERIOD_STATUS.GRACE);
+  }
+  return gymSubscriptionStatusMeta(r.status);
+};
 
 const EXPIRING_OPTIONS = [
   { value: '7', label: 'En 7 días' },
@@ -53,12 +61,20 @@ export function GymSubscriptions() {
   const columns = [
     { key: 'member_name', header: 'Afiliado', ellipsis: true, render: (r) => <span className={s.cellStrong}>{r.member_name}</span> },
     { key: 'plan_name', header: 'Plan', ellipsis: true, render: (r) => r.plan_name },
-    { key: 'end_date', header: 'Vence', width: 130, render: (r) => formatShortDate(r.end_date) },
-    { key: 'price', header: 'Precio', width: 120, align: 'right', render: (r) => <span className={s.priceCell}>{gymMoney(r.price)}</span> },
+    { key: 'end_date', header: 'Vence', width: 130, render: (r) => formatShortDate(r.current_period?.end_date) },
+    { key: 'price', header: 'Precio', width: 120, align: 'right', render: (r) => <span className={s.priceCell}>{gymMoney(r.current_period?.price)}</span> },
+    {
+      // El saldo suma los períodos no cancelados; una suscripción cancelada no es deuda.
+      key: 'saldo', header: 'Saldo', width: 110, align: 'right',
+      render: (r) => {
+        const pending = Number(r.status) === GYM_SUBSCRIPTION_STATUS.CANCELLED ? 0 : gymSubscriptionPending(r);
+        return pending > 0 ? <span className={gl.saldo}>{gymMoney(pending)}</span> : <span className={s.faint}>—</span>;
+      },
+    },
     {
       key: 'status', header: 'Estado', width: 130,
       render: (r) => {
-        const m = gymSubscriptionStatusMeta(r.status);
+        const m = subscriptionBadge(r);
         return <Badge variant={m.variant} dot>{m.label}</Badge>;
       },
     },
@@ -111,14 +127,19 @@ export function GymSubscriptions() {
           <Card><div className={s.mobileState}>No hay suscripciones para los filtros seleccionados.</div></Card>
         )}
         {!loading && !error && rows.map((r) => {
-          const m = gymSubscriptionStatusMeta(r.status);
+          const m = subscriptionBadge(r);
+          const pending = Number(r.status) === GYM_SUBSCRIPTION_STATUS.CANCELLED ? 0 : gymSubscriptionPending(r);
           return (
             <Card key={r.id} className={gl.cardPad}>
               <button type="button" className={gl.tapArea}
                 onClick={() => navigate(`/gym/subscriptions/${r.id}?${params.toString()}`)}>
                 <div className={gl.info}>
                   <span className={gl.name}>{r.member_name}</span>
-                  <span className={gl.meta}>{r.plan_name} · vence {formatShortDate(r.end_date)}</span>
+                  <span className={gl.meta}>
+                    {r.plan_name}
+                    {r.current_period && <> · vence {formatShortDate(r.current_period.end_date)}</>}
+                    {pending > 0 && <span className={gl.saldo}> · saldo {gymMoney(pending)}</span>}
+                  </span>
                 </div>
                 <Badge variant={m.variant} dot>{m.label}</Badge>
               </button>

@@ -73,23 +73,28 @@ export const gymService = {
   // credencial de acceso de la cuenta. Refresca los snapshots (nombre en ficha y suscripciones).
   updateGymMemberPersonal: (memberId, data) => http.put(`${base()}/members/${memberId}/personal`, data),
 
-  // ── Suscripciones ────────────────────────────────────────────────────────
+  // ── Suscripciones (continuas, con períodos de cobro que genera el sistema) ─
+  // Cada fila trae su período vigente embebido y el saldo pendiente total.
   gymSubscriptions: ({ status = '', expiringWithin = '', search = '', page = 1, perPage = 15 } = {}) =>
     http.get(`${base()}/subscriptions${qs({ status, expiring_within: expiringWithin, _search: search, page, per_page: perPage })}`, { paginated: true }),
 
+  // Detalle con `periods[]` (más reciente primero), cada uno con sus pagos.
   gymSubscription: (subscriptionId) => http.get(`${base()}/subscriptions/${subscriptionId}`),
 
   // Historial de suscripciones del afiliado, más reciente primero.
   gymMemberSubscriptions: (memberId) => list(http.get(`${base()}/members/${memberId}/subscriptions`)),
 
-  // Da de alta o renueva (si el afiliado tiene una vigente, la nueva se encadena automáticamente
-  // desde el backend). `payment` es opcional: registra el primer pago en la misma llamada.
+  // Suscribe al afiliado a un plan (rechaza si ya tiene una suscripción activa: los períodos
+  // siguientes los genera el sistema, no un alta nueva). `payment` es opcional: registra el
+  // primer pago en la misma llamada.
   createGymSubscription: (memberId, data) => http.post(`${base()}/members/${memberId}/subscriptions`, data),
 
-  // Cancela una suscripción vigente (irreversible, motivo obligatorio).
+  // Cancela una suscripción activa (irreversible, motivo obligatorio): cancela también sus
+  // períodos vivos.
   cancelGymSubscription: (subscriptionId, reason) => http.put(`${base()}/subscriptions/${subscriptionId}/cancel`, { reason }),
 
   // ── Pagos de suscripción ─────────────────────────────────────────────────
+  // Abona al período pendiente más antiguo (el backend decide cuál; no se indica period_id).
   // Cada pago genera su factura (orden GYM) en la fecha del pago.
   addGymSubscriptionPayment: (subscriptionId, data) => http.post(`${base()}/subscriptions/${subscriptionId}/payments`, data),
 

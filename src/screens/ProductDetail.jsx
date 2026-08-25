@@ -4,6 +4,7 @@ import { Button, IconButton, RefreshButton, Badge, Input, MoneyInput, Textarea, 
 import { SortableList, FileUpload } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
+import { useSetPageBack } from '../lib/pageTitle.jsx';
 import { ItemFormModal } from './ItemFormModal.jsx';
 import { entityTerm } from '../lib/terms.js';
 import s from './screens.module.css';
@@ -28,6 +29,9 @@ export function ProductDetail() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
+
+  // El "volver" se publica al Topbar: la flecha se pinta arriba, junto al título de la sección.
+  useSetPageBack(() => navigate('/products'));
 
   const itemRes = useResource(React.useCallback(() => api.item(itemId), [itemId]), null, [itemId]);
   const groupsRes = useResource(React.useCallback(() => api.optionGroups(itemId), [itemId]), [], [itemId]);
@@ -114,8 +118,8 @@ export function ProductDetail() {
 
   return (
     <div className={s.page}>
+      {/* Solo el refrescar: el volver vive en el Topbar. */}
       <div className={t.header}>
-        <IconButton icon="fas fa-arrow-left" variant="light" title={`Volver a ${prodT.many}`} onClick={() => navigate('/products')} />
         <div className={s.spacer} />
         <RefreshButton
           loading={itemRes.loading || groupsRes.loading || optsRes.loading}

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Card, Button, IconButton, RefreshButton, Badge, Modal, Alert, Spinner, PageHeader } from '../components';
+import { Card, Button, IconButton, Badge, Modal, Alert, Spinner, PageHeader } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { formatStayRange } from '../lib/dates.js';
@@ -72,7 +72,8 @@ export function ReservationsCalendar() {
     return map;
   }, [reservations, grid]);
 
-  const monthLabel = `${MONTHS[cursor.getMonth()]} ${cursor.getFullYear()}`;
+  const monthName = MONTHS[cursor.getMonth()];
+  const monthLabel = `${monthName[0].toUpperCase()}${monthName.slice(1)} ${cursor.getFullYear()}`;
   const shift = (delta) => setCursor((c) => new Date(c.getFullYear(), c.getMonth() + delta, 1));
   const goToday = () => setCursor(new Date(today.getFullYear(), today.getMonth(), 1));
 
@@ -80,23 +81,23 @@ export function ReservationsCalendar() {
     <div className={s.page}>
       <PageHeader
         onBack={() => navigate(`/reservations${params.toString() ? `?${params.toString()}` : ''}`)}
-        backTitle="Volver a reservas"
-        subtitle="Calendario de reservas"
-        actions={
-          <>
-            <div className={t.monthNav}>
-              <IconButton icon="fas fa-chevron-left" variant="light" title="Mes anterior" onClick={() => shift(-1)} />
-              <span className={t.monthLabel}>{monthLabel}</span>
-              <IconButton icon="fas fa-chevron-right" variant="light" title="Mes siguiente" onClick={() => shift(1)} />
-            </div>
-            <RefreshButton loading={loading} onClick={reload} />
-            <Button variant="secondary" size="sm" icon="fas fa-calendar-day" onClick={goToday}>Hoy</Button>
-            <Button variant="primary" size="sm" icon="fas fa-plus" onClick={() => navigate('/reservations/new')}>Nueva reserva</Button>
-          </>
-        }
+        title="Calendario de reservas"
+        action={<Button variant="primary" size="sm" icon="fas fa-plus" onClick={() => navigate('/reservations/new')}>Nueva reserva</Button>}
+        menu={[
+          { label: 'Actualizar', icon: 'fas fa-rotate-right', disabled: loading, onClick: reload },
+        ]}
       />
 
       <Card>
+        {/* El mes navegable es parte del calendario, no de la cabecera: vive en su tarjeta. */}
+        <Card.Header title={monthLabel}
+          action={
+            <span className={t.monthNav}>
+              <IconButton icon="fas fa-chevron-left" variant="light" size="sm" title="Mes anterior" onClick={() => shift(-1)} />
+              <Button variant="secondary" size="sm" icon="fas fa-calendar-day" onClick={goToday}>Hoy</Button>
+              <IconButton icon="fas fa-chevron-right" variant="light" size="sm" title="Mes siguiente" onClick={() => shift(1)} />
+            </span>
+          } />
         <Card.Body>
           {error ? (
             <Alert tone="danger" title="No se pudo cargar el calendario">{error}</Alert>

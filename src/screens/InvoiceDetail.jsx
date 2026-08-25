@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Card, Badge, Button, RefreshButton, Spinner, ConfirmDialog, PageHeader, Alert, useToast } from '../components';
+import { Card, Badge, Button, Spinner, ConfirmDialog, PageHeader, Alert, useToast } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { usePermissions } from '../lib/permissions/usePermissions.js';
@@ -83,17 +83,17 @@ export function InvoiceDetail() {
     <div className={s.page}>
       <PageHeader
         onBack={goBack}
-        backTitle="Volver a facturas"
-        subtitle={`${formatShortDate(order.created_date)} · ${timeOf(order.created_date)}`}
-        actions={<>
-          <RefreshButton loading={loading} onClick={reload} />
-          <Badge variant={st.variant} dot>{status?.name || st.label}</Badge>
-          <Badge variant={pay.variant}>{pay.label}</Badge>
-          {order.status !== 'CANCELLED' && can('order-cancel') && (
-            <Button variant="danger" size="sm" icon="fas fa-ban" onClick={() => setCancelOpen(true)}>Cancelar factura</Button>
-          )}
-        </>}
+        title={formatShortDate(order.created_date)}
+        subtitle={timeOf(order.created_date)}
+        action={order.status !== 'CANCELLED' && can('order-cancel') ? (
+          <Button variant="danger" size="sm" icon="fas fa-ban" onClick={() => setCancelOpen(true)}>Cancelar factura</Button>
+        ) : null}
+        menu={[
+          { label: 'Actualizar', icon: 'fas fa-rotate-right', disabled: loading, onClick: reload },
+        ]}
         meta={[
+          { label: 'Estado', value: <Badge variant={st.variant} dot>{status?.name || st.label}</Badge> },
+          { label: 'Pago', value: <Badge variant={pay.variant}>{pay.label}</Badge> },
           { label: 'Origen', value: originLabel(order.origin_code) },
           { label: 'Servicio', value: serviceTypeLabel(order.service_type) },
           order.table_id != null ? { label: 'Mesa', value: order.table_id } : null,

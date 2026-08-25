@@ -13,6 +13,10 @@
   transition: background-color .25s ease, border-color .25s ease, color .25s ease;
 }
 
+/* La flecha de volver de la pantalla activa (la publica su PageHeader): pegada al título,
+   en escritorio y en móvil, en vez de repetirse dentro del contenido. */
+.back { margin-left: -6px; flex: 0 0 auto; }
+
 .titleWrap { display: flex; align-items: baseline; gap: 9px; min-width: 0; }
 .title {
   font-size: var(--text-xl);
@@ -101,9 +105,6 @@
     border-bottom: 0;
   }
   .userText, .userChev, .crumb { display: none; }
-  /* La flecha de la pantalla activa (la publica su PageHeader): pegada al título, como en una
-     app nativa, en vez de repetirse dentro del contenido. */
-  .back { margin-left: -6px; flex: 0 0 auto; }
   .title {
     font-size: var(--text-xl);
     font-weight: var(--fw-heavy);

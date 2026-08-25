@@ -35,3 +35,6 @@
   font-size: var(--text-sm);
 }
 .payTotal strong { font-size: var(--text-lg); color: var(--gray-900); }
+
+/* El saldo pendiente va junto al total pagado, como badge, para que salte a la vista. */
+.payTotalRight { display: flex; align-items: center; gap: 10px; }

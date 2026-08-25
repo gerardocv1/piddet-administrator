@@ -1,12 +1,12 @@
 import React from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Card, Badge, Button, IconButton, RefreshButton, Avatar, Spinner, Modal, ConfirmDialog, Alert, useToast, Input, Select, MoneyInput, Autocomplete, PageHeader, Dropdown, DatePicker, DateRangePicker, LineList } from '../components';
+import { Card, Badge, Button, IconButton, Avatar, Spinner, Modal, ConfirmDialog, Alert, useToast, Input, Select, MoneyInput, Autocomplete, PageHeader, DatePicker, DateRangePicker, LineList } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { usePermissions } from '../lib/permissions/usePermissions.js';
 import { useIsMobile } from '../lib/useIsMobile.js';
 import { reservationMoney, reservationStatusMeta, arrivalSlotLabel, idTypeLabel, RESERVATION_STATUS } from '../lib/reservationLabels.js';
-import { formatStayRange, formatStayRangeLong } from '../lib/dates.js';
+import { formatStayRange, formatStayRangeShort } from '../lib/dates.js';
 import { useSetPageTitle } from '../lib/pageTitle.jsx';
 import s from './screens.module.css';
 import t from './ReservationDetail.module.css';
@@ -295,12 +295,9 @@ export function ReservationDetail() {
   // ── Menú ⋮ de la cabecera ─────────────────────────────────────────────────
   // En escritorio agrupa solo lo secundario; en el teléfono absorbe además actualizar y el
   // enlace de pre-check-in (su tarjeta no se muestra ahí), que es lo que descarga la vista.
+  // La cabecera lleva UNA acción visible (la del estado); todo lo demás vive aquí.
   const menuItems = [
-    ...(isMobile ? [{
-      label: 'Actualizar', icon: 'fas fa-rotate-right', disabled: loading,
-      onClick: () => { reload(); reloadOrders(); },
-    }] : []),
-    ...(isMobile && isOpen ? [{
+    ...(isOpen ? [{
       label: 'Copiar enlace de pre-check-in', icon: 'fas fa-link', onClick: copyCheckinLink,
     }] : []),
     ...(status === RESERVATION_STATUS.CANCELLED ? [] : [
@@ -313,41 +310,35 @@ export function ReservationDetail() {
         : []),
       ...(can('reservation-cancel') ? [{ label: 'Cancelar esta reserva', icon: 'fas fa-ban', variant: 'danger', onClick: () => setCancelOpen(true) }] : []),
     ]),
+    {
+      label: 'Actualizar', icon: 'fas fa-rotate-right', disabled: loading,
+      onClick: () => { reload(); reloadOrders(); },
+    },
   ];
 
   return (
     <div className={s.page}>
       <PageHeader
         onBack={goBack}
-        backTitle="Volver a reservas"
-        subtitle={formatStayRangeLong(data.check_in_date, data.check_out_date)}
-        actions={<>
-          {/* En el teléfono la fila se queda solo con la acción principal del estado y el menú:
-              actualizar y el enlace de pre-check-in viven dentro de `menuItems`. */}
-          {!isMobile && <RefreshButton loading={loading} onClick={() => { reload(); reloadOrders(); }} />}
-          {isPending && <Button variant="secondary" size="sm" icon="fas fa-circle-check" loading={busy} onClick={() => doConfirm()}>Confirmar</Button>}
-          {isConfirmed && (
+        title={data.rentable_unit_name}
+        subtitle={formatStayRangeShort(data.check_in_date, data.check_out_date)}
+        action={
+          isPending ? (
+            <Button variant="secondary" size="sm" icon="fas fa-circle-check" loading={busy} onClick={() => doConfirm()}>Confirmar</Button>
+          ) : isConfirmed ? (
             <Button variant="outline-primary" size="sm" icon="fas fa-door-open" disabled={!precheckinDone}
               title={precheckinDone ? 'Registrar la entrada del huésped' : 'El huésped debe completar su pre-check-in antes de la entrada (o usa el check-in forzado del menú de acciones)'}
               onClick={() => setCheckInOpen(true)}>Check-in</Button>
-          )}
-          {isCheckedIn && can('reservation-checkout') && (
+          ) : isCheckedIn && can('reservation-checkout') ? (
             <Button variant="outline-primary" size="sm" icon="fas fa-file-invoice-dollar" onClick={() => setCheckoutOpen(true)}>Checkout</Button>
-          )}
-          {isCheckedOut && can('reservation-checkout') && (
+          ) : isCheckedOut && can('reservation-checkout') ? (
             <Button variant="secondary" size="sm" icon="fas fa-rotate-left" onClick={() => setReopenOpen(true)}>Reabrir</Button>
-          )}
-          {menuItems.length > 0 && (
-            <Dropdown
-              trigger={<IconButton icon="fas fa-ellipsis-vertical" variant="light" size="sm" title="Más acciones" />}
-              items={menuItems}
-              width={isMobile ? 250 : 210}
-            />
-          )}
-        </>}
+          ) : null
+        }
+        menu={menuItems}
+        menuWidth={250}
         meta={[
           { label: 'Estado', value: <Badge variant={meta.variant} dot>{meta.label}</Badge> },
-          { label: 'Unidad', value: data.rentable_unit_name },
           {
             label: 'Personas',
             value: Number(extraInfo.count) > 0

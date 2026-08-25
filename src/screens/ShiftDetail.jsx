@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Card, Badge, Button, IconButton, RefreshButton, Spinner, DataTable, PageHeader, Dropdown, Modal, MoneyInput, ConfirmDialog, Alert, useToast } from '../components';
+import { Card, Badge, Button, Spinner, DataTable, PageHeader, Modal, MoneyInput, ConfirmDialog, Alert, useToast } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { usePermissions } from '../lib/permissions/usePermissions.js';
@@ -140,31 +140,29 @@ export function ShiftDetail() {
     <div className={s.page}>
       <PageHeader
         onBack={goBack}
-        backTitle="Volver a turnos"
-        subtitle={`Turno ${SHIFT_TYPE_LABELS[data.type] || data.type} · ${shiftDateTime(data.opened_at)}`}
-        actions={<>
-          <RefreshButton loading={loading} onClick={reload} />
-          {open
-            ? <Badge variant="success" dot>Abierto</Badge>
-            : cancelled
-              ? <Badge variant="danger" dot>Cancelado</Badge>
-              : <Badge variant="neutral" dot>Cerrado</Badge>}
-          {canClose && (
-            <Button variant="primary" size="sm" icon="fas fa-lock" onClick={() => navigate(`/shifts/${data.id}/close`)}>
-              Cerrar turno
-            </Button>
-          )}
-          {canManage && (
-            <Dropdown
-              trigger={<IconButton icon="fas fa-ellipsis-vertical" variant="light" size="sm" title="Más acciones" />}
-              items={[
-                { label: 'Editar base', icon: 'fas fa-pen', onClick: openEditBase },
-                { label: 'Cancelar turno', icon: 'fas fa-ban', variant: 'danger', onClick: () => { setActionError(null); setCancelOpen(true); } },
-              ]}
-            />
-          )}
-        </>}
+        title={`Turno ${SHIFT_TYPE_LABELS[data.type] || data.type}`}
+        subtitle={shiftDateTime(data.opened_at)}
+        action={canClose ? (
+          <Button variant="primary" size="sm" icon="fas fa-lock" onClick={() => navigate(`/shifts/${data.id}/close`)}>
+            Cerrar turno
+          </Button>
+        ) : null}
+        menu={[
+          ...(canManage ? [
+            { label: 'Editar base', icon: 'fas fa-pen', onClick: openEditBase },
+            { label: 'Cancelar turno', icon: 'fas fa-ban', variant: 'danger', onClick: () => { setActionError(null); setCancelOpen(true); } },
+          ] : []),
+          { label: 'Actualizar', icon: 'fas fa-rotate-right', disabled: loading, onClick: reload },
+        ]}
         meta={[
+          {
+            label: 'Estado',
+            value: open
+              ? <Badge variant="success" dot>Abierto</Badge>
+              : cancelled
+                ? <Badge variant="danger" dot>Cancelado</Badge>
+                : <Badge variant="neutral" dot>Cerrado</Badge>,
+          },
           { label: 'Base', value: shiftMoney(data.base_amount) },
           data.type === 'EMPLOYEE' && { label: 'Asignado a', value: data.assigned_user_name || '—' },
           { label: 'Abierto por', value: data.opened_by_name || '—' },

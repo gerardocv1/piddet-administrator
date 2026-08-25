@@ -56,7 +56,7 @@
 .outlinePrimary:active:not(:disabled) { background: var(--color-primary-100); }
 
 /* ---- Tamaños ---- */
-.sm { padding: 0.375rem 0.875rem; font-size: var(--text-xs); }
+.sm { padding: 0.25rem 0.8rem; font-size: var(--text-xs); }
 .md { padding: 0.55rem 1.1rem; font-size: var(--text-base); }
 .lg { padding: 0.8rem 1.6rem; font-size: var(--text-md); }
 
@@ -64,7 +64,7 @@
    el área de toque real algo mayor por el aire de la fila), pero dejan de comerse la pantalla:
    en el teléfono suele haber una acción por sección y no necesita parecer una barra. */
 @media (max-width: 860px) {
-  .sm { min-height: 34px; padding: 0.3rem 0.7rem; }
+  .sm { min-height: 30px; padding: 0.2rem 0.65rem; }
   .md { min-height: 38px; padding: 0.4rem 0.85rem; font-size: var(--text-sm); }
   .lg { min-height: 42px; padding: 0.55rem 1.15rem; font-size: var(--text-base); }
   /* Radio más generoso: acompaña la línea nativa (campos rellenos, tarjetas sin marco). */

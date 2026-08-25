@@ -1,11 +1,4 @@
 .monthNav { display: inline-flex; align-items: center; gap: 6px; }
-.monthLabel {
-  min-width: 150px;
-  text-align: center;
-  font-weight: 700;
-  color: var(--gray-900);
-  text-transform: capitalize;
-}
 
 .calendar { position: relative; }
 .loadingOverlay {
@@ -126,5 +119,4 @@
   .gridBody { grid-auto-rows: minmax(80px, auto); }
   .eventText { display: none; }
   .event { justify-content: center; padding: 4px; }
-  .monthLabel { min-width: 110px; font-size: var(--text-sm); }
 }

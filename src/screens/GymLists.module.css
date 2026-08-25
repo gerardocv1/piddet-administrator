@@ -47,3 +47,6 @@
   .cardPad { padding: 8px 12px; }
   .tapArea { min-height: 40px; }
 }
+
+/* Saldo pendiente de un período: acusa la deuda en el tono de alerta, en tabla y tarjeta. */
+.saldo { color: var(--color-warning-fg); font-weight: 600; white-space: nowrap; }

@@ -28,6 +28,14 @@ export function ageFromBirthdate(value) {
   return age >= 0 ? age : null;
 }
 
+// Suma días a una fecha ISO sin depender de la zona del navegador: "2026-08-31" + 1 → "2026-09-01".
+export function addDaysIso(value, days) {
+  const d = parseDate(value);
+  if (!d) return value;
+  const date = new Date(Date.UTC(Number(d.year), d.month - 1, d.day + days));
+  return date.toISOString().slice(0, 10);
+}
+
 // "2026-07-02" → "2 jul"
 export function formatDayMonth(value) {
   const d = parseDate(value);
@@ -42,6 +50,19 @@ export function formatStayRange(from, to) {
   if (!a || !b) return [formatShortDate(from), formatShortDate(to)].join(' → ');
   const start = a.year === b.year ? formatDayMonth(from) : formatShortDate(from);
   return `${start} → ${formatShortDate(to)}`;
+}
+
+// Rango abreviado, con lo repetido dicho una sola vez:
+// "2026-08-30", "2026-08-31" → "30 – 31 ago 2026"
+// "2026-08-28", "2026-09-02" → "28 ago – 2 sep 2026"
+// si cruza de año, ambos extremos van completos.
+export function formatStayRangeShort(from, to) {
+  const a = parseDate(from);
+  const b = parseDate(to);
+  if (!a || !b) return [formatShortDate(from), formatShortDate(to)].join(' – ');
+  if (a.year === b.year && a.month === b.month) return `${a.day} – ${formatShortDate(to)}`;
+  if (a.year === b.year) return `${formatDayMonth(from)} – ${formatShortDate(to)}`;
+  return `${formatShortDate(from)} – ${formatShortDate(to)}`;
 }
 
 // Rango en prosa, con lo repetido dicho una sola vez:

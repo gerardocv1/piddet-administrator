@@ -1,0 +1,31 @@
+.panel {
+  background: var(--surface-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 1rem 1.1rem;
+}
+
+/* Sin línea ni sombra hacia el contenido: el corte lo da solo un aire pequeño. */
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 0.6rem;
+}
+
+.title {
+  margin: 0;
+  font-size: var(--text-base);
+  font-weight: var(--fw-bold);
+  color: var(--text-heading);
+  line-height: var(--lh-tight);
+}
+
+/* A diferencia de Card, en móvil conserva el marco (sigue siendo una tarjetita); solo se
+   compacta el aire interior. */
+@media (max-width: 860px) {
+  .panel { padding: 0.8rem 0.9rem; }
+  .head { margin-bottom: 0.45rem; }
+}

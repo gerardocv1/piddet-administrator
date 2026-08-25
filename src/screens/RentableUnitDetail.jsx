@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
-  Card, Badge, Button, IconButton, RefreshButton, Input, Select, Textarea, MoneyInput, Switch, Spinner, Modal, Alert, useToast, MultiImageUpload, PageHeader,
+  Card, Button, IconButton, Input, Select, Textarea, MoneyInput, Switch, Spinner, Modal, Alert, useToast, MultiImageUpload, PageHeader,
 } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
@@ -169,15 +169,12 @@ export function RentableUnitDetail() {
     <div className={s.page}>
       <PageHeader
         onBack={goBack}
-        backTitle="Volver a unidades"
-        subtitle={isEdit ? (data.type_name || 'Unidad reservable') : 'Registra una cabaña, habitación o lugar para reservar.'}
-        actions={isEdit ? (
-          <>
-            <RefreshButton loading={loading} onClick={reload} />
-            <Badge variant={active ? 'success' : 'neutral'} dot>{active ? 'Reservable' : 'Inactiva'}</Badge>
-            <Switch checked={active} onChange={toggleStatus} label="Reservable" />
-          </>
-        ) : null}
+        title={isEdit ? (data.type_name || 'Unidad reservable') : 'Nueva unidad'}
+        subtitle={isEdit ? null : 'Registra una cabaña, habitación o lugar para reservar.'}
+        action={isEdit ? <Switch checked={active} onChange={toggleStatus} label="Reservable" /> : null}
+        menu={isEdit ? [
+          { label: 'Actualizar', icon: 'fas fa-rotate-right', disabled: loading, onClick: reload },
+        ] : []}
       />
 
       <div className={t.grid}>

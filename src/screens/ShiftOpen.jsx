@@ -68,7 +68,7 @@ export function ShiftOpen() {
 
   return (
     <div className={s.page}>
-      <PageHeader onBack={() => navigate('/shifts')} backTitle="Volver a turnos" subtitle="Abrir turno" />
+      <PageHeader onBack={() => navigate('/shifts')} title="Abrir turno" />
 
       <Card>
         <Card.Header title="Datos de apertura" />

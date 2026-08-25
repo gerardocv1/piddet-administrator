@@ -4,26 +4,6 @@
    sus hijos con space-between, así que sin envoltorio los botones se separaban entre sí). */
 .headerActions { display: inline-flex; align-items: center; gap: 8px; }
 
-/* Tarjetas plegables: el título es el interruptor. */
-.collapseToggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  border: none;
-  background: transparent;
-  padding: 0;
-  min-height: 44px;
-  cursor: pointer;
-  font-family: var(--font-sans);
-  font-size: var(--text-md);
-  font-weight: 700;
-  color: var(--gray-900);
-}
-.collapseChevron { color: var(--gray-400); font-size: 0.7rem; transition: transform 0.15s ease; }
-.chevronOpen { transform: rotate(180deg); }
-/* Plegada, el header es el borde inferior de la tarjeta: sin línea doble. */
-.collapsedHeader { border-bottom: none; }
-
 /* Fila-resumen de la suscripción vigente: toda el área navega al detalle. */
 .subSummary {
   display: flex;
@@ -54,25 +34,25 @@
   color: var(--gray-400);
 }
 
-/* Resumen del perfil: pares etiqueta/valor apilados; las notas pueden ocupar varias líneas. */
-.profileList {
-  list-style: none;
+/* Apartado dentro del formulario combinado "Editar datos": separa visualmente los datos
+   personales del perfil sin partirlos en dos modales. */
+.formSectionTitle {
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--gray-900);
+  padding-top: 4px;
+  border-top: 1px solid var(--border-color);
+}
+.formSectionTitle:first-child { padding-top: 0; border-top: 0; }
+
+/* Notas de salud dentro del InfoCard: texto libre bajo la rejilla de campos. */
+.healthNotes {
   margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
+  font-size: var(--text-sm);
+  color: var(--gray-600);
+  line-height: var(--lh-snug);
 }
-.profileList li + li { border-top: 1px solid var(--border-color); }
-.profileRow {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  min-height: 40px;
-  padding: 9px 0;
-}
-.profileLabel { flex: 0 0 auto; font-size: var(--text-sm); color: var(--gray-500); }
-.profileValue { min-width: 0; font-weight: 600; color: var(--gray-800); text-align: right; overflow-wrap: anywhere; }
+.healthNotes i { color: var(--gray-400); }
 
 /* Historial de mediciones: filas apiladas y tappables (abren el detalle en un modal). */
 .historyTitle {
@@ -135,3 +115,6 @@
 }
 .valueLabel { color: var(--gray-700); }
 .valueNumber { font-weight: 700; color: var(--gray-900); white-space: nowrap; }
+
+/* Saldo pendiente del período vigente, en la línea-resumen de la suscripción. */
+.subSaldo { color: var(--color-warning-fg); font-weight: 600; }

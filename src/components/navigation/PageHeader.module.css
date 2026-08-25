@@ -4,16 +4,30 @@
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-xs);
   padding: 16px 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
 }
 
 .top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .text { flex: 1; min-width: 0; }
-.subtitle { color: var(--gray-700); font-size: var(--text-base); font-weight: 600; }
-/* Subtítulo clicable: misma tipografía que el normal, solo cambia que responde al toque. */
-.subtitleLink {
+
+/* Identidad del recurso: nombre en negrita y su dato de contexto en pequeño, como InfoCard. */
+.title {
+  margin: 0;
+  font-size: var(--text-md);
+  font-weight: var(--fw-bold);
+  color: var(--text-heading);
+  line-height: var(--lh-tight);
+}
+.subtitle {
+  margin: 3px 0 0;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Título clicable: misma tipografía que el normal, solo cambia que responde al toque. */
+.titleLink {
+  display: block;
   border: none;
   background: transparent;
   padding: 0;
@@ -21,35 +35,18 @@
   cursor: pointer;
   text-align: left;
 }
-.subtitleLink:active { opacity: 0.7; }
-.actions { display: inline-flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.titleLink:active { opacity: 0.7; }
 
-/* En móvil las acciones (badges + botones) no caben junto al subtítulo: van a su propia
-   fila, alineadas a la izquierda y con los botones a ancho completo. La cabecera además deja
-   de pintarse como caja —igual que Card en la capa móvil nativa—: sin marco ni superficie
-   propia, lo que agrupa es el aire y el filete que ya separa los metadatos. El padding lateral
-   se conserva para que su contenido quede alineado con el de las tarjetas de abajo. */
-@media (max-width: 860px) {
-  .card {
-    padding: 0 0.9rem;
-    border: 0;
-    border-radius: 0;
-    background: transparent;
-    box-shadow: none;
-  }
-  .top { row-gap: 10px; }
-  .text { flex: 1 1 auto; }
-  /* Las acciones se quedan en la fila del subtítulo con su ancho natural (antes se estiraban
-     a lo ancho en una fila propia: parecían barras y gastaban media pantalla). Si no caben,
-     `.top` las envuelve y `margin-left: auto` las mantiene a la derecha. Lo secundario se
-     agrupa en el menú ⋮ de cada pantalla. */
-  .actions { margin-left: auto; gap: 8px; }
-  /* La flecha de volver la pinta el Topbar en el teléfono: aquí sobra. */
-  .back { display: none; }
-  /* Sin marco, el aire es lo único que separa: se ajusta para que la cabecera no empuje lo
-     operativo fuera de la primera pantalla. */
-  .card { gap: 8px; }
-}
+/* Una sola acción visible: la fila nunca acumula botones. */
+.action { flex: 0 0 auto; }
+/* El ⋮ (y en móvil el chevron debajo): en escritorio va en línea con la acción. */
+.side { display: inline-flex; align-items: center; gap: 10px; flex: 0 0 auto; }
+
+.chevIcon { transition: transform 0.2s ease; }
+.open .chevIcon { transform: rotate(180deg); }
+
+/* Escritorio: el detalle (meta + nota) siempre visible bajo la fila. */
+.detailInner { display: flex; flex-direction: column; gap: 12px; margin-top: 14px; }
 
 .meta {
   display: grid;
@@ -89,18 +86,48 @@
 }
 .note i { color: var(--color-danger); }
 
-/* Móvil: los metadatos dejan de ser una rejilla de bloques sueltos (etiqueta arriba, valor
-   abajo, con huecos entre columnas) y pasan a filas etiqueta→valor separadas por un filete: se
-   lee de un vistazo qué es cada dato, en el orden natural de lectura y sin aire de sobra.
-   Un valor largo (un rango de fechas) envuelve en vez de cortarse con "…".
-
-   Va al final del archivo a propósito: las reglas de `.meta` de arriba tienen la misma
-   especificidad, así que estas solo ganan declarándose después. */
+/* En móvil se comporta como InfoCard: conserva el marco de tarjeta y la fila superior pliega
+   el detalle (meta + nota); el chevron rota al abrir. Al desplegarse, la fila se separa del
+   detalle con el mismo borde + sombra corta de Card.Header. */
 @media (max-width: 860px) {
+  .card { padding: 0; }
+  .top { padding: 0.7rem 0.75rem; row-gap: 10px; }
+  .topTap { cursor: pointer; user-select: none; }
+  .open .top {
+    border-bottom: 1px solid var(--border-color);
+    position: relative;
+    z-index: 1;
+    box-shadow: var(--shadow-header);
+  }
+  .action { margin-left: auto; }
+  /* La columna derecha apila ⋮ arriba y chevron abajo (como el boceto de InfoCard): gasta
+     alto, que sobra, en vez de ancho, que falta. */
+  .side {
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: space-between;
+    align-self: stretch;
+    gap: 2px;
+    margin-left: auto;
+  }
+  .action + .side { margin-left: 0; }
+
+  /* Despliegue animado sin medir alturas: la fila del grid pasa de 0fr a 1fr. */
+  .detail {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.25s ease;
+  }
+  .open .detail { grid-template-rows: 1fr; }
+  .detailInner { overflow: hidden; min-height: 0; margin-top: 0; gap: 0; }
+
+  /* Los metadatos pasan de rejilla de bloques a filas etiqueta → valor con filete: se lee en
+     el orden natural y un valor largo envuelve en vez de cortarse con "…". */
   .meta {
     grid-template-columns: 1fr;
     gap: 0;
-    padding-top: 6px;
+    border-top: 0;
+    padding: 0.3rem 0.75rem 0.55rem;
   }
   .meta > div {
     flex-direction: row;
@@ -110,7 +137,7 @@
     padding: 7px 0;
     border-bottom: 1px solid var(--gray-100);
   }
-  .meta > div:last-child { border-bottom: 0; padding-bottom: 0; }
+  .meta > div:last-child { border-bottom: 0; }
   .meta dt {
     text-transform: none;
     letter-spacing: 0;
@@ -119,4 +146,7 @@
     flex: 0 0 auto;
   }
   .meta dd { text-align: right; white-space: normal; overflow: visible; }
+
+  .note { border-top: 0; padding: 0 0.75rem 0.7rem; }
+  .meta + .note { padding-top: 0.1rem; }
 }

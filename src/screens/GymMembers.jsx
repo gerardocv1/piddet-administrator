@@ -6,7 +6,7 @@ import {
 } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
-import { gymSubscriptionStatusMeta, GYM_SUBSCRIPTION_STATUS, GYM_SEX_OPTIONS } from '../lib/gymLabels.js';
+import { gymSubscriptionStatusMeta, gymPeriodStatusMeta, GYM_SUBSCRIPTION_STATUS, GYM_PERIOD_STATUS, GYM_SEX_OPTIONS } from '../lib/gymLabels.js';
 import { ID_TYPES } from '../lib/reservationLabels.js';
 import { todayIso, yearsAgoIso } from '../lib/orderLabels.js';
 import { formatShortDate, ageFromBirthdate } from '../lib/dates.js';
@@ -35,8 +35,9 @@ const OLDEST_BIRTHDATE = () => yearsAgoIso(100);
 // las resuelve como "pasivas" al registrarlas — find-or-create por documento o celular — y las
 // vincula a la compañía, mismo patrón que los huéspedes de Reservas). Por eso el alta empieza
 // buscando a la persona por celular o correo: si ya tiene cuenta, se reutiliza.
-// En móvil el listado son tarjetas con "Renovar" directo (abre el formulario de renovación al
-// llegar a la ficha, vía ?action=renew): cobrar/renovar es la operación más frecuente del mostrador.
+// En móvil el listado son tarjetas con "Suscribir" directo (abre el formulario al llegar a la
+// ficha, vía ?action=subscribe) para el afiliado que aún no tiene membresía: los períodos
+// siguientes de uno ya suscrito los genera el sistema, sin acción del mostrador.
 export function GymMembers() {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -183,22 +184,24 @@ export function GymMembers() {
   };
 
   // Resumen de membresía por fila: en el mostrador lo que importa es si el afiliado está al día,
-  // no su activo/inactivo administrativo. Sin suscripción, la acción pasa de Renovar a Suscribir.
+  // no su activo/inactivo administrativo. Sin suscripción activa, la acción es Suscribir.
   const membership = (r) => {
     if (!r.subscription) {
       return { badge: { label: 'Sin suscripción', variant: 'neutral' }, text: null, detail: null, alive: false };
     }
-    const st = Number(r.subscription.computed_status ?? r.subscription.status);
-    const alive = st === GYM_SUBSCRIPTION_STATUS.ACTIVE || st === GYM_SUBSCRIPTION_STATUS.GRACE;
-    const cancelled = st === GYM_SUBSCRIPTION_STATUS.CANCELLED;
-    const vigencia = `${alive ? 'Vence' : 'Venció'} el ${formatShortDate(r.subscription.end_date)}`;
+    const active = Number(r.subscription.subscription_status) === GYM_SUBSCRIPTION_STATUS.ACTIVE;
+    const inGrace = active && Number(r.subscription.computed_status) === GYM_PERIOD_STATUS.GRACE;
+    const badge = inGrace ? gymPeriodStatusMeta(GYM_PERIOD_STATUS.GRACE) : gymSubscriptionStatusMeta(r.subscription.subscription_status);
+    const vigencia = r.subscription.end_date
+      ? `${inGrace ? 'Venció' : 'Vence'} el ${formatShortDate(r.subscription.end_date)}`
+      : null;
     // `text` es la columna Vigencia de la tabla (escritorio). `detail` es la línea de la tarjeta
     // móvil, donde el estado ya lo dice el badge de al lado: ahí no se repite, se nombra el plan.
     return {
-      badge: gymSubscriptionStatusMeta(st),
-      text: cancelled ? `Cancelada · ${r.subscription.plan_name}` : vigencia,
-      detail: cancelled ? r.subscription.plan_name : vigencia,
-      alive,
+      badge,
+      text: active ? vigencia : `Cancelada · ${r.subscription.plan_name}`,
+      detail: active ? vigencia : r.subscription.plan_name,
+      alive: active,
     };
   };
 
@@ -279,7 +282,7 @@ export function GymMembers() {
             <Card key={r.id} className={gl.cardPad}>
               <div className={gl.row}>
                 {/* Toda la zona de información navega a la ficha; la única acción aparte es
-                    cobrar (Renovar/Suscribir según tenga o no membresía). */}
+                    Suscribir, y solo cuando el afiliado no tiene membresía activa. */}
                 <button type="button" className={gl.tapArea}
                   onClick={() => navigate(`/gym/members/${r.id}?${params.toString()}`)}>
                   <div className={gl.info}>
@@ -292,10 +295,12 @@ export function GymMembers() {
                     </span>
                   </div>
                 </button>
-                <Button variant="secondary" size="sm" icon={ms.alive ? 'fas fa-rotate' : 'fas fa-plus'}
-                  onClick={() => navigate(`/gym/members/${r.id}?action=renew`)}>
-                  {ms.alive ? 'Renovar' : 'Suscribir'}
-                </Button>
+                {!ms.alive && (
+                  <Button variant="secondary" size="sm" icon="fas fa-plus"
+                    onClick={() => navigate(`/gym/members/${r.id}?action=subscribe`)}>
+                    Suscribir
+                  </Button>
+                )}
               </div>
             </Card>
           );

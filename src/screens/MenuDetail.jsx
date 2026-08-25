@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Button, IconButton, RefreshButton, Input, MoneyInput, Select, Textarea, Modal, Spinner, SortableList, Autocomplete, Dropdown, Alert, useToast } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
+import { useSetPageBack } from '../lib/pageTitle.jsx';
 import { useFunctionalities } from '../lib/permissions/useFunctionalities.js';
 import { ADMIN_BASE } from '../lib/adminBase.js';
 import { entityTerm, cap } from '../lib/terms.js';
@@ -21,6 +22,9 @@ export function MenuDetail() {
   // Terminología por tipo de compañía: "menú" puede ser "catálogo público"; "producto", "ítem" o "servicio".
   const menuT = entityTerm('menu');
   const prodT = entityTerm('product');
+
+  // El "volver" se publica al Topbar: la flecha se pinta arriba, junto al título de la sección.
+  useSetPageBack(() => navigate('/menus'));
 
   const menuRes = useResource(React.useCallback(() => api.menu(menuId), [menuId]), null, [menuId]);
   const catsRes = useResource(React.useCallback(() => api.menuCategories(menuId), [menuId]), EMPTY_PAGE, [menuId]);
@@ -203,9 +207,8 @@ export function MenuDetail() {
 
   return (
     <div className={s.page}>
-      {/* Encabezado: volver + nombre + descripción/resumen */}
+      {/* Encabezado: nombre + descripción/resumen (el volver vive en el Topbar) */}
       <div className={t.header}>
-        <IconButton icon="fas fa-arrow-left" variant="light" title={`Volver a ${menuT.many}`} onClick={() => navigate('/menus')} />
         <div className={t.headerText}>
           <div className={t.headerTitleLine}>
             <h2 className={t.headerTitle}>{menu?.name || cap(menuT.one)}</h2>
