@@ -80,6 +80,12 @@ Si agregas un endpoint, agrega también su mock. Detalle en `specs/tech.md`.
 - **Nada se borra:** la mesa se desactiva, la factura se cancela, el gasto se anula, el turno se
   cancela o cierra.
 
+## Flujo de trabajo
+
+**Siempre abre un pull request** al terminar un cambio: nunca dejes la rama empujada esperando a
+que alguien lo pida. Y antes de mergear, comprueba que el PR incluya **todos** los commits de la
+rama: un PR mergeado no admite trabajo nuevo, y si quedan commits fuera hay que abrir otro.
+
 ## Hoja de ruta de documentación (`specs/`)
 
 | Si vas a… | Abre |
