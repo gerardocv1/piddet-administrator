@@ -2,15 +2,12 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App.jsx';
 import { registerServiceWorker } from './lib/pwa.js';
-import { applyStoredCompanyPwa } from './lib/brand/applyCompanyPwa.js';
 import { watchForUpdates } from './lib/appUpdate.js';
 import './styles/tokens.css';
 
-// Antes que nada: Chrome congela el nombre y el icono del diálogo de instalación en cuanto el
-// service worker queda registrado, así que la identidad de la compañía tiene que estar puesta
-// antes de esa línea. App.jsx la refina después (logo de la compañía, cambios de compañía).
-applyStoredCompanyPwa();
-
+// La identidad instalable (nombre e icono de la compañía) ya la dejó puesta el script en línea
+// del <head>, que corre durante el parseo: tiene que estar antes de que el navegador mire el
+// manifest. App.jsx solo la reaplica en caliente. Ver index.html.
 registerServiceWorker();
 watchForUpdates();
 
