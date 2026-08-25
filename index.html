@@ -7,7 +7,6 @@
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon/favicon-32x32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon/favicon-16x16.png" />
     <link rel="icon" href="/favicon.ico" />
-    <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="mask-icon" href="/favicon/safari-pinned-tab.svg" color="#e77001" />
     <!-- La barra de estado de la app instalada se funde con el fondo de la app: este valor es
          --bg-body y se reajusta al cambiar de tema (ver applyThemeColor en App.jsx). Cualquier
@@ -42,43 +41,145 @@
         href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&display=swap" />
       <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
     </noscript>
-    <!-- Identidad instalable de la compañía activa, lo ANTES posible. iOS fija el nombre y el
-         icono de «Agregar a Inicio» al cargar el documento, antes de que corra el bundle, así que
-         esto no puede esperar a main.jsx: va en línea y al final del <head>, cuando las metas de
-         arriba ya existen. Repite a propósito la lectura de la sesión (src/lib/auth/storage.js)
-         para no arrastrar el bundle hasta aquí; el resto lo reaplica applyCompanyPwa.js. -->
+    <!--
+      IDENTIDAD INSTALABLE. Va aquí en línea, y no en el bundle, por una razón medida:
+
+      Safari toma el nombre de «Agregar a Inicio» del WEB APP MANIFEST y lo fija al cargar el
+      documento. Cambiar después `apple-mobile-web-app-title` o el href del link no le llega: en
+      un iPhone seguía saliendo el `short_name` del manifest estático («Piddet») aunque el script
+      ya hubiera reescrito la meta. Por eso arriba NO hay <link rel="manifest">: lo inserta este
+      script, de modo que el primer y único manifest que el navegador llega a ver es el de la
+      compañía. Chrome gana lo mismo, porque congela el diálogo de instalación más tarde, en
+      `beforeinstallprompt`.
+
+      Un módulo (main.jsx) va diferido y llegaría tarde; de ahí el script clásico durante el
+      parseo. Expone `window.__piddetPwa` para que applyCompanyPwa.js reaplique lo mismo al
+      cambiar de compañía o guardar el perfil, sin duplicar la lógica.
+    -->
     <script>
       (function () {
-        try {
-          var persistent = localStorage.getItem('piddet_persist') === '1';
-          var store = persistent ? localStorage : sessionStorage;
-          var company = JSON.parse(store.getItem('piddet_company') || 'null');
-          if (!company || !company.name) return;
+        var API = '%VITE_API_URL%';
+        if (API.charAt(0) === '%') API = ''; // build sin backend: rigen los iconos de Piddet
+        var ADMIN = '/admin';
+        var SPLASH = '#fbfbfc';        // igual que --bg-body: la barra de estado se funde con él
+        var SHORT_MAX = 12;            // lo que cabe bajo el icono en la pantalla de inicio
+        var DEFAULT_TITLE = document.title;
+        var blobUrl = null;
 
-          // El NOMBRE va primero y sin depender de nada más: es lo único que Safari no relee
-          // después, y antes se quedaba sin poner cuando no había backend configurado.
-          var appName = (company.app_name || '').trim() || company.name;
-          // El título original queda anotado para que applyCompanyPwa.js pueda restaurarlo al
-          // cerrar sesión: cuando ese módulo arranca, esta línea ya lo habrá cambiado.
-          document.documentElement.dataset.defaultTitle = document.title;
-          document.title = appName + ' · Panel de administración';
-          ['apple-mobile-web-app-title', 'application-name'].forEach(function (name) {
-            var tag = document.querySelector('meta[name="' + name + '"]');
-            if (tag) tag.setAttribute('content', appName);
-          });
+        function linkEl(rel) {
+          var found = document.querySelector('link[rel="' + rel + '"]');
+          if (found) return found;
+          var el = document.createElement('link');
+          el.rel = rel;
+          document.head.appendChild(el);
+          return el;
+        }
 
-          // El icono sí necesita el backend y el username; si falta cualquiera, queda el de Piddet.
-          var api = '%VITE_API_URL%';
-          if (!api || api.charAt(0) === '%' || !company.username) return;
-          var icon = document.querySelector('link[rel="apple-touch-icon"]');
-          if (icon) {
-            var version = ((company.icon || '') + (company.app_icon_bg || company.brand_primary || ''))
-              .replace(/\W/g, '').slice(-12);
-            icon.href = api + '/public/' + encodeURIComponent(company.username)
-              + '/app-icon-180.png?maskable=1&v=' + encodeURIComponent(version);
+        function setMeta(name, value) {
+          var tag = document.querySelector('meta[name="' + name + '"]');
+          if (tag) tag.setAttribute('content', value);
+        }
+
+        /** El nombre configurado en el perfil; si no hay, el comercial. */
+        function appNameOf(company) {
+          return (company.app_name || '').trim() || (company.name || '').trim();
+        }
+
+        /** Icono servido por el backend. El `v` cuelga de logo y fondo: cambiarlos estrena URL. */
+        function iconUrl(company, size, maskable) {
+          if (!API || !company.username) return null;
+          var version = ((company.icon || '') + (company.app_icon_bg || company.brand_primary || ''))
+            .replace(/\W/g, '').slice(-12);
+          return API + '/public/' + encodeURIComponent(company.username)
+            + '/app-icon-' + size + '.png?' + (maskable ? 'maskable=1&' : '')
+            + 'v=' + encodeURIComponent(version);
+        }
+
+        function iconsFor(company, origin) {
+          var own = iconUrl(company, 192, false);
+          if (!own) {
+            return [
+              { src: origin + '/favicon/android-chrome-192x192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+              { src: origin + '/favicon/android-chrome-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+              { src: origin + '/favicon/maskable-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
+            ];
           }
+          return [
+            { src: own, sizes: '192x192', type: 'image/png', purpose: 'any' },
+            { src: iconUrl(company, 512, false), sizes: '512x512', type: 'image/png', purpose: 'any' },
+            { src: iconUrl(company, 512, true), sizes: '512x512', type: 'image/png', purpose: 'maskable' }
+          ];
+        }
+
+        function shortName(name) {
+          if (name.length <= SHORT_MAX) return name;
+          var cut = name.slice(0, SHORT_MAX);
+          var space = cut.lastIndexOf(' ');
+          return (space > 4 ? cut.slice(0, space) : cut).replace(/\s+$/, '');
+        }
+
+        function apply(company) {
+          if (!company || !appNameOf(company)) return restore();
+
+          var name = appNameOf(company);
+          var origin = window.location.origin;
+          var manifest = {
+            id: origin + ADMIN + '/',
+            name: name,
+            short_name: shortName(name),
+            description: 'Panel de administración de ' + name + ' en Piddet.',
+            lang: 'es',
+            dir: 'ltr',
+            // El manifest vive en un blob: sin URL base, sus rutas deben ser absolutas.
+            start_url: origin + ADMIN + '/',
+            scope: origin + ADMIN + '/',
+            display: 'standalone',
+            display_override: ['standalone', 'minimal-ui'],
+            orientation: 'any',
+            background_color: SPLASH,
+            theme_color: SPLASH,
+            icons: iconsFor(company, origin)
+          };
+
+          if (blobUrl) URL.revokeObjectURL(blobUrl);
+          blobUrl = URL.createObjectURL(new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' }));
+
+          linkEl('manifest').href = blobUrl;
+          // iOS redondea él las esquinas, así que se le pide el lienzo completo (maskable).
+          linkEl('apple-touch-icon').href = iconUrl(company, 180, true) || '/favicon/apple-touch-icon.png';
+          setMeta('apple-mobile-web-app-title', name);
+          setMeta('application-name', name);
+          document.title = name + ' · Panel de administración';
+        }
+
+        function restore() {
+          if (blobUrl) { URL.revokeObjectURL(blobUrl); blobUrl = null; }
+          linkEl('manifest').href = '/manifest.webmanifest';
+          linkEl('apple-touch-icon').href = '/favicon/apple-touch-icon.png';
+          setMeta('apple-mobile-web-app-title', 'Piddet');
+          setMeta('application-name', 'Piddet');
+          document.title = DEFAULT_TITLE;
+        }
+
+        function storedCompany() {
+          try {
+            var store = localStorage.getItem('piddet_persist') === '1' ? localStorage : sessionStorage;
+            return JSON.parse(store.getItem('piddet_company') || 'null');
+          } catch (e) {
+            return null; // storage bloqueado o modo privado
+          }
+        }
+
+        window.__piddetPwa = { apply: apply, restore: restore };
+
+        // Solo el panel: las páginas públicas (carta, portada, check-in) comparten documento pero
+        // no son la app instalable, y además fijan su propio título para compartir.
+        var path = window.location.pathname;
+        var inPanel = path === '/' || path === ADMIN || path.indexOf(ADMIN + '/') === 0;
+        try {
+          apply(inPanel ? storedCompany() : null);
         } catch (e) {
-          /* sin sesión, sin storage o en modo privado: queda la identidad Piddet */
+          restore(); // pase lo que pase, el documento queda con un manifest válido
         }
       })();
     </script>

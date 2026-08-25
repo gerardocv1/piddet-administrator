@@ -209,8 +209,8 @@ Piezas:
 | `public/manifest.webmanifest` | Identidad por defecto (sin sesión): iconos y colores de Piddet. |
 | `public/sw.js` | Service worker: red primero para el shell, caché para assets con hash e iconos; nunca cachea `/api` ni otros orígenes. Requisito de Chrome para ofrecer la instalación. |
 | `src/lib/pwa.js` | `registerServiceWorker()` y `useInstallPrompt()`, que alimenta el botón "Instalar app". |
-| **Script en línea al final del `<head>`** (`index.html`) | Nombre, `<title>` y `apple-touch-icon` de la compañía, durante el parseo del documento. Es la ruta crítica de iOS. |
-| `src/lib/brand/applyCompanyPwa.js` | Publica el manifest (blob) con el nombre y los iconos de la compañía, y reaplica la identidad al cambiar de compañía o guardar el perfil. |
+| **Script en línea al final del `<head>`** (`index.html`) | **Dueño de toda la identidad instalable**: inserta el `<link rel="manifest">` con el manifest de la compañía, el `apple-touch-icon`, las metas y el `<title>`, durante el parseo del documento. |
+| `src/lib/brand/applyCompanyPwa.js` | Solo reenvía a `window.__piddetPwa` para los cambios en caliente (cambio de compañía, guardado del perfil, cierre de sesión). |
 | **backend** `GET /public/{compañía}/app-icon-{tamaño}.png` | Sirve el icono ya compuesto: el logo centrado sobre el color de fondo elegido, o la inicial del nombre. |
 | `src/screens/CompanyBrandColors.jsx` | `AppIconPreview`, la vista previa del icono en el perfil. Reproduce las reglas del backend, incluida la tinta de la inicial según el fondo. |
 
@@ -235,15 +235,20 @@ nombre de la compañía pero rigen los iconos de Piddet.
 
 ### El momento importa, y por partida doble
 
-| Plataforma | Cuándo fija la identidad | Quién la pone a tiempo |
+| Plataforma | De dónde saca el nombre | Cuándo lo fija |
 |---|---|---|
-| Chrome / Android | En `beforeinstallprompt`, que dispara al registrarse el service worker | `applyStoredCompanyPwa()`, primera línea de `main.jsx`, **antes** de `registerServiceWorker()` |
-| Safari / iOS | El **nombre**, al cargar el documento, antes de que corra el bundle (el `href` del `apple-touch-icon` sí lo relee en vivo) | El **script en línea** del `<head>`, durante el parseo |
+| Chrome / Android | El manifest | En `beforeinstallprompt`, que dispara al registrarse el service worker |
+| Safari / iOS | **El manifest** (no `apple-mobile-web-app-title`) | Al cargar el documento |
 
-En ese script el **nombre va primero y sin depender de nada más**. Es la única pieza que Safari no
-relee después, y el icono —que sí necesita el backend y el `username`— puede fallar sin arrastrar
-al nombre consigo. Tenerlo al revés dejaba el nombre sin poner cuando el build no traía
-`VITE_API_URL` sustituido.
+**Por eso arriba no hay `<link rel="manifest">` escrito.** Se comprobó en un iPhone: el script
+reescribía `apple-mobile-web-app-title` durante el parseo y aun así «Agregar a Inicio» seguía
+proponiendo «Piddet», que es el `short_name` del manifest estático. Si Safari usara la meta habría
+funcionado; luego usa el manifest, y lo toma del `<link>` que ya se había parseado 40 líneas antes
+del script. Insertándolo desde el script, el primer y único manifest que el navegador llega a ver
+es el de la compañía.
+
+Sin sesión (login) o en una página pública, el script inserta el manifest estático de Piddet: la
+app sigue siendo instalable, con la identidad de la plataforma.
 
 
 Aplicarla más tarde —desde un efecto de React, por ejemplo— llega tarde en ambas: el diálogo
