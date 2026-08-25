@@ -188,42 +188,51 @@ Entrypoint: `index.html` → `src/main.jsx`. Variable de entorno: `VITE_API_URL`
 
 ## PWA (instalable en Android/iOS)
 
-El panel se instala como aplicación desde Chrome ("Instalar app" / "Agregar a pantalla de
-inicio") y se abre a pantalla completa, sin barra del navegador (`display: standalone`; en iOS
-además `apple-mobile-web-app-status-bar-style: black-translucent`, que pinta la app borde a
-borde con la hora sobre el propio fondo). Piezas:
+El panel se instala como aplicación desde Chrome ("Instalar app") o desde el menú *Compartir* de
+Safari ("Agregar a Inicio") y se abre a pantalla completa, sin barra del navegador
+(`display: standalone`; en iOS además `apple-mobile-web-app-status-bar-style: black-translucent`,
+que pinta la app borde a borde con la hora sobre el propio fondo).
+
+Instalada con sesión iniciada, toma el **nombre y el icono de la compañía activa**. Piezas:
 
 | Archivo | Rol |
 |---|---|
-| `public/manifest.webmanifest` | Identidad de la app **por defecto** (sin sesión): `id`/`start_url`/`scope` = `/admin/`, iconos 192/384/512 + `maskable`, colores de splash. |
-| `public/sw.js` | Service worker: red primero para el shell del panel, caché para assets con hash e iconos; nunca cachea `/api` ni otros orígenes. Requisito de Chrome para ofrecer la instalación. |
-| `src/lib/pwa.js` | `registerServiceWorker()` (solo en build de producción) y `useInstallPrompt()`, que alimenta el botón "Instalar app" del pie del menú lateral (escritorio) y de la pantalla «Más» (móvil). |
-| `src/lib/brand/applyCompanyPwa.js` | Identidad instalable **por compañía**: reescribe el `<link rel="manifest">` (blob con rutas absolutas), las metas/iconos `apple-*` y el `<title>` con el nombre de la compañía activa. Se restaura la identidad Piddet al cerrar sesión. |
-| `src/lib/brand/companyAppIcon.js` | Dibujo del icono en canvas: fondo plano con el color de marca (`brand_primary`) y, encima, el logo de la compañía (`company.icon`) sobre una placa blanca; sin logo, la inicial del nombre en blanco. Variantes `any` (esquinas redondeadas) y `maskable` (a sangre, contenido en la zona segura de Android). |
+| `public/manifest.webmanifest` | Identidad por defecto (sin sesión): iconos y colores de Piddet. |
+| `public/sw.js` | Service worker: red primero para el shell, caché para assets con hash e iconos; nunca cachea `/api` ni otros orígenes. Requisito de Chrome para ofrecer la instalación. |
+| `src/lib/pwa.js` | `registerServiceWorker()` y `useInstallPrompt()`, que alimenta el botón "Instalar app". |
+| **Script en línea al final del `<head>`** (`index.html`) | Nombre, `<title>` y `apple-touch-icon` de la compañía, durante el parseo del documento. Es la ruta crítica de iOS. |
+| `src/lib/brand/applyCompanyPwa.js` | Publica el manifest (blob) con el nombre y los iconos de la compañía, y reaplica la identidad al cambiar de compañía o guardar el perfil. |
+| **backend** `GET /public/{compañía}/app-icon-{tamaño}.png` | Sirve el icono ya compuesto: logo de la compañía sobre su color de marca, o la inicial del nombre. |
 
-Quien instala con sesión iniciada se lleva a la pantalla de inicio el nombre y el icono de su
-compañía; la identidad instalada es la del momento de instalar (Android congela el manifest de
-ese instante e iOS lee las metas al abrir "Agregar a inicio"). El `id` del manifest no cambia
-por compañía: es la misma app instalada aunque se cambie de compañía activa después.
+### Por qué el icono lo sirve el backend
 
-### El momento importa: dos pasadas
+**iOS no acepta un `data:` URI como `apple-touch-icon`.** Dibujar el icono en un canvas y colgarlo
+del documento funciona en Android y deja a iOS con el icono genérico, que fue exactamente el
+síntoma reportado. Por eso los iconos son URLs reales servidas por la API
+(`backend-piddet`: `PublicCompanyAppController` + `AppIconRenderer`), y el panel solo construye
+esas URLs. Llevan un `v` derivado del logo y el color, para que cambiar cualquiera de los dos
+estrene URL en vez de dejar servido el icono anterior desde la caché del teléfono.
 
-Chrome congela nombre e icono del diálogo de instalación en el evento `beforeinstallprompt`, que
-dispara en cuanto el service worker queda registrado. Aplicar la identidad más tarde —desde un
-efecto de React, por ejemplo— llega **tarde**: el diálogo sigue proponiendo «Piddet» aunque el
-manifest ya sea el de la compañía. Por eso hay dos entradas:
+El **manifest**, en cambio, sigue siendo un blob local: su `scope` y su `start_url` deben ser del
+mismo origen que él, y la API puede estar en otro. En modo demo (sin `VITE_API_URL`) se aplica el
+nombre de la compañía pero rigen los iconos de Piddet.
 
-| Pasada | Dónde | Qué hace |
+### El momento importa, y por partida doble
+
+| Plataforma | Cuándo fija la identidad | Quién la pone a tiempo |
 |---|---|---|
-| `applyStoredCompanyPwa()` | **Síncrona**, primera línea de `main.jsx`, antes de `registerServiceWorker()` | Lee la compañía de la sesión guardada (`readSession`) y publica la identidad antes de que el navegador mire nada. Solo actúa bajo `/admin` (las páginas públicas fijan su propio título). |
-| `applyCompanyPwa(company)` | Asíncrona, mismo efecto de `App.jsx` que `applyCompanyBrand` | Espera al logo (imagen remota) y publica el icono definitivo. Reacciona además al cambio de compañía y al guardado del perfil. |
+| Chrome / Android | En `beforeinstallprompt`, que dispara al registrarse el service worker | `applyStoredCompanyPwa()`, primera línea de `main.jsx`, **antes** de `registerServiceWorker()` |
+| Safari / iOS | Al cargar el documento, antes de que corra el bundle | El **script en línea** del `<head>`, durante el parseo |
 
-El logo no se puede cargar de forma síncrona, así que los iconos compuestos se cachean en
-`localStorage` (`piddet_pwa_icons`, ~110 KB, con clave id+nombre+color+logo): la primera visita
-instala el icono de inicial y desde la segunda la pasada síncrona ya publica el definitivo, con
-**un solo manifest por carga**. El fondo del icono es plano y no degradado porque el PNG comprime
-unas cinco veces mejor (51 KB frente a 253 KB a 512 px) y esos bytes viajan como data URL dentro
-del manifest. El caché se borra al cerrar sesión.
+Aplicarla más tarde —desde un efecto de React, por ejemplo— llega tarde en ambas: el diálogo
+sigue proponiendo «Piddet» aunque el manifest ya sea el de la compañía. El script en línea repite
+a propósito la lectura de la sesión de `src/lib/auth/storage.js` para no arrastrar el bundle hasta
+el `<head>`, y anota el título original en `document.documentElement.dataset.defaultTitle` para
+que el módulo pueda restaurarlo al cerrar sesión.
+
+La identidad instalada es la del **momento de instalar**: cambiar de compañía activa después no
+renombra el acceso ya creado. El `id` del manifest no cambia por compañía, así que es la misma app
+instalada.
 
 Requisitos de despliegue: **HTTPS** y que `/manifest.webmanifest` y `/sw.js` se sirvan desde la
 raíz del dominio (el scope del worker debe cubrir `/admin/`). Instalada de verdad —no como acceso
