@@ -190,8 +190,7 @@ Entrypoint: `index.html` → `src/main.jsx`. Variable de entorno: `VITE_API_URL`
 
 El panel se instala como aplicación desde Chrome ("Instalar app") o desde el menú *Compartir* de
 Safari ("Agregar a Inicio") y se abre a pantalla completa, sin barra del navegador
-(`display: standalone`; en iOS además `apple-mobile-web-app-status-bar-style: black-translucent`,
-que pinta la app borde a borde con la hora sobre el propio fondo).
+(`display: standalone`).
 
 Instalada con sesión iniciada, toma el **nombre y el icono de la compañía activa**, que se
 configuran en el perfil de empresa (sección *Logo*):
@@ -267,6 +266,20 @@ directo—, Android la lista entre las apps y permite desinstalarla desde el pro
 
 El CSS reserva los recortes de pantalla (`env(safe-area-inset-*)` en topbar, dock y
 contenido) y usa `100dvh`, porque a pantalla completa el sistema dibuja sobre la app.
+
+### `apple-mobile-web-app-status-bar-style`: dejar en `default`
+
+**No lo cambies a `black-translucent`.** Es tentador porque hace que la app pinte bajo la barra de
+estado, pero en la app instalada deja el viewport de maquetación ~47 px más corto que la pantalla:
+el dock va fijo a `bottom: 0`, queda anclado por encima del borde real y debajo asoma una franja
+de `--bg-body`. Medido en un iPhone 12/13/14 (390×844): el último texto del dock caía en 752 px y
+quedaban **91 px** en blanco, cuando lo correcto son ~37 (34 del indicador de inicio + el padding
+propio del dock).
+
+Con `default` la app sigue siendo pantalla completa —standalone, sin barra del navegador—, la
+barra de estado la dibuja el sistema y el viewport coincide con la pantalla. Ojo: **iOS fija este
+estilo al instalar**, así que para ver el cambio hay que quitar la app de la pantalla de inicio y
+volver a agregarla.
 
 ## Documentación Existente
 

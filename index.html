@@ -14,10 +14,17 @@
     <meta name="theme-color" content="#fbfbfc" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <!-- black-translucent: instalada en iOS la app pinta borde a borde (toda la pantalla, con la
-         hora sobre el propio fondo). Activa los env(safe-area-inset-*) que el CSS ya reserva en
-         topbar, dock, login y wizards; con "default" iOS meta una barra opaca del sistema. -->
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <!-- NO poner `black-translucent` aquí. Es tentador porque hace que la app pinte bajo la barra
+         de estado, pero en la app instalada deja el viewport de maquetación ~47 px más corto que
+         la pantalla: el dock, que va fijo a `bottom: 0`, queda anclado por encima del borde real
+         y debajo asoma una franja de --bg-body. Medido en un iPhone 12/13/14 (390x844): el último
+         texto del dock caía en 752 px y quedaban 91 px en blanco, cuando lo correcto son ~37
+         (34 del indicador de inicio + el padding propio).
+         Con `default` la app sigue siendo pantalla completa —standalone, sin barra del
+         navegador—, la barra de estado la dibuja el sistema y el viewport coincide con la
+         pantalla. Los env(safe-area-inset-*) siguen haciendo falta: arriba valen 0 en la app
+         instalada, pero no en Safari con notch, y abajo cubren el indicador de inicio. -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Piddet" />
     <meta name="application-name" content="Piddet" />
     <title>Piddet · Panel de administración</title>
