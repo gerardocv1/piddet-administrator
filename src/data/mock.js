@@ -436,7 +436,7 @@ export const mockMenuItems = [
 // el panel muestra Productos (y sus categorías), Menús y Usuarios; el resto queda oculto.
 const mockPermissions = {
   roles: ['Administrador'],
-  permissions: ['user-administrator', 'admin-general', 'role-list', 'role-create', 'role-update', 'role-delete', 'role-assign', 'permission-list', 'permission-update', 'api-module-menus', 'api-module-products', 'api-module-company', 'company-edit-functionalities', 'api-module-stores', 'table-list', 'table-create', 'table-update', 'api-module-orders', 'sales-report', 'order-cancel', 'order-sync-failure-admin', 'api-module-expenses', 'expenses-report', 'expense-annul', 'api-module-shifts', 'shift-global-admin', 'api-module-reservations', 'api-module-rentable-units', 'reservation-checkout', 'reservation-cancel', 'reservation-payment-annul', 'api-module-gym', 'api-module-gym-plans', 'gym-plans-create', 'gym-plans-edit', 'gym-members-create', 'gym-members-edit', 'gym-subscriptions-create', 'gym-subscriptions-cancel', 'gym-payments-create', 'gym-payments-annul', 'gym-checkins-create', 'gym-checkins-edit', 'gym-measurement-config', 'company-catalog-purge'],
+  permissions: ['user-administrator', 'admin-general', 'role-list', 'role-create', 'role-update', 'role-delete', 'role-assign', 'permission-list', 'permission-update', 'api-module-menus', 'api-module-products', 'api-module-company', 'company-edit-functionalities', 'api-module-stores', 'table-list', 'table-create', 'table-update', 'api-module-orders', 'sales-report', 'order-cancel', 'order-sync-failure-admin', 'api-module-expenses', 'expenses-report', 'expense-annul', 'api-module-shifts', 'shift-global-admin', 'api-module-reservations', 'api-module-rentable-units', 'reservation-checkout', 'reservation-cancel', 'reservation-payment-annul', 'api-module-gym', 'api-module-gym-plans', 'gym-plans-create', 'gym-plans-edit', 'gym-members-create', 'gym-members-edit', 'gym-subscriptions-create', 'gym-subscriptions-cancel', 'gym-payments-create', 'gym-payments-annul', 'gym-checkins-create', 'gym-checkins-edit', 'gym-measurement-config', 'company-catalog-purge', 'company-master'],
 };
 
 // Empresa (tenant) activa y empresas disponibles para el usuario (SaaS multi-tenant).
@@ -465,6 +465,16 @@ export const mockCompanies = [
   { id: 'pid-003', name: 'Antojitos S.A.', plan: 'Pro', tiendas: 7, status: 1 },
   // Inactiva: el backend no la lista en /auth/me/companies (el selector solo muestra activas).
   { id: 'pid-004', name: 'Sabores del Ayer', plan: 'Básico', tiendas: 0, status: 0 },
+];
+
+// Catálogo MAESTRO de plataforma: TODAS las compañías (no solo las del usuario demo). Alimenta
+// /admin/companies (permiso `company-master`). Independiente de `mockCompanies` (selector del
+// usuario) para no acoplar ambos listados.
+const mockPlatformCompanies = [
+  { id: 'pid-001', name: 'Grupo Sabor', username: 'grupo_sabor', code: 'GRUPOSABOR', status: true, company_type_name: 'Restaurante' },
+  { id: 'pid-002', name: 'Cocinas del Norte', username: 'cocinas_del_norte', code: 'COCINASDELN2', status: true, company_type_name: 'Restaurante' },
+  { id: 'pid-003', name: 'Antojitos S.A.', username: 'antojitos_sa', code: 'ANTOJITOSSA3', status: true, company_type_name: null },
+  { id: 'pid-004', name: 'Sabores del Ayer', username: 'sabores_del_ayer', code: 'SABORESDELA4', status: false, company_type_name: 'Restaurante' },
 ];
 
 // Tokens de agentes de IA de la compañía (el listado nunca incluye el token completo).
@@ -4534,6 +4544,125 @@ function resolveMenuImportsMock(path, query, { method = 'GET', body } = {}) {
   return undefined;
 }
 
+// Pertenencia usuario ↔ compañía en la administración maestra (en el backend, company_users).
+const mockPlatformMemberships = {
+  'pid-001': [1, 2, 3],
+  'pid-002': [1, 4],
+  'pid-003': [5],
+  'pid-004': [],
+};
+
+const platformUserOut = (user) => ({
+  id: user.id, name: user.name, first_name: user.first_name, last_name: user.last_name,
+  email: user.email, phone_code: user.phone_code, phone_number: user.phone_number,
+});
+
+// Administración MAESTRA de compañías (company-scoped en la URL solo por el chequeo de permiso;
+// los datos son de TODA la plataforma):
+//   /companies/{company}/master/users/search
+//   /companies/{company}/master/companies[/{id}][/status | /users[/search|/assignable-roles|/{userId}]]
+function resolveMasterCompaniesMock(path, query, opts = {}) {
+  const { method = 'GET', body } = opts;
+
+  // Búsqueda global para el alta de compañías (aún no hay compañía destino).
+  if (/^\/companies\/[^/]+\/master\/users\/search$/.test(path)) {
+    const user = mockUsers.find((u) => u.phone_number === (query.get('phone') || ''));
+    return user ? { exists: true, linked: false, user: platformUserOut(user) } : { exists: false, linked: false, user: null };
+  }
+
+  const m = path.match(/^\/companies\/[^/]+\/master\/companies(?:\/([^/]+))?(\/.*)?$/);
+  if (!m) return undefined;
+  const companyId = m[1];
+  const sub = m[2] || '';
+
+  // Colección: listado y alta.
+  if (!companyId) {
+    if (method === 'POST') {
+      const row = {
+        id: `pid-${String(mockPlatformCompanies.length + 1).padStart(3, '0')}`,
+        name: body?.name,
+        username: body?.username,
+        code: String(body?.username || 'empresa').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 16),
+        status: true,
+        company_type_name: null,
+      };
+      mockPlatformCompanies.push(row);
+      // Como el backend, el administrador queda vinculado desde el alta.
+      mockPlatformMemberships[row.id] = body?.user_id ? [body.user_id] : [];
+      return row;
+    }
+
+    return mockPaginate(mockPlatformCompanies.filter((c) => {
+      const status = query.get('status');
+      if (status !== null && status !== '' && Boolean(Number(status)) !== c.status) return false;
+      const term = (query.get('_search') || '').toLowerCase();
+      if (!term) return true;
+      return c.name.toLowerCase().includes(term) || c.username.toLowerCase().includes(term) || c.code.toLowerCase().includes(term);
+    }), query);
+  }
+
+  const company = mockPlatformCompanies.find((c) => String(c.id) === companyId);
+  if (!company) return null;
+  if (!mockPlatformMemberships[company.id]) mockPlatformMemberships[company.id] = [];
+  const members = mockPlatformMemberships[company.id];
+
+  if (sub === '/status' && method === 'PATCH') {
+    company.status = !!body?.status;
+    // El resolver no puede devolver null en éxito: el cliente mock lo lee como "sin datos".
+    return { ok: true };
+  }
+
+  if (sub === '/users/assignable-roles') return mockAssignableRoles();
+
+  if (sub === '/users/search') {
+    const user = mockUsers.find((u) => u.phone_number === (query.get('phone') || ''));
+    if (!user) return { exists: false, linked: false, user: null };
+    return { exists: true, linked: members.includes(user.id), user: platformUserOut(user) };
+  }
+
+  if (sub === '/users') {
+    if (method === 'POST') {
+      let userId = body?.user_id;
+      if (!userId) {
+        const created = {
+          id: nextId(mockUsers),
+          first_name: body?.first_name || 'Usuario',
+          last_name: body?.last_name || '',
+          name: `${body?.first_name || 'Usuario'} ${body?.last_name || ''}`.trim(),
+          email: body?.email || null,
+          phone_code: body?.phone_code || '57',
+          phone_number: body?.phone_number || '',
+          status: true, roles: [], direct_permissions: [], user_type_id: Number(body?.user_type_id) || 2,
+        };
+        mockUsers.push(created);
+        userId = created.id;
+      }
+      if (!members.includes(userId)) members.push(userId);
+      const user = mockUsers.find((u) => u.id === userId);
+      if (user && body?.roles?.length) {
+        user.roles = body.roles
+          .map((n) => mockRoles.find((r) => r.name === n))
+          .filter(Boolean)
+          .map((r) => ({ name: r.name, label: r.label }));
+      }
+      return user;
+    }
+
+    return mockPaginate(members.map((id) => mockUsers.find((u) => u.id === id)).filter(Boolean), query);
+  }
+
+  const removeMatch = sub.match(/^\/users\/(\d+)$/);
+  if (removeMatch && method === 'DELETE') {
+    const idx = members.indexOf(Number(removeMatch[1]));
+    if (idx >= 0) members.splice(idx, 1);
+    return { ok: true };
+  }
+
+  if (sub === '') return company;
+
+  return undefined;
+}
+
 export function resolveMock(rawPath, opts = {}) {
   const [path, qs = ''] = rawPath.split('?');
   const query = new URLSearchParams(qs);
@@ -4591,6 +4720,10 @@ export function resolveMock(rawPath, opts = {}) {
   // Carta pública (sin sesión): /public/{company}/m/{menuUsername}
   const publicMenu = resolvePublicMenuMock(path);
   if (publicMenu !== undefined) return publicMenu;
+
+  // Administración maestra de compañías (plataforma): /companies/{company}/master/companies…
+  const masterCompanies = resolveMasterCompaniesMock(path, query, opts);
+  if (masterCompanies !== undefined) return masterCompanies;
 
   // Módulo de menús (company-scoped: /companies/{company}/menus, con categorías e ítems anidados…)
   const menu = resolveMenuMock(path, query, opts);

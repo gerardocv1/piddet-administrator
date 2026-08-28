@@ -117,6 +117,9 @@ export const MODULE_GROUPS = [
         children: [
           { to: '/stores', label: 'Tiendas', icon: 'fas fa-store', perm: 'api-module-stores' },
           { to: '/admin/product-categories', label: 'Categorías globales', icon: 'fas fa-tags', perm: 'item-category-master' },
+          // Alta de compañías nuevas y activar/inactivar cualquiera: permiso de PLATAFORMA,
+          // solo super-admin (igual que item-category-master).
+          { to: '/admin/companies', label: 'Compañías', icon: 'fas fa-building', perm: 'company-master' },
           // Soporte: fallos del POS al sincronizar órdenes; el detalle (/sync-failures/:reportId) reusa este permiso.
           { to: '/sync-failures', label: 'Fallos de órdenes', icon: 'fas fa-triangle-exclamation', perm: 'order-sync-failure-admin' },
         ],

@@ -1,0 +1,45 @@
+.search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  height: 36px;
+  background: var(--surface-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  min-width: 220px;
+}
+.search i { color: var(--gray-400); font-size: var(--text-sm); }
+.search input {
+  border: none;
+  background: none;
+  outline: none;
+  font-size: var(--text-base);
+  color: var(--text-body);
+  width: 100%;
+}
+
+.name { display: flex; flex-direction: column; gap: 2px; }
+.username {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: var(--text-sm);
+  color: var(--gray-500);
+}
+
+.sectionTitle { font-size: var(--text-sm); font-weight: 700; color: var(--text-strong); }
+
+.roles { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+
+/* ── Detalle de compañía ── */
+.detailHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.detailInfo { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.detailName { margin: 0; font-size: var(--text-xl); color: var(--text-strong); }
+.detailMeta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.detailStatus { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.detailHint { margin: 14px 0 0; color: var(--gray-500); font-size: var(--text-sm); }

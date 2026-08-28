@@ -8,6 +8,8 @@ import { Products } from './screens/Products.jsx';
 import { ProductDetail } from './screens/ProductDetail.jsx';
 import { ProductCategories } from './screens/ProductCategories.jsx';
 import { AdminProductCategories } from './screens/AdminProductCategories.jsx';
+import { AdminCompanies } from './screens/AdminCompanies.jsx';
+import { AdminCompanyDetail } from './screens/AdminCompanyDetail.jsx';
 import { Tables } from './screens/Tables.jsx';
 import { Menus } from './screens/Menus.jsx';
 import { MenuDetail } from './screens/MenuDetail.jsx';
@@ -219,6 +221,8 @@ function AdminApp() {
             <Route path="products/:itemId" element={<RequirePermission path="/products"><ProductDetail /></RequirePermission>} />
             <Route path="product-categories" element={<RequirePermission path="/product-categories"><ProductCategories /></RequirePermission>} />
             <Route path="admin/product-categories" element={<RequirePermission path="/admin/product-categories"><AdminProductCategories /></RequirePermission>} />
+            <Route path="admin/companies" element={<RequirePermission path="/admin/companies"><AdminCompanies /></RequirePermission>} />
+            <Route path="admin/companies/:companyId" element={<RequirePermission path="/admin/companies"><AdminCompanyDetail /></RequirePermission>} />
             <Route path="menus" element={<RequirePermission path="/menus"><Menus /></RequirePermission>} />
             <Route path="menus/import" element={<RequirePermission path="/menus"><MenuImportWizard /></RequirePermission>} />
             <Route path="menus/import/:importId" element={<RequirePermission path="/menus"><MenuImportWizard /></RequirePermission>} />

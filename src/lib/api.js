@@ -21,6 +21,7 @@ import { metricsService } from './services/metrics.js';
 import { itemsService } from './services/items.js';
 import { itemCategoriesService } from './services/itemCategories.js';
 import { masterItemCategoriesService } from './services/masterItemCategories.js';
+import { masterCompaniesService } from './services/masterCompanies.js';
 import { itemTypesService } from './services/itemTypes.js';
 import { itemOptionsService } from './services/itemOptions.js';
 import { taxesService } from './services/taxes.js';
@@ -53,6 +54,7 @@ export const api = {
   ...itemsService,
   ...itemCategoriesService,
   ...masterItemCategoriesService,
+  ...masterCompaniesService,
   ...itemTypesService,
   ...itemOptionsService,
   ...taxesService,
