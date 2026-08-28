@@ -185,28 +185,60 @@ export function MenuImportWizard() {
   const totalProducts = categories.reduce((sum, c) => sum + c.products.length, 0);
   const usableCategories = categories.filter((c) => c.products.length > 0);
 
-  // Precio y categoría los exige el backend para crear el producto (items.value e
-  // item_category_id son NOT NULL): el agente puede dejarlos vacíos cuando no está seguro
-  // (needs_review), así que hay que completarlos aquí antes de poder continuar.
+  // Todo lo que exige el backend para crear el producto debe quedar completo aquí: el agente
+  // puede dejar precio o categoría vacíos cuando no está seguro (needs_review), y el usuario
+  // puede vaciar cualquier campo al editar. Se bloquea Continuar/Confirmar en vez de descubrirlo
+  // como un 422 en el confirm.
   const productHasPrice = (p) => p.price !== '' && p.price != null;
   const productHasCategory = (p) => p.item_category_id !== '' && p.item_category_id != null;
+  const productHasName = (p) => p.name.trim() !== '';
+  const productHasDescription = (p) => p.description.trim() !== '';
+  const productIsComplete = (p) => productHasPrice(p) && productHasCategory(p) && productHasName(p) && productHasDescription(p);
   const invalidProducts = usableCategories.flatMap((c) => c.products
-    .filter((p) => !productHasPrice(p) || !productHasCategory(p))
+    .filter((p) => !productIsComplete(p))
     .map((p) => ({ product: p, category: c })));
-  const canContinue = totalProducts > 0 && usableCategories.length > 0 && invalidProducts.length === 0;
+  const unnamedCategories = usableCategories.filter((c) => !c.name.trim()).length;
+  // Con la funcionalidad de impuestos activa, tax_family_id es obligatorio por producto en el
+  // backend (igual que en el formulario manual de ItemFormModal): hay que elegir uno.
+  const missingTax = taxesOn && !defaultTaxId;
+  const missingItems = [
+    !menuName.trim() && 'el nombre de la carta',
+    invalidProducts.length > 0 && `${invalidProducts.length} producto(s) sin precio, categoría, nombre o descripción`,
+    unnamedCategories > 0 && `${unnamedCategories} categoría(s) sin nombre`,
+    missingTax && 'el impuesto para los productos',
+  ].filter(Boolean);
+  const canContinue = totalProducts > 0 && usableCategories.length > 0 && missingItems.length === 0;
 
   // Traduce el error de validación del backend (rutas tipo categories.1.products.0.price) a
   // los nombres reales del producto y la categoría, si vino estructurado; si no, el mensaje tal cual.
   const describeConfirmError = (e) => {
+    const fallback = e?.message || 'No se pudo confirmar la importación.';
     const fieldErrors = e?.errors && typeof e.errors === 'object' ? Object.keys(e.errors) : [];
-    const match = fieldErrors[0]?.match(/^categories\.(\d+)\.products\.(\d+)\.(\w+)$/);
-    if (!match) return e?.message || 'No se pudo confirmar la importación.';
-    const [, ci, pi, field] = match;
-    const cat = usableCategories[Number(ci)];
-    const prod = cat?.products?.[Number(pi)];
-    const fieldLabel = { price: 'el precio', item_category_id: 'la categoría', name: 'el nombre', description: 'la descripción' }[field] || field;
-    if (!prod) return e?.message || 'No se pudo confirmar la importación.';
-    return `Falta ${fieldLabel} de "${prod.name}" (categoría "${cat.name}").`;
+    const first = fieldErrors[0];
+    if (!first) return fallback;
+
+    const fieldLabel = (field) => ({
+      price: 'el precio', item_category_id: 'la categoría', name: 'el nombre',
+      description: 'la descripción', tax_family_id: 'el impuesto',
+    }[field] || `el campo ${field}`);
+
+    const productMatch = first.match(/^categories\.(\d+)\.products\.(\d+)\.(\w+)$/);
+    if (productMatch) {
+      const [, ci, pi, field] = productMatch;
+      const cat = usableCategories[Number(ci)];
+      const prod = cat?.products?.[Number(pi)];
+      if (!prod) return fallback;
+      return `Revisa ${fieldLabel(field)} de "${prod.name}" (categoría "${cat.name}").`;
+    }
+
+    const categoryMatch = first.match(/^categories\.(\d+)\.(\w+)$/);
+    if (categoryMatch) {
+      const cat = usableCategories[Number(categoryMatch[1])];
+      return cat ? `Revisa ${fieldLabel(categoryMatch[2])} de la categoría "${cat.name || 'sin nombre'}".` : fallback;
+    }
+
+    if (first === 'menu_name') return 'Revisa el nombre de la carta.';
+    return fallback;
   };
 
   // ---- Paso 4: confirmar ----
@@ -331,11 +363,9 @@ export function MenuImportWizard() {
               </Alert>
             )}
 
-            {invalidProducts.length > 0 && (
+            {missingItems.length > 0 && (
               <Alert tone="danger" title="Faltan datos obligatorios">
-                {invalidProducts.length === 1
-                  ? 'Un producto no tiene precio y/o categoría. Complétalo para poder continuar.'
-                  : `${invalidProducts.length} productos no tienen precio y/o categoría. Complétalos para poder continuar.`}
+                Completa para poder continuar: {missingItems.join(', ')}.
               </Alert>
             )}
 
@@ -346,7 +376,7 @@ export function MenuImportWizard() {
             {taxesOn && (
               <Select label="Impuesto para todos los productos" icon="fas fa-percent"
                 value={defaultTaxId} onChange={(e) => setDefaultTaxId(e.target.value)}
-                options={[{ value: '', label: 'Sin impuesto' }, ...taxes.map((tx) => ({ value: String(tx.id), label: tx.name }))]} />
+                options={[{ value: '', label: 'Selecciona un impuesto' }, ...taxes.map((tx) => ({ value: String(tx.id), label: tx.name }))]} />
             )}
 
             {categories.map((cat) => (
@@ -364,6 +394,12 @@ export function MenuImportWizard() {
                         )}
                         {!productHasCategory(prod) && (
                           <Badge variant="danger"><i className="fas fa-circle-exclamation" /> Falta categoría</Badge>
+                        )}
+                        {!productHasName(prod) && (
+                          <Badge variant="danger"><i className="fas fa-circle-exclamation" /> Falta nombre</Badge>
+                        )}
+                        {!productHasDescription(prod) && (
+                          <Badge variant="danger"><i className="fas fa-circle-exclamation" /> Falta descripción</Badge>
                         )}
                         {prod.needs_review && (
                           <Badge variant="warning"><i className="fas fa-triangle-exclamation" /> Revisar</Badge>
@@ -429,7 +465,7 @@ export function MenuImportWizard() {
             <>
               <Button variant="secondary" onClick={() => navigate('/menus')}>Cancelar</Button>
               <Button variant="primary" icon="fas fa-arrow-right" disabled={!canContinue}
-                title={invalidProducts.length > 0 ? `Faltan datos en ${invalidProducts.length} producto(s)` : undefined}
+                title={missingItems.length > 0 ? `Falta: ${missingItems.join(', ')}` : undefined}
                 onClick={() => setStep(4)}>
                 Continuar
               </Button>
