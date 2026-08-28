@@ -185,9 +185,33 @@ export function MenuImportWizard() {
   const totalProducts = categories.reduce((sum, c) => sum + c.products.length, 0);
   const usableCategories = categories.filter((c) => c.products.length > 0);
 
+  // Precio y categoría los exige el backend para crear el producto (items.value e
+  // item_category_id son NOT NULL): el agente puede dejarlos vacíos cuando no está seguro
+  // (needs_review), así que hay que completarlos aquí antes de poder continuar.
+  const productHasPrice = (p) => p.price !== '' && p.price != null;
+  const productHasCategory = (p) => p.item_category_id !== '' && p.item_category_id != null;
+  const invalidProducts = usableCategories.flatMap((c) => c.products
+    .filter((p) => !productHasPrice(p) || !productHasCategory(p))
+    .map((p) => ({ product: p, category: c })));
+  const canContinue = totalProducts > 0 && usableCategories.length > 0 && invalidProducts.length === 0;
+
+  // Traduce el error de validación del backend (rutas tipo categories.1.products.0.price) a
+  // los nombres reales del producto y la categoría, si vino estructurado; si no, el mensaje tal cual.
+  const describeConfirmError = (e) => {
+    const fieldErrors = e?.errors && typeof e.errors === 'object' ? Object.keys(e.errors) : [];
+    const match = fieldErrors[0]?.match(/^categories\.(\d+)\.products\.(\d+)\.(\w+)$/);
+    if (!match) return e?.message || 'No se pudo confirmar la importación.';
+    const [, ci, pi, field] = match;
+    const cat = usableCategories[Number(ci)];
+    const prod = cat?.products?.[Number(pi)];
+    const fieldLabel = { price: 'el precio', item_category_id: 'la categoría', name: 'el nombre', description: 'la descripción' }[field] || field;
+    if (!prod) return e?.message || 'No se pudo confirmar la importación.';
+    return `Falta ${fieldLabel} de "${prod.name}" (categoría "${cat.name}").`;
+  };
+
   // ---- Paso 4: confirmar ----
   const submitConfirm = async () => {
-    if (confirming || !importId) return;
+    if (confirming || !importId || !canContinue) return;
     setConfirming(true);
     setConfirmError(null);
     try {
@@ -209,7 +233,7 @@ export function MenuImportWizard() {
       toast({ tone: 'success', title: 'Carta creada desde las fotos' });
       navigate(`/menus/${created_menu_id}`);
     } catch (e) {
-      setConfirmError(e?.message || 'No se pudo confirmar la importación.');
+      setConfirmError(describeConfirmError(e));
     } finally {
       setConfirming(false);
     }
@@ -307,6 +331,14 @@ export function MenuImportWizard() {
               </Alert>
             )}
 
+            {invalidProducts.length > 0 && (
+              <Alert tone="danger" title="Faltan datos obligatorios">
+                {invalidProducts.length === 1
+                  ? 'Un producto no tiene precio y/o categoría. Complétalo para poder continuar.'
+                  : `${invalidProducts.length} productos no tienen precio y/o categoría. Complétalos para poder continuar.`}
+              </Alert>
+            )}
+
             <Input label="Nombre de la carta" icon="fas fa-book-open" value={menuName}
               onChange={(e) => setMenuName(e.target.value)}
               hint={agentMenuName && agentMenuName !== menuName ? `La IA detectó: "${agentMenuName}"` : undefined} />
@@ -327,6 +359,12 @@ export function MenuImportWizard() {
                   <div key={prod.key} className={t.productCard}>
                     <div className={t.productTop}>
                       <div className={t.productBadges}>
+                        {!productHasPrice(prod) && (
+                          <Badge variant="danger"><i className="fas fa-circle-exclamation" /> Falta precio</Badge>
+                        )}
+                        {!productHasCategory(prod) && (
+                          <Badge variant="danger"><i className="fas fa-circle-exclamation" /> Falta categoría</Badge>
+                        )}
                         {prod.needs_review && (
                           <Badge variant="warning"><i className="fas fa-triangle-exclamation" /> Revisar</Badge>
                         )}
@@ -390,7 +428,8 @@ export function MenuImportWizard() {
           {step === 3 && (
             <>
               <Button variant="secondary" onClick={() => navigate('/menus')}>Cancelar</Button>
-              <Button variant="primary" icon="fas fa-arrow-right" disabled={totalProducts === 0 || usableCategories.length === 0}
+              <Button variant="primary" icon="fas fa-arrow-right" disabled={!canContinue}
+                title={invalidProducts.length > 0 ? `Faltan datos en ${invalidProducts.length} producto(s)` : undefined}
                 onClick={() => setStep(4)}>
                 Continuar
               </Button>
@@ -399,7 +438,7 @@ export function MenuImportWizard() {
           {step === 4 && (
             <>
               <Button variant="secondary" onClick={() => setStep(3)} disabled={confirming}>Atrás</Button>
-              <Button variant="primary" icon="fas fa-check" loading={confirming} onClick={submitConfirm}>
+              <Button variant="primary" icon="fas fa-check" loading={confirming} disabled={!canContinue} onClick={submitConfirm}>
                 Confirmar y crear
               </Button>
             </>
