@@ -132,7 +132,9 @@ export function ProductDetail() {
           <button type="button" className={t.heroImage} onClick={() => setPhoto(true)} title="Cambiar foto" aria-label="Cambiar foto">
             {itemImage
               ? <img src={itemImage} alt={item.name} />
-              : <i className="fas fa-burger" aria-hidden="true" />}
+              : item.icon
+                ? <span className={t.heroEmoji} aria-hidden="true">{item.icon}</span>
+                : <i className="fas fa-burger" aria-hidden="true" />}
             <span className={t.heroCam} aria-hidden="true"><i className="fas fa-camera" /></span>
             <span className={t.heroCamHover} aria-hidden="true"><i className="fas fa-camera" /> Cambiar foto</span>
           </button>

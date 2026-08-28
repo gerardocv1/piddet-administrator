@@ -33,4 +33,7 @@ export const itemsService = {
   setItemImage: (id, image) => http.post(`${base()}/items/${id}/image`, { image }),
   // Reorden en lote: { elements: [{ id, position }] }.
   sortItems: (elements) => http.put(`${base()}/items/sort`, { elements }),
+  // Sugerencia en vivo del icono automático, mientras el campo del formulario sigue vacío.
+  iconSuggestion: ({ name, categoryId, typeId }) =>
+    http.get(`${base()}/items/icon-suggestion${qs({ name, item_category_id: categoryId, item_type_id: typeId })}`),
 };

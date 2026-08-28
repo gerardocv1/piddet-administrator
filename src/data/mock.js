@@ -127,12 +127,12 @@ export const mockItemCategories = [
 
 // Productos de la compañía (status: 1 activo, 2 borrador, 3 eliminado).
 export const mockItems = [
-  { id: 1, name: 'Hamburguesa Clásica', code: 'HC-001', value: 18500, file: null, item_type_id: 1, item_category_id: 1, item_status_id: 1, tax_family_id: 1, description: 'Carne 150g, queso y vegetales', position: 0 },
-  { id: 2, name: 'Hamburguesa Doble', code: 'HD-002', value: 26000, file: null, item_type_id: 1, item_category_id: 1, item_status_id: 1, tax_family_id: 1, description: 'Doble carne y doble queso', position: 1 },
-  { id: 3, name: 'Pizza Margarita', code: 'PM-003', value: 32000, file: null, item_type_id: 1, item_category_id: 2, item_status_id: 1, tax_family_id: 1, description: 'Salsa de tomate, mozzarella y albahaca', position: 2 },
-  { id: 4, name: 'Ceviche mixto', code: 'CM-004', value: 28000, file: null, item_type_id: 1, item_category_id: 3, item_status_id: 2, tax_family_id: 3, description: 'Pescado y mariscos', position: 3 },
-  { id: 5, name: 'Brownie con helado', code: 'BH-005', value: 12000, file: null, item_type_id: 1, item_category_id: 4, item_status_id: 1, tax_family_id: 1, description: 'Brownie tibio con helado de vainilla', position: 4 },
-  { id: 6, name: 'Gaseosa 400ml', code: 'GA-006', value: 5000, file: null, item_type_id: 2, item_category_id: 5, item_status_id: 1, tax_family_id: 1, description: 'Bebida gaseosa fría', position: 5 },
+  { id: 1, name: 'Hamburguesa Clásica', code: 'HC-001', value: 18500, file: null, icon: '🍔', item_type_id: 1, item_category_id: 1, item_status_id: 1, tax_family_id: 1, description: 'Carne 150g, queso y vegetales', position: 0 },
+  { id: 2, name: 'Hamburguesa Doble', code: 'HD-002', value: 26000, file: null, icon: '🍔', item_type_id: 1, item_category_id: 1, item_status_id: 1, tax_family_id: 1, description: 'Doble carne y doble queso', position: 1 },
+  { id: 3, name: 'Pizza Margarita', code: 'PM-003', value: 32000, file: null, icon: '🍕', item_type_id: 1, item_category_id: 2, item_status_id: 1, tax_family_id: 1, description: 'Salsa de tomate, mozzarella y albahaca', position: 2 },
+  { id: 4, name: 'Ceviche mixto', code: 'CM-004', value: 28000, file: null, icon: '🦐', item_type_id: 1, item_category_id: 3, item_status_id: 2, tax_family_id: 3, description: 'Pescado y mariscos', position: 3 },
+  { id: 5, name: 'Brownie con helado', code: 'BH-005', value: 12000, file: null, icon: '🍰', item_type_id: 1, item_category_id: 4, item_status_id: 1, tax_family_id: 1, description: 'Brownie tibio con helado de vainilla', position: 4 },
+  { id: 6, name: 'Gaseosa 400ml', code: 'GA-006', value: 5000, file: null, icon: '🥤', item_type_id: 2, item_category_id: 5, item_status_id: 1, tax_family_id: 1, description: 'Bebida gaseosa fría', position: 5 },
 ];
 
 // Grupos de opciones (anidados por ítem). `multiple` = selección múltiple; reglas min/max.
@@ -855,6 +855,34 @@ function resolveItemImage(it) {
   };
 }
 
+// Mini versión del ItemIconResolverImp del backend, solo para el modo demo: alcanza para que el
+// formulario y el listado se vean coherentes sin duplicar el diccionario completo del servidor.
+const MOCK_ICON_NAME_RULES = [
+  ['burguesa', 'hamburg'], 'burguer',
+  ['pizza'], 'pizza',
+  ['gaseosa', 'jugo', 'limonada', 'bebida', 'malteada'], 'drink',
+  ['ceviche', 'camaron', 'mariscos', 'pescado'], 'shrimp',
+  ['brownie', 'torta', 'postre', 'helado'], 'cake',
+].reduce((rules, entry, i, arr) => {
+  if (i % 2 === 0) rules.push({ keys: entry, emoji: { burguer: '🍔', pizza: '🍕', drink: '🥤', shrimp: '🦐', cake: '🍰' }[arr[i + 1]] });
+  return rules;
+}, []);
+
+function mockSuggestIcon(name, categoryId) {
+  const normalized = ` ${(name || '').toLowerCase()} `;
+  const byName = MOCK_ICON_NAME_RULES.find((rule) => rule.keys.some((k) => normalized.includes(k)));
+  if (byName) return { icon: byName.emoji, source: 'name' };
+
+  const category = mockItemCategories.find((c) => c.id === Number(categoryId));
+  if (category) {
+    const catNorm = category.name.toLowerCase();
+    const byCategory = MOCK_ICON_NAME_RULES.find((rule) => rule.keys.some((k) => catNorm.includes(k)));
+    if (byCategory) return { icon: byCategory.emoji, source: 'category' };
+  }
+
+  return { icon: '🍽️', source: 'fallback' };
+}
+
 // Decora un producto con los nombres derivados (como hacen los joins del backend) y la imagen.
 function decorateItem(it) {
   const cat = mockItemCategories.find((c) => c.id === it.item_category_id);
@@ -1054,6 +1082,11 @@ function resolveItemsMock(path, query, { method = 'GET', body } = {}) {
         const b = { ...body };
         ['item_type_id', 'item_category_id', 'tax_family_id'].forEach((k) => { if (b[k] != null && b[k] !== '') b[k] = Number(b[k]); });
         if (b.value != null && b.value !== '') b.value = Number(b.value);
+        // Quitar el icono (null explícito) equivale a "vuelve a automático".
+        if ('icon' in b && b.icon === null) {
+          const merged = { ...mockItems[idx], ...b };
+          b.icon = mockSuggestIcon(merged.name, merged.item_category_id).icon;
+        }
         mockItems[idx] = { ...mockItems[idx], ...b };
       }
       return idx >= 0 ? decorateItem(mockItems[idx]) : null;
@@ -1061,9 +1094,12 @@ function resolveItemsMock(path, query, { method = 'GET', body } = {}) {
     if (method === 'DELETE') { if (idx >= 0) mockItems[idx].item_status_id = 3; return { ok: true }; } // soft-delete
     return idx >= 0 ? decorateItem(mockItems[idx]) : null;
   }
+  if (sub === 'items/icon-suggestion') {
+    return mockSuggestIcon(query.get('name'), query.get('item_category_id'));
+  }
   if (sub === 'items') {
     if (method === 'POST') {
-      const row = { id: nextId(mockItems), name: body.name, code: body.code || null, value: Number(body.value) || 0, file: null, item_type_id: Number(body.item_type_id), item_category_id: Number(body.item_category_id), item_status_id: 1, tax_family_id: body.tax_family_id != null && body.tax_family_id !== '' ? Number(body.tax_family_id) : null, description: body.description || '', position: mockItems.length, reservable: !!body.reservable };
+      const row = { id: nextId(mockItems), name: body.name, code: body.code || null, value: Number(body.value) || 0, file: null, icon: body.icon || mockSuggestIcon(body.name, body.item_category_id).icon, item_type_id: Number(body.item_type_id), item_category_id: Number(body.item_category_id), item_status_id: 1, tax_family_id: body.tax_family_id != null && body.tax_family_id !== '' ? Number(body.tax_family_id) : null, description: body.description || '', position: mockItems.length, reservable: !!body.reservable };
       mockItems.push(row);
       return decorateItem(row);
     }

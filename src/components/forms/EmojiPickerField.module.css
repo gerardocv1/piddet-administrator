@@ -1,0 +1,111 @@
+.field { display: block; }
+
+.label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--gray-600);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.trigger {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  flex: 1;
+  background: var(--surface-card);
+  border-radius: var(--radius);
+  height: 46px;
+  padding: 0 0.875rem;
+  border: 1px solid var(--border-input);
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.trigger:hover { border-color: var(--color-primary); }
+.trigger:focus-visible { border-color: var(--color-primary); box-shadow: var(--ring-primary); outline: none; }
+.trigger.error { border-color: var(--color-danger); }
+.trigger i { color: var(--gray-400); font-size: 0.9rem; }
+
+.emoji { font-size: 1.25rem; line-height: 1; }
+
+.text {
+  flex: 1;
+  font-size: var(--text-base);
+  color: var(--gray-700);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  flex-shrink: 0;
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius);
+  background: var(--surface-card);
+  color: var(--gray-500);
+  cursor: pointer;
+}
+.clear:hover { color: var(--color-primary); border-color: var(--color-primary); }
+
+.hint {
+  display: block;
+  margin-top: 5px;
+  font-size: var(--text-xs);
+  color: var(--gray-500);
+}
+.hint.errorText { color: var(--color-danger); }
+
+.popover {
+  position: fixed;
+  z-index: 1200;
+  max-height: 320px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px;
+  background: var(--surface-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.14);
+}
+
+.group { display: flex; flex-direction: column; gap: 6px; }
+
+.groupLabel {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--gray-500);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(36px, 1fr));
+  gap: 4px;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  border: none;
+  border-radius: var(--radius);
+  background: none;
+  font-size: 1.15rem;
+  cursor: pointer;
+}
+.option:hover { background: var(--color-primary-050); }

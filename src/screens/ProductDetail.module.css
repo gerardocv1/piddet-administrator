@@ -38,6 +38,7 @@
   justify-content: center;
 }
 .heroImage > i { font-size: 2rem; }
+.heroEmoji { font-size: 3rem; line-height: 1; }
 .heroImage img { width: 100%; height: 100%; object-fit: cover; }
 
 /* Insignia de cámara siempre visible (esquina) */

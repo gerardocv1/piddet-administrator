@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, Input, MoneyInput, Select, Switch, Textarea, Modal, CategoryCascader, Alert, useToast } from '../components';
+import { Button, Input, MoneyInput, Select, Switch, Textarea, Modal, CategoryCascader, EmojiPickerField, Alert, useToast } from '../components';
 import { api } from '../lib/api.js';
 import { SERVICE_ITEM_TYPE_ID } from '../lib/services/itemTypes.js';
 import { useFunctionalities } from '../lib/permissions/useFunctionalities.js';
@@ -31,9 +31,12 @@ export function ItemFormModal({ item, onClose, onSaved }) {
     value: item?.value != null ? String(item.value) : '',
     tax_family_id: item?.tax_family_id ? String(item.tax_family_id) : '',
     reservable: !!item?.reservable,
+    icon: item?.icon || '',
   }));
   const [saving, setSaving] = React.useState(false);
   const [err, setErr] = React.useState(null);
+  const [iconSuggestion, setIconSuggestion] = React.useState(null);
+  const [suggestingIcon, setSuggestingIcon] = React.useState(false);
 
   // Tipos (siempre) e impuestos (solo si la funcionalidad está activa).
   React.useEffect(() => {
@@ -57,6 +60,26 @@ export function ItemFormModal({ item, onClose, onSaved }) {
     return () => { alive = false; };
   }, [typeId]);
 
+  // Sugerencia en vivo del icono automático: solo mientras el usuario no eligió uno manualmente,
+  // y solo con algo de qué partir (nombre o categoría). Con debounce para no llamar en cada tecla.
+  const nameForSuggestion = form.name.trim();
+  const categoryForSuggestion = form.item_category_id;
+  React.useEffect(() => {
+    if (form.icon || (!nameForSuggestion && !categoryForSuggestion)) {
+      setIconSuggestion(null);
+      return undefined;
+    }
+    let alive = true;
+    setSuggestingIcon(true);
+    const timer = setTimeout(() => {
+      api.iconSuggestion({ name: nameForSuggestion, categoryId: categoryForSuggestion, typeId: form.item_type_id })
+        .then((d) => { if (alive) setIconSuggestion(d); })
+        .catch(() => { if (alive) setIconSuggestion(null); })
+        .finally(() => { if (alive) setSuggestingIcon(false); });
+    }, 400);
+    return () => { alive = false; clearTimeout(timer); };
+  }, [form.icon, nameForSuggestion, categoryForSuggestion, form.item_type_id]);
+
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
   // Cambiar el tipo invalida la categoría elegida (las categorías pertenecen a un tipo).
   const onChangeType = (v) => setForm((f) => ({ ...f, item_type_id: v, item_category_id: '' }));
@@ -77,6 +100,7 @@ export function ItemFormModal({ item, onClose, onSaved }) {
       description: form.description.trim(),
       value: Number(form.value),
       reservable: isService && reservationsOn && form.reservable,
+      icon: form.icon || null,
     };
     // El impuesto solo se envía cuando la funcionalidad está activa (si no, el backend lo acepta nulo).
     if (taxesOn && form.tax_family_id) payload.tax_family_id = Number(form.tax_family_id);
@@ -113,6 +137,9 @@ export function ItemFormModal({ item, onClose, onSaved }) {
         )}
         <Input label={`Nombre del ${prodT.one}`} icon="fas fa-burger" placeholder="Ej. Hamburguesa Doble"
           value={form.name} onChange={(e) => set('name', e.target.value)} />
+        <EmojiPickerField label={`Emoji del ${prodT.one}`} value={form.icon} onChange={(v) => set('icon', v)}
+          suggestion={iconSuggestion} suggesting={suggestingIcon}
+          hint="Si lo dejas en automático, se asigna según el nombre y la categoría." />
         <div className={s.formGrid}>
           <Input label="Código" icon="fas fa-barcode" placeholder="Opcional"
             value={form.code} onChange={(e) => set('code', e.target.value)} />

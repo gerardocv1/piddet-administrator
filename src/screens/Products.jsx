@@ -15,9 +15,11 @@ const STATUS_DRAFT = 2;
 
 // Miniatura del producto: la imagen viene resuelta del backend (URL completa, con `product.png`
 // por defecto). Si la imagen no carga, cae a un icono para no dejar un hueco roto.
-function ProductThumb({ src, alt }) {
+function ProductThumb({ src, alt, icon }) {
   const [failed, setFailed] = React.useState(false);
-  if (!src || failed) return <span className={t.icon}><i className="fas fa-burger" /></span>;
+  if (!src || failed) {
+    return <span className={t.icon}>{icon ? <span aria-hidden="true">{icon}</span> : <i className="fas fa-burger" />}</span>;
+  }
   return <img className={t.thumb} src={src} alt={alt} loading="lazy" onError={() => setFailed(true)} />;
 }
 
@@ -162,7 +164,7 @@ export function Products() {
               onClick={() => navigate(`/products/${it.id}`)}
               onKeyDown={(e) => { if (e.key === 'Enter') navigate(`/products/${it.id}`); }}>
               <div className={t.itemCell}>
-                <ProductThumb src={it.thumbnail_file || it.file} alt={it.name} />
+                <ProductThumb src={it.thumbnail_file || it.file} alt={it.name} icon={it.icon} />
                 <div className={t.itemText}>
                   <div className={t.name}>{it.name}</div>
                   {it.code && <div className={t.desc}>{it.code}</div>}
