@@ -2,6 +2,7 @@ import React from 'react';
 import Cropper from 'react-easy-crop';
 import { api } from '../../lib/api.js';
 import { getCroppedBlob } from '../../lib/cropImage.js';
+import { BackgroundRemover } from './BackgroundRemover.jsx';
 import styles from './FileUpload.module.css';
 
 /**
@@ -21,16 +22,18 @@ import styles from './FileUpload.module.css';
  *  - value: URL de la imagen actual (previsualización inicial)
  *  - aspect: relación de aspecto del recorte (por defecto 1 = cuadrado)
  *  - cropShape: 'rect' | 'round'
+ *  - allowBackgroundRemoval: habilita el editor que deja la imagen sin fondo (logos)
  *  - onChange(hasImage): avisa cuando hay (o no) una imagen nueva lista para subir
  *  - hint: texto de ayuda
  */
 export const FileUpload = React.forwardRef(function FileUpload(
-  { folder = 'general', visibility = 'private', value = null, aspect = 1, cropShape = 'rect', minZoom = 0.3, onChange, hint },
+  { folder = 'general', visibility = 'private', value = null, aspect = 1, cropShape = 'rect', minZoom = 0.3, allowBackgroundRemoval = false, onChange, hint },
   ref,
 ) {
   const inputRef = React.useRef(null);
   const srcRef = React.useRef(null); // object URL local de la imagen elegida (para recortar/subir)
-  const mimeRef = React.useRef(''); // tipo MIME del archivo elegido (para conservar transparencia en PNG)
+  const editedRef = React.useRef(null); // object URL del resultado sin fondo (sustituye al original)
+  const mimeRef = React.useRef(''); // tipo MIME de la imagen en edición (para conservar transparencia en PNG)
 
   const [src, setSrc] = React.useState(null); // imagen en edición (object URL); null = sin elegir
   const [crop, setCrop] = React.useState({ x: 0, y: 0 });
@@ -39,8 +42,16 @@ export const FileUpload = React.forwardRef(function FileUpload(
   const [areaPixels, setAreaPixels] = React.useState(null);
   const [error, setError] = React.useState(null);
   const [dragging, setDragging] = React.useState(false);
+  const [removingBackground, setRemovingBackground] = React.useState(false);
 
-  React.useEffect(() => () => { if (srcRef.current) URL.revokeObjectURL(srcRef.current); }, []);
+  const revokeEdited = () => {
+    if (editedRef.current) { URL.revokeObjectURL(editedRef.current); editedRef.current = null; }
+  };
+
+  React.useEffect(() => () => {
+    if (srcRef.current) URL.revokeObjectURL(srcRef.current);
+    if (editedRef.current) URL.revokeObjectURL(editedRef.current);
+  }, []);
 
   const reset = () => { setCrop({ x: 0, y: 0 }); setZoom(1); setRotation(0); setAreaPixels(null); };
 
@@ -49,6 +60,7 @@ export const FileUpload = React.forwardRef(function FileUpload(
     if (!file.type.startsWith('image/')) { setError('El archivo debe ser una imagen.'); return; }
     setError(null);
     if (srcRef.current) URL.revokeObjectURL(srcRef.current);
+    revokeEdited();
     const url = URL.createObjectURL(file);
     srcRef.current = url;
     mimeRef.current = file.type;
@@ -88,12 +100,27 @@ export const FileUpload = React.forwardRef(function FileUpload(
 
   const clear = () => {
     if (srcRef.current) { URL.revokeObjectURL(srcRef.current); srcRef.current = null; }
+    revokeEdited();
     setSrc(null);
     reset();
     onChange && onChange(false);
   };
 
   const rotate = (delta) => setRotation((r) => (((r + delta) % 360) + 360) % 360);
+
+  // El editor de fondo devuelve un PNG que reemplaza a la imagen en edición; `upload()` la
+  // exportará como PNG para no perder la transparencia. El encuadre vuelve al centro porque el
+  // recorte al contenido cambia el tamaño del lienzo, no así el giro que el usuario ya eligió.
+  const applyBackgroundRemoval = (blob) => {
+    revokeEdited();
+    const url = URL.createObjectURL(blob);
+    editedRef.current = url;
+    mimeRef.current = 'image/png';
+    setCrop({ x: 0, y: 0 });
+    setZoom(1);
+    setSrc(url);
+    setRemovingBackground(false);
+  };
 
   // Sube la imagen editada a S3. La invoca el contenedor al guardar. Devuelve el resultado o null.
   React.useImperativeHandle(ref, () => ({
@@ -153,6 +180,11 @@ export const FileUpload = React.forwardRef(function FileUpload(
                 onChange={(e) => setZoom(Number(e.target.value))} aria-label="Zoom" />
             </label>
             <div className={styles.spacer} />
+            {allowBackgroundRemoval && (
+              <button type="button" className={styles.ctrlBtn} onClick={() => setRemovingBackground(true)} title="Quitar el fondo de la imagen">
+                <i className="fas fa-wand-magic-sparkles" /> Sin fondo
+              </button>
+            )}
             <button type="button" className={styles.ctrlBtn} onClick={open} title="Cambiar imagen">
               <i className="fas fa-image" /> Cambiar
             </button>
@@ -176,6 +208,10 @@ export const FileUpload = React.forwardRef(function FileUpload(
       )}
 
       <input ref={inputRef} type="file" accept="image/*" className={styles.input} onChange={onPick} />
+
+      {removingBackground && (
+        <BackgroundRemover src={src} onApply={applyBackgroundRemoval} onCancel={() => setRemovingBackground(false)} />
+      )}
 
       {hint && !error && <span className={styles.hint}>{hint}</span>}
       {error && <div className={styles.error}><i className="fas fa-triangle-exclamation" /> {error}</div>}

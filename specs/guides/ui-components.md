@@ -102,6 +102,19 @@ El orden se confirma al soltar con `onReorder(nextItems, { from, to })` (array y
 consumidor persiste el cambio. `renderItem(item, { handleProps, isDragging })` debe colocar
 `handleProps` sobre el elemento que actúa como agarre. Ejemplo real: `src/screens/MenuCategories.jsx`.
 
+### `FileUpload`
+
+Subida de una imagen a S3 con edición previa en el navegador: recorte (`react-easy-crop`), giro y
+zoom. Nada se sube al elegir el archivo — el contenedor llama a `upload()` por ref al guardar, y
+recibe el resultado del backend (`name` es la referencia que se manda en el payload).
+
+Con `allowBackgroundRemoval` aparece el botón **Sin fondo**, que abre `BackgroundRemover`: quita el
+fondo por color (detectado solo o elegido con el cuentagotas, con tolerancia, borde suave y modo
+«solo el fondo de alrededor»), corrige a mano con pinceles de borrar/restaurar y puede recortar el
+sobrante transparente. Devuelve un PNG que sustituye a la imagen en edición, así que la exportación
+conserva la transparencia. La lógica de imagen vive aparte, en `src/lib/removeBackground.js`, sin
+dependencias externas. Hoy solo lo usa el logo en *Editar empresa* (`CompanyProfile`).
+
 ## Iconos
 
 FontAwesome 6 por CDN (declarado en `index.html`). Se pasan como **string de clase**:

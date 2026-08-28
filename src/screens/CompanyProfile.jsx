@@ -260,8 +260,8 @@ function CompanyEditModal({ company, onClose, onSaved }) {
             Con esto queda la app en la pantalla de inicio del teléfono cuando alguien la instala.
           </p>
           <FileUpload ref={uploaderRef} folder="logos" visibility="public" aspect={1}
-            value={company.icon}
-            hint="Logo de la empresa · JPG, PNG o WEBP. Recorta o gira la imagen; se subirá al guardar." />
+            value={company.icon} allowBackgroundRemoval
+            hint="Logo de la empresa · JPG, PNG o WEBP. Recórtalo, gíralo o quítale el fondo con «Sin fondo»; se subirá al guardar." />
           <Input label="Nombre de la app" maxLength={60}
             hint="El que se lee bajo el icono. Caben pocas letras: si lo dejas vacío se usa el nombre comercial."
             value={form.app_name} onChange={(e) => set('app_name', e.target.value)} />
