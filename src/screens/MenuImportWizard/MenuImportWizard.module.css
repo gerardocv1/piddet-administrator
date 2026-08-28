@@ -8,7 +8,9 @@
   gap: 16px;
   max-width: 640px;
   margin: 0 auto;
-  padding-bottom: 92px;
+  /* Reserva el alto de la barra fija (incluida la franja de gestos del teléfono) para que el
+     final del contenido nunca quede debajo de ella. */
+  padding-bottom: calc(92px + env(safe-area-inset-bottom));
 }
 
 /* ---- Stepper compacto y centrado (igual a ExpenseWizard) ---- */

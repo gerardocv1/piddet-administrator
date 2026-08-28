@@ -58,6 +58,7 @@ const FLOW_ROUTES = [
   /^\/reservations\/new$/,
   /^\/shifts\/[^/]+\/close$/,
   /^\/gym\/members\/[^/]+\/checkin$/,
+  /^\/menus\/import(\/[^/]+)?$/,
 ];
 
 /** Chrome de la app autenticada: menú lateral (escritorio) + barra superior + contenido (Outlet)
