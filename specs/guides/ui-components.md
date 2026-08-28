@@ -152,7 +152,7 @@ La propia `/more` no tiene submenú: no pertenece a ningún módulo.
 El dock **publica su alto real en `--dock-h`** (cambia según lleve submenú o no) y `Layout` lo usa
 para reservar abajo el espacio justo — así ninguna barra de acciones queda debajo del menú. En los
 **flujos a pantalla completa** con su propia barra fija (registrar gasto, nueva reserva, cerrar
-turno, tomar medidas) el dock **no se pinta** y `--dock-h` vale `0px`: tapaba los botones
+turno, tomar medidas, crear carta con IA) el dock **no se pinta** y `--dock-h` vale `0px`: tapaba los botones
 Continuar/Registrar, y durante el flujo la navegación es del propio asistente (la lista vive en
 `FLOW_ROUTES`, en `Layout.jsx`).
 
