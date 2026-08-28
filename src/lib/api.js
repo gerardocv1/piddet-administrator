@@ -40,6 +40,7 @@ import { permissionCatalogService } from './services/permissionCatalog.js';
 import { rolesService } from './services/roles.js';
 import { menusService } from './services/menus.js';
 import { menuCategoriesService } from './services/menuCategories.js';
+import { menuImportsService } from './services/menuImports.js';
 
 export const api = {
   // Auth: el login se delega en la fachada (gestiona token/refresh/persistencia).
@@ -71,6 +72,7 @@ export const api = {
   ...rolesService,
   ...menusService,
   ...menuCategoriesService,
+  ...menuImportsService,
 };
 
 export { USE_MOCK };

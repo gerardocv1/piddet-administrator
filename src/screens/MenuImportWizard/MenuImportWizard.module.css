@@ -1,0 +1,199 @@
+/* Asistente "Crear carta desde fotos con IA": mismo molde que ExpenseWizard (columna única,
+   angosta y centrada en desktop, barra de acciones fija abajo), pero con pasos más largos
+   (revisión de varios productos), por eso el cuerpo no limita su alto ni se preocupa por
+   anclar nada al fondo: solo la barra de acciones queda fija. */
+.wizard {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 640px;
+  margin: 0 auto;
+  padding-bottom: 92px;
+}
+
+/* ---- Stepper compacto y centrado (igual a ExpenseWizard) ---- */
+.stepper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex-wrap: wrap;
+}
+.step { display: flex; align-items: center; gap: 7px; flex: 0 0 auto; }
+.step:not(:first-child)::before {
+  content: '';
+  width: 26px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--gray-200);
+}
+.stepDone:not(:first-child)::before,
+.stepActive:not(:first-child)::before { background: var(--brand-dark-2); }
+
+.stepDot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--gray-200);
+  color: var(--gray-600);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+.stepActive .stepDot { background: var(--brand-dark-2); color: #fff; }
+.stepDone .stepDot { background: var(--brand-dark-2); color: #fff; }
+.stepLabel { font-size: var(--text-xs); font-weight: 600; color: var(--gray-500); white-space: nowrap; }
+.stepActive .stepLabel { color: var(--gray-900); }
+.stepDone .stepLabel { color: var(--gray-700); }
+
+/* ---- Cuerpo ---- */
+.body { display: flex; flex-direction: column; }
+.body > * { width: 100%; }
+.heading { margin: 0 0 4px; font-size: var(--text-lg); color: var(--gray-900); }
+.intro { margin: 0 0 4px; color: var(--gray-600); font-size: var(--text-sm); }
+.formCol { display: flex; flex-direction: column; gap: 14px; }
+
+/* ---- Paso 2: estado de análisis ---- */
+.loading { display: flex; justify-content: center; padding: 24px 0; }
+.stateBox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  max-width: 420px;
+  text-align: center;
+}
+.stateIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  margin-bottom: 6px;
+  border-radius: 50%;
+  background: var(--calendar-accent-soft);
+  color: var(--calendar-accent);
+  font-size: 1.6rem;
+}
+.stateIconDanger { background: var(--color-danger-100); color: var(--color-danger); }
+.aiPulse { animation: aiPulse 1.6s ease-in-out infinite; }
+@keyframes aiPulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 var(--calendar-accent-soft); }
+  50% { transform: scale(1.08); box-shadow: 0 0 0 10px transparent; }
+}
+.stateText { margin: 0; color: var(--gray-600); font-size: var(--text-sm); }
+.stateActions { display: flex; gap: 10px; margin-top: 8px; }
+.cancelLink {
+  margin-top: 8px;
+  border: none;
+  background: transparent;
+  color: var(--gray-500);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.resumeUrl {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  background: var(--surface-card);
+}
+.resumeUrl code {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-xs);
+  color: var(--gray-600);
+}
+
+/* ---- Paso 3: revisión ---- */
+.review { display: flex; flex-direction: column; gap: 16px; }
+.warningsList { margin: 4px 0 0; padding-left: 18px; }
+.categoryBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-color);
+}
+.categoryBlock:first-of-type { border-top: none; padding-top: 0; }
+.categoryNameInput { font-weight: 700; }
+.emptyCategory {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1.5px dashed var(--border-input);
+  border-radius: var(--radius-lg);
+  color: var(--gray-500);
+  font-size: var(--text-sm);
+}
+.productCard {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  background: var(--surface-card);
+}
+.productTop { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.productBadges { display: flex; flex-wrap: wrap; gap: 6px; }
+.productRemove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--gray-400);
+  cursor: pointer;
+}
+.productRemove:hover { background: var(--color-danger-100); color: var(--color-danger); }
+
+/* ---- Paso 4: resumen ---- */
+.summaryCard {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  background: var(--surface-card);
+}
+.summaryCard > div { display: flex; justify-content: space-between; gap: 12px; font-size: var(--text-sm); color: var(--gray-600); }
+.summaryCard strong { color: var(--gray-800); }
+
+/* ---- Barra de acciones fija abajo ---- */
+.actionBar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 30;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  background: var(--bg-body);
+  border-top: 1px solid var(--border-color);
+}
+.actionBar > * { flex: 1; max-width: 260px; }
+@media (min-width: 861px) {
+  .actionBar { left: var(--sidebar-w); }
+}

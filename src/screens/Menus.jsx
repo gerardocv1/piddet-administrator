@@ -123,6 +123,9 @@ export function Menus() {
         </div>
         <div className={s.spacer} />
         <RefreshButton loading={loading} onClick={reload} />
+        <Button variant="secondary" size="sm" icon="fas fa-wand-magic-sparkles" onClick={() => navigate('/menus/import')}>
+          Crear con IA desde fotos
+        </Button>
         <Button variant="primary" size="sm" icon="fas fa-plus" onClick={openNew}>Nuevo {menuT.one}</Button>
       </div>
 

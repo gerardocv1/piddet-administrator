@@ -990,6 +990,16 @@ function resolveItemsMock(path, query, { method = 'GET', body } = {}) {
       .sort((a, b) => a.position - b.position);
   }
 
+  // Árbol jerárquico del catálogo (para CategoryCascader). El catálogo demo es plano (sin
+  // subcategorías): cada raíz llega con `children: []`, que es lo que el cascader espera.
+  if (sub === 'item-categories/tree') {
+    const typeId = query.get('item_type_id');
+    return mockItemCategories
+      .filter((c) => c.status !== 0 && (!typeId || c.item_type_id === Number(typeId)))
+      .sort((a, b) => a.position - b.position)
+      .map((c) => ({ id: c.id, name: c.name, item_type_id: c.item_type_id, children: [] }));
+  }
+
   // ── Categorías de producto (por tipo) ──
   if (sub === 'item-categories') {
     if (method === 'POST') {
@@ -4325,6 +4335,204 @@ function resolveGymMock(path, query, { method = 'GET', body } = {}) {
   return null;
 }
 
+// ── Módulo de importación de carta desde fotos (agente IA) ──────────────────
+// El agente no escribe nada: el flujo real es asíncrono (job + webhook), así que el mock simula
+// el mismo ciclo de vida con un contador de "polls" en memoria: pending → running → completed
+// (con el resultado del agente) tras unas pocas llamadas a /status, para que la pantalla de
+// carga se vea un rato antes de pasar a la revisión. `confirm` crea de verdad items + menú +
+// categorías + ítems de menú sobre los mocks existentes, para que la redirección a MenuDetail
+// muestre contenido real.
+let menuImportSeq = 0;
+const mockMenuImports = [];
+
+const MENU_IMPORT_POLLS_TO_RUNNING = 2;
+const MENU_IMPORT_POLLS_TO_COMPLETE = 5;
+
+function buildMenuImportResult(menuName, fileNames) {
+  return {
+    menu: { name: menuName, currency: 'COP' },
+    categories: [
+      {
+        name: 'Entradas',
+        position: 0,
+        products: [
+          {
+            name: 'Empanadas de pollo', price: 9000,
+            description: 'Empanadas caseras rellenas de pollo desmechado, fritas hasta dorar.',
+            description_generated: false, item_category_id: 3, confidence: 0.92, needs_review: false,
+          },
+          {
+            name: 'Patacones con hogao', price: 12000,
+            description: 'Plátano verde frito, servido con hogao casero.',
+            description_generated: true, item_category_id: 3, confidence: 0.58, needs_review: true,
+          },
+        ],
+      },
+      {
+        name: 'Platos fuertes',
+        position: 1,
+        products: [
+          {
+            name: 'Hamburguesa de la casa', price: 24000,
+            description: 'Carne de res, tocineta, queso cheddar y salsa especial de la casa.',
+            description_generated: false, item_category_id: 1, confidence: 0.88, needs_review: false,
+          },
+          {
+            name: 'Pizza napolitana', price: null,
+            description: 'Pizza con salsa de tomate, mozzarella fresca y albahaca.',
+            description_generated: true, item_category_id: 2, confidence: 0.35, needs_review: true,
+          },
+        ],
+      },
+      {
+        name: 'Bebidas',
+        position: 2,
+        products: [
+          {
+            name: 'Limonada natural', price: 7000,
+            description: 'Limonada natural bien fría, endulzada al punto.',
+            description_generated: true, item_category_id: 6, confidence: 0.74, needs_review: false,
+          },
+          {
+            name: 'Gaseosa personal', price: 5000,
+            description: 'Gaseosa en presentación personal, sabor a elección.',
+            description_generated: false, item_category_id: 5, confidence: 0.95, needs_review: false,
+          },
+        ],
+      },
+    ],
+    warnings: fileNames.length > 1
+      ? ['La última foto tenía baja resolución: revisa los precios de esa página.']
+      : [],
+  };
+}
+
+// Simula lo que hace el backend real al confirmar: crea items (con categoría e icono automático),
+// luego el menú con sus propias categorías y los ítems que lo componen. Las categorías que quedaron
+// sin productos en la revisión no se crean.
+function confirmMenuImportMock(row, body) {
+  const menuName = (body?.menu_name || row.menu_name || 'Carta importada').trim();
+  const username = `${slugifyUsername(menuName)}-${Date.now().toString(36).slice(-4)}`;
+  const menuId = nextId(mockMenus);
+  mockMenus.push({
+    id: menuId, name: menuName, username, description: '', file: null,
+    position: mockMenus.length, status: 1, is_active: true,
+  });
+
+  const categories = Array.isArray(body?.categories) ? body.categories : [];
+  categories.forEach((cat, catIdx) => {
+    const products = Array.isArray(cat.products) ? cat.products : [];
+    if (!products.length) return;
+    const categoryId = nextId(mockMenuCategories);
+    mockMenuCategories.push({
+      id: categoryId, menu_id: menuId, name: cat.name || `Categoría ${catIdx + 1}`,
+      description: '', file: null, position: cat.position ?? catIdx, status: 1,
+    });
+
+    products.forEach((prod, prodIdx) => {
+      const itemId = nextId(mockItems);
+      const categoryIdForItem = prod.item_category_id != null ? Number(prod.item_category_id) : null;
+      const { icon } = mockSuggestIcon(prod.name, categoryIdForItem);
+      const value = Number(prod.price) || 0;
+      const description = (prod.description || '').trim() || prod.name;
+      mockItems.push({
+        id: itemId, name: prod.name, code: null, value, file: null, icon,
+        item_type_id: mockItemCategories.find((c) => c.id === categoryIdForItem)?.item_type_id ?? 1,
+        item_category_id: categoryIdForItem, item_status_id: 1,
+        tax_family_id: prod.tax_family_id ? Number(prod.tax_family_id) : null,
+        description, position: prodIdx,
+      });
+      mockMenuProducts.push({
+        id: itemId, name: prod.name, sku: null, image: null, value,
+        category_id: categoryIdForItem, description,
+      });
+      mockMenuItems.push({
+        id: nextId(mockMenuItems), menu_id: menuId, menu_category_id: categoryId,
+        item_id: itemId, position: prodIdx, status: 1, price: null,
+      });
+    });
+  });
+
+  return menuId;
+}
+
+// Resuelve las rutas company-scoped del asistente de importación (/companies/{company}/menu-imports…).
+function resolveMenuImportsMock(path, query, { method = 'GET', body } = {}) {
+  const scoped = path.match(/^\/companies\/[^/]+\/(menu-imports.*)$/);
+  if (!scoped) return undefined;
+  const sub = scoped[1];
+  let m;
+
+  if (sub === 'menu-imports') {
+    if (method !== 'POST') return undefined;
+    const row = {
+      id: ++menuImportSeq,
+      menu_name: body?.menu_name || '',
+      file_names: body?.file_names || [],
+      status: 'pending',
+      failure_reason: null,
+      result: null,
+      created_menu_id: null,
+      polls: 0,
+      created_at: new Date().toISOString(),
+      completed_at: null,
+      confirmed_at: null,
+    };
+    mockMenuImports.push(row);
+    return { id: row.id, status: row.status };
+  }
+
+  m = sub.match(/^menu-imports\/(\d+)\/status$/);
+  if (m) {
+    const row = mockMenuImports.find((r) => r.id === Number(m[1]));
+    if (!row) return null;
+    if (row.status === 'pending' || row.status === 'running') {
+      row.polls += 1;
+      if (row.polls >= MENU_IMPORT_POLLS_TO_COMPLETE) {
+        row.status = 'completed';
+        row.result = buildMenuImportResult(row.menu_name, row.file_names);
+        row.completed_at = new Date().toISOString();
+      } else if (row.polls >= MENU_IMPORT_POLLS_TO_RUNNING) {
+        row.status = 'running';
+      }
+    }
+    return { status: row.status, failure_reason: row.failure_reason };
+  }
+
+  m = sub.match(/^menu-imports\/(\d+)\/confirm$/);
+  if (m) {
+    const row = mockMenuImports.find((r) => r.id === Number(m[1]));
+    if (!row) return null;
+    const createdMenuId = confirmMenuImportMock(row, body);
+    row.status = 'confirmed';
+    row.created_menu_id = createdMenuId;
+    row.confirmed_at = new Date().toISOString();
+    return { created_menu_id: createdMenuId };
+  }
+
+  m = sub.match(/^menu-imports\/(\d+)\/retry$/);
+  if (m) {
+    const row = mockMenuImports.find((r) => r.id === Number(m[1]));
+    if (!row) return null;
+    row.status = 'pending';
+    row.polls = 0;
+    row.failure_reason = null;
+    row.result = null;
+    return { id: row.id, status: row.status };
+  }
+
+  m = sub.match(/^menu-imports\/(\d+)$/);
+  if (m) {
+    const row = mockMenuImports.find((r) => r.id === Number(m[1]));
+    if (!row) return null;
+    if (method === 'DELETE') { row.status = 'cancelled'; return { ok: true }; }
+    const { polls, ...detail } = row;
+    return detail;
+  }
+
+  return undefined;
+}
+
 export function resolveMock(rawPath, opts = {}) {
   const [path, qs = ''] = rawPath.split('?');
   const query = new URLSearchParams(qs);
@@ -4375,6 +4583,10 @@ export function resolveMock(rawPath, opts = {}) {
   // Módulo de menús (company-scoped: /companies/{company}/menus, con categorías e ítems anidados…)
   const menu = resolveMenuMock(path, query, opts);
   if (menu !== undefined) return menu;
+
+  // Asistente de importación de carta desde fotos (company-scoped: /companies/{company}/menu-imports…)
+  const menuImport = resolveMenuImportsMock(path, query, opts);
+  if (menuImport !== undefined) return menuImport;
 
   // Módulo de productos (company-scoped: /companies/{company}/items|item-categories|taxes…)
   const item = resolveItemsMock(path, query, opts);
