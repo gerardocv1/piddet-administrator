@@ -5,6 +5,7 @@ import { auth as authLib } from '../lib/auth/index.js';
 import { useResource } from '../lib/useResource.js';
 import { usePermissions } from '../lib/permissions/usePermissions.js';
 import { AiTokensCard } from './CompanyAiTokens.jsx';
+import { DangerZoneCard } from './CompanyDangerZone.jsx';
 import { FunctionalitiesCard } from './CompanyFunctionalities.jsx';
 import { BrandColorPicker, BrandPreview, AppIconPreview } from './CompanyBrandColors.jsx';
 import { DEFAULT_BRAND_PRIMARY, DEFAULT_BRAND_SECONDARY, ICON_BACKGROUNDS, findIconBackground } from '../lib/brand/palettes.js';
@@ -164,6 +165,8 @@ export function CompanyProfile() {
       <FunctionalitiesCard />
 
       {editable && <AiTokensCard />}
+
+      {can('company-catalog-purge') && <DangerZoneCard onPurged={reload} />}
 
       {editing && <CompanyEditModal company={company} onClose={() => setEditing(false)} onSaved={onSaved} />}
     </div>

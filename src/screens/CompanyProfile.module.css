@@ -151,6 +151,29 @@
 .tokenWarn { margin: 0; color: var(--color-warning-fg); font-size: var(--text-sm); }
 .tokenWarn i { margin-right: 6px; }
 
+/* ── Zona de peligro ── */
+.dangerCard { border-color: var(--color-danger); }
+.dangerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.dangerTitle { margin: 0 0 4px; font-size: var(--text-base); font-weight: 600; color: var(--text-strong); }
+.dangerDesc { margin: 0; color: var(--gray-500); font-size: var(--text-sm); }
+.dangerHint { margin: 0; color: var(--gray-500); font-size: var(--text-sm); }
+.dangerPhrase {
+  margin: 0;
+  padding: 10px 14px;
+  background: var(--color-danger-100);
+  color: var(--color-danger-fg);
+  border-radius: var(--radius-lg);
+  font-weight: 600;
+  text-align: center;
+  user-select: none;
+}
+
 /* ── Identidad visual (colores de marca) ── */
 .sectionTitle { font-size: var(--text-sm); font-weight: 700; color: var(--text-strong); }
 .brandHint { margin: 0 0 12px; font-size: var(--text-sm); color: var(--text-muted); }

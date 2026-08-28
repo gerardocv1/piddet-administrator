@@ -166,7 +166,9 @@ export function MenuDetail() {
           <i className="fas fa-grip-vertical" />
         </button>
       ) : (
-        <span className={t.itemIcon} aria-hidden="true"><i className="fas fa-utensils" /></span>
+        <span className={t.itemIcon} aria-hidden="true">
+          {it.icon ? <span>{it.icon}</span> : <i className="fas fa-utensils" />}
+        </span>
       )}
       <div className={t.itemInfo}>
         <span className={t.itemName}>{it.name}</span>

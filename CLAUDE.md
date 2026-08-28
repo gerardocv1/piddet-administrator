@@ -78,7 +78,9 @@ Si agregas un endpoint, agrega también su mock. Detalle en `specs/tech.md`.
 - **Alcance `-own`:** varios módulos tienen el par `X` / `X-own`. El filtro por usuario **lo
   aplica el backend** (un recurso ajeno responde 404); el panel solo oculta el filtro por usuario.
 - **Nada se borra:** la mesa se desactiva, la factura se cancela, el gasto se anula, el turno se
-  cancela o cierra.
+  cancela o cierra. Única excepción deliberada: la *Zona de peligro* del perfil de empresa
+  (permiso `company-catalog-purge`, solo super-admin) purga físicamente el catálogo completo,
+  con frase de seguridad escrita a mano.
 
 ## Flujo de trabajo
 

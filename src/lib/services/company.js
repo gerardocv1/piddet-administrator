@@ -33,4 +33,13 @@ export const companyService = {
   createAiToken: (data) => http.post(`${base()}/ai-agent-tokens`, data),
   // Revoca un token (irreversible; el agente pierde acceso de inmediato).
   revokeAiToken: (tokenId) => http.del(`${base()}/ai-agent-tokens/${tokenId}`),
+  // ZONA DE PELIGRO: borra PERMANENTEMENTE el catálogo de la empresa activa (productos,
+  // opciones, categorías propias y menús). El backend exige repetir el username en el body
+  // como confirmación contra purgar la compañía equivocada. Solo super-admin
+  // (permiso company-catalog-purge).
+  purgeCatalog: () => {
+    const c = auth.getCompany();
+    const username = String(c?.username ?? c?.id);
+    return http.post(`/companies/${username}/catalog/purge`, { confirm_company: username });
+  },
 };

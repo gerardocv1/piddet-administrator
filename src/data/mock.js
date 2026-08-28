@@ -436,7 +436,7 @@ export const mockMenuItems = [
 // el panel muestra Productos (y sus categorías), Menús y Usuarios; el resto queda oculto.
 const mockPermissions = {
   roles: ['Administrador'],
-  permissions: ['user-administrator', 'admin-general', 'role-list', 'role-create', 'role-update', 'role-delete', 'role-assign', 'permission-list', 'permission-update', 'api-module-menus', 'api-module-products', 'api-module-company', 'company-edit-functionalities', 'api-module-stores', 'table-list', 'table-create', 'table-update', 'api-module-orders', 'sales-report', 'order-cancel', 'order-sync-failure-admin', 'api-module-expenses', 'expenses-report', 'expense-annul', 'api-module-shifts', 'shift-global-admin', 'api-module-reservations', 'api-module-rentable-units', 'reservation-checkout', 'reservation-cancel', 'reservation-payment-annul', 'api-module-gym', 'api-module-gym-plans', 'gym-plans-create', 'gym-plans-edit', 'gym-members-create', 'gym-members-edit', 'gym-subscriptions-create', 'gym-subscriptions-cancel', 'gym-payments-create', 'gym-payments-annul', 'gym-checkins-create', 'gym-checkins-edit', 'gym-measurement-config'],
+  permissions: ['user-administrator', 'admin-general', 'role-list', 'role-create', 'role-update', 'role-delete', 'role-assign', 'permission-list', 'permission-update', 'api-module-menus', 'api-module-products', 'api-module-company', 'company-edit-functionalities', 'api-module-stores', 'table-list', 'table-create', 'table-update', 'api-module-orders', 'sales-report', 'order-cancel', 'order-sync-failure-admin', 'api-module-expenses', 'expenses-report', 'expense-annul', 'api-module-shifts', 'shift-global-admin', 'api-module-reservations', 'api-module-rentable-units', 'reservation-checkout', 'reservation-cancel', 'reservation-payment-annul', 'api-module-gym', 'api-module-gym-plans', 'gym-plans-create', 'gym-plans-edit', 'gym-members-create', 'gym-members-edit', 'gym-subscriptions-create', 'gym-subscriptions-cancel', 'gym-payments-create', 'gym-payments-annul', 'gym-checkins-create', 'gym-checkins-edit', 'gym-measurement-config', 'company-catalog-purge'],
 };
 
 // Empresa (tenant) activa y empresas disponibles para el usuario (SaaS multi-tenant).
@@ -526,7 +526,7 @@ const priceFmt = (n) => '$' + Number(n || 0).toLocaleString('es-CO');
 
 // Decora un ítem de menú con los datos del producto y la categoría (como hace el join del backend).
 // CONTRATO BACKEND: el endpoint real `/companies/{company}/menus/{menuId}/items` debe incluir, vía
-// el join con el item, `description` y la imagen resuelta (`file`/`thumbnail_file`/`standard_file`);
+// el join con el item, `icon`, `description` y la imagen resuelta (`file`/`thumbnail_file`/`standard_file`);
 // el item es la fuente con la info completa. La carta (vista "Generar menú") los consume desde aquí.
 function decorateMenuItem(mi) {
   const prod = mockMenuProducts.find((p) => p.id === mi.item_id) || {};
@@ -542,6 +542,7 @@ function decorateMenuItem(mi) {
     status: mi.status,
     category_name: cat.name || '',
     name: prod.name || '',
+    icon: prod.icon || null,
     description: prod.description || '',
     file: img.file,
     thumbnail_file: img.thumbnail_file,
@@ -4562,6 +4563,17 @@ export function resolveMock(rawPath, opts = {}) {
     // Como el backend: el perfil resuelve key/nombre del tipo a partir del company_type_id.
     const type = mockCompanyTypes.find((t) => Number(t.id) === Number(updated.company_type_id));
     return { ...updated, company_type_key: type?.key ?? null, company_type_name: type?.name ?? null };
+  }
+
+  // Zona de peligro: purga permanente del catálogo (/companies/{company}/catalog/purge).
+  if (/^\/companies\/[^/]+\/catalog\/purge$/.test(path) && opts.method === 'POST') {
+    return {
+      deleted: {
+        menu_items: 24, menu_categories: 9, menus: 4,
+        item_options: 58, item_option_groups: 21, item_preparation_place_items: 12,
+        item_inventories: 0, item_category_companies: 6, item_categories: 2, items: 22,
+      },
+    };
   }
 
   // Pre-check-in público (sin sesión): /public/checkin/{code}…

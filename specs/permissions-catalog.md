@@ -103,6 +103,7 @@ filtro por usuario.
 | `item-category-master` | `/admin/product-categories` | Categorías globales de producto (catálogo de plataforma). |
 | `order-sync-failure-admin` | `/sync-failures`, `/sync-failures/:reportId` | Reportes de fallo de sincronización del POS, por estado de soporte (pendiente / resuelto / no recuperable). El detalle permite editar el JSON de la orden, reintentar la creación y cambiar el estado; `resolved` es terminal. |
 | `company-edit-functionalities` | `/company` (tarjeta *Funcionalidades*) | Activar/desactivar las funcionalidades contratadas de la compañía (`auth.saveFunctionalities` → `PUT /companies/{company}/functionalities`). |
+| `company-catalog-purge` | `/company` (tarjeta *Zona de peligro*) | Borrado PERMANENTE de todo el catálogo de la compañía: productos, opciones, categorías propias y menús (`POST /companies/{company}/catalog/purge`). Solo lo trae el rol `super-admin`. El modal exige escribir a mano una frase de seguridad aleatoria que incluye el nombre de la compañía (pegar y soltar bloqueados) y el backend re-valida repitiendo el username en el body (`confirm_company`). Es la excepción deliberada a la regla «Nada se borra». |
 
 ## Accesos (usuarios, roles y permisos)
 
