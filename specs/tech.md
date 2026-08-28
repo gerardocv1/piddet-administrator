@@ -267,6 +267,30 @@ directo—, Android la lista entre las apps y permite desinstalarla desde el pro
 El CSS reserva los recortes de pantalla (`env(safe-area-inset-*)` en topbar, dock y
 contenido) y usa `100dvh`, porque a pantalla completa el sistema dibuja sobre la app.
 
+### El teclado virtual y las barras fijas (`--kb-h`)
+
+Una barra `position: fixed; bottom: 0` se ancla al **viewport de maquetación**, y al abrir el
+teclado virtual iOS no lo encoge (solo encoge el visual): la barra de acciones de un asistente
+queda **detrás del teclado** y el botón Continuar deja de verse. Además Safari desplaza el
+documento raíz para revelar el campo enfocado, y la barra superior se va con él aunque el shell
+mida `100dvh` con `overflow: hidden`.
+
+Se resuelve en dos frentes:
+
+- **Android:** `interactive-widget=resizes-content` en el meta viewport (`index.html`). El
+  navegador encoge el viewport de maquetación, así que `100dvh` y `bottom: 0` ya quedan sobre el
+  teclado sin JS.
+- **iOS:** `useKeyboardInset` (`src/lib/useKeyboardInset.js`), que el `Layout` monta una vez.
+  Mide con la *VisualViewport API* lo que el teclado le roba a la pantalla y lo publica en
+  `--kb-h`; de paso devuelve a 0 el scroll del documento raíz para que la cabecera no se
+  descoloque. Donde el navegador ya encogió el viewport, `--kb-h` vale `0px`: no hay doble
+  compensación.
+
+Cualquier barra fija al borde inferior debe anclarse a `bottom: var(--kb-h, 0px)` y descontar del
+padding la franja de gestos que el teclado ya tapa
+(`max(0px, env(safe-area-inset-bottom) - var(--kb-h, 0px))`). Es lo que hacen las cuatro
+`.actionBar` de los asistentes.
+
 ### `apple-mobile-web-app-status-bar-style`: dejar en `default`
 
 **No lo cambies a `black-translucent`.** Es tentador porque hace que la app pinte bajo la barra de
