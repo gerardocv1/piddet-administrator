@@ -332,7 +332,7 @@ export function GymMemberDetail() {
         footerActions={!isMobile ? [] : [
           { label: 'Editar', icon: 'fas fa-pen', onClick: openEdit },
           { label: 'Progreso', icon: 'fas fa-chart-line', onClick: () => navigate(`/gym/members/${memberId}/progress`) },
-          { label: 'Medidas', icon: 'fas fa-plus', variant: 'outline-primary', onClick: () => navigate(`/gym/members/${memberId}/checkin`) },
+          { label: 'Medidas', icon: 'fas fa-plus', variant: 'primary', onClick: () => navigate(`/gym/members/${memberId}/checkin`) },
         ]}
       >
         <InfoCard.Field label="Código">{data.member_code}</InfoCard.Field>
@@ -360,30 +360,31 @@ export function GymMemberDetail() {
         ) : (
           <button type="button" className={g.subSummary}
             onClick={() => navigate(`/gym/subscriptions/${current.id}`)}>
-            <div className={g.subInfo}>
-              <span className={g.subPlan}>{current.plan_name}</span>
-              <span className={g.subDates}>
-                {current.current_period ? (
-                  Number(current.current_period.computed_status ?? current.current_period.status) === GYM_PERIOD_STATUS.GRACE
-                    ? `Venció el ${formatShortDate(current.current_period.end_date)}`
-                    : `Vence el ${formatShortDate(current.current_period.end_date)}`
-                ) : 'Sin período vigente'}
-                {' · '}{gymMoney(current.current_period?.price)}
-                {currentIsActive && gymSubscriptionPending(current) > 0 && (
-                  <span className={g.subSaldo}> · saldo {gymMoney(gymSubscriptionPending(current))}</span>
-                )}
+            <span className={g.subTop}>
+              <span className={g.subInfo}>
+                <span className={g.subPlan}>{current.plan_name}</span>
+                <span className={g.subDates}>
+                  {current.current_period ? (
+                    Number(current.current_period.computed_status ?? current.current_period.status) === GYM_PERIOD_STATUS.GRACE
+                      ? `Venció el ${formatShortDate(current.current_period.end_date)}`
+                      : `Vence el ${formatShortDate(current.current_period.end_date)}`
+                  ) : 'Sin período vigente'}
+                  {' · '}{gymMoney(current.current_period?.price)}
+                </span>
               </span>
-            </div>
-            <span className={g.subRight}>
-              <Badge variant={subMeta.variant} dot>{subMeta.label}</Badge>
-              <i className={`fas fa-chevron-right ${g.subChevron}`} aria-hidden="true" />
+              <span className={g.subRight}>
+                <Badge variant={subMeta.variant} dot>{subMeta.label}</Badge>
+                <i className={`fas fa-chevron-right ${g.subChevron}`} aria-hidden="true" />
+              </span>
             </span>
+            {/* Lo que el afiliado debe no se pierde al final de la línea de fechas: baja a su
+                propia fila como badge, que es lo que se busca de un vistazo en el mostrador. */}
+            {currentIsActive && gymSubscriptionPending(current) > 0 && (
+              <span className={g.subFoot}>
+                <Badge variant="warning">Saldo {gymMoney(gymSubscriptionPending(current))}</Badge>
+              </span>
+            )}
           </button>
-        )}
-        {subscriptions.length > 1 && (
-          <p className={g.subHistoryNote}>
-            {subscriptions.length - 1} suscripción{subscriptions.length - 1 === 1 ? '' : 'es'} anterior{subscriptions.length - 1 === 1 ? '' : 'es'} — se abren desde el listado de suscripciones.
-          </p>
         )}
       </Panel>
 
