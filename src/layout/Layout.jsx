@@ -6,6 +6,7 @@ import { auth as authLib } from '../lib/auth/index.js';
 import { ADMIN_BASE } from '../lib/adminBase.js';
 import { useIsMobile } from '../lib/useIsMobile.js';
 import { usePullToRefresh } from '../lib/usePullToRefresh.js';
+import { useKeyboardInset } from '../lib/useKeyboardInset.js';
 import { PageTitleProvider, usePageTitle } from '../lib/pageTitle.jsx';
 import { moduleTerm, titleTerm } from '../lib/terms.js';
 import styles from './Layout.module.css';
@@ -67,6 +68,9 @@ export function Layout({ theme, onToggleTheme, onLogout }) {
   const location = useLocation();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  // Publica en `--kb-h` el alto del teclado virtual: las barras de acciones fijas de los
+  // asistentes se apoyan en él para no quedar detrás del teclado.
+  useKeyboardInset();
   // Usuario y empresa vienen de la sesión guardada en el login (no hay endpoint /me en backend).
   const [user] = React.useState(() => displayUser(authLib.getUser()));
   const [company, setCompany] = React.useState(() => authLib.getCompany());

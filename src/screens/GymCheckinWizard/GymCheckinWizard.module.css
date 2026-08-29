@@ -78,16 +78,20 @@
 .summaryRow strong { color: var(--gray-900); white-space: nowrap; }
 
 /* ---- Barra de acciones fija abajo ---- */
+/* `bottom: var(--kb-h)` sube la barra por encima del teclado virtual: el Layout publica ahí su
+   alto (en iOS el viewport de maquetación no se encoge y `bottom: 0` quedaría detrás del
+   teclado). Con el teclado abierto la franja de gestos ya no existe, así que el padding solo
+   descuenta lo que quede de ella. */
 .actionBar {
   position: fixed;
   left: 0;
   right: 0;
-  bottom: 0;
+  bottom: var(--kb-h, 0px);
   z-index: 30;
   display: flex;
   justify-content: center;
   gap: 10px;
-  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  padding: 12px 16px calc(12px + max(0px, env(safe-area-inset-bottom) - var(--kb-h, 0px)));
   background: var(--bg-body);
   border-top: 1px solid var(--border-color);
 }

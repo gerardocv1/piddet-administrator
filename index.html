@@ -2,7 +2,11 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <!-- `interactive-widget=resizes-content`: al abrir el teclado virtual, el navegador encoge el
+         viewport de maquetación en vez de solo el visual. Así 100dvh y las barras fijas a
+         `bottom: 0` (los asistentes) quedan por encima del teclado sin JS. Lo respeta Chrome/
+         Android; iOS lo ignora y ahí compensa `--kb-h` (ver src/lib/useKeyboardInset.js). -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content" />
     <link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon/favicon-32x32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon/favicon-16x16.png" />
