@@ -88,6 +88,9 @@ export const reservationsService = {
   guest: (userId) => http.get(`${base()}/guests/${userId}`),
 
   // ── Reservas ────────────────────────────────────────────────────────────
+  // El backend encabeza el listado con las reservas vigentes que entran hoy o mañana (el resto va
+  // por creación descendente) y marca con `has_decoration` las que llevan un servicio de
+  // decoración: el panel las alerta con un emoji de bombas.
   reservations: ({ dateFrom = '', dateTo = '', status = '', unitId = '', search = '', page = 1, perPage = 15 } = {}) =>
     http.get(`${base()}/reservations${qs({ date_from: dateFrom, date_to: dateTo, status, rentable_unit_id: unitId, _search: search, page, per_page: perPage })}`, { paginated: true }),
 
@@ -96,6 +99,12 @@ export const reservationsService = {
   //    nights, total, status, services_count }].
   reservationsCalendar: ({ from, to }) =>
     list(http.get(`${base()}/reservations/calendar${qs({ from, to })}`)),
+
+  // Agenda de reservas de un día (hoy si no se pasa fecha), para el widget del dashboard:
+  // { date, totals: { arrivals, departures, staying, decorated }, arrivals, departures, staying }.
+  // Cada fila trae los mismos campos del listado más `has_decoration` y `precheckin_completed`.
+  reservationsDayAgenda: ({ date = '' } = {}) =>
+    http.get(`${base()}/reservations/day-agenda${qs({ date })}`),
 
   // Detalle completo: huéspedes, servicios, pagos y resumen de saldo.
   reservation: (reservationId) => http.get(`${base()}/reservations/${reservationId}`),

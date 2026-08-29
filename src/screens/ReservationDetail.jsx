@@ -5,7 +5,7 @@ import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { usePermissions } from '../lib/permissions/usePermissions.js';
 import { useIsMobile } from '../lib/useIsMobile.js';
-import { reservationMoney, reservationStatusMeta, arrivalSlotLabel, idTypeLabel, RESERVATION_STATUS } from '../lib/reservationLabels.js';
+import { reservationMoney, reservationStatusMeta, arrivalSlotLabel, idTypeLabel, RESERVATION_STATUS, DECORATION_EMOJI, DECORATION_LABEL } from '../lib/reservationLabels.js';
 import { formatStayRange, formatStayRangeShort } from '../lib/dates.js';
 import { useSetPageTitle } from '../lib/pageTitle.jsx';
 import s from './screens.module.css';
@@ -320,7 +320,7 @@ export function ReservationDetail() {
     <div className={s.page}>
       <PageHeader
         onBack={goBack}
-        title={data.rentable_unit_name}
+        title={`${data.has_decoration ? `${DECORATION_EMOJI} ` : ''}${data.rentable_unit_name}`}
         subtitle={formatStayRangeShort(data.check_in_date, data.check_out_date)}
         action={
           isPending ? (
@@ -365,6 +365,13 @@ export function ReservationDetail() {
             onClick={() => navigate(`/rentable-units/${data.rentable_unit_id}`)}>Configurar unidad</Button>}>
           {data.rentable_unit_name} cubre {includedGuests} {includedGuests === 1 ? 'persona' : 'personas'} en
           su tarifa y no tiene item de persona adicional, así que el excedente no se está facturando.
+        </Alert>
+      )}
+
+      {/* La decoración es trabajo previo a la llegada: se avisa mientras la reserva siga abierta. */}
+      {isOpen && data.has_decoration && (
+        <Alert tone="info" title={`${DECORATION_EMOJI} ${DECORATION_LABEL}`}>
+          Esta reserva incluye un montaje de decoración: prepáralo antes de que llegue el huésped.
         </Alert>
       )}
 

@@ -4,7 +4,7 @@ import { Card, DataTable, Badge, Button, FilterBar, Pagination, RefreshButton } 
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { formatShortDate } from '../lib/dates.js';
-import { reservationMoney, reservationStatusMeta } from '../lib/reservationLabels.js';
+import { reservationMoney, reservationStatusMeta, checkInProximity, DECORATION_EMOJI, DECORATION_LABEL } from '../lib/reservationLabels.js';
 import s from './screens.module.css';
 
 const EMPTY = { items: [], pagination: null };
@@ -20,6 +20,10 @@ const STATUS_OPTIONS = [
 // Listado de reservas de la compañía activa, filtrable por rango de fechas de entrada, estado
 // (abiertas/canceladas), unidad y búsqueda por código o titular. Todo vive en la URL para
 // conservar la consulta al volver del detalle.
+//
+// El orden lo fija el backend: las reservas vigentes que entran hoy o mañana encabezan siempre el
+// listado (con su badge «Hoy»/«Mañana») y las que llevan decoración se marcan con 🎈 — las dos
+// cosas son alertas de operación: son las que hay que preparar.
 export function Reservations() {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
@@ -70,17 +74,30 @@ export function Reservations() {
   );
 
   const columns = [
-    { key: 'code', header: 'Código', width: 110, render: (r) => <span className={s.cellStrong}>{r.code}</span> },
+    {
+      key: 'code', header: 'Código', width: 130, nowrap: true,
+      render: (r) => (
+        <span className={s.cellStrong}>
+          {r.has_decoration && <span title={DECORATION_LABEL} aria-label={DECORATION_LABEL}>{DECORATION_EMOJI} </span>}
+          {r.code}
+        </span>
+      ),
+    },
     { key: 'holder_user_name', header: 'Titular', ellipsis: true, render: (r) => r.holder_user_name },
     { key: 'rentable_unit_name', header: 'Unidad', ellipsis: true, render: (r) => r.rentable_unit_name },
     {
-      key: 'check_in_date', header: 'Entrada', width: 160, nowrap: true,
-      render: (r) => (
-        <span className={s.muted}>
-          {formatShortDate(r.check_in_date)}{' '}
-          <Badge variant="neutral">{Number(r.nights) === 1 ? '1 noche' : `${r.nights} noches`}</Badge>
-        </span>
-      ),
+      key: 'check_in_date', header: 'Entrada', width: 250, nowrap: true,
+      render: (r) => {
+        // Las que entran hoy o mañana llegan de primeras desde el backend; el badge dice por qué.
+        const soon = checkInProximity(r.check_in_date, r.status);
+        return (
+          <span className={s.muted}>
+            {soon && <><Badge variant={soon.variant} dot>{soon.label}</Badge>{' '}</>}
+            {formatShortDate(r.check_in_date)}{' '}
+            <Badge variant="neutral">{Number(r.nights) === 1 ? '1 noche' : `${r.nights} noches`}</Badge>
+          </span>
+        );
+      },
     },
     {
       key: 'status', header: 'Estado', width: 130,

@@ -2973,6 +2973,12 @@ const mockServiceItems = [
 
 const serviceItemName = (id) => mockServiceItems.find((it) => it.id === Number(id))?.name || null;
 
+// Espejo de `config('reservations.decoration_keywords')` del backend: una reserva con un servicio
+// que nombre una decoración se marca con `has_decoration` y el panel la alerta con 🎈.
+const DECORATION_KEYWORDS = ['decorac', 'globo', 'bomba', 'sorpresa'];
+const reservationHasDecoration = (r) =>
+  (r.services || []).some((sv) => DECORATION_KEYWORDS.some((k) => String(sv.name || '').toLowerCase().includes(k)));
+
 // Catálogo facturable en la cuenta de una reserva: servicios + productos (para los cargos).
 const mockConsumableItems = [
   ...mockServiceItems.map((it) => ({ ...it, type: 'SERVICE' })),
@@ -3263,6 +3269,7 @@ function resolveReservationsCore(sub, query, { method, body }) {
     const stayUnit = mockRentableUnits.find((u) => u.id === r.rentable_unit_id);
     return {
       ...r,
+      has_decoration: reservationHasDecoration(r),
       check_in_time: stayUnit?.check_in_time || null,
       check_out_time: stayUnit?.check_out_time || null,
       summary: {
@@ -3303,6 +3310,26 @@ function resolveReservationsCore(sub, query, { method, body }) {
     annulled_by_name: null, annulled_at: null,
   });
 
+  // Agenda del día: quién entra, quién sale y quién sigue alojado (widget del dashboard).
+  if (sub === 'reservations/day-agenda') {
+    const day = query.get('date') || expenseDayIso(0);
+    const row = (r) => ({
+      id: r.id, code: r.code, rentable_unit_name: r.rentable_unit_name, holder_user_name: r.holder_user_name,
+      guests_count: r.guests_count || 1, check_in_date: r.check_in_date, check_out_date: r.check_out_date,
+      expected_arrival_time: r.expected_arrival_time || null, nights: r.nights, total: r.total, status: r.status,
+      precheckin_completed: !!r.precheckin_completed_at, has_decoration: reservationHasDecoration(r),
+    });
+    const arrivals = mockReservations.filter((r) => [1, 2, 3, 5].includes(r.status) && r.check_in_date === day).map(row);
+    const departures = mockReservations.filter((r) => [3, 4].includes(r.status) && r.check_out_date === day).map(row);
+    const staying = mockReservations.filter((r) => r.status === 3 && r.check_in_date < day && r.check_out_date > day).map(row);
+    const decorated = new Set([...arrivals, ...departures, ...staying].filter((r) => r.has_decoration).map((r) => r.id));
+    return {
+      date: day,
+      totals: { arrivals: arrivals.length, departures: departures.length, staying: staying.length, decorated: decorated.size },
+      arrivals, departures, staying,
+    };
+  }
+
   // Calendario: reservas que se solapan con [from, to], excluyendo canceladas.
   if (sub === 'reservations/calendar') {
     const from = query.get('from');
@@ -3313,6 +3340,7 @@ function resolveReservationsCore(sub, query, { method, body }) {
         id: r.id, code: r.code, rentable_unit_name: r.rentable_unit_name, holder_user_name: r.holder_user_name,
         guests_count: r.guests_count || 1, check_in_date: r.check_in_date, check_out_date: r.check_out_date,
         nights: r.nights, total: r.total, status: r.status, services_count: (r.services || []).length,
+        has_decoration: reservationHasDecoration(r),
       }));
   }
 
@@ -3363,6 +3391,7 @@ function resolveReservationsCore(sub, query, { method, body }) {
       holder_user_name: r.holder_user_name,
       check_in_date: r.check_in_date, check_out_date: r.check_out_date, nights: r.nights, total: r.total, status: r.status,
       precheckin_completed_at: r.precheckin_completed_at,
+      has_decoration: reservationHasDecoration(r),
     }));
     const status = query.get('status');
     if (status === 'open') rows = rows.filter((r) => r.status !== 0);
@@ -3371,6 +3400,20 @@ function resolveReservationsCore(sub, query, { method, body }) {
     if (unitId) rows = rows.filter((r) => String(r.rentable_unit_id) === unitId);
     const term = (query.get('_search') || '').toLowerCase();
     if (term) rows = rows.filter((r) => r.code.toLowerCase().includes(term) || r.holder_user_name.toLowerCase().includes(term));
+    // Igual que el backend: las reservas vigentes que entran hoy o mañana encabezan el listado
+    // (por fecha de entrada) y el resto conserva el orden por creación descendente.
+    const soonWindow = [expenseDayIso(0), expenseDayIso(-1)]; // hoy y mañana (el offset resta días)
+    const isSoon = (r) => [1, 2, 3, 5].includes(r.status) && soonWindow.includes(r.check_in_date);
+    rows = rows
+      .map((r, i) => ({ r, i }))
+      .sort((a, b) => {
+        const sa = isSoon(a.r) ? 0 : 1;
+        const sb = isSoon(b.r) ? 0 : 1;
+        if (sa !== sb) return sa - sb;
+        if (sa === 0 && a.r.check_in_date !== b.r.check_in_date) return a.r.check_in_date < b.r.check_in_date ? -1 : 1;
+        return a.i - b.i;
+      })
+      .map(({ r }) => r);
     return mockPaginate(rows, query);
   }
 

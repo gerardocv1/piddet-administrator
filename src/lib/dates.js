@@ -28,6 +28,12 @@ export function ageFromBirthdate(value) {
   return age >= 0 ? age : null;
 }
 
+// Fecha de hoy en ISO según el reloj del navegador: "2026-08-31".
+export function todayIso() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 // Suma días a una fecha ISO sin depender de la zona del navegador: "2026-08-31" + 1 → "2026-09-01".
 export function addDaysIso(value, days) {
   const d = parseDate(value);
