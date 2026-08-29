@@ -1,6 +1,7 @@
 import React from 'react';
 import { Dropdown } from '../core/Dropdown.jsx';
 import { IconButton } from '../core/IconButton.jsx';
+import { Button } from '../core/Button.jsx';
 import styles from './InfoCard.module.css';
 
 /**
@@ -15,12 +16,16 @@ import styles from './InfoCard.module.css';
  *  - icon: atajo — clase Font Awesome pintada en una baldosa con el acento de compañía
  *  - actions: ítems del Dropdown de la esquina ([{ label, icon?, onClick, variant?, disabled? }]);
  *    sin acciones no se pinta el menú
+ *  - footerActions: mismos ítems, pero como tira de botones al pie de la tarjeta —siempre
+ *    visibles, sin desplegar ni abrir el menú. Pensada para el teléfono, donde esconder las
+ *    acciones del recurso en el ⋮ las vuelve invisibles; conviven con `actions` o la sustituyen
+ *    (la pantalla decide según el tamaño)
  *  - defaultOpen: arranca desplegada
  *
  * El detalle son `InfoCard.Field` (label + children); cualquier otro nodo hijo se pinta tal
  * cual debajo de los campos.
  */
-export function InfoCard({ title, description, media = null, icon = null, actions = [], defaultOpen = false, className = '', children }) {
+export function InfoCard({ title, description, media = null, icon = null, actions = [], footerActions = [], defaultOpen = false, className = '', children }) {
   const [open, setOpen] = React.useState(defaultOpen);
   const detailId = React.useId();
   const toggle = () => setOpen((o) => !o);
@@ -53,6 +58,16 @@ export function InfoCard({ title, description, media = null, icon = null, action
           {rest.length > 0 && <div className={styles.extra}>{rest}</div>}
         </div>
       </div>
+      {footerActions.length > 0 && (
+        <div className={styles.footer}>
+          {footerActions.map((a) => (
+            <Button key={a.label} variant={a.variant || 'secondary'} icon={a.icon}
+              className={styles.footerBtn} disabled={a.disabled} onClick={a.onClick}>
+              {a.label}
+            </Button>
+          ))}
+        </div>
+      )}
     </section>
   );
 }
