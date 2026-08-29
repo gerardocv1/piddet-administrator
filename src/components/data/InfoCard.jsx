@@ -61,7 +61,7 @@ export function InfoCard({ title, description, media = null, icon = null, action
       {footerActions.length > 0 && (
         <div className={styles.footer}>
           {footerActions.map((a) => (
-            <Button key={a.label} variant={a.variant || 'secondary'} icon={a.icon}
+            <Button key={a.label} variant={a.variant || 'secondary'} size="sm" icon={a.icon}
               className={styles.footerBtn} disabled={a.disabled} onClick={a.onClick}>
               {a.label}
             </Button>

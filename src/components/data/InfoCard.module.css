@@ -124,15 +124,18 @@
   padding: 0.75rem 1.1rem;
   border-top: 1px solid var(--border-color);
 }
+/* Compactos a propósito: son atajos, no la acción principal de la pantalla. El alto mínimo
+   los mantiene cómodos para el pulgar aunque la tipografía sea pequeña. */
 .footerBtn {
   flex: 1 1 30%;
   min-width: 0;
+  min-height: 34px;
 }
 
 @media (max-width: 860px) {
-  .footer { padding: 0.6rem 0.75rem; }
+  .footer { padding: 0.5rem 0.75rem; gap: 6px; }
 }
 /* Teléfonos angostos: el aire lateral del botón cede antes que el texto. */
 @media (max-width: 380px) {
-  .footerBtn { padding-left: 0.5rem; padding-right: 0.5rem; }
+  .footerBtn { padding-left: 0.4rem; padding-right: 0.4rem; }
 }

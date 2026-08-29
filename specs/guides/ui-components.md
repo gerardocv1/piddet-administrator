@@ -207,7 +207,9 @@ Cuando la ficha de un recurso tiene **dos o tres acciones que se usan sobre la m
 ver progreso, tomar medidas), esconderlas en el ⋮ —o repartirlas por las cabeceras de los paneles
 de más abajo— las vuelve invisibles en el teléfono. Para eso `InfoCard` acepta `footerActions`:
 una tira de botones al pie de la tarjeta, **fuera del plegable**, así que se ve con la ficha
-cerrada. Se reparten el ancho a partes iguales y envuelven si no caben.
+cerrada. Se reparten el ancho a partes iguales y envuelven si no caben. Son compactos a
+propósito (`size="sm"` con alto mínimo para el pulgar): son atajos, no la acción principal de la
+pantalla — para destacar uno, dale `variant: 'primary'`.
 
 La pantalla decide según el tamaño y **no duplica**: si una acción sube a la tira, se quita de
 sus otros escondites.
