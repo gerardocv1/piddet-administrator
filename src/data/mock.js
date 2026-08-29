@@ -3310,24 +3310,18 @@ function resolveReservationsCore(sub, query, { method, body }) {
     annulled_by_name: null, annulled_at: null,
   });
 
-  // Agenda del día: quién entra, quién sale y quién sigue alojado (widget del dashboard).
-  if (sub === 'reservations/day-agenda') {
-    const day = query.get('date') || expenseDayIso(0);
-    const row = (r) => ({
-      id: r.id, code: r.code, rentable_unit_name: r.rentable_unit_name, holder_user_name: r.holder_user_name,
-      guests_count: r.guests_count || 1, check_in_date: r.check_in_date, check_out_date: r.check_out_date,
-      expected_arrival_time: r.expected_arrival_time || null, nights: r.nights, total: r.total, status: r.status,
-      precheckin_completed: !!r.precheckin_completed_at, has_decoration: reservationHasDecoration(r),
-    });
-    const arrivals = mockReservations.filter((r) => [1, 2, 3, 5].includes(r.status) && r.check_in_date === day).map(row);
-    const departures = mockReservations.filter((r) => [3, 4].includes(r.status) && r.check_out_date === day).map(row);
-    const staying = mockReservations.filter((r) => r.status === 3 && r.check_in_date < day && r.check_out_date > day).map(row);
-    const decorated = new Set([...arrivals, ...departures, ...staying].filter((r) => r.has_decoration).map((r) => r.id));
-    return {
-      date: day,
-      totals: { arrivals: arrivals.length, departures: departures.length, staying: staying.length, decorated: decorated.size },
-      arrivals, departures, staying,
-    };
+  // Reservas pendientes de recibir con entrada hoy o mañana (widget del dashboard).
+  if (sub === 'reservations/pending-arrivals') {
+    const window = [expenseDayIso(0), expenseDayIso(-1)]; // hoy y mañana (el offset resta días)
+    return mockReservations
+      .filter((r) => [1, 2, 5].includes(r.status) && window.includes(r.check_in_date))
+      .sort((a, b) => (a.check_in_date < b.check_in_date ? -1 : a.check_in_date > b.check_in_date ? 1 : 0))
+      .map((r) => ({
+        id: r.id, code: r.code, rentable_unit_name: r.rentable_unit_name, holder_user_name: r.holder_user_name,
+        guests_count: r.guests_count || 1, check_in_date: r.check_in_date, check_out_date: r.check_out_date,
+        expected_arrival_time: r.expected_arrival_time || null, nights: r.nights, total: r.total, status: r.status,
+        precheckin_completed: !!r.precheckin_completed_at, has_decoration: reservationHasDecoration(r),
+      }));
   }
 
   // Calendario: reservas que se solapan con [from, to], excluyendo canceladas.
