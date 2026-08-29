@@ -45,8 +45,11 @@ const { data: rows, loading, error } = useResource(api.products, []);
 ### `ListCard`
 
 La fila de un listado **en el teléfono**, donde `DataTable` no cabe: identidad arriba (`media`
-—un `Avatar`—, `title`, `subtitle`) y estado abajo (`badge`, `meta` y una sola `action`), con
-`onClick` para navegar al detalle. El pie solo se pinta si hay algo que poner en él.
+—un `Avatar`—, `title`, `subtitle`) y estado abajo — el `badge` abre la fila, el `meta` (fecha,
+plan) la cierra por la derecha y la única `action` va al final —, con `onClick` para navegar al
+detalle. El pie solo se pinta si hay algo que poner en él, y **no lleva filete**: la tarjeta ya
+está delimitada por su marco, y una línea interna la parte en dos objetos que se leen como
+tarjetas distintas.
 
 ```jsx
 <div className={s.mobileList}>
