@@ -113,3 +113,26 @@
   .fields { padding: 0.75rem 0.75rem 0.9rem; }
   .extra { padding: 0 0.75rem 0.9rem; }
 }
+
+/* Tira de acciones al pie: fuera del plegable, así que se ve con la tarjeta cerrada. Los
+   botones reparten el ancho a partes iguales y, si no caben, la fila se envuelve en vez de
+   desbordar (teléfonos de 320 px). */
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0.75rem 1.1rem;
+  border-top: 1px solid var(--border-color);
+}
+.footerBtn {
+  flex: 1 1 30%;
+  min-width: 0;
+}
+
+@media (max-width: 860px) {
+  .footer { padding: 0.6rem 0.75rem; }
+}
+/* Teléfonos angostos: el aire lateral del botón cede antes que el texto. */
+@media (max-width: 380px) {
+  .footerBtn { padding-left: 0.5rem; padding-right: 0.5rem; }
+}

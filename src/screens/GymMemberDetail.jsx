@@ -313,18 +313,26 @@ export function GymMemberDetail() {
 
   return (
     <div className={s.page}>
-      {/* La identidad del afiliado como InfoCard: avatar + nombre + teléfono, acciones en el
-          ⋮ y el resto de datos (personales y de perfil) en el detalle plegable — un solo lugar,
-          se editan juntos desde "Editar datos". */}
+      {/* La identidad del afiliado como InfoCard: avatar + nombre + teléfono, y el resto de
+          datos (personales y de perfil) en el detalle plegable — un solo lugar, se editan
+          juntos desde "Editar datos".
+          Las acciones cambian de sitio según el tamaño: en escritorio viven en el ⋮ (y tomar
+          medidas, en la cabecera de su Panel); en el teléfono esos dos escondites las vuelven
+          invisibles, así que las tres van como tira fija al pie de la ficha. */}
       <InfoCard
         media={<Avatar name={data.member_name} size="lg" />}
         title={data.member_name}
         description={data.phone_number
           ? <><i className="fas fa-phone" aria-hidden="true" /> {data.phone_number}</>
           : data.member_code}
-        actions={[
+        actions={isMobile ? [] : [
           { label: 'Editar datos', icon: 'fas fa-pen', onClick: openEdit },
           { label: 'Ver progreso', icon: 'fas fa-chart-line', onClick: () => navigate(`/gym/members/${memberId}/progress`) },
+        ]}
+        footerActions={!isMobile ? [] : [
+          { label: 'Editar', icon: 'fas fa-pen', onClick: openEdit },
+          { label: 'Progreso', icon: 'fas fa-chart-line', onClick: () => navigate(`/gym/members/${memberId}/progress`) },
+          { label: 'Medidas', icon: 'fas fa-plus', variant: 'outline-primary', onClick: () => navigate(`/gym/members/${memberId}/checkin`) },
         ]}
       >
         <InfoCard.Field label="Código">{data.member_code}</InfoCard.Field>
@@ -381,20 +389,18 @@ export function GymMemberDetail() {
 
       {/* ── Medidas: tabla de mediciones; el análisis visual vive en la vista de progreso ── */}
       <Panel title="Medidas"
-        action={
+        action={isMobile ? null : (
           <span className={g.headerActions}>
-            {!isMobile && (
-              <Button variant="secondary" size="sm" icon="fas fa-chart-line"
-                onClick={() => navigate(`/gym/members/${memberId}/progress`)}>
-                Ver progreso
-              </Button>
-            )}
+            <Button variant="secondary" size="sm" icon="fas fa-chart-line"
+              onClick={() => navigate(`/gym/members/${memberId}/progress`)}>
+              Ver progreso
+            </Button>
             <Button variant="outline-primary" size="sm" icon="fas fa-plus"
               onClick={() => navigate(`/gym/members/${memberId}/checkin`)}>
               Medidas
             </Button>
           </span>
-        }>
+        )}>
         <div className={s.formCol}>
             {progressStats.length > 0 && <StatStrip stats={progressStats} />}
             <div className={s.desktopList}>

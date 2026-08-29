@@ -201,6 +201,31 @@ del estado. Lo que ya está en otro lado (el contador de resultados de un listad
 repite otra pestaña) se oculta en móvil en vez de duplicarse. Ejemplos reales:
 `screens/GymMemberDetail.jsx` y `screens/ReservationDetail.jsx`.
 
+### La excepción: acciones del recurso al pie del `InfoCard`
+
+Cuando la ficha de un recurso tiene **dos o tres acciones que se usan sobre la marcha** (editar,
+ver progreso, tomar medidas), esconderlas en el ⋮ —o repartirlas por las cabeceras de los paneles
+de más abajo— las vuelve invisibles en el teléfono. Para eso `InfoCard` acepta `footerActions`:
+una tira de botones al pie de la tarjeta, **fuera del plegable**, así que se ve con la ficha
+cerrada. Se reparten el ancho a partes iguales y envuelven si no caben.
+
+La pantalla decide según el tamaño y **no duplica**: si una acción sube a la tira, se quita de
+sus otros escondites.
+
+```jsx
+<InfoCard
+  actions={isMobile ? [] : [/* … el ⋮ de escritorio … */]}
+  footerActions={!isMobile ? [] : [
+    { label: 'Editar', icon: 'fas fa-pen', onClick: openEdit },
+    { label: 'Progreso', icon: 'fas fa-chart-line', onClick: goProgress },
+    { label: 'Medidas', icon: 'fas fa-plus', variant: 'outline-primary', onClick: goCheckin },
+  ]}
+>
+```
+
+Ejemplo real: `screens/GymMemberDetail.jsx` (en móvil el Panel «Medidas» se queda sin acciones
+de cabecera, porque ya viven en la tira).
+
 ## Patrón de una pantalla con datos
 
 Flujo completo (datos + UI) en [`backend-service.md`](backend-service.md). Resumen de UI:
