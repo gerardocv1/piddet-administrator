@@ -1,0 +1,46 @@
+/* Barra de progreso pegada al borde superior de la pantalla. Va por encima de todo el chrome
+   (topbar, cajón lateral) pero por debajo de los modales, y nunca intercepta toques: es un
+   aviso, no un control. */
+.track {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  height: 3px;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* El transporte no conoce el porcentaje real, así que la barra avanza rápido al principio y se
+   va frenando cerca del final: nunca llega sola al 100 % —eso lo hace el desmontaje, cuando la
+   respuesta llega— y en todo momento hay algo pintado desde el borde izquierdo. Un tramo
+   deslizante dejaba instantes con la pantalla vacía de señal. */
+.bar {
+  height: 100%;
+  width: 0;
+  border-radius: 0 3px 3px 0;
+  background: var(--color-primary);
+  box-shadow: 0 0 6px var(--color-primary);
+  animation: advance 12s cubic-bezier(0.1, 0.9, 0.2, 1) forwards;
+}
+
+@keyframes advance {
+  0% { width: 5%; }
+  20% { width: 55%; }
+  50% { width: 78%; }
+  100% { width: 94%; }
+}
+
+/* Con movimiento reducido no avanza: se queda a lo ancho, latiendo, que sigue diciendo
+   "algo pasa". */
+@media (prefers-reduced-motion: reduce) {
+  .bar {
+    width: 100%;
+    animation: pulse 1.4s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 0.35; }
+    50% { opacity: 1; }
+  }
+}

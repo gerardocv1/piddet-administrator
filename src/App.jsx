@@ -1,7 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Layout } from './layout/Layout.jsx';
-import { ToastProvider } from './components/index.js';
+import { ToastProvider, LoadingBar } from './components/index.js';
 import { Login } from './screens/Login.jsx';
 import { Dashboard } from './screens/Dashboard.jsx';
 import { Products } from './screens/Products.jsx';
@@ -199,8 +199,11 @@ function AdminApp() {
   const logout = () => { authLib.logout(); setAuth(false); };
 
   // ToastProvider envuelve al router: la pila de confirmaciones sobrevive a los cambios de ruta.
+  // LoadingBar va fuera de las rutas y se monta una sola vez: escucha al transporte, así que
+  // avisa igual en el panel, en el login y en las vistas públicas.
   return (
     <ToastProvider>
+      <LoadingBar />
       <BrowserRouter basename={ADMIN_BASE}>
       <Routes>
         {/* Única vista pública */}

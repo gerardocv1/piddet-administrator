@@ -18,6 +18,23 @@ export class HttpClient {
     this.resolveMock = resolveMock;
     this.mockLatency = mockLatency;
     this.tokenManager = null; // inyectado por http/client.js
+    // Peticiones en vuelo + quién quiere enterarse. Es lo que permite a la UI avisar SIEMPRE
+    // de que algo está cargando (ver components/feedback/LoadingBar.jsx) sin que cada pantalla
+    // tenga que reportarlo por su cuenta.
+    this._inFlight = 0;
+    this._activityListeners = new Set();
+  }
+
+  /** Se suscribe al número de peticiones en vuelo. Devuelve la función para darse de baja. */
+  onActivity(listener) {
+    this._activityListeners.add(listener);
+    listener(this._inFlight);
+    return () => this._activityListeners.delete(listener);
+  }
+
+  _trackActivity(delta) {
+    this._inFlight = Math.max(0, this._inFlight + delta);
+    this._activityListeners.forEach((fn) => fn(this._inFlight));
   }
 
   /** Inyecta el cerebro del token (cableado en http/client.js). */
@@ -49,8 +66,19 @@ export class HttpClient {
    * @param {{ method?: string, body?: any, auth?: boolean, paginated?: boolean }} opts
    *        auth=false → no adjunta token (login/refresh) y no reintenta por 401.
    *        paginated=true → devuelve { items, pagination } (data + metadata del backend).
+   *        silent=true → no cuenta como actividad: sondeos de fondo y refrescos automáticos,
+   *        que no responden a un gesto del usuario y no deben encender el indicador global.
    */
-  async request(path, { method = 'GET', body, auth = true, paginated = false } = {}) {
+  async request(path, { method = 'GET', body, auth = true, paginated = false, silent = false } = {}) {
+    if (!silent) this._trackActivity(1);
+    try {
+      return await this._request(path, { method, body, auth, paginated });
+    } finally {
+      if (!silent) this._trackActivity(-1);
+    }
+  }
+
+  async _request(path, { method, body, auth, paginated }) {
     // --- Modo demo (sin backend) ---
     if (this.useMock) {
       await new Promise((r) => setTimeout(r, this.mockLatency));
