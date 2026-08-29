@@ -100,11 +100,10 @@ export const reservationsService = {
   reservationsCalendar: ({ from, to }) =>
     list(http.get(`${base()}/reservations/calendar${qs({ from, to })}`)),
 
-  // Agenda de reservas de un día (hoy si no se pasa fecha), para el widget del dashboard:
-  // { date, totals: { arrivals, departures, staying, decorated }, arrivals, departures, staying }.
-  // Cada fila trae los mismos campos del listado más `has_decoration` y `precheckin_completed`.
-  reservationsDayAgenda: ({ date = '' } = {}) =>
-    http.get(`${base()}/reservations/day-agenda${qs({ date })}`),
+  // Reservas pendientes de recibir (vivas y sin check-in) con entrada hoy o mañana, para el
+  // widget del dashboard. Lista plana ordenada por fecha de entrada; cada fila trae los campos
+  // del listado más `expected_arrival_time`, `precheckin_completed` y `has_decoration`.
+  reservationsPendingArrivals: () => list(http.get(`${base()}/reservations/pending-arrivals`)),
 
   // Detalle completo: huéspedes, servicios, pagos y resumen de saldo.
   reservation: (reservationId) => http.get(`${base()}/reservations/${reservationId}`),

@@ -22,8 +22,8 @@ const STATUS_OPTIONS = [
 // conservar la consulta al volver del detalle.
 //
 // El orden lo fija el backend: las reservas vigentes que entran hoy o mañana encabezan siempre el
-// listado (con su badge «Hoy»/«Mañana») y las que llevan decoración se marcan con 🎈 — las dos
-// cosas son alertas de operación: son las que hay que preparar.
+// listado (con su badge «Hoy»/«Mañana», que reemplaza a la fecha) y las que llevan decoración
+// llevan el badge 🎈 — las dos cosas son alertas de operación: son las que hay que preparar.
 export function Reservations() {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
@@ -74,27 +74,25 @@ export function Reservations() {
   );
 
   const columns = [
-    {
-      key: 'code', header: 'Código', width: 130, nowrap: true,
-      render: (r) => (
-        <span className={s.cellStrong}>
-          {r.has_decoration && <span title={DECORATION_LABEL} aria-label={DECORATION_LABEL}>{DECORATION_EMOJI} </span>}
-          {r.code}
-        </span>
-      ),
-    },
-    { key: 'holder_user_name', header: 'Titular', ellipsis: true, render: (r) => r.holder_user_name },
+    { key: 'holder_user_name', header: 'Titular', ellipsis: true, render: (r) => <span className={s.cellStrong}>{r.holder_user_name}</span> },
     { key: 'rentable_unit_name', header: 'Unidad', ellipsis: true, render: (r) => r.rentable_unit_name },
     {
-      key: 'check_in_date', header: 'Entrada', width: 250, nowrap: true,
+      key: 'check_in_date', header: 'Entrada', width: 220, nowrap: true,
       render: (r) => {
-        // Las que entran hoy o mañana llegan de primeras desde el backend; el badge dice por qué.
+        // Las que entran hoy o mañana llegan de primeras desde el backend, y el badge sustituye a
+        // la fecha: decir «Hoy» y «29 ago 2026» a la vez es repetir el mismo dato dos veces.
         const soon = checkInProximity(r.check_in_date, r.status);
+        const nights = Number(r.nights);
         return (
           <span className={s.muted}>
-            {soon && <><Badge variant={soon.variant} dot>{soon.label}</Badge>{' '}</>}
-            {formatShortDate(r.check_in_date)}{' '}
-            <Badge variant="neutral">{Number(r.nights) === 1 ? '1 noche' : `${r.nights} noches`}</Badge>
+            {soon
+              ? <Badge variant={soon.variant} dot>{soon.label}</Badge>
+              : formatShortDate(r.check_in_date)}
+            {r.has_decoration && (
+              <> <Badge variant="primary" title={DECORATION_LABEL} aria-label={DECORATION_LABEL}>{DECORATION_EMOJI}</Badge></>
+            )}
+            {/* Una noche es lo normal: solo se anuncia la estadía cuando son varias. */}
+            {nights > 1 && <> <Badge variant="neutral">{nights} noches</Badge></>}
           </span>
         );
       },
