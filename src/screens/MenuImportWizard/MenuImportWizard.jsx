@@ -161,14 +161,23 @@ export function MenuImportWizard() {
     }
   }, [statusData, importId]);
 
+  // `busy` marca cuál de las dos acciones del paso 2 está en curso, para que el botón que se
+  // tocó muestre su propia ruedita en vez de quedarse mudo esperando al servidor.
+  const [busy, setBusy] = React.useState(null); // 'retry' | 'cancel'
+
   const retryAnalysis = async () => {
-    if (!importId) return;
+    if (!importId || busy) return;
+    setBusy('retry');
     try { await api.retryMenuImport(importId); setFailure(null); }
     catch (e) { setFailure({ reason: e?.message || 'No se pudo reintentar.' }); }
+    finally { setBusy(null); }
   };
 
   const cancelImport = async () => {
+    if (busy) return;
+    setBusy('cancel');
     if (importId) { try { await api.cancelMenuImport(importId); } catch { /* se cancela igual del lado del panel */ } }
+    setBusy(null);
     navigate('/menus');
   };
 
@@ -316,8 +325,10 @@ export function MenuImportWizard() {
                 <h3 className={t.heading}>No se pudo generar la carta</h3>
                 <p className={t.stateText}>{failure.reason}</p>
                 <div className={t.stateActions}>
-                  <Button variant="secondary" onClick={cancelImport}>Cancelar</Button>
-                  <Button variant="primary" icon="fas fa-rotate-right" onClick={retryAnalysis}>Reintentar</Button>
+                  <Button variant="secondary" loading={busy === 'cancel'} disabled={busy === 'retry'}
+                    onClick={cancelImport}>Cancelar</Button>
+                  <Button variant="primary" icon="fas fa-rotate-right" loading={busy === 'retry'}
+                    disabled={busy === 'cancel'} onClick={retryAnalysis}>Reintentar</Button>
                 </div>
               </div>
             ) : timedOut ? (
@@ -342,7 +353,9 @@ export function MenuImportWizard() {
                   Estamos leyendo las fotos e identificando productos, precios y categorías. Puede
                   tardar uno o dos minutos.
                 </p>
-                <button type="button" className={t.cancelLink} onClick={cancelImport}>Cancelar importación</button>
+                <button type="button" className={t.cancelLink} disabled={busy === 'cancel'} onClick={cancelImport}>
+                  {busy === 'cancel' ? 'Cancelando…' : 'Cancelar importación'}
+                </button>
               </div>
             )}
           </div>

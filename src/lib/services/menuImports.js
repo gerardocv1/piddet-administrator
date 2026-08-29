@@ -18,7 +18,9 @@ export const menuImportsService = {
   createMenuImport: ({ fileNames, menuName }) =>
     http.post(`${base()}/menu-imports`, { file_names: fileNames, menu_name: menuName }),
   // Polling ligero de estado: { status: pending|running|completed|failed|confirmed|cancelled, failure_reason }.
-  menuImportStatus: (id) => http.get(`${base()}/menu-imports/${id}/status`),
+  // Sondeo de fondo del asistente: `silent` para que no encienda el indicador global cada 4 s
+  // (la pantalla ya explica que la IA está analizando).
+  menuImportStatus: (id) => http.get(`${base()}/menu-imports/${id}/status`, { silent: true }),
   // Detalle completo, con el resultado del agente una vez `completed` (forma del output schema).
   menuImport: (id) => http.get(`${base()}/menu-imports/${id}`),
   // Confirma la revisión editada: crea items + menú y devuelve { created_menu_id }.

@@ -80,7 +80,7 @@ class TokenManager {
 
     try {
       // El refresh viaja por el cliente con auth:false (no requiere Bearer y evita recursión).
-      const data = await this.client.post(REFRESH_PATH, { refresh_token: refreshToken }, { auth: false });
+      const data = await this.client.post(REFRESH_PATH, { refresh_token: refreshToken }, { auth: false, silent: true });
       const auth = data && data.auth ? data.auth : data;
       updateTokens({
         token: auth.token,

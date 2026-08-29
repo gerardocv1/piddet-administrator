@@ -93,6 +93,35 @@ misma atenuación y no se distinguía «esperando al servidor» de «no puedes h
 El foco de teclado pinta el anillo naranja (rojo en `danger`) vía `:focus-visible`; el clic con
 ratón no lo dispara.
 
+**Toda acción que llame al backend enciende su `loading`.** Un botón que se queda mudo mientras
+espera invita a tocarlo otra vez, y en el teléfono la respuesta puede tardar segundos: el
+handler asíncrono guarda su propio estado (`saving`, `busy`…) y lo pasa al botón que se tocó.
+Con dos acciones en la misma fila, marca cuál está en curso y deshabilita la otra.
+
+---
+
+## Nunca una espera muda: `LoadingBar`
+
+`components/feedback/LoadingBar.jsx` se monta **una sola vez** en `App.jsx` y pinta una barra
+fina en el borde superior de la pantalla mientras haya peticiones en vuelo. Se suscribe a
+`http.onActivity(...)`, el contador de peticiones del `HttpClient`, así que cubre por igual el
+cambio de vista (la pantalla nueva pide sus datos al montarse), el filtro, la paginación y el
+botón que guarda — sin que ninguna pantalla tenga que reportar nada.
+
+Es especialmente importante en el teléfono: al saltar de un módulo a otro el contenido tarda en
+aparecer y, sin esta barra, la app parecía congelada.
+
+- Aparece solo si la espera pasa de ~140 ms (lo instantáneo no debe parpadear) y, una vez
+  visible, se queda un mínimo para que dé tiempo a verla.
+- Avanza rápido y se va frenando: el transporte no conoce el porcentaje real, y nunca llega
+  sola al 100 % — eso lo hace la respuesta al llegar.
+- **No sustituye** al estado de carga de cada pantalla (el spinner del listado, el `loading` del
+  botón): lo respalda.
+
+**Peticiones de fondo:** un sondeo o un refresco automático no responden a un gesto del usuario y
+no deben encender la barra. Pásales `silent: true` (`http.get(path, { silent: true })`), como el
+sondeo del asistente de carta con IA y el refresh del token.
+
 ---
 
 ## Estado: migración completa

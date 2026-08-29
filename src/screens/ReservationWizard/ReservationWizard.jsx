@@ -84,9 +84,14 @@ export function ReservationWizard() {
       .finally(() => { if (reqId === availReq.current) setLoadingAvail(false); });
   }, [checkIn, checkOut, nights]);
 
+  // La búsqueda va al servidor: el botón muestra su ruedita mientras tanto, para que el
+  // mostrador no repita el toque creyendo que no pasó nada.
+  const [searchingGuest, setSearchingGuest] = React.useState(false);
   const searchGuest = async () => {
-    if (!guestQuery.trim()) return;
-    setGuestResults(await api.guestsSearch(guestQuery.trim()));
+    if (!guestQuery.trim() || searchingGuest) return;
+    setSearchingGuest(true);
+    try { setGuestResults(await api.guestsSearch(guestQuery.trim())); }
+    finally { setSearchingGuest(false); }
   };
 
   const pickGuest = (g) => {
@@ -277,7 +282,8 @@ export function ReservationWizard() {
                   placeholder="Cédula, nombre o celular" value={guestQuery}
                   onChange={(e) => setGuestQuery(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); searchGuest(); } }} />
-                <Button variant="secondary" size="sm" icon="fas fa-magnifying-glass" onClick={searchGuest}>Buscar</Button>
+                <Button variant="secondary" size="sm" icon="fas fa-magnifying-glass" loading={searchingGuest}
+                  onClick={searchGuest}>Buscar</Button>
               </div>
               {guestResults && (
                 <div className={t.guestResults}>

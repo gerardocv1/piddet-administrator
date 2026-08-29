@@ -45,6 +45,7 @@ export { MapPickerModal } from './feedback/MapPickerModal.jsx';
 export { SessionsModal } from './feedback/SessionsModal.jsx';
 export { ChangePasswordModal } from './feedback/ChangePasswordModal.jsx';
 export { Notifications } from './feedback/Notifications.jsx';
+export { LoadingBar } from './feedback/LoadingBar.jsx';
 // navigation
 export { Sidebar } from './navigation/Sidebar.jsx';
 export { Topbar } from './navigation/Topbar.jsx';
