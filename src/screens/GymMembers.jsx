@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  Card, DataTable, Badge, Button, FilterBar, Pagination, RefreshButton,
+  Card, DataTable, Badge, Button, FilterBar, Pagination, RefreshButton, ListCard, Avatar,
   Modal, Input, Textarea, Select, DatePicker, Alert, Spinner, useToast,
 } from '../components';
 import { api } from '../lib/api.js';
@@ -11,7 +11,6 @@ import { ID_TYPES } from '../lib/reservationLabels.js';
 import { todayIso, yearsAgoIso } from '../lib/orderLabels.js';
 import { formatShortDate, ageFromBirthdate } from '../lib/dates.js';
 import s from './screens.module.css';
-import gl from './GymLists.module.css';
 
 const EMPTY = { items: [], pagination: null };
 
@@ -276,33 +275,25 @@ export function GymMembers() {
         {!loading && !error && rows.length === 0 && (
           <Card><div className={s.mobileState}>No hay afiliados registrados.</div></Card>
         )}
+        {/* Cada afiliado es una tarjeta con marco: arriba quién es (avatar, nombre y código) y
+            abajo su membresía. Toda la zona de identidad navega a la ficha; la única acción
+            aparte es Suscribir, y solo cuando no tiene membresía activa. */}
         {!loading && !error && rows.map((r) => {
           const ms = membership(r);
           return (
-            <Card key={r.id} className={gl.cardPad}>
-              <div className={gl.row}>
-                {/* Toda la zona de información navega a la ficha; la única acción aparte es
-                    Suscribir, y solo cuando el afiliado no tiene membresía activa. */}
-                <button type="button" className={gl.tapArea}
-                  onClick={() => navigate(`/gym/members/${r.id}?${params.toString()}`)}>
-                  <div className={gl.info}>
-                    <span className={gl.name}>{r.member_name}</span>
-                    {/* Estado y vigencia en la misma línea: apilar el badge sobre la acción
-                        hacía cada tarjeta el doble de alta para dos datos de una línea. */}
-                    <span className={gl.metaRow}>
-                      <Badge variant={ms.badge.variant} dot>{ms.badge.label}</Badge>
-                      <span className={gl.meta}>{ms.detail || r.member_code}</span>
-                    </span>
-                  </div>
-                </button>
-                {!ms.alive && (
-                  <Button variant="secondary" size="sm" icon="fas fa-plus"
-                    onClick={() => navigate(`/gym/members/${r.id}?action=subscribe`)}>
-                    Suscribir
-                  </Button>
-                )}
-              </div>
-            </Card>
+            <ListCard key={r.id}
+              media={<Avatar name={r.member_name} size="sm" />}
+              title={r.member_name}
+              subtitle={r.member_code}
+              badge={<Badge variant={ms.badge.variant} dot>{ms.badge.label}</Badge>}
+              meta={ms.detail}
+              action={!ms.alive ? (
+                <Button variant="secondary" size="sm" icon="fas fa-plus"
+                  onClick={() => navigate(`/gym/members/${r.id}?action=subscribe`)}>
+                  Suscribir
+                </Button>
+              ) : null}
+              onClick={() => navigate(`/gym/members/${r.id}?${params.toString()}`)} />
           );
         })}
       </div>

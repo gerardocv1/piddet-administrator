@@ -18,7 +18,7 @@ import { Button, Card, DataTable, FilterBar, Modal, Switch } from '../components
 |---|---|
 | **core** | `Button`, `IconButton`, `Badge`, `Avatar`, `Card`, `Spinner` |
 | **forms** | `Input`, `Select`, `Checkbox`, `Switch`, `Autocomplete` |
-| **data** | `DataTable`, `FilterBar`, `StatStrip`, `Pagination`, `SortableList` |
+| **data** | `DataTable`, `ListCard`, `InfoCard`, `LineList`, `FilterBar`, `StatStrip`, `Pagination`, `SortableList` |
 | **feedback** | `Modal`, `SessionsModal`, `ChangePasswordModal`, `Notifications` |
 | **navigation** | `Sidebar`, `Topbar` |
 
@@ -41,6 +41,31 @@ const { data: rows, loading, error } = useResource(api.products, []);
   <DataTable columns={COLUMNS} rows={rows} loading={loading} error={error} empty="Sin productos." />
 </Card>
 ```
+
+### `ListCard`
+
+La fila de un listado **en el teléfono**, donde `DataTable` no cabe: identidad arriba (`media`
+—un `Avatar`—, `title`, `subtitle`) y estado abajo (`badge`, `meta` y una sola `action`), con
+`onClick` para navegar al detalle. El pie solo se pinta si hay algo que poner en él.
+
+```jsx
+<div className={s.mobileList}>
+  {rows.map((r) => (
+    <ListCard key={r.id}
+      media={<Avatar name={r.member_name} size="sm" />}
+      title={r.member_name} subtitle={r.member_code}
+      badge={<Badge variant={ms.badge.variant} dot>{ms.badge.label}</Badge>}
+      meta={ms.detail}
+      action={!ms.alive ? <Button size="sm" variant="secondary" …>Suscribir</Button> : null}
+      onClick={() => navigate(`/gym/members/${r.id}`)} />
+  ))}
+</div>
+```
+
+**Conserva el marco en móvil, a propósito** — igual que `InfoCard` y al revés que `Card`, que
+ahí se disuelve. En un listado el borde es lo que separa un registro del siguiente: sin él,
+nombre, estado y acción de varias filas se leen como un bloque de datos sueltos. Úsalo dentro
+de `s.mobileList`, con la tabla en `s.desktopList` (ver *Patrón de una pantalla con datos*).
 
 ### `FilterBar`
 
