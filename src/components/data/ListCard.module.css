@@ -15,7 +15,7 @@
   gap: 12px;
   width: 100%;
   min-height: 44px;
-  padding: 0.55rem 0.8rem;
+  padding: 0.55rem 0.8rem 0.4rem;
   border: none;
   background: transparent;
   font-family: var(--font-sans);
@@ -44,21 +44,29 @@ button.head:active { background: var(--gray-100); }
 }
 .chevron { flex: 0 0 auto; color: var(--gray-400); font-size: 0.72rem; }
 
-/* Pie: estado a la izquierda, la única acción a la derecha. El filete lo separa de la
-   identidad — es otra clase de dato, no una segunda línea del nombre. */
+/* Pie: estado a la izquierda, su dato corto al otro extremo y la única acción al final. Sin
+   filete que lo separe de la identidad — la tarjeta ya está delimitada por su propio marco, y
+   una línea interna la parte en dos objetos que se leen como tarjetas distintas. */
 .foot {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 10px;
-  padding: 0.4rem 0.8rem;
-  border-top: 1px solid var(--border-color);
+  padding: 0 0.8rem 0.55rem;
 }
-/* Estado y su dato corto comparten línea y se recortan antes de empujar a la acción. */
-.state { display: flex; align-items: center; gap: 8px; min-width: 0; }
+/* El estado abre la fila y el dato corto la cierra por la derecha; ambos se recortan antes de
+   empujar a la acción. */
+.state {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
 .meta {
   font-size: var(--text-sm);
   color: var(--gray-600);
+  text-align: right;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
