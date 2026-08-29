@@ -99,13 +99,14 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
   turno), el widget de **reservas por llegar** y, bajo un único control de período (fecha fin +
   semanas + refrescar), los reportes que permitan los permisos y funcionalidades: balance del
   período, ventas, gastos y hospedaje, cada uno con su franja de KPIs y su gráfico comparativo.
-- **Reservas por llegar** (con `api-module-reservations` + `functionality_reservations`): lista
-  resumida de las reservas que siguen **pendientes de recibir** (pendiente, validando pago o
-  confirmada) y entran hoy o mañana — nombre, unidad, hora estimada de llegada, badge «Hoy» o
-  «Mañana», 🎈 si lleva decoración y el estado; tocar abre la reserva. Sin franja de totales: el
-  widget avisa de lo que hay que preparar, no reporta. Es operación del día, así que va **antes**
-  del control de período y no lo obedece. Sale de `GET /reservations/pending-arrivals`; el botón
-  de refrescar lo recarga con los demás reportes.
+- **Reservas** (con `api-module-reservations` + `functionality_reservations`): lista resumida de
+  las que siguen **pendientes de recibir** (pendiente, validando pago o confirmada) y entran hoy o
+  mañana — nombre, unidad, hora estimada de llegada, badge «Hoy» o «Mañana», 🎈 si lleva
+  decoración y el estado; tocar abre la reserva. Sin franja de totales: el widget avisa de lo que
+  hay que preparar, no reporta. Es operación del día, así que va **antes** del control de período
+  y no lo obedece. Sale de `GET /reservations/pending-arrivals`; el botón de refrescar lo recarga
+  con los demás reportes. Su cuerpo no lleva relleno propio: en el teléfono las filas se alinean
+  con el resto de la pantalla en vez de quedar doblemente metidas.
 - **Reglas:** en el teléfono cada franja se queda con la cifra que se mira de un vistazo —ventas
   totales y ticket promedio; gastos totales; ingresos de hospedaje y ocupación— y el desglose
   (productos, servicios, registros, gasto promedio, mayor gasto, reservas, noches vendidas) se
@@ -197,6 +198,14 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
   fecha (no se repite el mismo dato), y el de noches solo aparece con más de una: una noche es lo
   normal y anunciarlo es ruido. El listado encabeza con el **titular**, no con el código: se busca
   y se reconoce por el nombre (el código sigue buscándose desde el campo de búsqueda).
+- **Por defecto el listado solo muestra lo vivo** (`status=active`): sin canceladas ni
+  finalizadas. Lo cerrado no se pierde —el filtro de estado ofrece *Finalizadas*, *Canceladas* y
+  *Todas*—, simplemente no estorba en la operación diaria.
+- **En el teléfono el listado son tarjetas** (`ListCard` bajo `s.mobileList`, como afiliados o
+  usuarios): cinco columnas no caben en 390px sin dejar el titular en «T…». En escritorio sigue
+  siendo tabla, con los anchos en **porcentaje** para que la proporción aguante cualquier ancho
+  (`table-layout: fixed` reparte lo que sobra, así que mezclar píxeles y columnas flexibles
+  ahogaba a estas últimas).
 - **Reglas:** requiere la funcionalidad `functionality_reservations` activa además del permiso.
   El pre-check-in del huésped ocurre fuera del panel, en la superficie pública del backend.
   Registrar la entrada exige ese pre-check-in completo; para los casos donde conseguir los datos
