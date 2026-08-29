@@ -3388,7 +3388,8 @@ function resolveReservationsCore(sub, query, { method, body }) {
       has_decoration: reservationHasDecoration(r),
     }));
     const status = query.get('status');
-    if (status === 'open') rows = rows.filter((r) => r.status !== 0);
+    if (status === 'active') rows = rows.filter((r) => ![0, 4].includes(r.status));
+    else if (status === 'open') rows = rows.filter((r) => r.status !== 0);
     else if (status !== null && status !== '') rows = rows.filter((r) => String(r.status) === status);
     const unitId = query.get('rentable_unit_id');
     if (unitId) rows = rows.filter((r) => String(r.rentable_unit_id) === unitId);

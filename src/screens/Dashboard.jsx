@@ -59,19 +59,21 @@ const buildReservationsKpis = ({ totals } = {}) => (totals ? [
 // Cuántas reservas caben en el widget antes de resumir el resto en una línea.
 const ARRIVALS_LIMIT = 6;
 
-/** Widget de reservas por llegar: las que siguen pendientes de recibir y entran hoy o mañana —
- *  lo que hay que preparar. Es operación del día, así que no depende de los filtros de período. */
+/** Widget de reservas: las que siguen pendientes de recibir y entran hoy o mañana — lo que hay
+ *  que preparar. Es operación del día, así que no depende de los filtros de período. */
 function PendingArrivalsCard({ rows, loading, error, onOpen, onSeeAll }) {
   const shown = rows.slice(0, ARRIVALS_LIMIT);
   const rest = rows.length - shown.length;
 
   return (
     <Card>
-      <Card.Header title="Reservas por llegar"
+      <Card.Header title="Reservas"
         action={<Button variant="secondary" size="sm" icon="fas fa-calendar-days" onClick={onSeeAll}>Ver todas</Button>} />
-      <Card.Body className={s.cardBody}>
+      {/* Sin `cardBody`: este widget es una lista, no un reporte, y el relleno propio de la Card
+          ya deja las filas a ras del resto de la pantalla en el teléfono. */}
+      <Card.Body>
         {error ? (
-          <Alert tone="danger" title="No se pudieron cargar las reservas por llegar">{error}</Alert>
+          <Alert tone="danger" title="No se pudieron cargar las reservas">{error}</Alert>
         ) : loading && rows.length === 0 ? (
           <Spinner center label="Cargando reservas…" />
         ) : rows.length === 0 ? (

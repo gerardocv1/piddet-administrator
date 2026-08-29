@@ -73,6 +73,10 @@
   .mobileList { display: flex; flex-direction: column; gap: 10px; }
 }
 
+/* Varias etiquetas en el pie de una ListCard: el pie reparte a sus lados, así que van dentro de
+   un solo hijo para que no se separen entre ellas. */
+.rowBadges { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+
 /* Tarjeta de usuario en móvil */
 .userCardBody { display: flex; flex-direction: column; gap: 10px; }
 .userCardTop { display: flex; align-items: center; gap: 10px; }

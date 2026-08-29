@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Card, DataTable, Badge, Button, FilterBar, Pagination, RefreshButton } from '../components';
+import { Card, DataTable, Badge, Button, FilterBar, Pagination, RefreshButton, ListCard, Avatar, Spinner, Alert } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { formatShortDate } from '../lib/dates.js';
@@ -9,12 +9,15 @@ import s from './screens.module.css';
 
 const EMPTY = { items: [], pagination: null };
 
-// `open` = todas menos las canceladas; es el filtro por defecto para que las canceladas
-// no estorben en la operación diaria.
-const DEFAULT_STATUS = 'open';
+// `active` = ni canceladas ni finalizadas. Es el filtro por defecto: el listado es la operación
+// viva, y lo cerrado (una estadía que ya terminó, una reserva que se canceló) solo estorba ahí.
+// No se pierde nada: los otros estados están a un filtro de distancia.
+const DEFAULT_STATUS = 'active';
 const STATUS_OPTIONS = [
-  { value: 'open', label: 'Abiertas' },
+  { value: 'active', label: 'Activas' },
+  { value: '4', label: 'Finalizadas' },
   { value: '0', label: 'Canceladas' },
+  { value: 'all', label: 'Todas' },
 ];
 
 // Listado de reservas de la compañía activa, filtrable por rango de fechas de entrada, estado
@@ -24,6 +27,14 @@ const STATUS_OPTIONS = [
 // El orden lo fija el backend: las reservas vigentes que entran hoy o mañana encabezan siempre el
 // listado (con su badge «Hoy»/«Mañana», que reemplaza a la fecha) y las que llevan decoración
 // llevan el badge 🎈 — las dos cosas son alertas de operación: son las que hay que preparar.
+//
+// En escritorio es una tabla; en el teléfono, tarjetas (`ListCard`): cinco columnas no caben en
+// 390px sin dejar el titular en «T…».
+// El badge de decoración es el mismo en la tabla y en las tarjetas del teléfono.
+const decorationBadge = (
+  <Badge variant="primary" title={DECORATION_LABEL} aria-label={DECORATION_LABEL}>{DECORATION_EMOJI}</Badge>
+);
+
 export function Reservations() {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
@@ -73,11 +84,14 @@ export function Reservations() {
     [units],
   );
 
+  // Anchos en porcentaje, no en píxeles: la tabla es `table-layout: fixed`, así que un ancho fijo
+  // en la mitad de las columnas dejaba a las flexibles con lo que sobrara —en pantallas angostas,
+  // «T…» y «U…»—. En porcentaje la proporción se mantiene a cualquier ancho.
   const columns = [
-    { key: 'holder_user_name', header: 'Titular', ellipsis: true, render: (r) => <span className={s.cellStrong}>{r.holder_user_name}</span> },
-    { key: 'rentable_unit_name', header: 'Unidad', ellipsis: true, render: (r) => r.rentable_unit_name },
+    { key: 'holder_user_name', header: 'Titular', width: '30%', ellipsis: true, render: (r) => <span className={s.cellStrong}>{r.holder_user_name}</span> },
+    { key: 'rentable_unit_name', header: 'Unidad', width: '22%', ellipsis: true, render: (r) => r.rentable_unit_name },
     {
-      key: 'check_in_date', header: 'Entrada', width: 220, nowrap: true,
+      key: 'check_in_date', header: 'Entrada', width: '24%', nowrap: true,
       render: (r) => {
         // Las que entran hoy o mañana llegan de primeras desde el backend, y el badge sustituye a
         // la fecha: decir «Hoy» y «29 ago 2026» a la vez es repetir el mismo dato dos veces.
@@ -88,9 +102,7 @@ export function Reservations() {
             {soon
               ? <Badge variant={soon.variant} dot>{soon.label}</Badge>
               : formatShortDate(r.check_in_date)}
-            {r.has_decoration && (
-              <> <Badge variant="primary" title={DECORATION_LABEL} aria-label={DECORATION_LABEL}>{DECORATION_EMOJI}</Badge></>
-            )}
+            {r.has_decoration && <> {decorationBadge}</>}
             {/* Una noche es lo normal: solo se anuncia la estadía cuando son varias. */}
             {nights > 1 && <> <Badge variant="neutral">{nights} noches</Badge></>}
           </span>
@@ -98,13 +110,13 @@ export function Reservations() {
       },
     },
     {
-      key: 'status', header: 'Estado', width: 130,
+      key: 'status', header: 'Estado', width: '14%',
       render: (r) => {
         const m = reservationStatusMeta(r.status);
         return <Badge variant={m.variant} dot>{m.label}</Badge>;
       },
     },
-    { key: 'total', header: 'Total', width: 130, align: 'right', render: (r) => <span className={s.priceCell}>{reservationMoney(r.total)}</span> },
+    { key: 'total', header: 'Total', width: '10%', align: 'right', render: (r) => <span className={s.priceCell}>{reservationMoney(r.total)}</span> },
   ];
 
   const filterDefs = [
@@ -146,16 +158,56 @@ export function Reservations() {
         }
       />
 
-      <Card>
-        <DataTable
-          columns={columns}
-          rows={rows}
-          loading={loading}
-          error={error}
-          empty="No hay reservas para los filtros seleccionados."
-          onRowClick={(r) => navigate(`/reservations/${r.id}?${params.toString()}`)}
-        />
-      </Card>
+      <div className={s.desktopList}>
+        <Card>
+          <DataTable
+            columns={columns}
+            rows={rows}
+            loading={loading}
+            error={error}
+            empty="No hay reservas para los filtros seleccionados."
+            onRowClick={(r) => navigate(`/reservations/${r.id}?${params.toString()}`)}
+          />
+        </Card>
+      </div>
+
+      {/* Teléfono: una tarjeta por reserva. Arriba quién llega y a dónde; abajo las alertas
+          («Hoy»/«Mañana» y decoración) y, al otro extremo, estado y total. */}
+      <div className={s.mobileList}>
+        {loading && <Card><div className={s.mobileState}><Spinner size="sm" label="Cargando…" /></div></Card>}
+        {!loading && error && (
+          <Card><Alert tone="danger" title="No se pudieron cargar las reservas">{error}</Alert></Card>
+        )}
+        {!loading && !error && rows.length === 0 && (
+          <Card><div className={s.mobileState}>No hay reservas para los filtros seleccionados.</div></Card>
+        )}
+        {!loading && !error && rows.map((r) => {
+          const soon = checkInProximity(r.check_in_date, r.status);
+          const nights = Number(r.nights);
+          const st = reservationStatusMeta(r.status);
+          // La fecha vive en el subtítulo salvo que el badge «Hoy»/«Mañana» ya la diga.
+          const stay = [
+            r.rentable_unit_name,
+            soon ? null : formatShortDate(r.check_in_date),
+            nights > 1 ? `${nights} noches` : null,
+          ].filter(Boolean).join(' · ');
+          return (
+            <ListCard key={r.id}
+              media={<Avatar name={r.holder_user_name} size="sm" />}
+              title={r.holder_user_name}
+              subtitle={stay}
+              badge={
+                <span className={s.rowBadges}>
+                  {soon && <Badge variant={soon.variant} dot>{soon.label}</Badge>}
+                  {r.has_decoration && decorationBadge}
+                  <Badge variant={st.variant} dot>{st.label}</Badge>
+                </span>
+              }
+              meta={reservationMoney(r.total)}
+              onClick={() => navigate(`/reservations/${r.id}?${params.toString()}`)} />
+          );
+        })}
+      </div>
 
       {pg && pg.last_page > 1 && (
         <Pagination page={pg.current_page} lastPage={pg.last_page} total={pg.total}

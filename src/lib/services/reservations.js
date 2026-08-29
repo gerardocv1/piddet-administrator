@@ -91,8 +91,12 @@ export const reservationsService = {
   // El backend encabeza el listado con las reservas vigentes que entran hoy o mañana (el resto va
   // por creación descendente) y marca con `has_decoration` las que llevan un servicio de
   // decoración: el panel las alerta con un emoji de bombas.
+  //
+  // `status`: un estado exacto ('0'…'5'), 'active' (ni cancelada ni finalizada — el defecto del
+  // panel), 'open' (todas menos canceladas) o 'all' para no filtrar. 'all' es del panel: el
+  // backend no filtra por estado cuando el parámetro va vacío.
   reservations: ({ dateFrom = '', dateTo = '', status = '', unitId = '', search = '', page = 1, perPage = 15 } = {}) =>
-    http.get(`${base()}/reservations${qs({ date_from: dateFrom, date_to: dateTo, status, rentable_unit_id: unitId, _search: search, page, per_page: perPage })}`, { paginated: true }),
+    http.get(`${base()}/reservations${qs({ date_from: dateFrom, date_to: dateTo, status: status === 'all' ? '' : status, rentable_unit_id: unitId, _search: search, page, per_page: perPage })}`, { paginated: true }),
 
   // Reservas que se solapan con un rango, para la vista de calendario:
   // [{ id, code, rentable_unit_name, holder_user_name, guests_count, check_in_date, check_out_date,
