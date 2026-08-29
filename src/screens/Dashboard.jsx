@@ -1,11 +1,14 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { StatStrip, SalesComparisonChart, Card, Input, Select, IconButton, Spinner } from '../components';
+import { StatStrip, SalesComparisonChart, Card, Input, Select, IconButton, Spinner, Badge, Button, ListCard, Alert } from '../components';
 import { useResource } from '../lib/useResource.js';
 import { usePermissions } from '../lib/permissions/usePermissions.js';
 import { useFunctionalities } from '../lib/permissions/useFunctionalities.js';
 import { api } from '../lib/api.js';
 import { shiftMoney } from '../lib/shiftLabels.js';
+import {
+  reservationStatusMeta, arrivalSlotLabel, DECORATION_EMOJI, DECORATION_LABEL,
+} from '../lib/reservationLabels.js';
 import { phrase } from '../lib/terms.js';
 import s from './Dashboard.module.css';
 
@@ -52,6 +55,84 @@ const buildReservationsKpis = ({ totals } = {}) => (totals ? [
   { label: 'Noches vendidas', value: String(totals.nights_sold), desktopOnly: true },
   { label: 'Ocupación', value: `${totals.occupancy_rate}%` },
 ] : []);
+
+// Cuántas reservas de cada tramo caben en el widget antes de resumir el resto en una línea.
+const AGENDA_LIMIT = 4;
+
+/** Un tramo de la agenda del día (llegadas o salidas) como lista de tarjetas. */
+function AgendaSection({ title, icon, rows, emptyLabel, onOpen }) {
+  const shown = rows.slice(0, AGENDA_LIMIT);
+  const rest = rows.length - shown.length;
+
+  return (
+    <section className={s.agendaSection}>
+      <h4 className={s.agendaTitle}>
+        <i className={icon} /> {title}
+        <span className={s.agendaCount}>{rows.length}</span>
+      </h4>
+      {rows.length === 0 ? (
+        <p className={s.agendaEmpty}>{emptyLabel}</p>
+      ) : (
+        <div className={s.agendaList}>
+          {shown.map((r) => {
+            const meta = reservationStatusMeta(r.status);
+            return (
+              <ListCard key={r.id}
+                media={<span className={s.agendaIcon}><i className={icon} /></span>}
+                title={
+                  <>
+                    {r.has_decoration && <span title={DECORATION_LABEL} aria-label={DECORATION_LABEL}>{DECORATION_EMOJI} </span>}
+                    {r.holder_user_name}
+                  </>
+                }
+                subtitle={`${r.rentable_unit_name} · ${r.code}`}
+                badge={<Badge variant={meta.variant} dot>{meta.label}</Badge>}
+                meta={r.expected_arrival_time ? arrivalSlotLabel(r.expected_arrival_time) : `${r.nights} ${r.nights === 1 ? 'noche' : 'noches'}`}
+                onClick={() => onOpen(r.id)} />
+            );
+          })}
+          {rest > 0 && <p className={s.agendaMore}>y {rest} más</p>}
+        </div>
+      )}
+    </section>
+  );
+}
+
+/** Widget de reservas del día: entradas, salidas y quiénes siguen alojados, con la alerta de
+ *  decoración por delante. Es operación de hoy, así que no depende de los filtros de período. */
+function TodayReservationsCard({ agenda, loading, error, onOpen, onSeeAll }) {
+  const totals = agenda?.totals;
+  const stats = totals ? [
+    { label: 'Entradas', value: String(totals.arrivals) },
+    { label: 'Salidas', value: String(totals.departures) },
+    { label: 'Alojados', value: String(totals.staying) },
+    { label: 'Con decoración', value: `${DECORATION_EMOJI} ${totals.decorated}` },
+  ] : [];
+
+  return (
+    <Card>
+      <Card.Header title="Reservas de hoy"
+        action={<Button variant="secondary" size="sm" icon="fas fa-calendar-days" onClick={onSeeAll}>Ver todas</Button>} />
+      <Card.Body className={s.cardBody}>
+        {error ? (
+          <Alert tone="danger" title="No se pudieron cargar las reservas de hoy">{error}</Alert>
+        ) : (
+          <>
+            <StatStrip stats={stats} loading={loading && !agenda} />
+            {agenda && (
+              <div className={s.agenda}>
+                <AgendaSection title="Llegan hoy" icon="fas fa-right-to-bracket" rows={agenda.arrivals || []}
+                  emptyLabel="Sin entradas para hoy." onOpen={onOpen} />
+                <AgendaSection title="Salen hoy" icon="fas fa-right-from-bracket" rows={agenda.departures || []}
+                  emptyLabel="Sin salidas para hoy." onOpen={onOpen} />
+              </div>
+            )}
+          </>
+        )}
+      </Card.Body>
+    </Card>
+  );
+}
 
 /** Tarjeta presentacional de un dash: KPIs + gráfico comparativo. Los filtros y la carga
  *  de datos viven en el Dashboard (un solo control para todos los reportes). */
@@ -136,7 +217,16 @@ export function Dashboard() {
   const expCmpRes = useMetric(canExpenses, api.expensesComparison);
   const resKpisRes = useMetric(canReservations, api.reservationsReport);
 
-  const anyLoading = salesKpisRes.loading || salesCmpRes.loading || expKpisRes.loading || expCmpRes.loading || resKpisRes.loading;
+  // Agenda del día: siempre HOY, al margen del período elegido (es operación, no reporte). Se
+  // recarga con el mismo botón de refresco que los reportes.
+  const agendaFetcher = React.useCallback(
+    () => (canReservations ? api.reservationsDayAgenda() : Promise.resolve(null)),
+    [canReservations, endDate, refreshToken],
+  );
+  const dayAgendaRes = useResource(agendaFetcher, null, [canReservations, endDate, refreshToken]);
+
+  const anyLoading = salesKpisRes.loading || salesCmpRes.loading || expKpisRes.loading || expCmpRes.loading
+    || resKpisRes.loading || dayAgendaRes.loading;
 
   // Botón refresh: click corto → con cache; mantener ~2s → fuerza recálculo (force).
   // Re-sincroniza la fecha a "hoy" para no arrastrar un endDate congelado desde el montaje.
@@ -253,6 +343,16 @@ export function Dashboard() {
             )
           )}
         </div>
+      )}
+
+      {canReservations && (
+        <TodayReservationsCard
+          agenda={dayAgendaRes.data}
+          loading={dayAgendaRes.loading}
+          error={dayAgendaRes.error}
+          onOpen={(id) => navigate(`/reservations/${id}`)}
+          onSeeAll={() => navigate('/reservations')}
+        />
       )}
 
       {(canSales || canExpenses || canReservations) && (

@@ -148,3 +148,57 @@
 .emptyDash i { font-size: 1.6rem; color: var(--gray-400); }
 .emptyDash p { margin: 0; color: var(--gray-900); font-size: var(--text-base); }
 .emptyDash span { color: var(--gray-500); font-size: var(--text-sm); }
+
+/* ── Widget de reservas de hoy ── */
+/* Los dos tramos (llegadas y salidas) comparten fila en escritorio y se apilan en el teléfono. */
+.agenda {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
+  margin-top: 1.5rem;
+}
+@media (min-width: 861px) {
+  .agenda { grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+}
+
+.agendaSection { display: flex; flex-direction: column; gap: 0.6rem; min-width: 0; }
+
+.agendaTitle {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.agendaTitle i { color: var(--gray-400); }
+/* El conteo cierra el título por la derecha: dice cuántas hay aunque la lista venga recortada. */
+.agendaCount {
+  margin-left: auto;
+  padding: 0 0.45rem;
+  border-radius: var(--radius-pill);
+  background: var(--gray-100);
+  color: var(--gray-600);
+  font-size: var(--text-xs);
+  letter-spacing: 0;
+}
+
+.agendaList { display: flex; flex-direction: column; gap: 8px; }
+
+.agendaIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--company-accent-soft);
+  color: var(--company-accent-strong);
+  font-size: 0.8rem;
+}
+
+.agendaMore { margin: 0; color: var(--gray-500); font-size: var(--text-xs); }
+.agendaEmpty { margin: 0; color: var(--gray-500); font-size: var(--text-sm); }

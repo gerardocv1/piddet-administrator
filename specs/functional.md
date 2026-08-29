@@ -96,9 +96,14 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
 
 - **Descripción:** vista inicial (`/`), siempre visible. Solo lectura.
 - **Flujo principal:** acciones rápidas de móvil (cobrar membresía, registrar gasto, abrir/cerrar
-  turno) y, bajo un único control de período (fecha fin + semanas + refrescar), los reportes que
-  permitan los permisos y funcionalidades: balance del período, ventas, gastos y hospedaje, cada
-  uno con su franja de KPIs y su gráfico comparativo.
+  turno), el widget de **reservas de hoy** y, bajo un único control de período (fecha fin +
+  semanas + refrescar), los reportes que permitan los permisos y funcionalidades: balance del
+  período, ventas, gastos y hospedaje, cada uno con su franja de KPIs y su gráfico comparativo.
+- **Reservas de hoy** (con `api-module-reservations` + `functionality_reservations`): franja con
+  entradas, salidas, alojados y cuántas llevan decoración, y debajo las listas de quién llega y
+  quién sale hoy (`ListCard`, tocar abre la reserva). Es operación del día, así que va **antes**
+  del control de período y no lo obedece: siempre muestra hoy, aunque se mire otro rango. Sale de
+  `GET /reservations/day-agenda`; el botón de refrescar lo recarga con los demás reportes.
 - **Reglas:** en el teléfono cada franja se queda con la cifra que se mira de un vistazo —ventas
   totales y ticket promedio; gastos totales; ingresos de hospedaje y ocupación— y el desglose
   (productos, servicios, registros, gasto promedio, mayor gasto, reservas, noches vendidas) se
@@ -179,6 +184,13 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
 - **Flujo principal:** `/rentable-units` configura las unidades (espacios, inclusiones, fotos);
   `/reservations` opera calendario, creación asistida, confirmación, check-in, consumos y
   cargos, abonos y checkout.
+- **Alertas del listado.** Las dos las decide el backend y el panel solo las pinta:
+  - **🎈 decoración** — la reserva con un servicio de decoración llega con `has_decoration` y se
+    marca con el emoji junto al código (listado), en el chip y el resumen del calendario y en el
+    título del detalle, que además muestra un aviso mientras la reserva siga abierta.
+  - **Entradas de hoy y mañana primero** — el listado llega ordenado con las reservas vigentes que
+    entran hoy o mañana al principio, y cada una lleva su badge «Hoy» o «Mañana». No es un filtro:
+    el resto del listado sigue debajo, por creación descendente.
 - **Reglas:** requiere la funcionalidad `functionality_reservations` activa además del permiso.
   El pre-check-in del huésped ocurre fuera del panel, en la superficie pública del backend.
   Registrar la entrada exige ese pre-check-in completo; para los casos donde conseguir los datos

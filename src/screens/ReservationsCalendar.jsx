@@ -4,7 +4,7 @@ import { Card, Button, IconButton, Badge, Modal, Alert, Spinner, PageHeader } fr
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { formatStayRange } from '../lib/dates.js';
-import { reservationMoney, reservationStatusMeta, RESERVATION_STATUS } from '../lib/reservationLabels.js';
+import { reservationMoney, reservationStatusMeta, RESERVATION_STATUS, DECORATION_EMOJI, DECORATION_LABEL } from '../lib/reservationLabels.js';
 import { useSetPageTitle } from '../lib/pageTitle.jsx';
 import s from './screens.module.css';
 import t from './ReservationsCalendar.module.css';
@@ -120,10 +120,10 @@ export function ReservationsCalendar() {
                         {events.slice(0, MAX_CHIPS).map((r) => (
                           <button key={r.id} type="button"
                             className={[t.event, STATUS_CLASS[r.status] || ''].filter(Boolean).join(' ')}
-                            title={`${r.holder_user_name} · ${r.rentable_unit_name}`}
+                            title={`${r.holder_user_name} · ${r.rentable_unit_name}${r.has_decoration ? ` · ${DECORATION_LABEL}` : ''}`}
                             onClick={() => setSelected(r)}>
                             <span className={t.eventDot} />
-                            <span className={t.eventText}>{r.holder_user_name}</span>
+                            <span className={t.eventText}>{r.has_decoration ? `${DECORATION_EMOJI} ` : ''}{r.holder_user_name}</span>
                           </button>
                         ))}
                         {events.length > MAX_CHIPS && (
@@ -154,7 +154,9 @@ function EventModal({ reservation, onClose, onOpen }) {
   const guests = Number(reservation.guests_count) || 1;
 
   return (
-    <Modal open size="sm" title={reservation.holder_user_name} subtitle={`Reserva ${reservation.code}`} onClose={onClose}
+    <Modal open size="sm"
+      title={`${reservation.has_decoration ? `${DECORATION_EMOJI} ` : ''}${reservation.holder_user_name}`}
+      subtitle={`Reserva ${reservation.code}${reservation.has_decoration ? ` · ${DECORATION_LABEL}` : ''}`} onClose={onClose}
       footer={<>
         <Button variant="secondary" onClick={onClose}>Cerrar</Button>
         <Button variant="primary" icon="fas fa-eye" onClick={() => onOpen(reservation.id)}>Ver reserva</Button>
