@@ -232,7 +232,8 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
   mediciones se lista como filas tappables en vez de tabla.
 - **Flujo principal:** `/gym/plans` administra los planes (nombre, precio, **duración por
   calendario** —`duration_months`: un plan de un mes que arranca el 2 de octubre vence el 1 de
-  noviembre, tenga el mes 28, 30 o 31 días; `duration_days` solo para lo que se cuenta en días,
+  noviembre, tenga el mes 28, 30 o 31 días, y el que arranca un 31 cubre el mes siguiente completo
+  (31 de agosto → 30 de septiembre); `duration_days` solo para lo que se cuenta en días,
   como semanal o quincenal—, días de gracia tras el vencimiento, si el plan permite pausar la
   suscripción y el ítem del catálogo de productos con el que se factura cada pago). `/gym/members` registra afiliados **en
   dos pasos**: primero se busca a la persona por **celular o correo** (un solo campo: con `@`
