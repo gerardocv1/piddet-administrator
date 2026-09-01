@@ -205,8 +205,7 @@ export function GymMembers() {
   };
 
   const columns = [
-    { key: 'member_code', header: 'Código', width: 110, render: (r) => <span className={s.cellStrong}>{r.member_code}</span> },
-    { key: 'member_name', header: 'Afiliado', ellipsis: true, render: (r) => r.member_name },
+    { key: 'member_name', header: 'Afiliado', ellipsis: true, render: (r) => <span className={s.cellStrong}>{r.member_name}</span> },
     {
       key: 'subscription', header: 'Membresía', width: 140,
       render: (r) => {
@@ -275,16 +274,15 @@ export function GymMembers() {
         {!loading && !error && rows.length === 0 && (
           <Card><div className={s.mobileState}>No hay afiliados registrados.</div></Card>
         )}
-        {/* Cada afiliado es una tarjeta con marco: arriba quién es (avatar, nombre y código) y
-            abajo su membresía. Toda la zona de identidad navega a la ficha; la única acción
-            aparte es Suscribir, y solo cuando no tiene membresía activa. */}
+        {/* Cada afiliado es una tarjeta con marco: arriba quién es (avatar y nombre) y abajo su
+            membresía. Toda la zona de identidad navega a la ficha; la única acción aparte es
+            Suscribir, y solo cuando no tiene membresía activa. */}
         {!loading && !error && rows.map((r) => {
           const ms = membership(r);
           return (
             <ListCard key={r.id}
               media={<Avatar name={r.member_name} size="sm" />}
               title={r.member_name}
-              subtitle={r.member_code}
               badge={<Badge variant={ms.badge.variant} dot>{ms.badge.label}</Badge>}
               meta={ms.detail}
               action={!ms.alive ? (

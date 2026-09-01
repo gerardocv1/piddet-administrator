@@ -1644,6 +1644,14 @@ function resolvePermissionsAdminMock(path, query, { method = 'GET', body } = {})
     const role = mockRoles[idx];
 
     if (roleMatch[2]) {
+      // Mismo guard que el backend: la lista REEMPLAZA, así que el super-admin no se reduce por
+      // aquí y el resto de roles del sistema exige `admin-general`.
+      if (role.name === 'super-admin') {
+        throw new Error('El rol super-admin conserva todos los permisos de la plataforma: no se puede reducir');
+      }
+      if (role.system && !mockPermissions.permissions.includes('admin-general')) {
+        throw new Error('No se pueden cambiar los permisos de un rol del sistema');
+      }
       role.permissions = Array.isArray(body?.permissions) ? body.permissions : [];
       return roleOut(role);
     }

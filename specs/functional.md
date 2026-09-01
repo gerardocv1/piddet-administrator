@@ -243,7 +243,8 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
   nacimiento, talla, objetivo, notas; el documento solo si su cuenta aún no lo tiene), o (c) si no existe, el segundo
   paso pide la ficha completa y el backend crea su usuario. En cualquier caso el backend resuelve
   a la persona como usuario real de la plataforma —por `user_id`, documento o celular— antes de
-  crear su ficha con un código de afiliado autogenerado (`M00001`, `M00002`…). **El listado de afiliados
+  crear su ficha con un código de afiliado autogenerado (`M00001`, `M00002`…), que vive en la ficha
+  y no se lista. **El listado de afiliados
   muestra el estado de la membresía, no el activo/inactivo administrativo**: cada fila trae la
   suscripción más reciente (badge Activa/En gracia/Vencida/Cancelada/Sin suscripción y su
   vencimiento "Vence/Venció el …"), y la acción por fila es **Renovar** (membresía vigente) o

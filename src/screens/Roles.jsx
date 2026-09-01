@@ -9,6 +9,7 @@ import a from './Access.module.css';
 
 // Roles base de la plataforma: se editan como cualquier otro, pero eliminarlos exige `admin-general`.
 const SYSTEM_ROLES = ['super-admin', 'client', 'employee'];
+const SUPER_ADMIN = 'super-admin';
 const isSystemRole = (role) => SYSTEM_ROLES.includes(role.name);
 
 const matches = (role, term) => {
@@ -31,6 +32,14 @@ export function Roles() {
   // Cualquier rol se edita y se le cambian los permisos; eliminar uno del sistema exige además
   // `admin-general` (es irreversible y afecta a toda la plataforma).
   const canDeleteRole = (role) => canDelete && (!isSystemRole(role) || can('admin-general'));
+  // Cambiar los permisos de un rol REEMPLAZA su lista completa, así que el backend protege los
+  // roles del sistema: el super-admin no se reduce nunca (por definición los tiene todos) y los
+  // demás exigen `admin-general`. El panel lo refleja en vez de dejar que falle al guardar.
+  const permissionsBlockedReason = (role) => {
+    if (role.name === SUPER_ADMIN) return 'El super-admin conserva todos los permisos de la plataforma';
+    if (isSystemRole(role) && !can('admin-general')) return 'Cambiar los permisos de un rol del sistema exige admin-general';
+    return null;
+  };
 
   const { data: roles, loading, error, reload } = useResource(api.roles, [], []);
 
@@ -69,7 +78,9 @@ export function Roles() {
   const actionsFor = (role) => (
     <span className={s.actions}>
       {canAssign && (
-        <IconButton icon="fas fa-key" variant="light" size="sm" title="Permisos del rol"
+        <IconButton icon="fas fa-key" variant="light" size="sm"
+          disabled={!!permissionsBlockedReason(role)}
+          title={permissionsBlockedReason(role) || 'Permisos del rol'}
           onClick={() => setPermsOf(role)} />
       )}
       {canUpdate && (
@@ -231,7 +242,8 @@ function RoleFormModal({ role, onClose, onSaved }) {
 // ── Modal: permisos que otorga el rol ──────────────────────────────────────────
 // Reemplaza la lista completa de permisos del rol (el backend sincroniza, no agrega).
 function RolePermissionsModal({ role, catalog, onClose, onSaved }) {
-  const [selected, setSelected] = React.useState(() => new Set((role.permissions || []).map((p) => p.name)));
+  const original = React.useMemo(() => new Set((role.permissions || []).map((p) => p.name)), [role]);
+  const [selected, setSelected] = React.useState(() => new Set(original));
   const [q, setQ] = React.useState('');
   const [saving, setSaving] = React.useState(false);
   const [err, setErr] = React.useState(null);
@@ -289,6 +301,10 @@ function RolePermissionsModal({ role, catalog, onClose, onSaved }) {
     }
   };
 
+  // Lo que se desmarca se retira del rol al guardar, y el checkbox de la cabecera de un módulo
+  // desmarca decenas de un clic: se avisa antes de que la baja sea silenciosa.
+  const removed = [...original].filter((name) => !selected.has(name));
+
   return (
     <Modal open title="Permisos del rol" subtitle={roleLabel(role.name)} size="lg" onClose={onClose}
       footer={<>
@@ -301,6 +317,14 @@ function RolePermissionsModal({ role, catalog, onClose, onSaved }) {
             onChange={(e) => setQ(e.target.value)} />
           <span className={a.pickerCount}>{selected.size} seleccionados</span>
         </div>
+
+        {removed.length > 0 && (
+          <Alert tone="warning" title={`Se retirarán ${removed.length} permiso${removed.length === 1 ? '' : 's'}`}>
+            Al guardar, el rol pierde: {removed.slice(0, 8).join(', ')}
+            {removed.length > 8 && ` y ${removed.length - 8} más`}. Quien tenga este rol deja de
+            acceder a lo que otorgaban, en todas las compañías.
+          </Alert>
+        )}
 
         <div className={a.pickerBody}>
           {groups.length === 0 && <div className={a.empty}>No hay permisos que coincidan.</div>}
