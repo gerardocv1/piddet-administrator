@@ -230,9 +230,11 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
   ver progreso, registrar pago, cancelar, activar/desactivar un plan) vive en un menú ⋮: el de
   la cabecera en las fichas, el de la propia fila en el listado de planes. El historial de
   mediciones se lista como filas tappables en vez de tabla.
-- **Flujo principal:** `/gym/plans` administra los planes (nombre, precio, duración en días,
-  días de gracia tras el vencimiento, si el plan permite pausar la suscripción y el ítem del
-  catálogo de productos con el que se factura cada pago). `/gym/members` registra afiliados **en
+- **Flujo principal:** `/gym/plans` administra los planes (nombre, precio, **duración por
+  calendario** —`duration_months`: un plan de un mes que arranca el 2 de octubre vence el 1 de
+  noviembre, tenga el mes 28, 30 o 31 días; `duration_days` solo para lo que se cuenta en días,
+  como semanal o quincenal—, días de gracia tras el vencimiento, si el plan permite pausar la
+  suscripción y el ítem del catálogo de productos con el que se factura cada pago). `/gym/members` registra afiliados **en
   dos pasos**: primero se busca a la persona por **celular o correo** (un solo campo: con `@`
   busca por correo, si no por celular) contra `GET /gym/members/lookup`, y según lo que responda,
   (a) si ya está afiliada a esta compañía no se duplica nada —se ofrece abrir su ficha—, (b) si ya
