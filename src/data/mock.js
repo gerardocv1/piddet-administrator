@@ -3625,9 +3625,9 @@ function resolveCheckinMock(path, query, { method = 'GET', body } = {}) {
 // ── Gimnasio: catálogo de planes de membresía (afiliados/suscripciones llegan en fases
 // posteriores). Mutan en memoria durante la sesión, como el resto de los mocks.
 let mockGymPlans = [
-  { id: 1, name: 'Plan mensual', description: 'Acceso ilimitado al gimnasio, mes a mes', price: '90000.00', duration_days: 30, grace_period_days: 3, allows_pause: false, item_id: 905, status: 1, sort_order: 0 },
-  { id: 2, name: 'Plan trimestral', description: 'Tres meses con un mes de descuento', price: '240000.00', duration_days: 90, grace_period_days: 3, allows_pause: true, item_id: 905, status: 1, sort_order: 1 },
-  { id: 3, name: 'Plan anual', description: 'Doce meses al mejor precio', price: '840000.00', duration_days: 365, grace_period_days: 7, allows_pause: true, item_id: 905, status: 1, sort_order: 2 },
+  { id: 1, name: 'Plan mensual', description: 'Acceso ilimitado al gimnasio, mes a mes', price: '90000.00', duration_months: 1, duration_days: null, grace_period_days: 3, allows_pause: false, item_id: 905, status: 1, sort_order: 0 },
+  { id: 2, name: 'Plan trimestral', description: 'Tres meses con un mes de descuento', price: '240000.00', duration_months: 3, duration_days: null, grace_period_days: 3, allows_pause: true, item_id: 905, status: 1, sort_order: 1 },
+  { id: 3, name: 'Plan anual', description: 'Doce meses al mejor precio', price: '840000.00', duration_months: 12, duration_days: null, grace_period_days: 7, allows_pause: true, item_id: 905, status: 1, sort_order: 2 },
 ];
 
 const gymPlanPresent = (p) => ({ ...p, item_name: p.item_id ? serviceItemName(p.item_id) : null });
@@ -3640,6 +3640,23 @@ const addDaysIso = (iso, days) => {
   const p = (n) => String(n).padStart(2, '0');
   return `${dt.getFullYear()}-${p(dt.getMonth() + 1)}-${p(dt.getDate())}`;
 };
+// Suma meses de CALENDARIO conservando el día de anclaje (espejo de App\Utils\Gym\GymPeriodCalendar
+// en el backend): el 2 de octubre + 1 mes es el 2 de noviembre, y el 31 de enero + 1 mes es el
+// 28 de febrero sin desbordar, recuperando el 31 en cuanto el mes lo tiene.
+const addMonthsIso = (iso, months, anchorDay) => {
+  const [y, m, d] = iso.split('-').map(Number);
+  const target = new Date(y, m - 1 + months, 1);
+  const daysInMonth = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate();
+  target.setDate(Math.min(anchorDay || d, daysInMonth));
+  const p = (n) => String(n).padStart(2, '0');
+  return `${target.getFullYear()}-${p(target.getMonth() + 1)}-${p(target.getDate())}`;
+};
+
+// Último día (inclusive) del período que arranca en `startIso`, según la duración del plan.
+const gymPeriodEndIso = (startIso, plan, anchorDay) => (plan.duration_months
+  ? addDaysIso(addMonthsIso(startIso, plan.duration_months, anchorDay), -1)
+  : addDaysIso(startIso, plan.duration_days - 1));
+
 // Afiliados: personas ya resueltas como usuarios de la plataforma (user_id ficticio en el demo).
 // Catálogo cerrado de objetivos (espejo del seed de gym_goals): el afiliado elige uno, no hay
 // texto libre. `goal` en el afiliado es el snapshot del label.
@@ -3766,7 +3783,8 @@ const gymPeriodFull = (p) => {
   const paidTotal = periodPaidTotal(p);
   return {
     id: p.id, number: p.number, plan_name: p.plan_name, price: p.price,
-    duration_days: p.duration_days, grace_period_days: p.grace_period_days,
+    duration_months: p.duration_months ?? null, duration_days: p.duration_days,
+    grace_period_days: p.grace_period_days,
     start_date: p.start_date, end_date: p.end_date, grace_ends_at: p.grace_ends_at,
     status: p.status, computed_status: computePeriodStatus(p),
     paid_total: paidTotal.toFixed(2),
@@ -3846,7 +3864,7 @@ let mockGymSubscriptionPeriods = [
   // ── Laura (gsub-1) ──
   {
     id: 'gper-1a', subscription_id: 'gsub-1', gym_member_id: 1, member_name: 'Laura Gómez',
-    number: 1, plan_id: 1, plan_name: 'Plan mensual', price: '90000.00', duration_days: 30, grace_period_days: 3,
+    number: 1, plan_id: 1, plan_name: 'Plan mensual', price: '90000.00', duration_months: 1, duration_days: 30, grace_period_days: 3,
     start_date: isoDay(40), end_date: isoDay(11), grace_ends_at: isoDay(8), status: GYM_PER_CLOSED,
     payments: [
       { id: 'gpay-1a', registers_income: true, value: '90000.00', payment_method: 'nequi', payment_method_name: 'Nequi', payment_date: isoDay(40), notes: null, order_id: 'ord-gym-1a', status: 1, created_by_name: 'Gerardo', annulled_at: null, annulment_reason: null },
@@ -3854,7 +3872,7 @@ let mockGymSubscriptionPeriods = [
   },
   {
     id: 'gper-1b', subscription_id: 'gsub-1', gym_member_id: 1, member_name: 'Laura Gómez',
-    number: 2, plan_id: 1, plan_name: 'Plan mensual', price: '90000.00', duration_days: 30, grace_period_days: 3,
+    number: 2, plan_id: 1, plan_name: 'Plan mensual', price: '90000.00', duration_months: 1, duration_days: 30, grace_period_days: 3,
     start_date: isoDay(10), end_date: isoDay(-19), grace_ends_at: isoDay(-22), status: GYM_PER_CURRENT,
     payments: [
       { id: 'gpay-1b', registers_income: true, value: '90000.00', payment_method: 'nequi', payment_method_name: 'Nequi', payment_date: isoDay(10), notes: null, order_id: 'ord-gym-1b', status: 1, created_by_name: 'Gerardo', annulled_at: null, annulment_reason: null },
@@ -3863,7 +3881,7 @@ let mockGymSubscriptionPeriods = [
   // ── Carlos (gsub-2) ──
   {
     id: 'gper-2a', subscription_id: 'gsub-2', gym_member_id: 2, member_name: 'Carlos Restrepo',
-    number: 1, plan_id: 1, plan_name: 'Plan mensual', price: '90000.00', duration_days: 30, grace_period_days: 3,
+    number: 1, plan_id: 1, plan_name: 'Plan mensual', price: '90000.00', duration_months: 1, duration_days: 30, grace_period_days: 3,
     start_date: isoDay(61), end_date: isoDay(32), grace_ends_at: isoDay(29), status: GYM_PER_CLOSED,
     payments: [
       { id: 'gpay-2a', registers_income: true, value: '50000.00', payment_method: 'cash', payment_method_name: 'Efectivo', payment_date: isoDay(61), notes: 'Abono inicial', order_id: 'ord-gym-2a', status: 1, created_by_name: 'Gerardo', annulled_at: null, annulment_reason: null },
@@ -3871,14 +3889,14 @@ let mockGymSubscriptionPeriods = [
   },
   {
     id: 'gper-2b', subscription_id: 'gsub-2', gym_member_id: 2, member_name: 'Carlos Restrepo',
-    number: 2, plan_id: 1, plan_name: 'Plan mensual', price: '90000.00', duration_days: 30, grace_period_days: 3,
+    number: 2, plan_id: 1, plan_name: 'Plan mensual', price: '90000.00', duration_months: 1, duration_days: 30, grace_period_days: 3,
     start_date: isoDay(31), end_date: isoDay(2), grace_ends_at: isoDay(-1), status: GYM_PER_GRACE,
     payments: [],
   },
   // ── Daniela (gsub-3) — cancelada automáticamente en el período 2 ──
   {
     id: 'gper-3a', subscription_id: 'gsub-3', gym_member_id: 3, member_name: 'Daniela Ríos',
-    number: 1, plan_id: 1, plan_name: 'Plan mensual', price: '90000.00', duration_days: 30, grace_period_days: 3,
+    number: 1, plan_id: 1, plan_name: 'Plan mensual', price: '90000.00', duration_months: 1, duration_days: 30, grace_period_days: 3,
     start_date: isoDay(100), end_date: isoDay(71), grace_ends_at: isoDay(68), status: GYM_PER_CLOSED,
     payments: [
       { id: 'gpay-3a', registers_income: false, value: '90000.00', payment_method: 'datafono', payment_method_name: 'Datafono', payment_date: isoDay(100), notes: 'Cobrado antes de usar la plataforma', order_id: null, status: 1, created_by_name: 'Gerardo', annulled_at: null, annulment_reason: null },
@@ -3886,14 +3904,14 @@ let mockGymSubscriptionPeriods = [
   },
   {
     id: 'gper-3b', subscription_id: 'gsub-3', gym_member_id: 3, member_name: 'Daniela Ríos',
-    number: 2, plan_id: 1, plan_name: 'Plan mensual', price: '90000.00', duration_days: 30, grace_period_days: 3,
+    number: 2, plan_id: 1, plan_name: 'Plan mensual', price: '90000.00', duration_months: 1, duration_days: 30, grace_period_days: 3,
     start_date: isoDay(70), end_date: isoDay(41), grace_ends_at: isoDay(38), status: GYM_PER_CANCELLED,
     payments: [],
   },
   // ── Andrés (gsub-4) — cancelada manualmente con el pago anulado ──
   {
     id: 'gper-4a', subscription_id: 'gsub-4', gym_member_id: 4, member_name: 'Andrés Mejía',
-    number: 1, plan_id: 2, plan_name: 'Plan trimestral', price: '240000.00', duration_days: 90, grace_period_days: 3,
+    number: 1, plan_id: 2, plan_name: 'Plan trimestral', price: '240000.00', duration_months: 3, duration_days: 90, grace_period_days: 3,
     start_date: isoDay(95), end_date: isoDay(6), grace_ends_at: isoDay(3), status: GYM_PER_CANCELLED,
     payments: [
       { id: 'gpay-4a', registers_income: true, value: '240000.00', payment_method: 'bancolombia', payment_method_name: 'Ahorro a la mano Bancolombia', payment_date: isoDay(95), notes: null, order_id: 'ord-gym-4a', status: 0, created_by_name: 'Gerardo', annulled_at: isoDay(50), annulment_reason: 'Cancelación de la suscripción' },
@@ -3971,7 +3989,9 @@ function resolveGymMock(path, query, { method = 'GET', body } = {}) {
         name: body.name,
         description: body.description || null,
         price: body.price,
-        duration_days: Number(body.duration_days),
+        // Los meses mandan: un plan por calendario no se mide en días.
+        duration_months: body.duration_months ? Number(body.duration_months) : null,
+        duration_days: body.duration_months ? null : Number(body.duration_days),
         grace_period_days: Number(body.grace_period_days ?? 3),
         allows_pause: !!body.allows_pause,
         item_id: body.item_id ? Number(body.item_id) : null,
@@ -4003,11 +4023,16 @@ function resolveGymMock(path, query, { method = 'GET', body } = {}) {
       return gymPlanPresent(plan);
     }
     if (method === 'PUT') {
-      ['name', 'description', 'price', 'duration_days', 'grace_period_days', 'allows_pause', 'item_id', 'sort_order'].forEach((key) => {
-        if (key in body) plan[key] = key === 'duration_days' || key === 'grace_period_days' || key === 'sort_order'
+      ['name', 'description', 'price', 'grace_period_days', 'allows_pause', 'item_id', 'sort_order'].forEach((key) => {
+        if (key in body) plan[key] = key === 'grace_period_days' || key === 'sort_order'
           ? Number(body[key])
           : (key === 'item_id' ? (body[key] ? Number(body[key]) : null) : body[key]);
       });
+      // La duración se guarda completa: fijar los meses limpia los días y viceversa.
+      if ('duration_months' in body || 'duration_days' in body) {
+        plan.duration_months = body.duration_months ? Number(body.duration_months) : null;
+        plan.duration_days = plan.duration_months ? null : (body.duration_days ? Number(body.duration_days) : null);
+      }
       return gymPlanPresent(plan);
     }
     return gymPlanPresent(plan);
@@ -4152,7 +4177,7 @@ function resolveGymMock(path, query, { method = 'GET', body } = {}) {
       if (hasActive) throw new Error('El afiliado ya tiene una suscripción activa');
 
       const startDate = body.start_date || todayIso();
-      const endDate = addDaysIso(startDate, plan.duration_days - 1);
+      const endDate = gymPeriodEndIso(startDate, plan);
       const graceEndsAt = addDaysIso(endDate, plan.grace_period_days);
       // Con fecha retroactiva el período #1 puede nacer ya en gracia.
       const periodStatus = todayIso() <= endDate ? GYM_PER_CURRENT : GYM_PER_GRACE;
@@ -4168,7 +4193,10 @@ function resolveGymMock(path, query, { method = 'GET', body } = {}) {
         id: 'gper-' + Date.now().toString(36), subscription_id: subId,
         gym_member_id: memberId, member_name: member.member_name,
         number: 1, plan_id: plan.id, plan_name: plan.name, price: plan.price,
-        duration_days: plan.duration_days, grace_period_days: plan.grace_period_days,
+        duration_months: plan.duration_months ?? null,
+        // Días que cubre de verdad el período (en calendario varían con el mes).
+        duration_days: 1 + Math.round((new Date(endDate) - new Date(startDate)) / 86400000),
+        grace_period_days: plan.grace_period_days,
         start_date: startDate, end_date: endDate, grace_ends_at: graceEndsAt,
         status: periodStatus, payments: [],
       };

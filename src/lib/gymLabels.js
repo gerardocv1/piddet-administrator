@@ -25,19 +25,36 @@ export const GYM_SEX_OPTIONS = [
 ];
 export const gymSexLabel = (sex) => GYM_SEX_OPTIONS.find((o) => o.value === sex)?.label || '';
 
-// Presets de duración para el formulario de planes (en días). "custom" deja el campo libre.
+// Presets de duración para el formulario de planes, en MESES de calendario: un plan mensual que
+// arranca el 2 de octubre vence el 1 de noviembre, tenga el mes 28, 30 o 31 días. "custom" deja
+// el valor libre y permite medirlo en días (semanal, quincenal, promos sueltas).
 export const GYM_PLAN_DURATION_PRESETS = [
-  { value: '30', label: 'Mensual (30 días)' },
-  { value: '90', label: 'Trimestral (90 días)' },
-  { value: '365', label: 'Anual (365 días)' },
+  { value: '1', label: 'Mensual (1 mes)' },
+  { value: '3', label: 'Trimestral (3 meses)' },
+  { value: '6', label: 'Semestral (6 meses)' },
+  { value: '12', label: 'Anual (12 meses)' },
   { value: 'custom', label: 'Personalizado' },
 ];
 
-// Etiqueta corta de la duración del plan para listados y tarjetas.
-export const gymPlanDurationLabel = (days) => {
-  const preset = GYM_PLAN_DURATION_PRESETS.find((p) => p.value === String(days));
-  if (preset) return preset.label.replace(/ \(.*\)/, '');
-  return `${days} días`;
+// Unidad de la duración personalizada. El backend guarda `duration_months` (calendario) o
+// `duration_days` (conteo), nunca los dos.
+export const GYM_PLAN_DURATION_UNITS = [
+  { value: 'months', label: 'Meses' },
+  { value: 'days', label: 'Días' },
+];
+
+const durationPlural = (value, one, many) => `${value} ${Number(value) === 1 ? one : many}`;
+
+// Etiqueta corta de la duración del plan para listados y tarjetas. Recibe el plan completo
+// porque la duración puede venir en meses (lo normal) o en días.
+export const gymPlanDurationLabel = (plan) => {
+  const months = plan?.duration_months;
+  const days = plan?.duration_days;
+  if (months) {
+    const preset = GYM_PLAN_DURATION_PRESETS.find((p) => p.value === String(months));
+    return preset ? preset.label.replace(/ \(.*\)/, '') : durationPlural(months, 'mes', 'meses');
+  }
+  return days ? durationPlural(days, 'día', 'días') : '—';
 };
 
 // Estados de una suscripción (deben coincidir con las constantes del modelo GymSubscription).

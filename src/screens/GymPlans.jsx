@@ -6,7 +6,10 @@ import {
 } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
-import { gymMoney, gymPlanStatusMeta, gymPlanDurationLabel, GYM_PLAN_DURATION_PRESETS, GYM_PLAN_STATUS } from '../lib/gymLabels.js';
+import {
+  gymMoney, gymPlanStatusMeta, gymPlanDurationLabel,
+  GYM_PLAN_DURATION_PRESETS, GYM_PLAN_DURATION_UNITS, GYM_PLAN_STATUS,
+} from '../lib/gymLabels.js';
 import s from './screens.module.css';
 import gl from './GymLists.module.css';
 
@@ -18,7 +21,7 @@ const STATUS_OPTIONS = [
 ];
 
 const emptyForm = {
-  name: '', description: '', price: '', durationPreset: '30', durationDays: '30',
+  name: '', description: '', price: '', durationPreset: '1', durationUnit: 'months', durationValue: '1',
   grace_period_days: '3', allows_pause: false, item_id: '',
 };
 
@@ -61,8 +64,11 @@ export function GymPlans() {
       name: plan.name,
       description: plan.description || '',
       price: plan.price,
-      durationPreset: GYM_PLAN_DURATION_PRESETS.some((p) => p.value === String(plan.duration_days)) ? String(plan.duration_days) : 'custom',
-      durationDays: String(plan.duration_days),
+      // La duración es de calendario (meses) salvo los planes que sí se cuentan en días.
+      durationPreset: plan.duration_months && GYM_PLAN_DURATION_PRESETS.some((p) => p.value === String(plan.duration_months))
+        ? String(plan.duration_months) : 'custom',
+      durationUnit: plan.duration_months ? 'months' : 'days',
+      durationValue: String(plan.duration_months || plan.duration_days || ''),
       grace_period_days: String(plan.grace_period_days),
       allows_pause: !!plan.allows_pause,
       item_id: String(plan.item_id || ''),
@@ -71,13 +77,15 @@ export function GymPlans() {
   };
 
   const setDurationPreset = (value) => {
-    setForm((f) => ({ ...f, durationPreset: value, durationDays: value === 'custom' ? f.durationDays : value }));
+    setForm((f) => (value === 'custom'
+      ? { ...f, durationPreset: value }
+      : { ...f, durationPreset: value, durationUnit: 'months', durationValue: value }));
   };
 
   const save = async () => {
     if (saving) return;
-    const durationDays = Number(form.durationDays);
-    if (!form.name.trim() || form.price === '' || !durationDays) {
+    const durationValue = Number(form.durationValue);
+    if (!form.name.trim() || form.price === '' || !durationValue) {
       setFormError('Completa nombre, precio y duración.');
       return;
     }
@@ -88,7 +96,9 @@ export function GymPlans() {
         name: form.name.trim(),
         description: form.description.trim() || null,
         price: form.price,
-        duration_days: durationDays,
+        // Solo viaja una de las dos: en meses vence por calendario, en días se cuentan días.
+        duration_months: form.durationUnit === 'months' ? durationValue : null,
+        duration_days: form.durationUnit === 'days' ? durationValue : null,
         grace_period_days: Number(form.grace_period_days) || 0,
         allows_pause: form.allows_pause,
         item_id: form.item_id ? Number(form.item_id) : null,
@@ -129,7 +139,7 @@ export function GymPlans() {
 
   const columns = [
     { key: 'name', header: 'Plan', ellipsis: true, render: (r) => <span className={s.cellStrong}>{r.name}</span> },
-    { key: 'duration_days', header: 'Duración', width: 160, render: (r) => gymPlanDurationLabel(r.duration_days) },
+    { key: 'duration_months', header: 'Duración', width: 160, render: (r) => gymPlanDurationLabel(r) },
     { key: 'grace_period_days', header: 'Gracia', width: 100, render: (r) => `${r.grace_period_days} día${Number(r.grace_period_days) === 1 ? '' : 's'}` },
     { key: 'price', header: 'Precio', width: 130, align: 'right', render: (r) => <span className={s.priceCell}>{gymMoney(r.price)}</span> },
     {
@@ -212,7 +222,7 @@ export function GymPlans() {
                     <span className={gl.name}>{r.name}</span>
                     <span className={gl.metaRow}>
                       <Badge variant={m.variant} dot>{m.label}</Badge>
-                      <span className={gl.meta}>{gymPlanDurationLabel(r.duration_days)} · {gymMoney(r.price)}</span>
+                      <span className={gl.meta}>{gymPlanDurationLabel(r)} · {gymMoney(r.price)}</span>
                     </span>
                   </div>
                 </button>
@@ -256,9 +266,18 @@ export function GymPlans() {
                 onChange={(e) => setDurationPreset(e.target.value)} options={GYM_PLAN_DURATION_PRESETS} />
             </div>
             {form.durationPreset === 'custom' && (
-              <Input label="Duración en días" type="number" min="1" icon="fas fa-calendar-day"
-                value={form.durationDays} onChange={(e) => setForm({ ...form, durationDays: e.target.value })} />
+              <div className={s.formGrid}>
+                <Input label="Duración" type="number" min="1" icon="fas fa-calendar-day"
+                  value={form.durationValue} onChange={(e) => setForm({ ...form, durationValue: e.target.value })} />
+                <Select label="Medida" icon="fas fa-ruler" value={form.durationUnit}
+                  onChange={(e) => setForm({ ...form, durationUnit: e.target.value })}
+                  options={GYM_PLAN_DURATION_UNITS} />
+              </div>
             )}
+            <p className={s.faint}>
+              Los meses vencen por calendario: un plan de un mes que arranca el 2 de octubre vence
+              el 1 de noviembre, tenga el mes 28, 30 o 31 días. Los días se cuentan uno a uno.
+            </p>
             <div className={s.formGrid}>
               <Input label="Días de gracia" type="number" min="0" icon="fas fa-hourglass-half"
                 hint="Días de acceso tras vencer, antes de marcar la suscripción como vencida."
