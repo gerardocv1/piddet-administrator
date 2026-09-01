@@ -83,9 +83,10 @@ function GymPeriodDatesFixModal({ onClose, onFixed }) {
       <div className={s.formCol}>
         <p className={s.faint}>
           Los planes en meses vencen por calendario: el período que arranca el 2 de octubre vence
-          el 1 de noviembre, tenga el mes 28, 30 o 31 días. Esto corrige los períodos vigentes que
-          se calcularon sumando días. No toca la historia: los períodos cerrados o cancelados y las
-          suscripciones ya canceladas quedan como están.
+          el 1 de noviembre, tenga el mes 28, 30 o 31 días; y el que arranca un 31 cubre el mes
+          siguiente completo (31 de agosto → 30 de septiembre). Esto corrige los períodos vigentes
+          que se calcularon sumando días. No toca la historia: los períodos cerrados o cancelados
+          y las suscripciones ya canceladas quedan como están.
         </p>
 
         {error && <Alert tone="danger" onClose={() => setError(null)}>{error}</Alert>}

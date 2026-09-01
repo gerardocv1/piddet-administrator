@@ -3648,14 +3648,15 @@ const addDaysIso = (iso, days) => {
   const p = (n) => String(n).padStart(2, '0');
   return `${dt.getFullYear()}-${p(dt.getMonth() + 1)}-${p(dt.getDate())}`;
 };
-// Suma meses de CALENDARIO conservando el día de anclaje (espejo de App\Utils\Gym\GymPeriodCalendar
-// en el backend): el 2 de octubre + 1 mes es el 2 de noviembre, y el 31 de enero + 1 mes es el
-// 28 de febrero sin desbordar, recuperando el 31 en cuanto el mes lo tiene.
-const addMonthsIso = (iso, months, anchorDay) => {
+// Suma meses de CALENDARIO (espejo de App\Utils\Gym\GymPeriodCalendar en el backend): el 2 de
+// octubre + 1 mes es el 2 de noviembre. Si el día no existe en el mes destino (31 de agosto +
+// 1 mes), devuelve el día 1 del mes siguiente, así el período cubre septiembre completo.
+const addMonthsIso = (iso, months) => {
   const [y, m, d] = iso.split('-').map(Number);
   const target = new Date(y, m - 1 + months, 1);
   const daysInMonth = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate();
-  target.setDate(Math.min(anchorDay || d, daysInMonth));
+  if (d > daysInMonth) target.setMonth(target.getMonth() + 1);
+  else target.setDate(d);
   const p = (n) => String(n).padStart(2, '0');
   return `${target.getFullYear()}-${p(target.getMonth() + 1)}-${p(target.getDate())}`;
 };
@@ -3667,8 +3668,8 @@ const MONTHS_BY_DAYS = {
 };
 
 // Último día (inclusive) del período que arranca en `startIso`, según la duración del plan.
-const gymPeriodEndIso = (startIso, plan, anchorDay) => (plan.duration_months
-  ? addDaysIso(addMonthsIso(startIso, plan.duration_months, anchorDay), -1)
+const gymPeriodEndIso = (startIso, plan) => (plan.duration_months
+  ? addDaysIso(addMonthsIso(startIso, plan.duration_months), -1)
   : addDaysIso(startIso, plan.duration_days - 1));
 
 // Afiliados: personas ya resueltas como usuarios de la plataforma (user_id ficticio en el demo).
@@ -4347,8 +4348,7 @@ function resolveGymMock(path, query, { method = 'GET', body } = {}) {
         const months = period.duration_months || MONTHS_BY_DAYS[period.duration_days];
         if (!months) return;
 
-        const anchorDay = Number(subscription.subscribed_at.split('-')[2]);
-        const endDate = addDaysIso(addMonthsIso(period.start_date, months, anchorDay), -1);
+        const endDate = addDaysIso(addMonthsIso(period.start_date, months), -1);
         const graceEndsAt = addDaysIso(endDate, period.grace_period_days);
         if (endDate === period.end_date && period.duration_months === months) return;
 

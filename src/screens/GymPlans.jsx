@@ -276,7 +276,8 @@ export function GymPlans() {
             )}
             <p className={s.faint}>
               Los meses vencen por calendario: un plan de un mes que arranca el 2 de octubre vence
-              el 1 de noviembre, tenga el mes 28, 30 o 31 días. Los días se cuentan uno a uno.
+              el 1 de noviembre, tenga el mes 28, 30 o 31 días, y el que arranca un 31 cubre el mes
+              siguiente completo (31 de agosto → 30 de septiembre). Los días se cuentan uno a uno.
             </p>
             <div className={s.formGrid}>
               <Input label="Días de gracia" type="number" min="0" icon="fas fa-hourglass-half"
