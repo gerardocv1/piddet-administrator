@@ -436,7 +436,7 @@ export const mockMenuItems = [
 // el panel muestra Productos (y sus categorías), Menús y Usuarios; el resto queda oculto.
 const mockPermissions = {
   roles: ['Administrador'],
-  permissions: ['user-administrator', 'admin-general', 'role-list', 'role-create', 'role-update', 'role-delete', 'role-assign', 'permission-list', 'permission-update', 'api-module-menus', 'api-module-products', 'api-module-company', 'company-edit-functionalities', 'api-module-stores', 'table-list', 'table-create', 'table-update', 'api-module-orders', 'sales-report', 'order-cancel', 'order-sync-failure-admin', 'api-module-expenses', 'expenses-report', 'expense-annul', 'api-module-shifts', 'shift-global-admin', 'api-module-reservations', 'api-module-rentable-units', 'reservation-checkout', 'reservation-cancel', 'reservation-payment-annul', 'api-module-gym', 'api-module-gym-plans', 'gym-plans-create', 'gym-plans-edit', 'gym-members-create', 'gym-members-edit', 'gym-subscriptions-create', 'gym-subscriptions-cancel', 'gym-payments-create', 'gym-payments-annul', 'gym-checkins-create', 'gym-checkins-edit', 'gym-measurement-config', 'company-catalog-purge', 'company-master'],
+  permissions: ['user-administrator', 'admin-general', 'role-list', 'role-create', 'role-update', 'role-delete', 'role-assign', 'permission-list', 'permission-update', 'api-module-menus', 'api-module-products', 'api-module-company', 'company-edit-functionalities', 'api-module-stores', 'table-list', 'table-create', 'table-update', 'api-module-orders', 'sales-report', 'order-cancel', 'order-sync-failure-admin', 'api-module-expenses', 'expenses-report', 'expense-annul', 'api-module-shifts', 'shift-global-admin', 'api-module-reservations', 'api-module-rentable-units', 'reservation-checkout', 'reservation-cancel', 'reservation-payment-annul', 'api-module-gym', 'api-module-gym-plans', 'gym-plans-create', 'gym-plans-edit', 'gym-members-create', 'gym-members-edit', 'gym-subscriptions-create', 'gym-subscriptions-cancel', 'gym-payments-create', 'gym-payments-annul', 'gym-checkins-create', 'gym-checkins-edit', 'gym-measurement-config', 'gym-periods-recalculate', 'company-catalog-purge', 'company-master'],
 };
 
 // Empresa (tenant) activa y empresas disponibles para el usuario (SaaS multi-tenant).
@@ -3652,6 +3652,12 @@ const addMonthsIso = (iso, months, anchorDay) => {
   return `${target.getFullYear()}-${p(target.getMonth() + 1)}-${p(target.getDate())}`;
 };
 
+// Duraciones en días que en realidad eran meses de calendario (espejo de
+// GymPeriodCalendar::MONTHS_BY_DAYS): con esto se corrigen los períodos creados sumando días.
+const MONTHS_BY_DAYS = {
+  30: 1, 31: 1, 60: 2, 90: 3, 91: 3, 120: 4, 180: 6, 182: 6, 183: 6, 360: 12, 365: 12, 366: 12,
+};
+
 // Último día (inclusive) del período que arranca en `startIso`, según la duración del plan.
 const gymPeriodEndIso = (startIso, plan, anchorDay) => (plan.duration_months
   ? addDaysIso(addMonthsIso(startIso, plan.duration_months, anchorDay), -1)
@@ -4315,6 +4321,55 @@ function resolveGymMock(path, query, { method = 'GET', body } = {}) {
       }
     }
     return gymCheckinPresent(checkin);
+  }
+
+  // Mantenimiento (solo super-admin): recalcula por calendario las fechas de los períodos vivos.
+  // Espejo del backend: usa el día de anclaje de la suscripción y no toca la historia.
+  if (sub === 'subscriptions/recalculate-period-dates') {
+    const dryRun = body?.dry_run === true;
+    const changes = [];
+
+    mockGymSubscriptionPeriods
+      .filter((p) => [GYM_PER_CURRENT, GYM_PER_GRACE].includes(p.status))
+      .forEach((period) => {
+        const subscription = mockGymSubscriptions.find((s) => s.id === period.subscription_id);
+        if (!subscription || subscription.status !== GYM_SUB_ACTIVE) return;
+
+        // La duración sale del snapshot del período; sin meses redondos se cuenta en días.
+        const months = period.duration_months || MONTHS_BY_DAYS[period.duration_days];
+        if (!months) return;
+
+        const anchorDay = Number(subscription.subscribed_at.split('-')[2]);
+        const endDate = addDaysIso(addMonthsIso(period.start_date, months, anchorDay), -1);
+        const graceEndsAt = addDaysIso(endDate, period.grace_period_days);
+        if (endDate === period.end_date && period.duration_months === months) return;
+
+        changes.push({
+          subscription_id: period.subscription_id,
+          member_name: period.member_name,
+          number: period.number,
+          start_date: period.start_date,
+          old_end_date: period.end_date,
+          new_end_date: endDate,
+          old_grace_ends_at: period.grace_ends_at,
+          new_grace_ends_at: graceEndsAt,
+        });
+
+        if (!dryRun) {
+          period.duration_months = months;
+          period.duration_days = 1 + Math.round((new Date(endDate) - new Date(period.start_date)) / 86400000);
+          period.end_date = endDate;
+          period.grace_ends_at = graceEndsAt;
+          period.status = todayIso() <= endDate ? GYM_PER_CURRENT : GYM_PER_GRACE;
+        }
+      });
+
+    return {
+      scanned: mockGymSubscriptionPeriods.filter((p) => [GYM_PER_CURRENT, GYM_PER_GRACE].includes(p.status)).length,
+      updated: dryRun ? 0 : changes.length,
+      dry_run: dryRun,
+      changes,
+    };
   }
 
   if (sub === 'subscriptions') {

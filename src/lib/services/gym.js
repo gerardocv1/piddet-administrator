@@ -93,6 +93,14 @@ export const gymService = {
   // períodos vivos.
   cancelGymSubscription: (subscriptionId, reason) => http.put(`${base()}/subscriptions/${subscriptionId}/cancel`, { reason }),
 
+  // Mantenimiento (permiso `gym-periods-recalculate`, solo super-admin): recalcula por calendario
+  // las fechas de los períodos vivos de la compañía, para arreglar las suscripciones creadas
+  // cuando el vencimiento se sumaba en días. Con `dryRun` no escribe: devuelve lo que cambiaría.
+  // Responde { scanned, updated, dry_run, changes: [{ subscription_id, member_name, number,
+  // start_date, old_end_date, new_end_date, old_grace_ends_at, new_grace_ends_at }] }.
+  recalculateGymPeriodDates: ({ dryRun = false } = {}) =>
+    http.post(`${base()}/subscriptions/recalculate-period-dates`, { dry_run: dryRun }),
+
   // ── Pagos de suscripción ─────────────────────────────────────────────────
   // Abona al período pendiente más antiguo (el backend decide cuál; no se indica period_id).
   // Cada pago genera su factura (orden GYM) en la fecha del pago.

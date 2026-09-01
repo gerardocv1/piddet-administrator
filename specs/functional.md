@@ -266,7 +266,8 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
   vive en la **vista de progreso** (`/gym/members/:memberId/progress`). El detalle de la suscripción
   (`/gym/subscriptions/:subscriptionId`) es la vista transaccional: sus pagos (registrar con el
   precio precargado, anular), renovar y cancelar; el nombre del afiliado arriba navega a su
-  perfil. `/gym/subscriptions` es el listado operativo, filtrable por estado y por próximas a
+  perfil. `/gym/subscriptions` es el listado operativo (con el botón *Revisar fechas* para el super-admin:
+  recalcula por calendario las fechas de los períodos vigentes, con simulación previa), filtrable por estado y por próximas a
   vencer. Las medidas se toman con el **asistente paso a paso**
   (`/gym/members/:memberId/checkin`): una medida por pantalla —solo las que la compañía activó en
   `/gym/measurements`— con teclado numérico, el valor anterior como referencia y omisión con solo

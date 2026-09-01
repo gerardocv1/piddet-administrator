@@ -49,6 +49,7 @@ filtro por usuario.
 | `gym-checkins-edit` | (acción) | Corregir fecha, notas o valores de un chequeo ya registrado (sin efecto contable, no hace falta anularlo). |
 | `api-module-gym-plans` + funcionalidad `functionality_gym` | `/gym/measurements` | Ver qué medidas físicas pide el gimnasio a sus afiliados (subconjunto del catálogo: peso, % de grasa, circunferencias…). El asistente de medición solo recorre las activas. |
 | `gym-measurement-config` | (acción) | Cambiar esa selección de medidas (los interruptores y el guardar de `/gym/measurements`). |
+| `gym-periods-recalculate` | `/gym/subscriptions` (botón *Revisar fechas*) | Mantenimiento de plataforma: recalcula por calendario las fechas de los períodos **vigentes** de la compañía (`POST /companies/{company}/gym/subscriptions/recalculate-period-dates`), para arreglar las suscripciones creadas cuando el vencimiento se sumaba en días (el 2 de octubre vencía el 31 de octubre en vez del 1 de noviembre). Solo lo trae el rol `super-admin`. El modal muestra primero la simulación (`dry_run`) fila por fila y aplicar es un segundo clic; no toca los períodos cerrados o cancelados ni las suscripciones ya canceladas. |
 
 ## Operación
 
