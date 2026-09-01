@@ -3,6 +3,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, DataTable, Badge, FilterBar, Pagination, RefreshButton, Spinner, Alert } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
+import { usePermissions } from '../lib/permissions/usePermissions.js';
+import { GymPeriodDatesFixButton } from './GymPeriodDatesFix.jsx';
 import { gymMoney, gymSubscriptionStatusMeta, gymPeriodStatusMeta, gymSubscriptionPending, GYM_SUBSCRIPTION_STATUS, GYM_PERIOD_STATUS } from '../lib/gymLabels.js';
 import { formatShortDate } from '../lib/dates.js';
 import s from './screens.module.css';
@@ -35,6 +37,7 @@ const EXPIRING_OPTIONS = [
 // (/gym/subscriptions/:id), donde viven sus pagos y acciones.
 export function GymSubscriptions() {
   const navigate = useNavigate();
+  const { can } = usePermissions();
   const [params, setParams] = useSearchParams();
   const status = params.get('status') || undefined;
   const expiringWithin = params.get('expiring_within') || undefined;
@@ -101,6 +104,9 @@ export function GymSubscriptions() {
               </p>
             )}
             <RefreshButton loading={loading} onClick={reload} />
+            {/* Mantenimiento de plataforma (solo super-admin): recalcula por calendario las
+                fechas de los períodos vigentes que se crearon sumando días. */}
+            {can('gym-periods-recalculate') && <GymPeriodDatesFixButton onFixed={reload} />}
           </>
         }
       />
