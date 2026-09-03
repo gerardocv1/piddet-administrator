@@ -119,6 +119,14 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
 - **Flujo principal:** listado con filtros (búsqueda, categoría, disponibilidad) → crear,
   editar, activar/desactivar o eliminar.
 - **Reglas:** las disponibilidades y categorías usan las claves del backend (`cat`, `avail`).
+- **Opciones del producto** (`/products/:itemId`): grupos de opciones con sus reglas de
+  selección (`min`, `max`, `multiple`) y las opciones de cada grupo, ambos reordenables. Cada
+  grupo tiene un **tipo** (`type`, lo define el backend): `OPTION` para términos, tamaños y
+  adiciones (cada opción puede tener precio extra) y `REMOVE` para **ingredientes que el cliente
+  pide quitar**: sus opciones no llevan precio y el POS las imprime con signo menos
+  («− Cebolla»). El panel muestra la insignia *Para quitar* en esos grupos y no pide precio al
+  crear sus ingredientes. Un nombre vacío o un mínimo mayor que el máximo se avisan junto al
+  campo antes de enviar.
 
 ### Facturas (órdenes por fecha)
 
