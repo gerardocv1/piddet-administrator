@@ -99,6 +99,12 @@ export const gymService = {
   // existe para cuando no corrió. Responde el detalle actualizado de la suscripción.
   processGymSubscription: (subscriptionId) => http.post(`${base()}/subscriptions/${subscriptionId}/process`, {}),
 
+  // Mueve el inicio del período vigente (el último, vivo) y el backend recalcula vencimiento y
+  // gracia con la duración del período. Para el afiliado que volvió días después de que se
+  // encadenara su período. Responde el detalle actualizado de la suscripción.
+  updateGymPeriodStartDate: (subscriptionId, periodId, startDate) =>
+    http.put(`${base()}/subscriptions/${subscriptionId}/periods/${periodId}/start-date`, { start_date: startDate }),
+
   // Mantenimiento (permiso `gym-periods-recalculate`, solo super-admin): recalcula por calendario
   // las fechas de los períodos vivos de la compañía, para arreglar las suscripciones creadas
   // cuando el vencimiento se sumaba en días. Con `dryRun` no escribe: devuelve lo que cambiaría.

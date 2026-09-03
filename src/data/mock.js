@@ -4483,6 +4483,35 @@ function resolveGymMock(path, query, { method = 'GET', body } = {}) {
     return gymSubDetailPresent(subscription);
   }
 
+  // Mueve el inicio del período vigente (espejo de `updatePeriodStartDate` del backend).
+  const periodStartMatch = sub.match(/^subscriptions\/([\w-]+)\/periods\/([\w-]+)\/start-date$/);
+  if (periodStartMatch) {
+    const subscription = mockGymSubscriptions.find((s) => s.id === periodStartMatch[1]);
+    if (!subscription) return null;
+    if (subscription.status !== GYM_SUB_ACTIVE) throw new Error('Solo se puede mover el inicio de un período en una suscripción activa');
+    const period = mockGymSubscriptionPeriods.find((p) => p.id === periodStartMatch[2] && p.subscription_id === subscription.id);
+    if (!period) throw new Error('Período no encontrado');
+    if (![GYM_PER_CURRENT, GYM_PER_GRACE].includes(period.status)) throw new Error('Solo se puede mover el inicio del período vigente');
+    const latest = currentPeriodOf(subscription.id);
+    if (!latest || latest.id !== period.id) throw new Error('Solo se puede mover el inicio del último período: los anteriores ya tienen el siguiente encadenado');
+    const previous = mockGymSubscriptionPeriods
+      .filter((p) => p.subscription_id === subscription.id && p.number < period.number && p.status !== GYM_PER_CANCELLED)
+      .sort((a, b) => b.number - a.number)[0];
+    const startDate = body.start_date;
+    if (previous && startDate <= previous.end_date) {
+      const [y, m, d] = previous.end_date.split('-');
+      throw new Error(`El inicio no puede solaparse con el período anterior, que venció el ${d}/${m}/${y}`);
+    }
+    const endDate = gymPeriodEndIso(startDate, period);
+    period.start_date = startDate;
+    period.end_date = endDate;
+    period.grace_ends_at = addDaysIso(endDate, period.grace_period_days);
+    period.duration_days = 1 + Math.round((new Date(endDate) - new Date(startDate)) / 86400000);
+    period.status = todayIso() <= endDate ? GYM_PER_CURRENT : GYM_PER_GRACE;
+    if (period.number === 1) subscription.subscribed_at = startDate;
+    return gymSubDetailPresent(subscription);
+  }
+
   const subPaymentsMatch = sub.match(/^subscriptions\/([\w-]+)\/payments$/);
   if (subPaymentsMatch) {
     const subscription = mockGymSubscriptions.find((s) => s.id === subPaymentsMatch[1]);
