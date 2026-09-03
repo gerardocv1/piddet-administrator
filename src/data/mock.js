@@ -3873,6 +3873,12 @@ let mockGymSubscriptions = [
     status: GYM_SUB_CANCELLED, subscribed_at: isoDay(95),
     cancelled_at: isoDay(50), cancellation_reason: 'El afiliado se mudó de ciudad', cancelled_by: 1,
   },
+  // Miguel: activa con el período 1 pagado y vencido hace dos semanas SIN período 2 — el cron no
+  // corrió. Es el caso del botón "Generar período" del detalle.
+  {
+    id: 'gsub-5', gym_member_id: 5, member_name: 'Miguel Torres', plan_id: 1, plan_name: 'Plan mensual',
+    status: GYM_SUB_ACTIVE, subscribed_at: isoDay(44), cancelled_at: null, cancellation_reason: null, cancelled_by: null,
+  },
 ];
 
 let mockGymSubscriptionPeriods = [
@@ -3930,6 +3936,15 @@ let mockGymSubscriptionPeriods = [
     start_date: isoDay(95), end_date: isoDay(6), grace_ends_at: isoDay(3), status: GYM_PER_CANCELLED,
     payments: [
       { id: 'gpay-4a', registers_income: true, value: '240000.00', payment_method: 'bancolombia', payment_method_name: 'Ahorro a la mano Bancolombia', payment_date: isoDay(95), notes: null, order_id: 'ord-gym-4a', status: 0, created_by_name: 'Gerardo', annulled_at: isoDay(50), annulment_reason: 'Cancelación de la suscripción' },
+    ],
+  },
+  // ── Miguel (gsub-5) — período 1 pagado, vencido y sin el siguiente generado ──
+  {
+    id: 'gper-5a', subscription_id: 'gsub-5', gym_member_id: 5, member_name: 'Miguel Torres',
+    number: 1, plan_id: 1, plan_name: 'Plan mensual', price: '90000.00', duration_months: 1, duration_days: 30, grace_period_days: 3,
+    start_date: isoDay(44), end_date: isoDay(15), grace_ends_at: isoDay(12), status: GYM_PER_GRACE,
+    payments: [
+      { id: 'gpay-5a', registers_income: true, value: '90000.00', payment_method: 'cash', payment_method_name: 'Efectivo', payment_date: isoDay(1), notes: null, order_id: 'ord-gym-5a', status: 1, created_by_name: 'Gerardo', annulled_at: null, annulment_reason: null },
     ],
   },
 ];
@@ -4412,6 +4427,59 @@ function resolveGymMock(path, query, { method = 'GET', body } = {}) {
     subscription.cancelled_at = new Date().toISOString();
     subscription.cancellation_reason = body.reason;
     subscription.cancelled_by = 1;
+    return gymSubDetailPresent(subscription);
+  }
+
+  // Fuerza el ciclo diario de UNA suscripción (espejo de `processSubscription` del backend):
+  // corte por no pago → transiciones por fecha → generación encadenada hasta cubrir hoy.
+  const subProcessMatch = sub.match(/^subscriptions\/([\w-]+)\/process$/);
+  if (subProcessMatch) {
+    const subscription = mockGymSubscriptions.find((s) => s.id === subProcessMatch[1]);
+    if (!subscription) return null;
+    if (subscription.status !== GYM_SUB_ACTIVE) throw new Error('Solo se procesan suscripciones activas');
+
+    const today = todayIso();
+    const live = () => mockGymSubscriptionPeriods
+      .filter((p) => p.subscription_id === subscription.id && [GYM_PER_CURRENT, GYM_PER_GRACE].includes(p.status));
+
+    for (let guard = 0; guard < 400; guard++) {
+      // 1. Corte: un período vivo que agotó su gracia sin un solo abono cancela todo.
+      if (live().some((p) => p.grace_ends_at < today && periodPaidTotal(p) === 0)) {
+        live().forEach((p) => { p.status = GYM_PER_CANCELLED; });
+        subscription.status = GYM_SUB_CANCELLED;
+        subscription.cancelled_at = new Date().toISOString();
+        subscription.cancellation_reason = 'Sin pago del período';
+        subscription.cancelled_by = null;
+        break;
+      }
+
+      // 2. Transiciones por fecha (gracia → cerrado solo con pagos).
+      live().forEach((p) => {
+        if (p.status === GYM_PER_CURRENT && p.end_date < today) p.status = GYM_PER_GRACE;
+        if (p.status === GYM_PER_GRACE && p.grace_ends_at < today && periodPaidTotal(p) > 0) p.status = GYM_PER_CLOSED;
+      });
+
+      // 3. Generación: si el último período ya cubre hoy, no hay nada que crear.
+      const last = currentPeriodOf(subscription.id);
+      if (!last || last.end_date >= today) break;
+
+      // Snapshot del plan actual; si ya no existe se hereda el del período anterior.
+      const plan = mockGymPlans.find((pl) => pl.id === last.plan_id) || last;
+      const startDate = addDaysIso(last.end_date, 1);
+      const endDate = gymPeriodEndIso(startDate, plan);
+      mockGymSubscriptionPeriods.push({
+        id: 'gper-' + Date.now().toString(36) + '-' + (last.number + 1),
+        subscription_id: subscription.id, gym_member_id: subscription.gym_member_id, member_name: subscription.member_name,
+        number: last.number + 1, plan_id: last.plan_id, plan_name: plan.name || last.plan_name, price: plan.price,
+        duration_months: plan.duration_months ?? null,
+        duration_days: 1 + Math.round((new Date(endDate) - new Date(startDate)) / 86400000),
+        grace_period_days: plan.grace_period_days,
+        start_date: startDate, end_date: endDate, grace_ends_at: addDaysIso(endDate, plan.grace_period_days),
+        status: today <= endDate ? GYM_PER_CURRENT : GYM_PER_GRACE,
+        payments: [],
+      });
+    }
+
     return gymSubDetailPresent(subscription);
   }
 
