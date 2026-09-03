@@ -6,24 +6,28 @@ import {
 } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
+import { usePermissions } from '../lib/permissions/usePermissions.js';
 import {
   gymMoney, gymSubscriptionStatusMeta, gymPeriodStatusMeta, gymPendingBalance,
   gymSubscriptionPending, GYM_SUBSCRIPTION_STATUS, GYM_PERIOD_STATUS,
 } from '../lib/gymLabels.js';
-import { formatShortDate, formatStayRangeShort } from '../lib/dates.js';
+import { formatShortDate, formatStayRangeShort, todayIso, addDaysIso } from '../lib/dates.js';
 import { useSetPageTitle } from '../lib/pageTitle.jsx';
 import s from './screens.module.css';
 import g from './GymSubscriptionDetail.module.css';
 
 // Detalle de LA suscripción continua del afiliado: su estado y el historial de períodos de
 // cobro que el sistema genera solo, cada uno con sus pagos (abonos) y su saldo. No hay
-// "renovar": el período siguiente aparece automáticamente; si uno agota su gracia sin ningún
-// abono, la suscripción entera se cancela sola.
+// "renovar": el período siguiente aparece automáticamente con la corrida diaria del backend; si
+// uno agota su gracia sin ningún abono, la suscripción entera se cancela sola. Cuando esa
+// corrida no ha pasado (el período vigente ya venció y no existe el siguiente), el operador
+// puede forzar el mismo ciclo desde aquí con "Generar período".
 export function GymSubscriptionDetail() {
   const { subscriptionId } = useParams();
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const { toast } = useToast();
+  const { can } = usePermissions();
 
   const fetcher = React.useCallback(() => api.gymSubscription(subscriptionId), [subscriptionId]);
   const { data, setData, loading, error } = useResource(fetcher, null, [subscriptionId]);
@@ -130,6 +134,35 @@ export function GymSubscriptionDetail() {
     }
   };
 
+  // ── Generar período siguiente (forzar el ciclo diario del backend) ───────
+  const [processOpen, setProcessOpen] = React.useState(false);
+  const [processBusy, setProcessBusy] = React.useState(false);
+  const [processError, setProcessError] = React.useState('');
+
+  const submitProcess = async () => {
+    if (processBusy) return;
+    setProcessBusy(true);
+    setProcessError('');
+    try {
+      const updated = await api.processGymSubscription(subscriptionId);
+      const before = (data?.periods || []).length;
+      const after = (updated?.periods || []).length;
+      setData(updated);
+      if (Number(updated?.status) === GYM_SUBSCRIPTION_STATUS.CANCELLED) {
+        toast({ tone: 'neutral', title: 'Suscripción cancelada por no pago' });
+      } else if (after > before) {
+        toast({ tone: 'success', title: after - before === 1 ? 'Período siguiente generado' : `${after - before} períodos generados` });
+      } else {
+        toast({ tone: 'neutral', title: 'No había nada que generar' });
+      }
+      setProcessOpen(false);
+    } catch (e) {
+      setProcessError(e?.message || 'No se pudo generar el período.');
+    } finally {
+      setProcessBusy(false);
+    }
+  };
+
   if (loading) return <Spinner center label="Cargando suscripción…" />;
   if (error || !data) {
     return (
@@ -144,6 +177,15 @@ export function GymSubscriptionDetail() {
   const currentStatus = currentPeriod ? Number(currentPeriod.computed_status ?? currentPeriod.status) : null;
   const currentInGrace = isActive && currentStatus === GYM_PERIOD_STATUS.GRACE;
   const currentUnpaid = currentPeriod && Number(currentPeriod.paid_total || 0) === 0;
+
+  // `current_period` es el último no cancelado: si ya venció, el siguiente no existe todavía,
+  // es decir, la corrida diaria del backend no ha pasado por esta suscripción. Forzarla genera
+  // el período siguiente… o aplica el corte, si el vigente agotó su gracia sin ningún abono.
+  const today = todayIso();
+  const nextPending = isActive && !!currentPeriod && currentPeriod.end_date < today;
+  const wouldCancel = nextPending && currentUnpaid && currentPeriod.grace_ends_at < today;
+  const canProcess = nextPending && can('gym-subscriptions-create');
+  const openProcess = () => { setProcessError(''); setProcessOpen(true); };
 
   // Con una activa cuyo período está en gracia, el badge lo advierte; si no, manda el estado
   // de la suscripción.
@@ -160,6 +202,7 @@ export function GymSubscriptionDetail() {
         subtitle={data.plan_name}
         menu={isActive ? [
           ...(pendingTotal > 0 ? [{ label: 'Registrar pago', icon: 'fas fa-dollar-sign', onClick: openPay }] : []),
+          ...(canProcess ? [{ label: 'Generar período siguiente', icon: 'fas fa-calendar-plus', onClick: openProcess }] : []),
           { label: 'Cancelar suscripción', icon: 'fas fa-ban', variant: 'danger', onClick: () => setCancelOpen(true) },
         ] : []}
         meta={[
@@ -177,7 +220,30 @@ export function GymSubscriptionDetail() {
           : undefined}
       />
 
-      {currentInGrace && (
+      {nextPending && (
+        <Alert tone={wouldCancel ? 'danger' : 'warning'}
+          title={wouldCancel ? 'Período vencido sin pago' : 'Período siguiente sin generar'}
+          action={canProcess && (
+            <Button variant={wouldCancel ? 'secondary' : 'primary'} size="sm" icon="fas fa-calendar-plus" onClick={openProcess}>
+              Generar período
+            </Button>
+          )}>
+          El período {currentPeriod.number} venció el {formatShortDate(currentPeriod.end_date)} y el
+          sistema aún no generó el siguiente: lo hace en su corrida diaria, o se puede generar ahora.{' '}
+          {wouldCancel ? (
+            <>Ojo: agotó la gracia el {formatShortDate(currentPeriod.grace_ends_at)} sin ningún abono,
+              así que al procesarla la suscripción se cancelará por no pago.</>
+          ) : currentUnpaid ? (
+            <>No tiene ningún abono: si no se registra un pago antes del{' '}
+              {formatShortDate(currentPeriod.grace_ends_at)}, el corte la cancelará.</>
+          ) : gymPendingBalance(currentPeriod) > 0 ? (
+            <>Conserva un saldo de {gymMoney(gymPendingBalance(currentPeriod))}, que sigue siendo cobrable.</>
+          ) : null}
+        </Alert>
+      )}
+      {/* Solo si el backend ya lo ve en gracia pero para el navegador todavía no venció (zona
+          horaria distinta): en cualquier otro caso "en gracia" implica que falta el siguiente. */}
+      {currentInGrace && !nextPending && (
         <Alert tone="warning" title="Período en gracia">
           {currentUnpaid ? (
             <>El período venció el {formatShortDate(currentPeriod.end_date)} sin ningún abono:
@@ -279,6 +345,23 @@ export function GymSubscriptionDetail() {
         onConfirm={submitCancel} onClose={() => setCancelOpen(false)}>
         Esta acción es irreversible: se cancelan también los períodos pendientes y el afiliado
         pierde el acceso. Para que vuelva a tener membresía habrá que suscribirlo de nuevo.
+      </ConfirmDialog>
+
+      <ConfirmDialog open={processOpen} title="Generar período siguiente"
+        variant={wouldCancel ? 'danger' : 'primary'} icon={wouldCancel ? 'fas fa-ban' : 'fas fa-calendar-plus'}
+        confirmLabel={wouldCancel ? 'Procesar de todos modos' : 'Generar'}
+        loading={processBusy} error={processError}
+        onConfirm={submitProcess} onClose={() => setProcessOpen(false)}>
+        {wouldCancel ? (
+          <>El período {currentPeriod?.number} agotó su gracia sin ningún abono: al procesarla, la
+            suscripción se cancelará por no pago y el afiliado perderá el acceso. Si en realidad
+            pagó, registra primero ese pago con su fecha real y vuelve aquí.</>
+        ) : (
+          <>Se creará el período {currentPeriod ? currentPeriod.number + 1 : ''} desde el{' '}
+            {currentPeriod ? formatShortDate(addDaysIso(currentPeriod.end_date, 1)) : ''} con el precio
+            actual del plan, pendiente de pago. Es exactamente lo que hace el sistema en su corrida
+            diaria; si hay varios ciclos atrasados, los genera todos hasta cubrir hoy.</>
+        )}
       </ConfirmDialog>
 
       <ConfirmDialog open={!!annulTarget} title="Anular pago" reason="required"

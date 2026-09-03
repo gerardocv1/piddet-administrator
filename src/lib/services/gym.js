@@ -93,6 +93,12 @@ export const gymService = {
   // períodos vivos.
   cancelGymSubscription: (subscriptionId, reason) => http.put(`${base()}/subscriptions/${subscriptionId}/cancel`, { reason }),
 
+  // Fuerza a demanda el ciclo diario de UNA suscripción (permiso `gym-subscriptions-create`):
+  // transiciona sus períodos, aplica el corte por no pago si agotó la gracia sin abonos y genera
+  // el período siguiente cuando el vigente ya venció. Es lo que hace el cron del backend; el botón
+  // existe para cuando no corrió. Responde el detalle actualizado de la suscripción.
+  processGymSubscription: (subscriptionId) => http.post(`${base()}/subscriptions/${subscriptionId}/process`, {}),
+
   // Mantenimiento (permiso `gym-periods-recalculate`, solo super-admin): recalcula por calendario
   // las fechas de los períodos vivos de la compañía, para arreglar las suscripciones creadas
   // cuando el vencimiento se sumaba en días. Con `dryRun` no escribe: devuelve lo que cambiaría.

@@ -312,8 +312,12 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
   conserva el peso actual, el IMC y la tabla de mediciones.
 - **Reglas:** requiere la funcionalidad `functionality_gym` activa además del permiso. Los
   afiliados son usuarios de la plataforma (mismo patrón "pasivo" de Reservas). Un job diario
-  (`gym:transition-subscriptions`, backend) transiciona automáticamente las suscripciones
-  vencidas: activa → en gracia → vencida.
+  (`gym:transition-subscriptions`, backend) transiciona automáticamente los períodos (vigente →
+  en gracia → cerrado), aplica el corte por no pago y **genera el período siguiente**; nadie lo
+  crea a mano. Si esa corrida no pasó (el período vigente ya venció y no existe el siguiente), el
+  detalle lo avisa y, con `gym-subscriptions-create`, ofrece **Generar período**: fuerza el mismo
+  ciclo para esa suscripción, con confirmación —y advertencia en rojo si el resultado va a ser el
+  corte, porque el vigente agotó su gracia sin ningún abono—.
 
 ### Reportes
 
