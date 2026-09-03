@@ -136,9 +136,11 @@ export const mockItems = [
 ];
 
 // Grupos de opciones (anidados por ítem). `multiple` = selección múltiple; reglas min/max.
+// `type`: OPTION (términos/adiciones, con precio) o REMOVE (ingredientes para quitar, sin costo).
 export const mockOptionGroups = [
   { id: 1, item_id: 1, name: 'Punto de la carne', type: 'OPTION', description: '', min: 1, max: 1, multiple: false, status: 1, position: 0 },
   { id: 2, item_id: 1, name: 'Adiciones', type: 'OPTION', description: 'Extras con costo', min: 0, max: 3, multiple: true, status: 1, position: 1 },
+  { id: 4, item_id: 1, name: 'Quitar ingredientes', type: 'REMOVE', description: 'Lo que el cliente no quiere', min: 0, max: 0, multiple: true, status: 1, position: 2 },
   { id: 3, item_id: 3, name: 'Tamaño', type: 'OPTION', description: '', min: 1, max: 1, multiple: false, status: 1, position: 0 },
 ];
 
@@ -151,6 +153,9 @@ export const mockItemOptions = [
   { id: 5, item_id: 1, group_id: 2, name: 'Huevo', description: '', value: 2000, status: 1, position: 2 },
   { id: 6, item_id: 3, group_id: 3, name: 'Personal', description: '', value: 0, status: 1, position: 0 },
   { id: 7, item_id: 3, group_id: 3, name: 'Familiar', description: '', value: 10000, status: 1, position: 1 },
+  { id: 8, item_id: 1, group_id: 4, name: 'Cebolla', description: '', value: 0, status: 1, position: 0 },
+  { id: 9, item_id: 1, group_id: 4, name: 'Tomate', description: '', value: 0, status: 1, position: 1 },
+  { id: 10, item_id: 1, group_id: 4, name: 'Queso', description: '', value: 0, status: 1, position: 2 },
 ];
 
 // Mesas de la compañía activa, con el mismo shape del backend.
