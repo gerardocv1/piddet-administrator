@@ -57,6 +57,7 @@ export const checkInProximity = (checkInDate, status) => {
 // Tipos de documento de identidad soportados (ids del catálogo del backend).
 export const ID_TYPES = [
   { value: '1', label: 'Cédula' },
+  { value: '2', label: 'Tarjeta de identidad' },
   { value: '3', label: 'Cédula de extranjería' },
   { value: '4', label: 'Pasaporte' },
 ];

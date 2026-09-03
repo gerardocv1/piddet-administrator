@@ -284,7 +284,14 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
   defecto, retroactivo para quien ya venía pagando antes de usar la plataforma— y de esa fecha
   salen el vencimiento y el fin de gracia; con fecha retroactiva la suscripción puede nacer ya en
   gracia o vencida. Encadenada, ese campo no aparece: la fecha la decide la anterior.
-  Cancelar es irreversible y pide motivo.
+  Cancelar es irreversible y pide motivo. El **inicio del período vigente se puede mover**
+  (*Mover inicio*, con `gym-subscriptions-create`): para el afiliado que volvió días después de
+  que el sistema encadenara su período, el ciclo arranca cuando de verdad regresó y el backend
+  recalcula vencimiento y gracia con la duración del período; solo el último período vivo, sin
+  solaparse con el anterior, y los pagos quedan como están. Ambas acciones viven en el menú ⋮ del
+  período vigente, junto a **Cancelar período** (`gym-subscriptions-cancel`): confirmación con
+  motivo obligatorio que deja claro que se cancela la suscripción completa y, si el período tiene
+  pagos activos, pregunta si se anulan también con sus facturas (solo con `gym-payments-annul`).
 - **Pagos:** cada pago manual (efectivo, tarjeta…) genera su propia factura en el módulo de
   Facturas (origen "Gimnasio", numeración propia), compartiendo la misma infraestructura de
   facturación que el resto de la plataforma. Anular un pago cancela también su factura;

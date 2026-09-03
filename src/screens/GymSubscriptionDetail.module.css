@@ -38,3 +38,6 @@
 
 /* El saldo pendiente va junto al total pagado, como badge, para que salte a la vista. */
 .payTotalRight { display: flex; align-items: center; gap: 10px; }
+
+/* Cabecera del período: el badge de estado y, en el vigente, la acción de mover el inicio. */
+.periodActions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
