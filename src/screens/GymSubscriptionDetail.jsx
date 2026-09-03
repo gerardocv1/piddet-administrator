@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
-  Panel, Badge, Button, Spinner, Alert, Select, MoneyInput, DatePicker, Checkbox,
+  Panel, Badge, Button, IconButton, Dropdown, Spinner, Alert, Select, MoneyInput, DatePicker, Checkbox,
   Modal, ConfirmDialog, PageHeader, useToast,
 } from '../components';
 import { api } from '../lib/api.js';
@@ -191,6 +191,34 @@ export function GymSubscriptionDetail() {
     }
   };
 
+  // ── Cancelar el período vigente (y con él la suscripción) ────────────────
+  const [cancelPeriodTarget, setCancelPeriodTarget] = React.useState(null);
+  const [cancelPeriodAnnul, setCancelPeriodAnnul] = React.useState(false);
+  const [cancelPeriodBusy, setCancelPeriodBusy] = React.useState(false);
+  const [cancelPeriodError, setCancelPeriodError] = React.useState('');
+
+  const openCancelPeriod = (period) => {
+    setCancelPeriodTarget(period);
+    setCancelPeriodAnnul(false);
+    setCancelPeriodError('');
+  };
+
+  const submitCancelPeriod = async (reason) => {
+    if (cancelPeriodBusy || !cancelPeriodTarget) return;
+    setCancelPeriodBusy(true);
+    setCancelPeriodError('');
+    try {
+      const updated = await api.cancelGymPeriod(subscriptionId, cancelPeriodTarget.id, { reason, annulPayments: cancelPeriodAnnul });
+      setData(updated);
+      toast({ tone: 'neutral', title: cancelPeriodAnnul ? 'Período cancelado y pagos anulados' : 'Período cancelado' });
+      setCancelPeriodTarget(null);
+    } catch (e) {
+      setCancelPeriodError(e?.message || 'No se pudo cancelar el período.');
+    } finally {
+      setCancelPeriodBusy(false);
+    }
+  };
+
   if (loading) return <Spinner center label="Cargando suscripción…" />;
   if (error || !data) {
     return (
@@ -223,6 +251,19 @@ export function GymSubscriptionDetail() {
   const previousOf = (p) => periodsAsc.filter((q) => q.number < p.number && Number(q.status) !== GYM_PERIOD_STATUS.CANCELLED).slice(-1)[0];
   const startMin = startTarget && previousOf(startTarget) ? addDaysIso(previousOf(startTarget).end_date, 1) : undefined;
 
+  // El mismo período vigente admite cancelarse (con la suscripción). Sus pagos activos se
+  // pueden anular en el mismo paso solo con `gym-payments-annul`, porque cancela facturas.
+  const isLiveLatest = (p) => isActive && p.id === currentPeriod?.id
+    && [GYM_PERIOD_STATUS.CURRENT, GYM_PERIOD_STATUS.GRACE].includes(Number(p.status));
+  const canCancelPeriod = (p) => isLiveLatest(p) && can('gym-subscriptions-cancel');
+  const periodMenu = (p) => [
+    ...(canMoveStart(p) ? [{ label: 'Mover inicio', icon: 'fas fa-calendar-day', onClick: () => openStart(p) }] : []),
+    ...(canCancelPeriod(p) ? [{ label: 'Cancelar período', icon: 'fas fa-ban', variant: 'danger', onClick: () => openCancelPeriod(p) }] : []),
+  ];
+  const activePaymentsOf = (p) => (p?.payments || []).filter((pay) => Number(pay.status) === 1);
+  const invoicedPaymentsOf = (p) => activePaymentsOf(p).filter((pay) => pay.registers_income !== false);
+  const canAnnulPayments = can('gym-payments-annul');
+
   // Con una activa cuyo período está en gracia, el badge lo advierte; si no, manda el estado
   // de la suscripción.
   const headerMeta = currentInGrace
@@ -239,7 +280,10 @@ export function GymSubscriptionDetail() {
         menu={isActive ? [
           ...(pendingTotal > 0 ? [{ label: 'Registrar pago', icon: 'fas fa-dollar-sign', onClick: openPay }] : []),
           ...(canProcess ? [{ label: 'Generar período siguiente', icon: 'fas fa-calendar-plus', onClick: openProcess }] : []),
-          { label: 'Cancelar suscripción', icon: 'fas fa-ban', variant: 'danger', onClick: () => setCancelOpen(true) },
+          {
+            label: 'Cancelar suscripción', icon: 'fas fa-ban', variant: 'danger',
+            onClick: () => (currentPeriod && canCancelPeriod(currentPeriod) ? openCancelPeriod(currentPeriod) : setCancelOpen(true)),
+          },
         ] : []}
         meta={[
           { label: 'Suscrito desde', value: formatShortDate(data.subscribed_at) },
@@ -305,10 +349,10 @@ export function GymSubscriptionDetail() {
             action={(
               <span className={g.periodActions}>
                 <Badge variant={pMeta.variant} dot>{pMeta.label}</Badge>
-                {canMoveStart(p) && (
-                  <Button variant="outline-primary" size="sm" icon="fas fa-calendar-day" onClick={() => openStart(p)}>
-                    Mover inicio
-                  </Button>
+                {periodMenu(p).length > 0 && (
+                  <Dropdown
+                    trigger={<IconButton icon="fas fa-ellipsis-vertical" variant="light" size="sm" title="Acciones del período" />}
+                    items={periodMenu(p)} />
                 )}
               </span>
             )}>
@@ -413,6 +457,38 @@ export function GymSubscriptionDetail() {
           {startError && <Alert tone="danger" onClose={() => setStartError('')}>{startError}</Alert>}
         </div>
       </Modal>
+
+      <ConfirmDialog open={!!cancelPeriodTarget} title={`Cancelar el período ${cancelPeriodTarget?.number ?? ''}`}
+        reason="required" reasonLabel="Motivo de la cancelación" confirmLabel="Sí, cancelar el período"
+        loading={cancelPeriodBusy} error={cancelPeriodError}
+        onConfirm={submitCancelPeriod} onClose={() => setCancelPeriodTarget(null)}>
+        <p>
+          Esta acción es irreversible. Se cancela el período{' '}
+          {cancelPeriodTarget ? `${cancelPeriodTarget.number} (${formatStayRangeShort(cancelPeriodTarget.start_date, cancelPeriodTarget.end_date)})` : ''}{' '}
+          y, con él, <strong>la suscripción completa</strong>: el afiliado pierde el acceso y para volver
+          habrá que suscribirlo de nuevo.
+        </p>
+        {activePaymentsOf(cancelPeriodTarget).length > 0 && (
+          canAnnulPayments ? (
+            <>
+              <Checkbox
+                label={`Anular también los pagos de este período (${activePaymentsOf(cancelPeriodTarget).length === 1 ? '1 pago' : `${activePaymentsOf(cancelPeriodTarget).length} pagos`}, ${invoicedPaymentsOf(cancelPeriodTarget).length} con factura)`}
+                checked={cancelPeriodAnnul}
+                onChange={(e) => setCancelPeriodAnnul(e.target.checked)} />
+              <p className={s.faint}>
+                {cancelPeriodAnnul
+                  ? 'Cada pago queda anulado y su factura cancelada en la caja: el dinero deja de contar como ingreso.'
+                  : 'Los pagos y sus facturas quedan como están: el cobro sigue contando como ingreso.'}
+              </p>
+            </>
+          ) : (
+            <p className={s.faint}>
+              Este período tiene {invoicedPaymentsOf(cancelPeriodTarget).length === 1 ? 'un pago facturado' : `${invoicedPaymentsOf(cancelPeriodTarget).length} pagos facturados`} que
+              quedarán como están: anularlos requiere el permiso de anular pagos.
+            </p>
+          )
+        )}
+      </ConfirmDialog>
 
       <ConfirmDialog open={processOpen} title="Generar período siguiente"
         variant={wouldCancel ? 'danger' : 'primary'} icon={wouldCancel ? 'fas fa-ban' : 'fas fa-calendar-plus'}

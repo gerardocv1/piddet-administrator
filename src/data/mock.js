@@ -4512,6 +4512,35 @@ function resolveGymMock(path, query, { method = 'GET', body } = {}) {
     return gymSubDetailPresent(subscription);
   }
 
+  // Cancela el período vigente y la suscripción; con annul_payments anula sus pagos (espejo de
+  // `cancelPeriod` del backend).
+  const periodCancelMatch = sub.match(/^subscriptions\/([\w-]+)\/periods\/([\w-]+)\/cancel$/);
+  if (periodCancelMatch) {
+    const subscription = mockGymSubscriptions.find((s) => s.id === periodCancelMatch[1]);
+    if (!subscription) return null;
+    if (subscription.status !== GYM_SUB_ACTIVE) throw new Error('Solo se pueden cancelar períodos de una suscripción activa');
+    const period = mockGymSubscriptionPeriods.find((p) => p.id === periodCancelMatch[2] && p.subscription_id === subscription.id);
+    if (!period) throw new Error('Período no encontrado');
+    if (![GYM_PER_CURRENT, GYM_PER_GRACE].includes(period.status)) throw new Error('Solo se puede cancelar el período vigente');
+    const latest = currentPeriodOf(subscription.id);
+    if (!latest || latest.id !== period.id) throw new Error('Solo se puede cancelar el último período: los anteriores ya tienen el siguiente encadenado');
+    if (body.annul_payments) {
+      (period.payments || []).filter((pay) => pay.status === 1).forEach((pay) => {
+        pay.status = 0;
+        pay.annulled_at = todayIso();
+        pay.annulment_reason = `Cancelación del período ${period.number}: ${body.reason}`;
+      });
+    }
+    mockGymSubscriptionPeriods
+      .filter((p) => p.subscription_id === subscription.id && [GYM_PER_CURRENT, GYM_PER_GRACE].includes(p.status))
+      .forEach((p) => { p.status = GYM_PER_CANCELLED; });
+    subscription.status = GYM_SUB_CANCELLED;
+    subscription.cancelled_at = new Date().toISOString();
+    subscription.cancellation_reason = body.reason;
+    subscription.cancelled_by = 1;
+    return gymSubDetailPresent(subscription);
+  }
+
   const subPaymentsMatch = sub.match(/^subscriptions\/([\w-]+)\/payments$/);
   if (subPaymentsMatch) {
     const subscription = mockGymSubscriptions.find((s) => s.id === subPaymentsMatch[1]);
