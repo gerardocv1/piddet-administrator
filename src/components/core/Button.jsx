@@ -9,6 +9,7 @@ const VARIANT_CLASS = {
   danger: styles.danger,
   neutral: styles.neutral,
   'outline-primary': styles.outlinePrimary,
+  link: styles.link,
 };
 const SIZE_CLASS = { sm: styles.sm, md: styles.md, lg: styles.lg };
 
@@ -18,7 +19,9 @@ const SIZE_CLASS = { sm: styles.sm, md: styles.md, lg: styles.lg };
  *  CONSERVA el color pleno: cargando no es lo mismo que deshabilitado, y atenuar ambos igual
  *  hacía que se confundieran. Solo `disabled` puro baja la opacidad.
  *
- *  Variantes: primary | secondary | dark | success | danger | neutral | outline-primary.
+ *  Variantes: primary | secondary | dark | success | danger | neutral | outline-primary | link.
+ *  `link` es texto sin caja (un «ver más»): para acciones secundarias que no deben competir
+ *  con el contenido; se subraya al pasar el cursor.
  *  Tamaños: sm | md | lg (en móvil el `md` llega a 44 px de alto). */
 export function Button({
   variant = 'primary', size = 'md', pill = false, block = false,

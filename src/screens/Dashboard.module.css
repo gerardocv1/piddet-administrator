@@ -150,6 +150,23 @@
 .emptyDash span { color: var(--gray-500); font-size: var(--text-sm); }
 
 /* ── Widget de reservas por llegar ── */
+/* En el teléfono el widget se lee como una sección de la pantalla, no como una tarjeta: el
+   título "Reservas" queda al ras del borde y la lista a todo el ancho, alineados con los
+   accesos rápidos de arriba; sin el filete ni la sombra del encabezado y con menos aire entre
+   el título y la primera reserva. Los selectores compuestos ganan a los de Card.module.css. */
+@media (max-width: 860px) {
+  .arrivalsCard .arrivalsHead {
+    padding: 0.7rem 0 0.4rem;
+    border-bottom: 0;
+    box-shadow: none;
+  }
+  .arrivalsCard .arrivalsBody { padding: 0 0 0.9rem; }
+}
+/* "Ver todas" es un «ver más»: pegado al borde derecho (sin el relleno lateral del enlace) y
+   apoyado en la base del título, un pelo por debajo, en vez de centrado con él. */
+.arrivalsCard .arrivalsHead { align-items: baseline; }
+.arrivalsCard .arrivalsSeeAll { padding-right: 0; position: relative; top: 3px; }
+
 /* Lista compacta: una columna en el teléfono, dos en escritorio para no estirar la tarjeta. */
 .arrivalsList {
   display: grid;

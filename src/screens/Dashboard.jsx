@@ -66,12 +66,13 @@ function PendingArrivalsCard({ rows, loading, error, onOpen, onSeeAll }) {
   const rest = rows.length - shown.length;
 
   return (
-    <Card>
-      <Card.Header title="Reservas"
-        action={<Button variant="secondary" size="sm" icon="fas fa-calendar-days" onClick={onSeeAll}>Ver todas</Button>} />
-      {/* Sin `cardBody`: este widget es una lista, no un reporte, y el relleno propio de la Card
-          ya deja las filas a ras del resto de la pantalla en el teléfono. */}
-      <Card.Body>
+    <Card className={s.arrivalsCard}>
+      {/* En el teléfono el título va al ras del borde, sin filete ni sombra, y la lista a todo
+          el ancho, alineada con los accesos rápidos de arriba (ver .arrivalsCard en el CSS). */}
+      <Card.Header title="Reservas" className={s.arrivalsHead}
+        action={<Button variant="link" size="sm" iconRight="fas fa-chevron-right" className={s.arrivalsSeeAll} onClick={onSeeAll}>Ver todas</Button>} />
+      {/* Sin `cardBody`: este widget es una lista, no un reporte. */}
+      <Card.Body className={s.arrivalsBody}>
         {error ? (
           <Alert tone="danger" title="No se pudieron cargar las reservas">{error}</Alert>
         ) : loading && rows.length === 0 ? (

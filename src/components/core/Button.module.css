@@ -35,6 +35,8 @@
 .secondary { background: var(--surface-card); color: var(--gray-700); border-color: var(--border-input); }
 .neutral { background: var(--surface-card); color: var(--color-primary); border-color: var(--surface-card); }
 .outlinePrimary { background: transparent; color: var(--color-primary); border-color: var(--color-primary); }
+/* Texto sin caja: se lee como un enlace («ver más»), no como un botón. */
+.link { background: transparent; color: var(--color-primary); border-color: transparent; padding-left: 0.25rem; padding-right: 0.25rem; }
 
 /* Hover — los sólidos se oscurecen con filter; los claros con un wash. */
 .primary:hover:not(:disabled),
@@ -44,6 +46,7 @@
 .secondary:hover:not(:disabled),
 .neutral:hover:not(:disabled) { background: var(--gray-100); }
 .outlinePrimary:hover:not(:disabled) { background: var(--color-primary-050); }
+.link:hover:not(:disabled) { text-decoration: underline; text-underline-offset: 3px; }
 
 /* Presionado — hundimiento de 2 % + tono más oscuro. */
 .btn:active:not(:disabled) { transform: scale(0.98); }
@@ -54,6 +57,7 @@
 .secondary:active:not(:disabled),
 .neutral:active:not(:disabled) { background: var(--gray-200); }
 .outlinePrimary:active:not(:disabled) { background: var(--color-primary-100); }
+.link:active:not(:disabled) { filter: brightness(0.85); }
 
 /* ---- Tamaños ---- */
 .sm { padding: 0.25rem 0.8rem; font-size: var(--text-xs); }
