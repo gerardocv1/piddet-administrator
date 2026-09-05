@@ -5,7 +5,7 @@ import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { todayIso, firstNameOf } from '../lib/orderLabels.js';
 import { usePermissions } from '../lib/permissions/usePermissions.js';
-import { shiftMoney, shiftDateTime, SHIFT_TYPE_LABELS } from '../lib/shiftLabels.js';
+import { shiftMoney, shiftDateTime, shiftAssignedUsers, SHIFT_TYPE_LABELS } from '../lib/shiftLabels.js';
 import s from './screens.module.css';
 
 const EMPTY = { items: [], pagination: null };
@@ -23,8 +23,10 @@ const TYPE_OPTIONS = [
 
 // Listado de turnos de caja de la compañía activa: abiertos primero, luego el histórico por
 // apertura descendente. El backend decide qué se ve: el cajero (api-module-shifts-own) solo
-// recibe los suyos y los turnos GLOBAL solo llegan con shift-global-admin. Los filtros viven
-// en la URL para que volver desde el detalle conserve la consulta.
+// recibe los turnos en los que está asignado y los turnos GLOBAL solo llegan con
+// shift-global-admin. Un turno de cajero puede tener varios asignados (caja compartida): la
+// columna muestra sus nombres. Los filtros viven en la URL para que volver desde el detalle
+// conserve la consulta.
 export function Shifts() {
   const navigate = useNavigate();
   const { can } = usePermissions();
@@ -68,9 +70,11 @@ export function Shifts() {
     },
     {
       key: 'assigned_user_name', header: 'Asignado a', ellipsis: true,
-      render: (r) => (r.type === 'EMPLOYEE'
-        ? firstNameOf(r.assigned_user_name) || <span className={s.faint}>—</span>
-        : <span className={s.faint}>Toda la compañía</span>),
+      render: (r) => {
+        if (r.type !== 'EMPLOYEE') return <span className={s.faint}>Toda la compañía</span>;
+        const names = shiftAssignedUsers(r).map((u) => firstNameOf(u.name)).filter(Boolean);
+        return names.length ? names.join(', ') : <span className={s.faint}>—</span>;
+      },
     },
     { key: 'base_amount', header: 'Base', width: 120, align: 'right', render: (r) => <span className={s.priceCell}>{shiftMoney(r.base_amount)}</span> },
     {

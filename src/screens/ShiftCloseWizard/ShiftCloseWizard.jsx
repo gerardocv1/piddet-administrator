@@ -4,7 +4,7 @@ import { Button, MoneyInput, Textarea, Spinner, Alert } from '../../components';
 import { api } from '../../lib/api.js';
 import { phrase } from '../../lib/terms.js';
 import { useResource } from '../../lib/useResource.js';
-import { shiftMoney, SHIFT_TYPE_LABELS } from '../../lib/shiftLabels.js';
+import { shiftMoney, SHIFT_TYPE_LABELS, shiftAssignedNames } from '../../lib/shiftLabels.js';
 import t from './ShiftCloseWizard.module.css';
 
 const STEPS = [
@@ -136,7 +136,7 @@ export function ShiftCloseWizard() {
             <h3 className={t.heading}>¿Cuánto dinero hay en la caja?</h3>
             <p className={t.helper}>
               Turno <strong>{SHIFT_TYPE_LABELS[shift.type] || shift.type}</strong>
-              {shift.assigned_user_name ? <> de <strong>{shift.assigned_user_name}</strong></> : null} · base
+              {shiftAssignedNames(shift) ? <> de <strong>{shiftAssignedNames(shift)}</strong></> : null} · base
               de {shiftMoney(shift.base_amount)}.
             </p>
             <MoneyInput label="Dinero contado" icon="fas fa-dollar-sign" placeholder="0" autoFocus

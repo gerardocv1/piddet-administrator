@@ -18,6 +18,18 @@ export const SHIFT_STATUS_LABELS = {
   CANCELLED: 'Cancelado',
 };
 
+// Usuarios asignados a un turno de cajero. El backend manda `assigned_users` ([{id, name}]);
+// puede ser más de uno (caja compartida). Los turnos previos al cambio solo traen
+// `assigned_user_name`, que se conserva como respaldo.
+export const shiftAssignedUsers = (shift) => {
+  if (Array.isArray(shift?.assigned_users) && shift.assigned_users.length) return shift.assigned_users;
+  return shift?.assigned_user_name ? [{ id: shift.assigned_user_id, name: shift.assigned_user_name }] : [];
+};
+
+// "María López, Juan Pérez" (nombres completos) o '' si el turno no tiene asignados.
+export const shiftAssignedNames = (shift) =>
+  shiftAssignedUsers(shift).map((u) => u.name).filter(Boolean).join(', ');
+
 export const MOVEMENT_TYPE_LABELS = {
   order: 'Venta',
   expense: 'Gasto',

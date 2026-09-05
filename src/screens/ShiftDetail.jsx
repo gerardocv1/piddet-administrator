@@ -4,7 +4,7 @@ import { Card, Badge, Button, Spinner, DataTable, PageHeader, Modal, MoneyInput,
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { usePermissions } from '../lib/permissions/usePermissions.js';
-import { shiftMoney, shiftDateTime, SHIFT_TYPE_LABELS, MOVEMENT_TYPE_LABELS } from '../lib/shiftLabels.js';
+import { shiftMoney, shiftDateTime, shiftAssignedNames, SHIFT_TYPE_LABELS, MOVEMENT_TYPE_LABELS } from '../lib/shiftLabels.js';
 import { useSetPageTitle } from '../lib/pageTitle.jsx';
 import { phrase } from '../lib/terms.js';
 import s from './screens.module.css';
@@ -66,8 +66,8 @@ export function ShiftDetail() {
   const cancelled = data.status === 'CANCELLED';
   const balance = data.balance || {};
   const movements = data.movements || [];
-  // El turno GLOBAL solo lo cierra quien tenga shift-global-admin; el de cajero, su dueño o
-  // un admin (los cajeros solo llegan a ver los suyos: el backend filtra).
+  // El turno GLOBAL solo lo cierra quien tenga shift-global-admin; el de cajero, cualquiera de
+  // sus asignados o un admin (los cajeros solo llegan a ver los suyos: el backend filtra).
   const canClose = open && (data.type === 'GLOBAL' ? can('shift-global-admin') : true);
   // Corregir la base y cancelar el turno son acciones solo del admin del módulo (el backend
   // gatea las rutas con api-module-shifts); el GLOBAL exige además shift-global-admin.
@@ -164,7 +164,7 @@ export function ShiftDetail() {
                 : <Badge variant="neutral" dot>Cerrado</Badge>,
           },
           { label: 'Base', value: shiftMoney(data.base_amount) },
-          data.type === 'EMPLOYEE' && { label: 'Asignado a', value: data.assigned_user_name || '—' },
+          data.type === 'EMPLOYEE' && { label: 'Asignado a', value: shiftAssignedNames(data) || '—' },
           { label: 'Abierto por', value: data.opened_by_name || '—' },
           cancelled && { label: 'Cancelado por', value: data.cancelled_by_name || '—' },
           cancelled && { label: 'Cancelación', value: shiftDateTime(data.cancelled_at) },
