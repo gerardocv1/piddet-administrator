@@ -70,7 +70,7 @@ function PendingArrivalsCard({ rows, loading, error, onOpen, onSeeAll }) {
       {/* En el teléfono el título va al ras del borde, sin filete ni sombra, y la lista a todo
           el ancho, alineada con los accesos rápidos de arriba (ver .arrivalsCard en el CSS). */}
       <Card.Header title="Reservas" className={s.arrivalsHead}
-        action={<Button variant="secondary" size="sm" icon="fas fa-calendar-days" onClick={onSeeAll}>Ver todas</Button>} />
+        action={<Button variant="link" size="sm" iconRight="fas fa-chevron-right" onClick={onSeeAll}>Ver todas</Button>} />
       {/* Sin `cardBody`: este widget es una lista, no un reporte. */}
       <Card.Body className={s.arrivalsBody}>
         {error ? (
