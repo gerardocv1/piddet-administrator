@@ -2782,14 +2782,16 @@ function resolveExpensesMock(path, query, { method = 'GET', body } = {}) {
 // ── Módulo de turnos de caja (datos en memoria; las mutaciones persisten durante la sesión) ──
 // Replican la forma del backend: turno GLOBAL o EMPLOYEE con base de dinero, movimientos con
 // monto/método denormalizados (una venta con pago mixto genera una fila por pago) y cierre con
-// arqueo (counted/expected/difference + ajuste). El usuario demo (id 1) es admin del módulo.
+// arqueo (counted/expected/difference + ajuste). Un turno EMPLOYEE puede tener varios usuarios
+// asignados (`assigned_users`, caja compartida); `assigned_user_id`/`assigned_user_name`
+// conservan el primero por compatibilidad. El usuario demo (id 1) es admin del módulo.
 const shiftDateIso = (dayOffset = 0, time = '09:00:00') =>
   `${new Date(Date.now() - dayOffset * 864e5).toISOString().slice(0, 10)} ${time}`;
 
 export const mockShifts = [
   {
     id: 1, type: 'GLOBAL', status: 'OPEN', base_amount: '200000.00',
-    assigned_user_id: null, assigned_user_name: null,
+    assigned_user_id: null, assigned_user_name: null, assigned_users: [],
     opened_by: 1, opened_by_name: 'Gerardo Cruz', opened_at: shiftDateIso(0, '08:00:00'),
     counted_amount: null, expected_amount: null, difference: null, closing_notes: null,
     closed_by: null, closed_by_name: null, closed_at: null,
@@ -2797,13 +2799,14 @@ export const mockShifts = [
   {
     id: 2, type: 'EMPLOYEE', status: 'OPEN', base_amount: '100000.00',
     assigned_user_id: 2, assigned_user_name: 'María López',
+    assigned_users: [{ id: 2, name: 'María López' }, { id: 3, name: 'Carlos Mejía' }],
     opened_by: 1, opened_by_name: 'Gerardo Cruz', opened_at: shiftDateIso(0, '08:15:00'),
     counted_amount: null, expected_amount: null, difference: null, closing_notes: null,
     closed_by: null, closed_by_name: null, closed_at: null,
   },
   {
     id: 3, type: 'EMPLOYEE', status: 'CLOSED', base_amount: '100000.00',
-    assigned_user_id: 2, assigned_user_name: 'María López',
+    assigned_user_id: 2, assigned_user_name: 'María López', assigned_users: [{ id: 2, name: 'María López' }],
     opened_by: 1, opened_by_name: 'Gerardo Cruz', opened_at: shiftDateIso(1, '08:00:00'),
     counted_amount: '575000.00', expected_amount: '580000.00', difference: '-5000.00',
     closing_notes: 'Faltó cambio de un billete.', closed_by: 2, closed_by_name: 'María López',
@@ -2811,7 +2814,7 @@ export const mockShifts = [
   },
   {
     id: 4, type: 'GLOBAL', status: 'CLOSED', base_amount: '200000.00',
-    assigned_user_id: null, assigned_user_name: null,
+    assigned_user_id: null, assigned_user_name: null, assigned_users: [],
     opened_by: 1, opened_by_name: 'Gerardo Cruz', opened_at: shiftDateIso(1, '07:30:00'),
     counted_amount: '1240000.00', expected_amount: '1225000.00', difference: '15000.00',
     closing_notes: null, closed_by: 1, closed_by_name: 'Gerardo Cruz',
@@ -2892,6 +2895,9 @@ const decorateShiftDetail = (shift) => ({
 // las pantallas muestran err.message, igual que con un 409 real.
 const shiftConflict = (message) => { throw Object.assign(new Error(message), { status: 409 }); };
 
+// ¿El usuario está asignado al turno? (como el backend: por la lista, no por la columna).
+const shiftHasUser = (shift, userId) => (shift.assigned_users || []).some((u) => u.id === userId);
+
 function resolveShiftsMock(path, query, { method = 'GET', body } = {}) {
   const scoped = path.match(/^\/companies\/[^/]+\/(.+)$/);
   if (!scoped) return undefined;
@@ -2906,7 +2912,7 @@ function resolveShiftsMock(path, query, { method = 'GET', body } = {}) {
   if (sub === 'shifts/current') {
     return {
       global: (canGlobal && mockShifts.find((sh) => sh.type === 'GLOBAL' && sh.status === 'OPEN')) || null,
-      mine: mockShifts.find((sh) => sh.type === 'EMPLOYEE' && sh.status === 'OPEN' && sh.assigned_user_id === 1) || null,
+      mine: mockShifts.find((sh) => sh.type === 'EMPLOYEE' && sh.status === 'OPEN' && shiftHasUser(sh, 1)) || null,
       open_employee_count: mockShifts.filter((sh) => sh.type === 'EMPLOYEE' && sh.status === 'OPEN').length,
     };
   }
@@ -2916,16 +2922,20 @@ function resolveShiftsMock(path, query, { method = 'GET', body } = {}) {
     if (type === 'GLOBAL' && mockShifts.some((sh) => sh.type === 'GLOBAL' && sh.status === 'OPEN')) {
       shiftConflict('Ya hay un turno global abierto');
     }
-    const assignedId = type === 'EMPLOYEE' ? Number(body?.assigned_user_id || 1) : null;
-    if (type === 'EMPLOYEE'
-      && mockShifts.some((sh) => sh.type === 'EMPLOYEE' && sh.status === 'OPEN' && sh.assigned_user_id === assignedId)) {
-      shiftConflict('El empleado ya tiene un turno abierto');
+    // Uno o varios asignados (caja compartida); sin lista, el turno es del usuario demo.
+    let assignedUsers = [];
+    if (type === 'EMPLOYEE') {
+      const ids = [...new Set([body?.assigned_user_id, ...(body?.assigned_user_ids || [])].map(Number).filter((id) => id > 0))];
+      assignedUsers = (ids.length ? ids : [1]).map((id) => ({ id, name: mockUsers.find((u) => u.id === id)?.name ?? `Usuario ${id}` }));
+      const busy = assignedUsers.filter((u) =>
+        mockShifts.some((sh) => sh.type === 'EMPLOYEE' && sh.status === 'OPEN' && shiftHasUser(sh, u.id)));
+      if (busy.length) shiftConflict(`${busy.map((u) => u.name).join(', ')} ya tiene un turno abierto`);
     }
-    const assigned = assignedId ? mockUsers.find((u) => u.id === assignedId) : null;
     const row = {
       id: nextId(mockShifts), type, status: 'OPEN',
       base_amount: Number(body?.base_amount || 0).toFixed(2),
-      assigned_user_id: assignedId, assigned_user_name: assigned?.name ?? (assignedId ? `Usuario ${assignedId}` : null),
+      assigned_user_id: assignedUsers[0]?.id ?? null, assigned_user_name: assignedUsers[0]?.name ?? null,
+      assigned_users: assignedUsers,
       opened_by: 1, opened_by_name: 'Gerardo Cruz',
       opened_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
       counted_amount: null, expected_amount: null, difference: null, closing_notes: null,

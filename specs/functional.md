@@ -190,8 +190,10 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
 
 - **Descripción:** sesiones de caja con base, movimientos y arqueo de cierre.
 - **Flujo principal:** `/shifts/open` abre un turno **global** (compañía) o **de empleado**
-  (cajero) con una base de dinero; el backend le asocia automáticamente ventas y gastos como
-  movimientos. `/shifts/:shiftId` muestra el balance en vivo; `/shifts/:shiftId/close` guía el
+  con una base de dinero. Un admin asigna el turno de empleado a uno o **varios** cajeros
+  (caja compartida: checkboxes de usuarios; sin selección es suyo); el cajero solo abre el
+  propio. El backend le asocia automáticamente las ventas y gastos de cualquiera de sus
+  asignados como movimientos, y rechaza (409, con el nombre) a quien ya esté en otro abierto. `/shifts/:shiftId` muestra el balance en vivo; `/shifts/:shiftId/close` guía el
   cierre: contar dinero → balance (base + ventas − gastos) → confirmar.
 - **Reglas:** la diferencia se respalda con un documento contable real (sobrante → factura de
   origen `SHIFT`; faltante → gasto en «Ajustes de caja»), que no se asocia a un turno abierto. El
