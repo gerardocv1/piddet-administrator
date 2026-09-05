@@ -162,6 +162,10 @@
   }
   .arrivalsCard .arrivalsBody { padding: 0 0 0.9rem; }
 }
+/* "Ver todas" es un «ver más»: pegado al borde derecho (sin el relleno lateral del enlace) y
+   apoyado en la base del título, un pelo por debajo, en vez de centrado con él. */
+.arrivalsCard .arrivalsHead { align-items: baseline; }
+.arrivalsCard .arrivalsSeeAll { padding-right: 0; position: relative; top: 3px; }
 
 /* Lista compacta: una columna en el teléfono, dos en escritorio para no estirar la tarjeta. */
 .arrivalsList {
