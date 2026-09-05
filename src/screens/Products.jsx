@@ -5,6 +5,7 @@ import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { ItemFormModal } from './ItemFormModal.jsx';
 import { entityTerm, cap } from '../lib/terms.js';
+import { usePermissions } from '../lib/permissions/usePermissions.js';
 import s from './screens.module.css';
 import t from './Products.module.css';
 
@@ -28,6 +29,7 @@ export function Products() {
   // Terminología por tipo de compañía: el "producto" puede llamarse "ítem" o "servicio".
   const prodT = entityTerm('product');
   const { toast } = useToast();
+  const { can } = usePermissions();
   const [page, setPage] = React.useState(1);
   const [q, setQ] = React.useState('');
   const [search, setSearch] = React.useState('');
@@ -133,7 +135,14 @@ export function Products() {
           <RefreshButton loading={loading} onClick={reload} />
           <Dropdown
             trigger={<IconButton icon="fas fa-ellipsis-vertical" variant="light" size="sm" title="Más acciones" />}
-            items={[{ label: 'Categorías', icon: 'fas fa-tags', onClick: () => navigate('/product-categories') }]}
+            items={[
+              { label: 'Categorías', icon: 'fas fa-tags', onClick: () => navigate('/product-categories') },
+              // Atajo al módulo de opciones generales (grupos que aplican a varios productos); solo
+              // con su permiso, igual que la entrada del menú lateral.
+              ...(can('api-module-general-options')
+                ? [{ label: 'Opciones generales', icon: 'fas fa-sliders', onClick: () => navigate('/general-options') }]
+                : []),
+            ]}
           />
           <Button variant="primary" size="sm" icon="fas fa-plus" onClick={() => setForm({})}>Nuevo {prodT.one}</Button>
         </>}
