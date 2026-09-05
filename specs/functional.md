@@ -46,6 +46,7 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
 |---|---|---|---|
 | — | **Inicio / Dashboard** | `/` | siempre visible |
 | Oferta | **Productos** (con categorías y opciones) | `/products` | `api-module-products` |
+| Oferta | **Opciones generales** (grupos de opciones para varios productos) | `/general-options` | `api-module-general-options` |
 | Oferta | **Carta / Menús** | `/menus` | `api-module-menus` |
 | Oferta | **Reservas** (hospedaje) | `/reservations` | `api-module-reservations` + `functionality_reservations` |
 | Oferta | **Unidades rentables** | `/rentable-units` | `api-module-rentable-units` + `functionality_reservations` |
@@ -126,7 +127,15 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
   pide quitar**: sus opciones no llevan precio y el POS las imprime con signo menos
   («− Cebolla»). El panel muestra la insignia *Para quitar* en esos grupos y no pide precio al
   crear sus ingredientes. Un nombre vacío o un mínimo mayor que el máximo se avisan junto al
-  campo antes de enviar.
+  campo antes de enviar. Los modales de grupo y de opción son compartidos (`OptionGroupModals.jsx`).
+- **Opciones generales** (`/general-options`): grupos de opciones de la **compañía** (sin
+  producto), con las mismas reglas y tipos que los de un producto, que se asignan a varios
+  productos a la vez —p. ej. «Servicios»: para llevar, cubiertos—. Cada grupo muestra sus
+  opciones, cuántos productos lo usan y un botón que abre el **selector de productos**
+  (`ProductPickerModal`): lista paginada con búsqueda por nombre y filtro por categoría, casillas
+  por producto y chips removibles de lo seleccionado; al guardar se envía la lista completa de
+  ids. Un grupo sin productos asignados avisa que no se verá en el menú. El backend los expone
+  dentro de cada producto asignado en el menú del POS, detrás de sus grupos propios.
 
 ### Facturas (órdenes por fecha)
 

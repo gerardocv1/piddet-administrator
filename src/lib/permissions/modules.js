@@ -36,6 +36,9 @@ export const MODULE_GROUPS = [
         children: [
           { to: '/products', label: 'Productos', icon: 'fas fa-burger', perm: 'api-module-products' },
           { to: '/menus', label: 'Carta', icon: 'fas fa-book-open', perm: 'api-module-menus' },
+          // Opciones generales: grupos de opciones (servicios, adiciones…) que aplican a varios
+          // productos a la vez; el menú del POS los expone dentro de cada producto asignado.
+          { to: '/general-options', label: 'Opciones generales', icon: 'fas fa-sliders', perm: 'api-module-general-options' },
         ],
       },
       // Hospedaje: reservas de cabañas/habitaciones/lugares. `api-module-reservations` opera las

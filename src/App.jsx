@@ -6,6 +6,7 @@ import { Login } from './screens/Login.jsx';
 import { Dashboard } from './screens/Dashboard.jsx';
 import { Products } from './screens/Products.jsx';
 import { ProductDetail } from './screens/ProductDetail.jsx';
+import { GeneralOptions } from './screens/GeneralOptions.jsx';
 import { ProductCategories } from './screens/ProductCategories.jsx';
 import { AdminProductCategories } from './screens/AdminProductCategories.jsx';
 import { AdminCompanies } from './screens/AdminCompanies.jsx';
@@ -223,6 +224,7 @@ function AdminApp() {
             <Route path="products" element={<RequirePermission path="/products"><Products /></RequirePermission>} />
             <Route path="products/:itemId" element={<RequirePermission path="/products"><ProductDetail /></RequirePermission>} />
             <Route path="product-categories" element={<RequirePermission path="/product-categories"><ProductCategories /></RequirePermission>} />
+            <Route path="general-options" element={<RequirePermission path="/general-options"><GeneralOptions /></RequirePermission>} />
             <Route path="admin/product-categories" element={<RequirePermission path="/admin/product-categories"><AdminProductCategories /></RequirePermission>} />
             <Route path="admin/companies" element={<RequirePermission path="/admin/companies"><AdminCompanies /></RequirePermission>} />
             <Route path="admin/companies/:companyId" element={<RequirePermission path="/admin/companies"><AdminCompanyDetail /></RequirePermission>} />

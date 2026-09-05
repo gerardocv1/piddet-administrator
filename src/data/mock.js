@@ -158,6 +158,26 @@ export const mockItemOptions = [
   { id: 10, item_id: 1, group_id: 4, name: 'Queso', description: '', value: 0, status: 1, position: 2 },
 ];
 
+// Grupos de opciones GENERALES: de la compañía (sin item_id), aplican a varios productos a la vez
+// (mockGeneralOptionGroupItems). El menú del POS los expone dentro de cada producto asignado.
+export const mockGeneralOptionGroups = [
+  { id: 101, company_id: 1, scope: 'GENERAL', name: 'Servicios', type: 'OPTION', description: 'Cómo se entrega el pedido', min: 0, max: 0, multiple: true, status: 1, position: 0 },
+  { id: 102, company_id: 1, scope: 'GENERAL', name: 'Salsas', type: 'OPTION', description: '', min: 0, max: 2, multiple: true, status: 1, position: 1 },
+];
+export const mockGeneralOptions = [
+  { id: 201, item_id: null, group_id: 101, name: 'Para llevar', description: '', value: 0, status: 1, position: 0 },
+  { id: 202, item_id: null, group_id: 101, name: 'Cubiertos', description: '', value: 500, status: 1, position: 1 },
+  { id: 203, item_id: null, group_id: 102, name: 'Salsa de ajo', description: '', value: 0, status: 1, position: 0 },
+  { id: 204, item_id: null, group_id: 102, name: 'Salsa picante', description: '', value: 0, status: 1, position: 1 },
+];
+// Asignación grupo general → producto.
+export const mockGeneralOptionGroupItems = [
+  { id: 1, group_id: 101, item_id: 1 },
+  { id: 2, group_id: 101, item_id: 2 },
+  { id: 3, group_id: 101, item_id: 3 },
+  { id: 4, group_id: 102, item_id: 1 },
+];
+
 // Mesas de la compañía activa, con el mismo shape del backend.
 export const mockTables = [
   { id: 1, name: 'Mesa 1', description: 'Ventana', capacity: 2, status: 'available', is_active: true },
@@ -240,7 +260,7 @@ export const mockRoles = [
   { id: 1, name: 'super-admin', label: 'Superadministrador', description: 'Acceso total a la plataforma', system: true, permissions: [] },
   { id: 2, name: 'client', label: 'Cliente', description: 'Cliente final de la app', system: true, permissions: [] },
   { id: 3, name: 'employee', label: 'Empleado', description: 'Empleado sin módulos asignados', system: true, permissions: [] },
-  { id: 4, name: 'admin', label: 'Administrador', description: 'Acceso total a la compañía', permissions: ['user-administrator', 'role-list', 'role-create', 'role-update', 'role-delete', 'role-assign', 'permission-list', 'permission-update', 'api-module-products', 'api-module-menus', 'api-module-orders', 'order-cancel', 'api-module-expenses', 'expense-annul', 'table-list', 'table-create', 'table-update'] },
+  { id: 4, name: 'admin', label: 'Administrador', description: 'Acceso total a la compañía', permissions: ['user-administrator', 'role-list', 'role-create', 'role-update', 'role-delete', 'role-assign', 'permission-list', 'permission-update', 'api-module-products', 'api-module-general-options', 'api-module-menus', 'api-module-orders', 'order-cancel', 'api-module-expenses', 'expense-annul', 'table-list', 'table-create', 'table-update'] },
   { id: 5, name: 'cashier', label: 'Cajero', description: 'Gestión de pagos y caja', permissions: ['api-module-orders', 'api-module-shifts-own'] },
   { id: 6, name: 'waiter', label: 'Mesero', description: 'Toma de pedidos en sala', permissions: ['table-list'] },
   { id: 7, name: 'cook', label: 'Cocinero', description: 'Operación de cocina', permissions: [] },
@@ -268,6 +288,7 @@ export const mockAssignablePermissions = [
   { module_id: 3, module_name: 'Productos y menús', permissions: [
     { name: 'api-module-products', description: 'Administrar productos y categorías' },
     { name: 'api-module-menus', description: 'Administrar menús y sus categorías' },
+    { name: 'api-module-general-options', description: 'Administrar las opciones generales (grupos que aplican a varios productos)' },
   ] },
   { module_id: 4, module_name: 'Órdenes', permissions: [
     { name: 'api-module-orders', description: 'Consultar las facturas de toda la compañía' },
@@ -441,7 +462,7 @@ export const mockMenuItems = [
 // el panel muestra Productos (y sus categorías), Menús y Usuarios; el resto queda oculto.
 const mockPermissions = {
   roles: ['Administrador'],
-  permissions: ['user-administrator', 'admin-general', 'role-list', 'role-create', 'role-update', 'role-delete', 'role-assign', 'permission-list', 'permission-update', 'api-module-menus', 'api-module-products', 'api-module-company', 'company-edit-functionalities', 'api-module-stores', 'table-list', 'table-create', 'table-update', 'api-module-orders', 'sales-report', 'order-cancel', 'order-sync-failure-admin', 'api-module-expenses', 'expenses-report', 'expense-annul', 'api-module-shifts', 'shift-global-admin', 'api-module-reservations', 'api-module-rentable-units', 'reservation-checkout', 'reservation-cancel', 'reservation-payment-annul', 'api-module-gym', 'api-module-gym-plans', 'gym-plans-create', 'gym-plans-edit', 'gym-members-create', 'gym-members-edit', 'gym-subscriptions-create', 'gym-subscriptions-cancel', 'gym-payments-create', 'gym-payments-annul', 'gym-checkins-create', 'gym-checkins-edit', 'gym-measurement-config', 'gym-periods-recalculate', 'company-catalog-purge', 'company-master'],
+  permissions: ['user-administrator', 'admin-general', 'role-list', 'role-create', 'role-update', 'role-delete', 'role-assign', 'permission-list', 'permission-update', 'api-module-menus', 'api-module-products', 'api-module-general-options', 'api-module-company', 'company-edit-functionalities', 'api-module-stores', 'table-list', 'table-create', 'table-update', 'api-module-orders', 'sales-report', 'order-cancel', 'order-sync-failure-admin', 'api-module-expenses', 'expenses-report', 'expense-annul', 'api-module-shifts', 'shift-global-admin', 'api-module-reservations', 'api-module-rentable-units', 'reservation-checkout', 'reservation-cancel', 'reservation-payment-annul', 'api-module-gym', 'api-module-gym-plans', 'gym-plans-create', 'gym-plans-edit', 'gym-members-create', 'gym-members-edit', 'gym-subscriptions-create', 'gym-subscriptions-cancel', 'gym-payments-create', 'gym-payments-annul', 'gym-checkins-create', 'gym-checkins-edit', 'gym-measurement-config', 'gym-periods-recalculate', 'company-catalog-purge', 'company-master'],
 };
 
 // Empresa (tenant) activa y empresas disponibles para el usuario (SaaS multi-tenant).
@@ -1039,6 +1060,80 @@ function resolveItemsMock(path, query, { method = 'GET', body } = {}) {
     if (method === 'PUT') { if (idx >= 0) mockItemCategories[idx] = { ...mockItemCategories[idx], ...body, item_type_id: body.item_type_id != null ? Number(body.item_type_id) : mockItemCategories[idx].item_type_id }; return mockItemCategories[idx] || null; }
     if (method === 'DELETE') { if (idx >= 0) mockItemCategories.splice(idx, 1); return { ok: true }; }
     return mockItemCategories[idx] || null;
+  }
+
+  // ── Opciones generales (grupos de la compañía que aplican a varios productos) ──
+  const withGeneralExtras = (gr) => ({
+    ...gr,
+    items_count: mockGeneralOptionGroupItems.filter((x) => x.group_id === gr.id).length,
+    options: mockGeneralOptions.filter((o) => o.group_id === gr.id && o.status !== 2).sort((a, b) => a.position - b.position),
+  });
+  if (sub === 'general-option-groups/sort') return applySort(mockGeneralOptionGroups, body.elements);
+  if (sub === 'general-option-groups') {
+    if (method === 'POST') {
+      const row = { id: nextId(mockGeneralOptionGroups), company_id: 1, scope: 'GENERAL', name: body.name, type: body.type || 'OPTION', description: body.description || '', min: Number(body.min) || 0, max: Number(body.max) || 0, multiple: !!body.multiple, status: body.status != null ? (body.status ? 1 : 0) : 1, position: mockGeneralOptionGroups.length };
+      mockGeneralOptionGroups.push(row);
+      return withGeneralExtras(row);
+    }
+    const sq = (query.get('_search') || '').toLowerCase();
+    return mockGeneralOptionGroups
+      .filter((gr) => !sq || gr.name.toLowerCase().includes(sq))
+      .sort((a, b) => a.position - b.position)
+      .map(withGeneralExtras);
+  }
+  m = sub.match(/^general-option-groups\/(\d+)\/items$/);
+  if (m) {
+    const gid = Number(m[1]);
+    if (method === 'PUT') {
+      const wanted = new Set((body.item_ids || []).map(Number).filter((id) => mockItems.some((it) => it.id === id && it.item_status_id !== 3)));
+      for (let i = mockGeneralOptionGroupItems.length - 1; i >= 0; i--) {
+        if (mockGeneralOptionGroupItems[i].group_id === gid && !wanted.has(mockGeneralOptionGroupItems[i].item_id)) mockGeneralOptionGroupItems.splice(i, 1);
+      }
+      wanted.forEach((itemId) => {
+        if (!mockGeneralOptionGroupItems.some((x) => x.group_id === gid && x.item_id === itemId)) {
+          mockGeneralOptionGroupItems.push({ id: nextId(mockGeneralOptionGroupItems), group_id: gid, item_id: itemId });
+        }
+      });
+    }
+    return mockGeneralOptionGroupItems
+      .filter((x) => x.group_id === gid)
+      .map((x) => mockItems.find((it) => it.id === x.item_id))
+      .filter((it) => it && it.item_status_id !== 3)
+      .sort((a, b) => a.position - b.position)
+      .map(decorateItem);
+  }
+  m = sub.match(/^general-option-groups\/(\d+)\/options\/sort$/);
+  if (m) return applySort(mockGeneralOptions, body.elements);
+  m = sub.match(/^general-option-groups\/(\d+)\/options\/(\d+)$/);
+  if (m) {
+    const idx = mockGeneralOptions.findIndex((o) => o.id === Number(m[2]) && o.group_id === Number(m[1]));
+    if (method === 'PUT') { if (idx >= 0) mockGeneralOptions[idx] = { ...mockGeneralOptions[idx], ...body, value: body.value != null ? Number(body.value) : mockGeneralOptions[idx].value }; return mockGeneralOptions[idx] || null; }
+    if (method === 'DELETE') { if (idx >= 0) mockGeneralOptions.splice(idx, 1); return { ok: true }; }
+    return mockGeneralOptions[idx] || null;
+  }
+  m = sub.match(/^general-option-groups\/(\d+)\/options$/);
+  if (m) {
+    const gid = Number(m[1]);
+    if (method === 'POST') {
+      const row = { id: nextId(mockGeneralOptions), item_id: null, group_id: gid, name: body.name, description: body.description || '', value: Number(body.value) || 0, status: body.status != null ? Number(body.status) : 1, position: mockGeneralOptions.filter((o) => o.group_id === gid).length };
+      mockGeneralOptions.push(row);
+      return row;
+    }
+    return mockGeneralOptions.filter((o) => o.group_id === gid).sort((a, b) => a.position - b.position);
+  }
+  m = sub.match(/^general-option-groups\/(\d+)$/);
+  if (m) {
+    const idx = mockGeneralOptionGroups.findIndex((gr) => gr.id === Number(m[1]));
+    if (method === 'PUT') { if (idx >= 0) mockGeneralOptionGroups[idx] = { ...mockGeneralOptionGroups[idx], ...body, multiple: body.multiple != null ? !!body.multiple : mockGeneralOptionGroups[idx].multiple }; return idx >= 0 ? withGeneralExtras(mockGeneralOptionGroups[idx]) : null; }
+    if (method === 'DELETE') {
+      if (idx >= 0) {
+        const gid = mockGeneralOptionGroups[idx].id;
+        mockGeneralOptionGroups.splice(idx, 1);
+        for (let i = mockGeneralOptions.length - 1; i >= 0; i--) if (mockGeneralOptions[i].group_id === gid) mockGeneralOptions.splice(i, 1);
+      }
+      return { ok: true };
+    }
+    return idx >= 0 ? withGeneralExtras(mockGeneralOptionGroups[idx]) : null;
   }
 
   // ── Grupos de opciones (anidados por ítem) ──
