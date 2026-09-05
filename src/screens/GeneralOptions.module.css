@@ -1,0 +1,22 @@
+/* Opciones generales: reutiliza la tarjeta y los grupos de ProductDetail.module.css; aquí solo
+   lo propio del módulo. */
+
+/* Aviso de grupo sin productos asignados (no se ve en el menú). */
+.unassigned {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: var(--radius);
+  background: var(--color-warning-100);
+  color: var(--gray-700);
+  font-size: var(--text-sm);
+}
+.unassigned i { color: var(--color-warning-fg); }
+
+/* En teléfono la cabecera del grupo tiene un botón más (los productos a los que aplica): las
+   acciones bajan a su propia fila para que el nombre y las reglas no queden apretados. */
+@media (max-width: 860px) {
+  .groupHead { flex-wrap: wrap; }
+  .groupActions { width: 100%; justify-content: flex-end; flex-wrap: wrap; }
+}

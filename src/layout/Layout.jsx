@@ -31,6 +31,7 @@ const META = {
   '/': { title: 'Inicio', crumb: 'Resumen' },
   '/products': { title: 'Productos', crumb: 'Oferta' },
   '/product-categories': { title: 'Categorías de producto', crumb: 'Oferta' },
+  '/general-options': { title: 'Opciones generales', crumb: 'Oferta' },
   '/admin/companies': { title: 'Compañías', crumb: 'Plataforma' },
   '/menus': { title: 'Menús', crumb: 'Oferta' },
   '/tables': { title: 'Mesas', crumb: 'Operación' },
