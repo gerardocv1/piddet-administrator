@@ -10,8 +10,8 @@ import {
   reservationStatusMeta, arrivalSlotLabel, checkInProximity, DECORATION_EMOJI, DECORATION_LABEL,
 } from '../lib/reservationLabels.js';
 import { phrase } from '../lib/terms.js';
-import { gymMoney, GYM_PERIOD_STATUS } from '../lib/gymLabels.js';
-import { formatShortDate, monthName, shortMonthName } from '../lib/dates.js';
+import { gymMoney } from '../lib/gymLabels.js';
+import { formatDayMonth, monthName, shortMonthName } from '../lib/dates.js';
 import { whatsappHref } from './public/whatsapp.js';
 import s from './Dashboard.module.css';
 
@@ -234,11 +234,12 @@ function GymExpiringCard({ data, loading, error, onOpen, onSeeAll }) {
   const days = data?.days || 7;
   const shown = items.slice(0, EXPIRING_LIMIT);
   const rest = items.length - shown.length;
-  const pending = Number(counts.pending_total) || 0;
 
+  // Solo los conteos: una suscripción en gracia ya venció (el corte es lo que sigue), y las
+  // demás están por vencer. El detalle de cada una vive en su fila.
   const summaryParts = [];
-  if (counts.grace > 0) summaryParts.push(`${counts.grace} en gracia`);
-  if (counts.expiring > 0) summaryParts.push(counts.expiring === 1 ? `1 vence en ${days} días` : `${counts.expiring} vencen en ${days} días`);
+  if (counts.grace > 0) summaryParts.push(counts.grace === 1 ? '1 vencida' : `${counts.grace} vencidas`);
+  if (counts.expiring > 0) summaryParts.push(`${counts.expiring} por vencer`);
   const tone = counts.grace > 0 ? 'danger' : counts.expiring > 0 ? 'warning' : 'success';
 
   return (
@@ -256,30 +257,33 @@ function GymExpiringCard({ data, loading, error, onOpen, onSeeAll }) {
           </Alert>
         ) : (
           <>
-            <Alert tone={tone} title={summaryParts.join(' · ')} className={s.expiringSummary}>
-              {pending > 0
-                ? <>Saldo pendiente <strong>{gymMoney(pending)}</strong>. Una suscripción en gracia sin abonos se corta sola al terminar la gracia.</>
-                : 'Sin saldo pendiente: solo falta renovar.'}
-            </Alert>
-            <div className={s.widgetList}>
+            <Alert tone={tone} title={summaryParts.join(' · ')} className={s.expiringSummary} />
+            {/* Filas compactas: una sola línea de datos bajo el nombre y el estado a la derecha,
+                sin el pie de la ListCard — aquí caben más afiliados en menos alto. */}
+            <div className={s.expList}>
               {shown.map((it) => {
                 const b = expiringBadge(it);
                 const grace = it.alert === 'grace';
                 const owes = Number(it.pending) > 0;
+                const when = grace && it.current_period?.grace_ends_at
+                  ? `gracia hasta ${formatDayMonth(it.current_period.grace_ends_at)}`
+                  : `vence ${formatDayMonth(it.current_period?.end_date)}`;
                 return (
-                  <ListCard key={it.subscription_id}
-                    media={
-                      <span className={[s.expIcon, grace ? s.expIconGrace : ''].filter(Boolean).join(' ')}>
-                        <i className={grace ? 'fas fa-triangle-exclamation' : 'fas fa-hourglass-half'} />
+                  <button type="button" key={it.subscription_id} className={s.expRow} onClick={() => onOpen(it.subscription_id)}>
+                    <span className={[s.expIcon, grace ? s.expIconGrace : ''].filter(Boolean).join(' ')}>
+                      <i className={grace ? 'fas fa-triangle-exclamation' : 'fas fa-hourglass-half'} />
+                    </span>
+                    <span className={s.expText}>
+                      <span className={s.expName}>{it.member_name}</span>
+                      <span className={s.expMeta}>
+                        {/* El plan solo en escritorio: en el teléfono la fila prioriza fecha y saldo. */}
+                        <span className={s.expPlan}>{it.plan_name} · </span>{when}
+                        {owes && <span className={s.saldo}> · {gymMoney(it.pending)}</span>}
                       </span>
-                    }
-                    title={it.member_name}
-                    subtitle={grace && it.current_period?.grace_ends_at
-                      ? `${it.plan_name} · gracia hasta ${formatShortDate(it.current_period.grace_ends_at)}`
-                      : `${it.plan_name} · vence ${formatShortDate(it.current_period?.end_date)}`}
-                    badge={<Badge variant={b.variant} dot>{b.label}</Badge>}
-                    meta={owes ? <span className={s.saldo}>Saldo {gymMoney(it.pending)}</span> : 'Al día'}
-                    onClick={() => onOpen(it.subscription_id)} />
+                    </span>
+                    <Badge variant={b.variant} dot>{b.label}</Badge>
+                    <i className={`fas fa-chevron-right ${s.expChevron}`} aria-hidden="true" />
+                  </button>
                 );
               })}
             </div>

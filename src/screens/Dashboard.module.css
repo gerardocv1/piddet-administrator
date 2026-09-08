@@ -223,22 +223,64 @@
 /* Entre el resumen del aviso y su lista, un aire corto: leen como un solo bloque. */
 .expiringSummary { margin-bottom: 0.75rem; }
 
+/* Filas compactas del aviso: una tarjetita de una sola altura de línea doble (nombre + dato),
+   con el estado a la derecha; más bajas que una ListCard porque no tienen pie. */
+.expList { display: flex; flex-direction: column; gap: 6px; }
+.expRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  padding: 6px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  background: var(--surface-card);
+  font-family: var(--font-sans);
+  text-align: left;
+  cursor: pointer;
+}
+.expRow:hover { border-color: var(--gray-300); }
+.expRow:active { background: var(--gray-100); }
+.expText { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.expName {
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--text-heading);
+  line-height: var(--lh-tight);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.expMeta {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.expChevron { flex: 0 0 auto; color: var(--gray-400); font-size: 0.65rem; }
+@media (max-width: 860px) {
+  .expPlan { display: none; }
+}
+
 /* Baldosa del vencimiento: tinte de aviso para "vence pronto" y de peligro para la gracia (el
-   corte automático está cerca). Misma medida que el icono de las reservas. */
+   corte automático está cerca). Más chica que el icono de las reservas: la fila es compacta. */
 .expIcon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
   background: var(--color-warning-100);
   color: var(--color-warning-fg);
-  font-size: 0.8rem;
+  font-size: 0.7rem;
 }
 .expIconGrace { background: var(--color-danger-100); color: var(--color-danger-fg); }
 
-/* Saldo pendiente en el pie de la fila: mismo tono con el que lo acusan los listados del gym. */
+/* Saldo pendiente en la línea de datos: mismo tono con el que lo acusan los listados del gym. */
 .saldo { color: var(--color-warning-fg); font-weight: 600; }
 
 /* Baldosa-calendario del cumpleaños: el día grande y el mes debajo, con el acento de la
