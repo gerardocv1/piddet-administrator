@@ -10,6 +10,9 @@ import {
   reservationStatusMeta, arrivalSlotLabel, checkInProximity, DECORATION_EMOJI, DECORATION_LABEL,
 } from '../lib/reservationLabels.js';
 import { phrase } from '../lib/terms.js';
+import { gymMoney } from '../lib/gymLabels.js';
+import { formatDayMonth, monthName, shortMonthName } from '../lib/dates.js';
+import { whatsappHref } from './public/whatsapp.js';
 import s from './Dashboard.module.css';
 
 const PERIOD_OPTIONS = [
@@ -66,22 +69,22 @@ function PendingArrivalsCard({ rows, loading, error, onOpen, onSeeAll }) {
   const rest = rows.length - shown.length;
 
   return (
-    <Card className={s.arrivalsCard}>
+    <Card className={s.widgetCard}>
       {/* En el teléfono el título va al ras del borde, sin filete ni sombra, y la lista a todo
-          el ancho, alineada con los accesos rápidos de arriba (ver .arrivalsCard en el CSS). */}
-      <Card.Header title="Reservas" className={s.arrivalsHead}
-        action={<Button variant="link" size="sm" iconRight="fas fa-chevron-right" className={s.arrivalsSeeAll} onClick={onSeeAll}>Ver todas</Button>} />
+          el ancho, alineada con los accesos rápidos de arriba (ver .widgetCard en el CSS). */}
+      <Card.Header title="Reservas" className={s.widgetHead}
+        action={<Button variant="link" size="sm" iconRight="fas fa-chevron-right" className={s.widgetSeeAll} onClick={onSeeAll}>Ver todas</Button>} />
       {/* Sin `cardBody`: este widget es una lista, no un reporte. */}
-      <Card.Body className={s.arrivalsBody}>
+      <Card.Body className={s.widgetBody}>
         {error ? (
           <Alert tone="danger" title="No se pudieron cargar las reservas">{error}</Alert>
         ) : loading && rows.length === 0 ? (
           <Spinner center label="Cargando reservas…" />
         ) : rows.length === 0 ? (
-          <p className={s.arrivalsEmpty}>No hay reservas pendientes para hoy ni mañana.</p>
+          <p className={s.widgetEmpty}>No hay reservas pendientes para hoy ni mañana.</p>
         ) : (
           <>
-            <div className={s.arrivalsList}>
+            <div className={s.widgetList}>
               {shown.map((r) => {
                 const soon = checkInProximity(r.check_in_date, r.status);
                 const meta = reservationStatusMeta(r.status);
@@ -109,7 +112,182 @@ function PendingArrivalsCard({ rows, loading, error, onOpen, onSeeAll }) {
                 );
               })}
             </div>
-            {rest > 0 && <p className={s.arrivalsMore}>y {rest} más</p>}
+            {rest > 0 && <p className={s.widgetMore}>y {rest} más</p>}
+          </>
+        )}
+      </Card.Body>
+    </Card>
+  );
+}
+
+// Cuántos cumpleaños se ven antes de plegar el resto: en un gimnasio grande un mes trae decenas
+// y el inicio no es la lista completa.
+const BIRTHDAYS_LIMIT = 6;
+
+// Qué se dice al lado de cada cumpleaños según qué tan lejos queda de hoy.
+const birthdayWhen = (row, today) => {
+  if (row.is_today) return null; // lo dice el badge «Hoy»
+  if (row.is_past) return 'Ya pasó';
+  const days = Math.round((new Date(row.date) - new Date(today)) / 86400000);
+  return days === 1 ? 'Mañana' : `En ${days} días`;
+};
+
+/** Widget de cumpleaños: los afiliados activos que cumplen años este mes. Primero los de hoy,
+ *  después los que vienen y al final, atenuados, los que ya pasaron. Cada fila permite felicitar
+ *  por WhatsApp cuando el afiliado tiene celular. */
+function GymBirthdaysCard({ rows, loading, error, onOpen, onSeeAll }) {
+  const [expanded, setExpanded] = React.useState(false);
+  const now = new Date();
+  const month = now.getMonth() + 1;
+  const today = `${now.getFullYear()}-${String(month).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+  // Hoy → próximos → pasados; dentro de cada grupo, por día.
+  const ordered = React.useMemo(() => {
+    const rank = (r) => (r.is_today ? 0 : r.is_past ? 2 : 1);
+    return rows.slice().sort((a, b) => rank(a) - rank(b) || a.day - b.day || a.member_name.localeCompare(b.member_name));
+  }, [rows]);
+  const shown = expanded ? ordered : ordered.slice(0, BIRTHDAYS_LIMIT);
+  const rest = ordered.length - shown.length;
+  const todayCount = rows.filter((r) => r.is_today).length;
+
+  return (
+    <Card className={s.widgetCard}>
+      <Card.Header title={`Cumpleaños de ${monthName(month)}`} className={s.widgetHead}
+        action={<Button variant="link" size="sm" iconRight="fas fa-chevron-right" className={s.widgetSeeAll} onClick={onSeeAll}>Afiliados</Button>} />
+      <Card.Body className={s.widgetBody}>
+        {error ? (
+          <Alert tone="danger" title="No se pudieron cargar los cumpleaños">{error}</Alert>
+        ) : loading && rows.length === 0 ? (
+          <Spinner center label="Cargando cumpleaños…" />
+        ) : rows.length === 0 ? (
+          <p className={s.widgetEmpty}>Ningún afiliado activo cumple años en {monthName(month)}.</p>
+        ) : (
+          <>
+            {todayCount > 0 && (
+              <p className={s.widgetLead}>
+                <i className="fas fa-cake-candles" /> {todayCount === 1 ? 'Hoy cumple años un afiliado' : `Hoy cumplen años ${todayCount} afiliados`}
+              </p>
+            )}
+            <div className={s.widgetList}>
+              {shown.map((r) => {
+                const wa = whatsappHref(
+                  r.phone_number ? `${r.phone_code || ''}${r.phone_number}` : '',
+                  `¡Feliz cumpleaños, ${r.member_name.split(' ')[0]}! 🎉 Te desea todo el equipo.`,
+                );
+                const when = birthdayWhen(r, today);
+                return (
+                  <ListCard key={r.gym_member_id}
+                    className={r.is_past ? s.bdayPast : ''}
+                    media={
+                      <span className={[s.bdayTile, r.is_today ? s.bdayTileToday : ''].filter(Boolean).join(' ')}>
+                        <strong>{r.day}</strong>
+                        <span>{shortMonthName(month)}</span>
+                      </span>
+                    }
+                    title={r.member_name}
+                    subtitle={`Cumple ${r.turns} años${r.member_code ? ` · ${r.member_code}` : ''}`}
+                    badge={r.is_today ? <Badge variant="primary" dot>Hoy</Badge> : null}
+                    meta={when}
+                    action={wa ? (
+                      <IconButton icon="fab fa-whatsapp" variant="light" size="sm" className={s.waBtn}
+                        title="Felicitar por WhatsApp"
+                        onClick={() => window.open(wa, '_blank', 'noopener,noreferrer')} />
+                    ) : null}
+                    onClick={() => onOpen(r.gym_member_id)} />
+                );
+              })}
+            </div>
+            {rest > 0 && (
+              <Button variant="link" size="sm" className={s.widgetMoreBtn} onClick={() => setExpanded(true)}>
+                Ver {rest} más
+              </Button>
+            )}
+          </>
+        )}
+      </Card.Body>
+    </Card>
+  );
+}
+
+// Cuántas suscripciones se ven en el aviso; el resto vive en el listado de suscripciones.
+const EXPIRING_LIMIT = 6;
+
+// Etiqueta de urgencia de cada suscripción: la gracia manda (el corte automático está cerca), y
+// entre las que aún no vencen, cuenta cuánto falta.
+const expiringBadge = (item) => {
+  if (item.alert === 'grace') {
+    return item.grace_days_left != null && item.grace_days_left < 0
+      ? { label: 'Gracia vencida', variant: 'danger' }
+      : { label: 'En gracia', variant: 'warning' };
+  }
+  if (item.days_left <= 0) return { label: 'Vence hoy', variant: 'danger' };
+  if (item.days_left === 1) return { label: 'Vence mañana', variant: 'warning' };
+  return { label: `Vence en ${item.days_left} días`, variant: 'warning' };
+};
+
+/** Widget-alerta de vencimientos: suscripciones en gracia o que vencen en los próximos días. El
+ *  resumen de arriba es un Alert cuyo tono sube con la urgencia (gracia → danger, solo por vencer
+ *  → warning, nada → success) y cada fila abre la suscripción para cobrar o renovar. */
+function GymExpiringCard({ data, loading, error, onOpen, onSeeAll }) {
+  const items = data?.items || [];
+  const counts = data?.counts || { grace: 0, expiring: 0, pending_total: '0' };
+  const days = data?.days || 7;
+  const shown = items.slice(0, EXPIRING_LIMIT);
+  const rest = items.length - shown.length;
+
+  // Solo los conteos: una suscripción en gracia ya venció (el corte es lo que sigue), y las
+  // demás están por vencer. El detalle de cada una vive en su fila.
+  const summaryParts = [];
+  if (counts.grace > 0) summaryParts.push(counts.grace === 1 ? '1 vencida' : `${counts.grace} vencidas`);
+  if (counts.expiring > 0) summaryParts.push(`${counts.expiring} por vencer`);
+  const tone = counts.grace > 0 ? 'danger' : counts.expiring > 0 ? 'warning' : 'success';
+
+  return (
+    <Card className={s.widgetCard}>
+      <Card.Header title="Vencimientos" className={s.widgetHead}
+        action={<Button variant="link" size="sm" iconRight="fas fa-chevron-right" className={s.widgetSeeAll} onClick={onSeeAll}>Suscripciones</Button>} />
+      <Card.Body className={s.widgetBody}>
+        {error ? (
+          <Alert tone="danger" title="No se pudieron cargar los vencimientos">{error}</Alert>
+        ) : loading && !data ? (
+          <Spinner center label="Revisando vencimientos…" />
+        ) : items.length === 0 ? (
+          <Alert tone="success" title="Todo al día">
+            Ninguna suscripción está en gracia ni vence en los próximos {days} días.
+          </Alert>
+        ) : (
+          <>
+            <Alert tone={tone} title={summaryParts.join(' · ')} className={s.expiringSummary} />
+            {/* Filas compactas: una sola línea de datos bajo el nombre y el estado a la derecha,
+                sin el pie de la ListCard — aquí caben más afiliados en menos alto. */}
+            <div className={s.expList}>
+              {shown.map((it) => {
+                const b = expiringBadge(it);
+                const grace = it.alert === 'grace';
+                const owes = Number(it.pending) > 0;
+                const when = grace && it.current_period?.grace_ends_at
+                  ? `gracia hasta ${formatDayMonth(it.current_period.grace_ends_at)}`
+                  : `vence ${formatDayMonth(it.current_period?.end_date)}`;
+                return (
+                  <button type="button" key={it.subscription_id} className={s.expRow} onClick={() => onOpen(it.subscription_id)}>
+                    <span className={[s.expIcon, grace ? s.expIconGrace : ''].filter(Boolean).join(' ')}>
+                      <i className={grace ? 'fas fa-triangle-exclamation' : 'fas fa-hourglass-half'} />
+                    </span>
+                    <span className={s.expText}>
+                      <span className={s.expName}>{it.member_name}</span>
+                      <span className={s.expMeta}>
+                        {/* El plan solo en escritorio: en el teléfono la fila prioriza fecha y saldo. */}
+                        <span className={s.expPlan}>{it.plan_name} · </span>{when}
+                        {owes && <span className={s.saldo}> · {gymMoney(it.pending)}</span>}
+                      </span>
+                    </span>
+                    <Badge variant={b.variant} dot>{b.label}</Badge>
+                    <i className={`fas fa-chevron-right ${s.expChevron}`} aria-hidden="true" />
+                  </button>
+                );
+              })}
+            </div>
+            {rest > 0 && <p className={s.widgetMore}>y {rest} más en Suscripciones</p>}
           </>
         )}
       </Card.Body>
@@ -208,8 +386,21 @@ export function Dashboard() {
   );
   const arrivalsRes = useResource(arrivalsFetcher, [], [canReservations, endDate, refreshToken]);
 
+  // Widgets del gimnasio: cumpleaños del mes y vencimientos. Operación del día, como las
+  // reservas: no dependen del período y se recargan con el mismo botón de refresco.
+  const birthdaysFetcher = React.useCallback(
+    () => (canGym ? api.gymDashboardBirthdays() : Promise.resolve([])),
+    [canGym, endDate, refreshToken],
+  );
+  const birthdaysRes = useResource(birthdaysFetcher, [], [canGym, endDate, refreshToken]);
+  const expiringFetcher = React.useCallback(
+    () => (canGym ? api.gymDashboardExpiring() : Promise.resolve(null)),
+    [canGym, endDate, refreshToken],
+  );
+  const expiringRes = useResource(expiringFetcher, null, [canGym, endDate, refreshToken]);
+
   const anyLoading = salesKpisRes.loading || salesCmpRes.loading || expKpisRes.loading || expCmpRes.loading
-    || resKpisRes.loading || arrivalsRes.loading;
+    || resKpisRes.loading || arrivalsRes.loading || birthdaysRes.loading || expiringRes.loading;
 
   // Botón refresh: click corto → con cache; mantener ~2s → fuerza recálculo (force).
   // Re-sincroniza la fecha a "hoy" para no arrastrar un endDate congelado desde el montaje.
@@ -338,6 +529,27 @@ export function Dashboard() {
         />
       )}
 
+      {/* Gimnasio: el aviso de vencimientos va primero (es lo que hay que cobrar hoy) y al
+          lado, en escritorio, los cumpleaños del mes. En el teléfono se apilan en ese orden. */}
+      {canGym && (
+        <div className={s.gymRow}>
+          <GymExpiringCard
+            data={expiringRes.data}
+            loading={expiringRes.loading}
+            error={expiringRes.error}
+            onOpen={(id) => navigate(`/gym/subscriptions/${id}`)}
+            onSeeAll={() => navigate('/gym/subscriptions')}
+          />
+          <GymBirthdaysCard
+            rows={birthdaysRes.data || []}
+            loading={birthdaysRes.loading}
+            error={birthdaysRes.error}
+            onOpen={(id) => navigate(`/gym/members/${id}`)}
+            onSeeAll={() => navigate('/gym/members')}
+          />
+        </div>
+      )}
+
       {(canSales || canExpenses || canReservations) && (
         <div className={s.toolbar}>
           <Input type="date" value={endDate} max={todayStr()} onChange={(e) => setEndDate(e.target.value)} wrapClassName={s.ctrl} />
@@ -403,7 +615,7 @@ export function Dashboard() {
         </Card>
       )}
 
-      {!canSales && !canExpenses && (
+      {!canSales && !canExpenses && !canGym && (
         <div className={s.emptyDash}>
           <i className="fas fa-hand-peace" />
           <p>¡Hola! Por ahora no tienes reportes disponibles en el inicio.</p>

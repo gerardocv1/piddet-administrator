@@ -3794,11 +3794,22 @@ const mockGymGoals = [
   { id: 6, key: 'general_health', label: 'Salud general' },
 ];
 
+// Fecha de nacimiento en el MES EN CURSO, a `dayOffset` días de hoy (acotado al mes), con el año
+// dado: así el widget de cumpleaños del inicio siempre tiene a quién felicitar en la demo.
+const birthdateThisMonth = (year, dayOffset = 0) => {
+  const now = new Date();
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const day = Math.min(daysInMonth, Math.max(1, now.getDate() + dayOffset));
+  return `${year}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+};
+
 let mockGymMembers = [
-  { id: 1, user_id: 5001, member_code: 'M00001', member_name: 'Laura Gómez', document_snapshot: '1017234567', sex: 'F', birthdate: '1994-03-12', email: 'laura.gomez@example.com', phone_number: '3001234567', id_type_id: 1, height_cm: '165.0', goal_id: 4, goal: 'Tonificar', health_notes: '', status: 1, joined_at: '2026-05-02' },
+  // Laura cumple HOY y Daniela dentro de unos días; Andrés también cumple este mes, pero está
+  // inactivo y por eso no aparece en el widget.
+  { id: 1, user_id: 5001, member_code: 'M00001', member_name: 'Laura Gómez', document_snapshot: '1017234567', sex: 'F', birthdate: birthdateThisMonth(1994, 0), email: 'laura.gomez@example.com', phone_number: '3001234567', id_type_id: 1, height_cm: '165.0', goal_id: 4, goal: 'Tonificar', health_notes: '', status: 1, joined_at: '2026-05-02' },
   { id: 2, user_id: 5002, member_code: 'M00002', member_name: 'Carlos Restrepo', document_snapshot: '1098765432', sex: 'M', birthdate: '1988-11-30', email: 'carlos.restrepo@example.com', phone_number: '3007654321', id_type_id: 1, height_cm: '178.0', goal_id: 3, goal: 'Aumentar masa muscular', health_notes: 'Molestia leve en rodilla derecha', status: 1, joined_at: '2026-05-10' },
-  { id: 3, user_id: 5003, member_code: 'M00003', member_name: 'Daniela Ríos', document_snapshot: '1023456789', sex: 'F', birthdate: '2001-06-04', email: null, phone_number: '3012223344', id_type_id: 1, height_cm: '160.0', goal_id: 1, goal: 'Bajar de peso', health_notes: '', status: 1, joined_at: '2026-06-01' },
-  { id: 4, user_id: 5004, member_code: 'M00004', member_name: 'Andrés Mejía', document_snapshot: '1076543210', sex: 'M', birthdate: '1979-02-21', email: null, phone_number: '3019876543', id_type_id: 1, height_cm: '182.0', goal_id: null, goal: null, health_notes: '', status: 0, joined_at: '2026-04-15' },
+  { id: 3, user_id: 5003, member_code: 'M00003', member_name: 'Daniela Ríos', document_snapshot: '1023456789', sex: 'F', birthdate: birthdateThisMonth(2001, 6), email: null, phone_number: '3012223344', id_type_id: 1, height_cm: '160.0', goal_id: 1, goal: 'Bajar de peso', health_notes: '', status: 1, joined_at: '2026-06-01' },
+  { id: 4, user_id: 5004, member_code: 'M00004', member_name: 'Andrés Mejía', document_snapshot: '1076543210', sex: 'M', birthdate: birthdateThisMonth(1979, -3), email: null, phone_number: '3019876543', id_type_id: 1, height_cm: '182.0', goal_id: null, goal: null, health_notes: '', status: 0, joined_at: '2026-04-15' },
   // Miguel va sin sexo y sin fecha de nacimiento a propósito: hace visible el estado "Sin definir"
   // de la ficha y el aviso de sexo de la vista de progreso.
   { id: 5, user_id: 5005, member_code: 'M00005', member_name: 'Miguel Torres', document_snapshot: '1055443322', sex: null, birthdate: null, email: null, phone_number: '3025556677', id_type_id: 1, height_cm: null, goal_id: 6, goal: 'Salud general', health_notes: '', status: 1, joined_at: '2026-08-18' },
@@ -3960,10 +3971,11 @@ const gymSubDetailPresent = (sub) => {
 // completo sin simular el cron: los períodos ya generados quedan como si el sistema los hubiera
 // creado solo.
 let mockGymSubscriptions = [
-  // Laura: activa y al día — período 1 cerrado y pago, período 2 vigente y ya pago.
+  // Laura: activa y al día — período 1 cerrado y pago, período 2 vigente y ya pago, y vence en
+  // cuatro días: es la fila "vence pronto" del aviso de vencimientos del inicio.
   {
     id: 'gsub-1', gym_member_id: 1, member_name: 'Laura Gómez', plan_id: 1, plan_name: 'Plan mensual',
-    status: GYM_SUB_ACTIVE, subscribed_at: isoDay(40), cancelled_at: null, cancellation_reason: null, cancelled_by: null,
+    status: GYM_SUB_ACTIVE, subscribed_at: isoDay(55), cancelled_at: null, cancellation_reason: null, cancelled_by: null,
   },
   // Carlos: activa, período 1 con abono parcial (saldo perseguible) y período 2 en gracia SIN
   // ningún pago — la gracia termina mañana: si nadie paga, el corte automático la cancela.
@@ -3996,17 +4008,17 @@ let mockGymSubscriptionPeriods = [
   {
     id: 'gper-1a', subscription_id: 'gsub-1', gym_member_id: 1, member_name: 'Laura Gómez',
     number: 1, plan_id: 1, plan_name: 'Plan mensual', price: '90000.00', duration_months: 1, duration_days: 30, grace_period_days: 3,
-    start_date: isoDay(40), end_date: isoDay(11), grace_ends_at: isoDay(8), status: GYM_PER_CLOSED,
+    start_date: isoDay(55), end_date: isoDay(26), grace_ends_at: isoDay(23), status: GYM_PER_CLOSED,
     payments: [
-      { id: 'gpay-1a', registers_income: true, value: '90000.00', payment_method: 'nequi', payment_method_name: 'Nequi', payment_date: isoDay(40), notes: null, order_id: 'ord-gym-1a', status: 1, created_by_name: 'Gerardo', annulled_at: null, annulment_reason: null },
+      { id: 'gpay-1a', registers_income: true, value: '90000.00', payment_method: 'nequi', payment_method_name: 'Nequi', payment_date: isoDay(55), notes: null, order_id: 'ord-gym-1a', status: 1, created_by_name: 'Gerardo', annulled_at: null, annulment_reason: null },
     ],
   },
   {
     id: 'gper-1b', subscription_id: 'gsub-1', gym_member_id: 1, member_name: 'Laura Gómez',
     number: 2, plan_id: 1, plan_name: 'Plan mensual', price: '90000.00', duration_months: 1, duration_days: 30, grace_period_days: 3,
-    start_date: isoDay(10), end_date: isoDay(-19), grace_ends_at: isoDay(-22), status: GYM_PER_CURRENT,
+    start_date: isoDay(25), end_date: isoDay(-4), grace_ends_at: isoDay(-7), status: GYM_PER_CURRENT,
     payments: [
-      { id: 'gpay-1b', registers_income: true, value: '90000.00', payment_method: 'nequi', payment_method_name: 'Nequi', payment_date: isoDay(10), notes: null, order_id: 'ord-gym-1b', status: 1, created_by_name: 'Gerardo', annulled_at: null, annulment_reason: null },
+      { id: 'gpay-1b', registers_income: true, value: '90000.00', payment_method: 'nequi', payment_method_name: 'Nequi', payment_date: isoDay(25), notes: null, order_id: 'ord-gym-1b', status: 1, created_by_name: 'Gerardo', annulled_at: null, annulment_reason: null },
     ],
   },
   // ── Carlos (gsub-2) ──
@@ -4180,6 +4192,70 @@ function resolveGymMock(path, query, { method = 'GET', body } = {}) {
 
   // Búsqueda previa al alta: por celular (único) o por correo. Responde si la persona ya tiene
   // cuenta en la plataforma y si además ya está afiliada a esta compañía.
+  // ── Widgets del inicio ──────────────────────────────────────────────────
+  // Cumpleaños del mes de los afiliados ACTIVOS (espejo del backend: la fecha sale del perfil de
+  // usuario y se cruza en el servicio). Sin `month`, el mes en curso.
+  if (sub === 'dashboard/birthdays') {
+    const now = new Date();
+    const month = Number(query.get('month')) || now.getMonth() + 1;
+    const year = Number(query.get('year')) || now.getFullYear();
+    const today = todayIso();
+    const daysInMonth = new Date(year, month, 0).getDate();
+    return mockGymMembers
+      .filter((m) => m.status === 1 && m.birthdate && Number(m.birthdate.slice(5, 7)) === month)
+      .map((m) => {
+        const day = Math.min(Number(m.birthdate.slice(8, 10)), daysInMonth);
+        const date = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        return {
+          gym_member_id: m.id, member_name: m.member_name, member_code: m.member_code,
+          birthdate: m.birthdate, day, date, turns: Math.max(0, year - Number(m.birthdate.slice(0, 4))),
+          is_today: date === today, is_past: date < today,
+          phone_code: '57', phone_number: m.phone_number || null,
+        };
+      })
+      .sort((a, b) => a.day - b.day || a.member_name.localeCompare(b.member_name));
+  }
+
+  // Suscripciones activas en gracia (ya vencieron) o que vencen en los próximos `days` días.
+  if (sub === 'dashboard/expiring') {
+    const days = Number(query.get('days')) || 7;
+    const today = todayIso();
+    const limit = addDaysIso(today, days);
+    const daysBetween = (from, to) => Math.round((new Date(to) - new Date(from)) / 86400000);
+    const items = mockGymSubscriptions
+      .filter((sub) => sub.status === GYM_SUB_ACTIVE)
+      .map((sub) => ({ sub, period: currentPeriodOf(sub.id) }))
+      .filter(({ period }) => period && [GYM_PER_CURRENT, GYM_PER_GRACE].includes(period.status) && period.end_date <= limit)
+      .map(({ sub, period }) => {
+        const inGrace = computePeriodStatus(period) === GYM_PER_GRACE;
+        const pending = Math.max(0, Number(period.price) - periodPaidTotal(period));
+        return {
+          subscription_id: sub.id, gym_member_id: sub.gym_member_id, member_name: sub.member_name,
+          plan_name: sub.plan_name, alert: inGrace ? 'grace' : 'expiring',
+          days_left: daysBetween(today, period.end_date),
+          grace_days_left: inGrace ? daysBetween(today, period.grace_ends_at) : null,
+          pending: pending.toFixed(2),
+          current_period: gymPeriodSummary(period),
+        };
+      })
+      .sort((a, b) => {
+        if (a.alert !== b.alert) return a.alert === 'grace' ? -1 : 1;
+        const ka = a.alert === 'grace' ? a.grace_days_left : a.days_left;
+        const kb = b.alert === 'grace' ? b.grace_days_left : b.days_left;
+        return ka - kb || a.member_name.localeCompare(b.member_name);
+      });
+    return {
+      days,
+      today,
+      counts: {
+        grace: items.filter((i) => i.alert === 'grace').length,
+        expiring: items.filter((i) => i.alert === 'expiring').length,
+        pending_total: items.reduce((sum, i) => sum + Number(i.pending), 0).toFixed(2),
+      },
+      items,
+    };
+  }
+
   if (sub === 'members/lookup') {
     const phone = (query.get('phone_number') || '').trim();
     const email = (query.get('email') || '').trim().toLowerCase();

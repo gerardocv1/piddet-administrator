@@ -108,6 +108,21 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
   y no lo obedece. Sale de `GET /reservations/pending-arrivals`; el botón de refrescar lo recarga
   con los demás reportes. Su cuerpo no lleva relleno propio: en el teléfono las filas se alinean
   con el resto de la pantalla en vez de quedar doblemente metidas.
+- **Gimnasio** (con `api-module-gym` + `functionality_gym`): dos widgets de operación del día,
+  lado a lado en escritorio y apilados en el teléfono, que también van antes del control de
+  período y se recargan con el mismo botón. **Vencimientos** (`GET /gym/dashboard/expiring`):
+  un aviso cuyo tono sube con la urgencia —`danger` si hay suscripciones en gracia, `warning` si
+  solo hay por vencer, `success` cuando todo está al día— con solo los conteos («2 vencidas ·
+  1 por vencer», sin más texto) y debajo la lista en filas compactas, del más urgente al más
+  lejano: en gracia primero (el corte automático está cerca), luego las que vencen hoy, mañana
+  o en N días; cada fila lleva el nombre, una línea con plan (solo en escritorio), fecha de
+  corte y saldo, y el estado a la derecha; tocarla abre la suscripción para cobrar o renovar.
+  **Cumpleaños del mes** (`GET /gym/dashboard/birthdays`): los afiliados activos que cumplen
+  años este mes, con baldosa-calendario del día, la edad que cumplen y el código; primero los de
+  hoy (badge «Hoy» y baldosa rellena), luego los próximos («Mañana», «En N días») y al final,
+  atenuados, los que ya pasaron; el botón de WhatsApp abre un saludo listo para enviar cuando
+  el afiliado tiene celular, y tocar la fila abre su ficha. Se muestran seis y el resto se
+  despliega con «Ver N más».
 - **Reglas:** en el teléfono cada franja se queda con la cifra que se mira de un vistazo —ventas
   totales y ticket promedio; gastos totales; ingresos de hospedaje y ocupación— y el desglose
   (productos, servicios, registros, gasto promedio, mayor gasto, reservas, noches vendidas) se

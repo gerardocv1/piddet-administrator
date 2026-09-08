@@ -149,33 +149,48 @@
 .emptyDash p { margin: 0; color: var(--gray-900); font-size: var(--text-base); }
 .emptyDash span { color: var(--gray-500); font-size: var(--text-sm); }
 
-/* ── Widget de reservas por llegar ── */
+/* ── Widgets de operación del día (reservas por llegar, vencimientos, cumpleaños) ── */
 /* En el teléfono el widget se lee como una sección de la pantalla, no como una tarjeta: el
-   título "Reservas" queda al ras del borde y la lista a todo el ancho, alineados con los
-   accesos rápidos de arriba; sin el filete ni la sombra del encabezado y con menos aire entre
-   el título y la primera reserva. Los selectores compuestos ganan a los de Card.module.css. */
+   título queda al ras del borde y la lista a todo el ancho, alineados con los accesos rápidos
+   de arriba; sin el filete ni la sombra del encabezado y con menos aire entre el título y la
+   primera fila. Los selectores compuestos ganan a los de Card.module.css. */
 @media (max-width: 860px) {
-  .arrivalsCard .arrivalsHead {
+  .widgetCard .widgetHead {
     padding: 0.7rem 0 0.4rem;
     border-bottom: 0;
     box-shadow: none;
   }
-  .arrivalsCard .arrivalsBody { padding: 0 0 0.9rem; }
+  .widgetCard .widgetBody { padding: 0 0 0.9rem; }
 }
 /* "Ver todas" es un «ver más»: pegado al borde derecho (sin el relleno lateral del enlace) y
    apoyado en la base del título, un pelo por debajo, en vez de centrado con él. */
-.arrivalsCard .arrivalsHead { align-items: baseline; }
-.arrivalsCard .arrivalsSeeAll { padding-right: 0; position: relative; top: 3px; }
+.widgetCard .widgetHead { align-items: baseline; }
+.widgetCard .widgetSeeAll { padding-right: 0; position: relative; top: 3px; }
 
 /* Lista compacta: una columna en el teléfono, dos en escritorio para no estirar la tarjeta. */
-.arrivalsList {
+.widgetList {
   display: grid;
   grid-template-columns: 1fr;
   gap: 8px;
 }
 @media (min-width: 861px) {
-  .arrivalsList { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .widgetList { grid-template-columns: 1fr 1fr; gap: 10px; }
 }
+
+.widgetMore { margin: 0.6rem 0 0; color: var(--gray-500); font-size: var(--text-xs); }
+.widgetMoreBtn { margin-top: 0.4rem; padding-left: 0; }
+.widgetEmpty { margin: 0; color: var(--gray-500); font-size: var(--text-sm); }
+/* Frase de apertura del widget ("Hoy cumple años…"): un renglón corto antes de la lista. */
+.widgetLead {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0 0 0.6rem;
+  color: var(--text-heading);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.widgetLead i { color: var(--company-accent-strong); }
 
 .arrivalIcon {
   display: inline-flex;
@@ -191,5 +206,102 @@
 
 .arrivalBadges { display: inline-flex; align-items: center; gap: 6px; }
 
-.arrivalsMore { margin: 0.6rem 0 0; color: var(--gray-500); font-size: var(--text-xs); }
-.arrivalsEmpty { margin: 0; color: var(--gray-500); font-size: var(--text-sm); }
+/* ── Gimnasio: vencimientos + cumpleaños ── */
+/* Los dos widgets comparten fila en escritorio (el aviso a la izquierda, los cumpleaños a la
+   derecha) y se apilan en el teléfono. Al ir a media anchura, cada lista vuelve a una columna:
+   dos filas de ListCard no caben lado a lado con nombre, estado y saldo legibles. */
+.gymRow {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 18px;
+  align-items: start;
+}
+@media (min-width: 861px) {
+  .gymRow { grid-template-columns: 1fr 1fr; }
+  .gymRow .widgetList { grid-template-columns: 1fr; }
+}
+/* Entre el resumen del aviso y su lista, un aire corto: leen como un solo bloque. */
+.expiringSummary { margin-bottom: 0.75rem; }
+
+/* Filas compactas del aviso: una tarjetita de una sola altura de línea doble (nombre + dato),
+   con el estado a la derecha; más bajas que una ListCard porque no tienen pie. */
+.expList { display: flex; flex-direction: column; gap: 6px; }
+.expRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  padding: 6px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  background: var(--surface-card);
+  font-family: var(--font-sans);
+  text-align: left;
+  cursor: pointer;
+}
+.expRow:hover { border-color: var(--gray-300); }
+.expRow:active { background: var(--gray-100); }
+.expText { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.expName {
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--text-heading);
+  line-height: var(--lh-tight);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.expMeta {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.expChevron { flex: 0 0 auto; color: var(--gray-400); font-size: 0.65rem; }
+@media (max-width: 860px) {
+  .expPlan { display: none; }
+}
+
+/* Baldosa del vencimiento: tinte de aviso para "vence pronto" y de peligro para la gracia (el
+   corte automático está cerca). Más chica que el icono de las reservas: la fila es compacta. */
+.expIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--color-warning-100);
+  color: var(--color-warning-fg);
+  font-size: 0.7rem;
+}
+.expIconGrace { background: var(--color-danger-100); color: var(--color-danger-fg); }
+
+/* Saldo pendiente en la línea de datos: mismo tono con el que lo acusan los listados del gym. */
+.saldo { color: var(--color-warning-fg); font-weight: 600; }
+
+/* Baldosa-calendario del cumpleaños: el día grande y el mes debajo, con el acento de la
+   compañía; la de hoy se rellena para que salte a la vista. */
+.bdayTile {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius);
+  background: var(--company-accent-soft);
+  color: var(--company-accent-strong);
+  line-height: 1;
+}
+.bdayTile strong { font-size: var(--text-md); font-weight: 700; }
+.bdayTile span { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.04em; margin-top: 2px; }
+.bdayTileToday { background: var(--company-accent-strong); color: var(--white); }
+/* Los cumpleaños que ya pasaron este mes se quedan como registro, atenuados. */
+.bdayPast { opacity: 0.55; }
+/* Icono de WhatsApp en su verde de marca: es un canal externo, no una acción del panel. */
+.waBtn { color: var(--brand-whatsapp-fg); }
+.waBtn i { color: var(--brand-whatsapp); }
