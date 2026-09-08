@@ -117,12 +117,15 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
   lejano: en gracia primero (el corte automático está cerca), luego las que vencen hoy, mañana
   o en N días; cada fila lleva el nombre, una línea con plan (solo en escritorio), fecha de
   corte y saldo, y el estado a la derecha; tocarla abre la suscripción para cobrar o renovar.
+  «Ver todas» abre Suscripciones con el filtro «Vencen en 7 días» puesto.
   **Cumpleaños del mes** (`GET /gym/dashboard/birthdays`): los afiliados activos que cumplen
-  años este mes, con baldosa-calendario del día, la edad que cumplen y el código; primero los de
-  hoy (badge «Hoy» y baldosa rellena), luego los próximos («Mañana», «En N días») y al final,
-  atenuados, los que ya pasaron; el botón de WhatsApp abre un saludo listo para enviar cuando
-  el afiliado tiene celular, y tocar la fila abre su ficha. Se muestran seis y el resto se
-  despliega con «Ver N más».
+  años este mes, en filas compactas de dos líneas —baldosa-calendario del día, nombre y años
+  que cumple— con el badge de cuándo («Hoy», «Mañana», «En N días», «Ya pasó») y, a la derecha,
+  el botón de WhatsApp con un saludo a nombre de la compañía cuando el afiliado tiene celular;
+  tocar la identidad abre su ficha. Primero los de hoy, luego los próximos y al final,
+  atenuados, los que ya pasaron. Se muestran seis y el resto se despliega con «Ver N más»;
+  «Ver todos» abre Afiliados con el filtro «Cumpleaños: mes» puesto (`?birthday_month=`), que
+  lista a todos los que cumplen ese mes ordenados por día con su fecha y los años que cumplen.
 - **Reglas:** en el teléfono cada franja se queda con la cifra que se mira de un vistazo —ventas
   totales y ticket promedio; gastos totales; ingresos de hospedaje y ocupación— y el desglose
   (productos, servicios, registros, gasto promedio, mayor gasto, reservas, noches vendidas) se

@@ -53,8 +53,10 @@ export const gymService = {
   // Los afiliados son usuarios reales de la plataforma (resueltos como "pasivos" al registrarlos,
   // mismo patrón que los huéspedes de Reservas): el backend hace find-or-create por documento o
   // celular, así que crear con los datos de alguien ya existente lo reutiliza en vez de duplicarlo.
-  gymMembers: ({ status = '', search = '', page = 1, perPage = 15 } = {}) =>
-    http.get(`${base()}/members${qs({ status, _search: search, page, per_page: perPage })}`, { paginated: true }),
+  // `birthdayMonth` (1-12) deja solo a quienes cumplen años ese mes, ordenados por día, y cada
+  // fila trae además `birthdate`.
+  gymMembers: ({ status = '', search = '', birthdayMonth = '', page = 1, perPage = 15 } = {}) =>
+    http.get(`${base()}/members${qs({ status, _search: search, birthday_month: birthdayMonth, page, per_page: perPage })}`, { paginated: true }),
 
   gymMember: (memberId) => http.get(`${base()}/members/${memberId}`),
 
