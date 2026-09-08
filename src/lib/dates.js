@@ -42,6 +42,16 @@ export function addDaysIso(value, days) {
   return date.toISOString().slice(0, 10);
 }
 
+// Nombre largo del mes (1 = enero) en minúsculas, como se escribe en español dentro de una frase.
+export function monthName(month) {
+  return LONG_MONTHS[Number(month) - 1] || '';
+}
+
+// Abreviatura del mes (1 = enero): "sep".
+export function shortMonthName(month) {
+  return SHORT_MONTHS[Number(month) - 1] || '';
+}
+
 // "2026-07-02" → "2 jul"
 export function formatDayMonth(value) {
   const d = parseDate(value);

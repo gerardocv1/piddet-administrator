@@ -119,6 +119,21 @@ export const gymService = {
   recalculateGymPeriodDates: ({ dryRun = false } = {}) =>
     http.post(`${base()}/subscriptions/recalculate-period-dates`, { dry_run: dryRun }),
 
+  // ── Widgets del inicio (operación del día, sin filtros de período) ────────
+  // Cumpleaños del mes de los afiliados activos, ordenados por día. Sin `month` es el mes en
+  // curso. Filas: { gym_member_id, member_name, member_code, birthdate, day, date, turns,
+  // is_today, is_past, phone_code, phone_number }.
+  gymDashboardBirthdays: ({ month = '', year = '' } = {}) =>
+    list(http.get(`${base()}/dashboard/birthdays${qs({ month, year })}`)),
+
+  // Suscripciones activas que necesitan atención: en gracia (alert = 'grace', el corte automático
+  // está cerca) y las que vencen en los próximos `days` días (alert = 'expiring'; por defecto el
+  // mayor aviso configurado en el backend, 7). Responde { days, today, counts: { grace, expiring,
+  // pending_total }, items: [{ subscription_id, gym_member_id, member_name, plan_name, alert,
+  // days_left, grace_days_left, pending, current_period }] }, del más urgente al más lejano.
+  gymDashboardExpiring: ({ days = '' } = {}) =>
+    obj(http.get(`${base()}/dashboard/expiring${qs({ days })}`)),
+
   // ── Pagos de suscripción ─────────────────────────────────────────────────
   // Abona al período pendiente más antiguo (el backend decide cuál; no se indica period_id).
   // Cada pago genera su factura (orden GYM) en la fecha del pago.
