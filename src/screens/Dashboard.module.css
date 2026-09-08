@@ -180,17 +180,6 @@
 .widgetMore { margin: 0.6rem 0 0; color: var(--gray-500); font-size: var(--text-xs); }
 .widgetMoreBtn { margin-top: 0.4rem; padding-left: 0; }
 .widgetEmpty { margin: 0; color: var(--gray-500); font-size: var(--text-sm); }
-/* Frase de apertura del widget ("Hoy cumple años…"): un renglón corto antes de la lista. */
-.widgetLead {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  margin: 0 0 0.6rem;
-  color: var(--text-heading);
-  font-size: var(--text-sm);
-  font-weight: 600;
-}
-.widgetLead i { color: var(--company-accent-strong); }
 
 .arrivalIcon {
   display: inline-flex;

@@ -160,7 +160,6 @@ function GymBirthdaysCard({ rows, loading, error, onOpen, onSeeAll }) {
   }, [rows]);
   const shown = expanded ? ordered : ordered.slice(0, BIRTHDAYS_LIMIT);
   const rest = ordered.length - shown.length;
-  const todayCount = rows.filter((r) => r.is_today).length;
 
   return (
     <Card className={s.widgetCard}>
@@ -175,11 +174,6 @@ function GymBirthdaysCard({ rows, loading, error, onOpen, onSeeAll }) {
           <p className={s.widgetEmpty}>Ningún afiliado activo cumple años en {monthName(month)}.</p>
         ) : (
           <>
-            {todayCount > 0 && (
-              <p className={s.widgetLead}>
-                <i className="fas fa-cake-candles" /> {todayCount === 1 ? 'Hoy cumple años un afiliado' : `Hoy cumplen años ${todayCount} afiliados`}
-              </p>
-            )}
             {/* Filas compactas como las del aviso de vencimientos: baldosa del día, nombre y años
                 que cumple, el badge de cuándo y el WhatsApp a la derecha (sin chevron: la zona
                 de identidad sigue abriendo la ficha). */}
