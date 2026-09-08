@@ -287,11 +287,12 @@
    compañía; la de hoy se rellena para que salte a la vista. */
 .bdayTile {
   display: inline-flex;
+  flex: 0 0 auto;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  width: 38px;
-  height: 38px;
+  width: 34px;
+  height: 34px;
   border-radius: var(--radius);
   background: var(--company-accent-soft);
   color: var(--company-accent-strong);
@@ -300,6 +301,25 @@
 .bdayTile strong { font-size: var(--text-md); font-weight: 700; }
 .bdayTile span { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.04em; margin-top: 2px; }
 .bdayTileToday { background: var(--company-accent-strong); color: var(--white); }
+/* La fila de cumpleaños reparte: zona tappable (baldosa + texto), badge y WhatsApp. El
+   contenedor no es botón (lleva otro botón dentro); la zona de identidad sí. */
+.bdayRow { cursor: default; padding-right: 8px; }
+.bdayTap {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-family: var(--font-sans);
+  text-align: left;
+  cursor: pointer;
+}
+.bdayTap:active { opacity: 0.7; }
+/* Sin celular no hay WhatsApp: se reserva su hueco para que los badges queden alineados. */
+.waGap { width: 30px; height: 30px; flex: 0 0 auto; }
 /* Los cumpleaños que ya pasaron este mes se quedan como registro, atenuados. */
 .bdayPast { opacity: 0.55; }
 /* Icono de WhatsApp en su verde de marca: es un canal externo, no una acción del panel. */

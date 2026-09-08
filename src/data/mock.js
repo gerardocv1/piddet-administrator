@@ -4321,14 +4321,18 @@ function resolveGymMock(path, query, { method = 'GET', body } = {}) {
 
     const status = query.get('status');
     const search = (query.get('_search') || '').toLowerCase();
+    const birthdayMonth = Number(query.get('birthday_month')) || null;
+    const birthDay = (m) => Number((m.birthdate || '').slice(8, 10));
     const rows = mockGymMembers
       .filter((m) => (status === '' || status == null ? true : String(m.status) === status))
       .filter((m) => !search
         || m.member_name.toLowerCase().includes(search)
         || m.member_code.toLowerCase().includes(search)
         || (m.document_snapshot || '').includes(search))
-      .sort((a, b) => a.member_name.localeCompare(b.member_name))
-      .map(gymMemberListPresent);
+      // Cumpleaños del mes: por día y, en el mismo día, por nombre; la fila trae la fecha.
+      .filter((m) => !birthdayMonth || (m.birthdate && Number(m.birthdate.slice(5, 7)) === birthdayMonth))
+      .sort((a, b) => (birthdayMonth ? birthDay(a) - birthDay(b) : 0) || a.member_name.localeCompare(b.member_name))
+      .map((m) => (birthdayMonth ? { ...gymMemberListPresent(m), birthdate: m.birthdate } : gymMemberListPresent(m)));
     return mockPaginate(rows, query);
   }
 

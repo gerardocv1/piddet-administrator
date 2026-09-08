@@ -13,6 +13,7 @@ import { phrase } from '../lib/terms.js';
 import { gymMoney } from '../lib/gymLabels.js';
 import { formatDayMonth, monthName, shortMonthName } from '../lib/dates.js';
 import { whatsappHref } from './public/whatsapp.js';
+import { auth } from '../lib/auth/index.js';
 import s from './Dashboard.module.css';
 
 const PERIOD_OPTIONS = [
@@ -124,17 +125,28 @@ function PendingArrivalsCard({ rows, loading, error, onOpen, onSeeAll }) {
 // y el inicio no es la lista completa.
 const BIRTHDAYS_LIMIT = 6;
 
-// Qué se dice al lado de cada cumpleaños según qué tan lejos queda de hoy.
-const birthdayWhen = (row, today) => {
-  if (row.is_today) return null; // lo dice el badge «Hoy»
-  if (row.is_past) return 'Ya pasó';
+// Badge de cada cumpleaños según qué tan lejos queda de hoy.
+const birthdayBadge = (row, today) => {
+  if (row.is_today) return { label: 'Hoy', variant: 'primary' };
+  if (row.is_past) return { label: 'Ya pasó', variant: 'neutral' };
   const days = Math.round((new Date(row.date) - new Date(today)) / 86400000);
-  return days === 1 ? 'Mañana' : `En ${days} días`;
+  if (days === 1) return { label: 'Mañana', variant: 'success' };
+  return { label: `En ${days} días`, variant: 'neutral' };
 };
 
-/** Widget de cumpleaños: los afiliados activos que cumplen años este mes. Primero los de hoy,
- *  después los que vienen y al final, atenuados, los que ya pasaron. Cada fila permite felicitar
- *  por WhatsApp cuando el afiliado tiene celular. */
+// Saludo listo para WhatsApp, a nombre de la compañía activa.
+const birthdayGreeting = (row) => {
+  const company = auth.getCompany()?.name;
+  const first = row.member_name.split(' ')[0];
+  return company
+    ? `¡Feliz cumpleaños, ${first}! 🎉 En ${company} te deseamos un día increíble. ¡Te esperamos para celebrarlo entrenando!`
+    : `¡Feliz cumpleaños, ${first}! 🎉 Te deseamos un día increíble.`;
+};
+
+/** Widget de cumpleaños: los afiliados activos que cumplen años este mes, en filas de dos líneas
+ *  (nombre y años que cumple) con el badge de cuándo y, a la derecha, el saludo por WhatsApp
+ *  cuando el afiliado tiene celular. Primero los de hoy, después los que vienen y al final,
+ *  atenuados, los que ya pasaron. */
 function GymBirthdaysCard({ rows, loading, error, onOpen, onSeeAll }) {
   const [expanded, setExpanded] = React.useState(false);
   const now = new Date();
@@ -153,7 +165,7 @@ function GymBirthdaysCard({ rows, loading, error, onOpen, onSeeAll }) {
   return (
     <Card className={s.widgetCard}>
       <Card.Header title={`Cumpleaños de ${monthName(month)}`} className={s.widgetHead}
-        action={<Button variant="link" size="sm" iconRight="fas fa-chevron-right" className={s.widgetSeeAll} onClick={onSeeAll}>Afiliados</Button>} />
+        action={<Button variant="link" size="sm" iconRight="fas fa-chevron-right" className={s.widgetSeeAll} onClick={() => onSeeAll(month)}>Ver todos</Button>} />
       <Card.Body className={s.widgetBody}>
         {error ? (
           <Alert tone="danger" title="No se pudieron cargar los cumpleaños">{error}</Alert>
@@ -168,32 +180,32 @@ function GymBirthdaysCard({ rows, loading, error, onOpen, onSeeAll }) {
                 <i className="fas fa-cake-candles" /> {todayCount === 1 ? 'Hoy cumple años un afiliado' : `Hoy cumplen años ${todayCount} afiliados`}
               </p>
             )}
-            <div className={s.widgetList}>
+            {/* Filas compactas como las del aviso de vencimientos: baldosa del día, nombre y años
+                que cumple, el badge de cuándo y el WhatsApp a la derecha (sin chevron: la zona
+                de identidad sigue abriendo la ficha). */}
+            <div className={s.expList}>
               {shown.map((r) => {
-                const wa = whatsappHref(
-                  r.phone_number ? `${r.phone_code || ''}${r.phone_number}` : '',
-                  `¡Feliz cumpleaños, ${r.member_name.split(' ')[0]}! 🎉 Te desea todo el equipo.`,
-                );
-                const when = birthdayWhen(r, today);
+                const wa = whatsappHref(r.phone_number ? `${r.phone_code || ''}${r.phone_number}` : '', birthdayGreeting(r));
+                const b = birthdayBadge(r, today);
                 return (
-                  <ListCard key={r.gym_member_id}
-                    className={r.is_past ? s.bdayPast : ''}
-                    media={
+                  <div key={r.gym_member_id} className={[s.expRow, s.bdayRow, r.is_past ? s.bdayPast : ''].filter(Boolean).join(' ')}>
+                    <button type="button" className={s.bdayTap} onClick={() => onOpen(r.gym_member_id)}>
                       <span className={[s.bdayTile, r.is_today ? s.bdayTileToday : ''].filter(Boolean).join(' ')}>
                         <strong>{r.day}</strong>
                         <span>{shortMonthName(month)}</span>
                       </span>
-                    }
-                    title={r.member_name}
-                    subtitle={`Cumple ${r.turns} años${r.member_code ? ` · ${r.member_code}` : ''}`}
-                    badge={r.is_today ? <Badge variant="primary" dot>Hoy</Badge> : null}
-                    meta={when}
-                    action={wa ? (
+                      <span className={s.expText}>
+                        <span className={s.expName}>{r.member_name}</span>
+                        <span className={s.expMeta}>Cumple {r.turns} años</span>
+                      </span>
+                    </button>
+                    <Badge variant={b.variant} dot={r.is_today}>{b.label}</Badge>
+                    {wa ? (
                       <IconButton icon="fab fa-whatsapp" variant="light" size="sm" className={s.waBtn}
                         title="Felicitar por WhatsApp"
                         onClick={() => window.open(wa, '_blank', 'noopener,noreferrer')} />
-                    ) : null}
-                    onClick={() => onOpen(r.gym_member_id)} />
+                    ) : <span className={s.waGap} />}
+                  </div>
                 );
               })}
             </div>
@@ -245,7 +257,7 @@ function GymExpiringCard({ data, loading, error, onOpen, onSeeAll }) {
   return (
     <Card className={s.widgetCard}>
       <Card.Header title="Vencimientos" className={s.widgetHead}
-        action={<Button variant="link" size="sm" iconRight="fas fa-chevron-right" className={s.widgetSeeAll} onClick={onSeeAll}>Suscripciones</Button>} />
+        action={<Button variant="link" size="sm" iconRight="fas fa-chevron-right" className={s.widgetSeeAll} onClick={() => onSeeAll(days)}>Ver todas</Button>} />
       <Card.Body className={s.widgetBody}>
         {error ? (
           <Alert tone="danger" title="No se pudieron cargar los vencimientos">{error}</Alert>
@@ -538,14 +550,14 @@ export function Dashboard() {
             loading={expiringRes.loading}
             error={expiringRes.error}
             onOpen={(id) => navigate(`/gym/subscriptions/${id}`)}
-            onSeeAll={() => navigate('/gym/subscriptions')}
+            onSeeAll={(days) => navigate(`/gym/subscriptions?expiring_within=${days}`)}
           />
           <GymBirthdaysCard
             rows={birthdaysRes.data || []}
             loading={birthdaysRes.loading}
             error={birthdaysRes.error}
             onOpen={(id) => navigate(`/gym/members/${id}`)}
-            onSeeAll={() => navigate('/gym/members')}
+            onSeeAll={(month) => navigate(`/gym/members?birthday_month=${month}`)}
           />
         </div>
       )}

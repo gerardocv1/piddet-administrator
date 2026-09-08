@@ -9,7 +9,7 @@ import { useResource } from '../lib/useResource.js';
 import { gymSubscriptionStatusMeta, gymPeriodStatusMeta, GYM_SUBSCRIPTION_STATUS, GYM_PERIOD_STATUS, GYM_SEX_OPTIONS } from '../lib/gymLabels.js';
 import { ID_TYPES } from '../lib/reservationLabels.js';
 import { todayIso, yearsAgoIso } from '../lib/orderLabels.js';
-import { formatShortDate, ageFromBirthdate } from '../lib/dates.js';
+import { formatShortDate, formatDayMonth, ageFromBirthdate, monthName } from '../lib/dates.js';
 import s from './screens.module.css';
 
 const EMPTY = { items: [], pagination: null };
@@ -20,6 +20,12 @@ const STATUS_OPTIONS = [
   { value: '1', label: 'Afiliado activo' },
   { value: '0', label: 'Afiliado inactivo' },
 ];
+
+// Meses para el filtro de cumpleaños, con el nombre en mayúscula inicial.
+const MONTH_OPTIONS = Array.from({ length: 12 }, (_, i) => {
+  const name = monthName(i + 1);
+  return { value: String(i + 1), label: name.charAt(0).toUpperCase() + name.slice(1) };
+});
 
 const emptyForm = {
   first_name: '', last_name: '', phone_number: '', email: '',
@@ -42,12 +48,16 @@ export function GymMembers() {
   const { toast } = useToast();
   const [params, setParams] = useSearchParams();
   const status = params.get('status') || undefined;
+  // Mes de cumpleaños (1-12): llega desde el widget del inicio («Ver todos») o del filtro.
+  const birthdayMonth = params.get('birthday_month') || undefined;
   const page = Math.max(1, Number(params.get('page')) || 1);
 
   const setQuery = (next = {}, nextPage = 1) => {
     const q = {};
     const st = 'status' in next ? next.status : status;
+    const bm = 'birthday_month' in next ? next.birthday_month : birthdayMonth;
     if (st) q.status = st;
+    if (bm) q.birthday_month = bm;
     if (nextPage > 1) q.page = String(nextPage);
     setParams(q);
   };
@@ -57,15 +67,15 @@ export function GymMembers() {
   React.useEffect(() => {
     const id = setTimeout(() => {
       if ((searchInput.trim() || undefined) !== search) {
-        const q = {}; if (status) q.status = status; if (searchInput.trim()) q.q = searchInput.trim();
+        const q = {}; if (status) q.status = status; if (birthdayMonth) q.birthday_month = birthdayMonth; if (searchInput.trim()) q.q = searchInput.trim();
         setParams(q);
       }
     }, 300);
     return () => clearTimeout(id);
   }, [searchInput]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const fetcher = React.useCallback(() => api.gymMembers({ status, search, page }), [status, search, page]);
-  const { data, loading, error, reload } = useResource(fetcher, EMPTY, [status, search, page]);
+  const fetcher = React.useCallback(() => api.gymMembers({ status, search, birthdayMonth, page }), [status, search, birthdayMonth, page]);
+  const { data, loading, error, reload } = useResource(fetcher, EMPTY, [status, search, birthdayMonth, page]);
   const rows = data.items || [];
   const pg = data.pagination;
 
@@ -204,8 +214,19 @@ export function GymMembers() {
     };
   };
 
+  // Con el filtro de cumpleaños cada fila trae `birthdate`: se dice el día y los años que cumple.
+  const birthdayText = (r) => {
+    if (!r.birthdate) return null;
+    const turns = new Date().getFullYear() - Number(String(r.birthdate).slice(0, 4));
+    return `${formatDayMonth(r.birthdate)} · cumple ${turns}`;
+  };
+
   const columns = [
     { key: 'member_name', header: 'Afiliado', ellipsis: true, render: (r) => <span className={s.cellStrong}>{r.member_name}</span> },
+    ...(birthdayMonth ? [{
+      key: 'birthdate', header: 'Cumpleaños', width: 180,
+      render: (r) => birthdayText(r) || <span className={s.faint}>—</span>,
+    }] : []),
     {
       key: 'subscription', header: 'Membresía', width: 140,
       render: (r) => {
@@ -224,6 +245,7 @@ export function GymMembers() {
 
   const filterDefs = [
     { key: 'status', type: 'select', label: 'Afiliado', icon: 'fas fa-circle-check', options: STATUS_OPTIONS },
+    { key: 'birthday_month', type: 'select', label: 'Cumpleaños', icon: 'fas fa-cake-candles', options: MONTH_OPTIONS, placeholder: 'Cualquier mes' },
   ];
 
   return (
@@ -234,8 +256,8 @@ export function GymMembers() {
         onSearchChange={setSearchInput}
         searchPlaceholder="Buscar por nombre, código o documento"
         filters={filterDefs}
-        values={{ status }}
-        onChange={(next) => setQuery({ status: next.status })}
+        values={{ status, birthday_month: birthdayMonth }}
+        onChange={(next) => setQuery({ status: next.status, birthday_month: next.birthday_month })}
         inlineThreshold={0}
         resultCount={pg?.total}
         actions={
@@ -283,6 +305,7 @@ export function GymMembers() {
             <ListCard key={r.id}
               media={<Avatar name={r.member_name} size="sm" />}
               title={r.member_name}
+              subtitle={birthdayText(r)}
               badge={<Badge variant={ms.badge.variant} dot>{ms.badge.label}</Badge>}
               meta={ms.detail}
               action={!ms.alive ? (
