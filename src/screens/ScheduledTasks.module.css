@@ -1,0 +1,125 @@
+/* Bitácora del scheduler: tarjetas de estado por tarea + detalle de una corrida. */
+
+.status {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+.statusCard {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-md);
+  background: var(--surface-card);
+}
+
+.statusHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.statusName {
+  margin: 0;
+  font-weight: 700;
+  color: var(--gray-800);
+  font-size: var(--text-base);
+}
+
+.statusDetail {
+  margin: 0;
+  color: var(--gray-500);
+  font-size: var(--text-sm);
+}
+
+.statusFoot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--gray-600);
+  font-size: var(--text-sm);
+}
+
+.schedule {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  color: var(--gray-700);
+}
+
+/* Resumen de una corrida en la tabla: pares "etiqueta valor" en UNA línea. Sin envolver: la
+   columna corta con puntos suspensivos (ellipsis) y así todas las filas miden lo mismo, también
+   cuando la tabla hace scroll horizontal en el teléfono. */
+.summaryCell {
+  display: inline-flex;
+  gap: 4px 10px;
+  white-space: nowrap;
+}
+
+.summaryPair {
+  color: var(--gray-600);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}
+
+.summaryPair b {
+  color: var(--gray-800);
+  font-weight: 700;
+}
+
+/* Detalle en el modal. */
+.detail {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.detailGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.detailGrid > * {
+  min-width: 0;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.fieldLabel {
+  color: var(--gray-500);
+  font-size: var(--text-sm);
+}
+
+.fieldValue {
+  color: var(--gray-800);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.errorBox {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--gray-100);
+  color: var(--gray-800);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+@media (max-width: 640px) {
+  .detailGrid { grid-template-columns: 1fr; }
+}

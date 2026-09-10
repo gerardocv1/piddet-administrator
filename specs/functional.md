@@ -64,6 +64,7 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
 | Configuración | **Tiendas** | `/stores` | `api-module-stores` |
 | Configuración | **Categorías globales de producto** | `/admin/product-categories` | `item-category-master` |
 | Configuración | **Fallos de órdenes** (soporte del POS) | `/sync-failures` | `order-sync-failure-admin` |
+| Configuración | **Tareas programadas** (bitácora del scheduler) | `/scheduled-tasks` | `api-module-scheduled-tasks` |
 | Accesos | **Usuarios de la compañía** | `/users` | `user-administrator` |
 | Accesos | **Roles** | `/roles` | `role-list` |
 | Accesos | **Permisos** | `/permissions` | `permission-list` |
@@ -381,6 +382,22 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
   creación y cambiar el estado.
 - **Reglas:** el estado `resolved` es terminal. Es el mecanismo de rescate del modelo
   offline-first del POS: ninguna venta debería quedarse sin registrar.
+
+### Tareas programadas (bitácora del scheduler)
+
+- **Descripción:** el backend corre tres tareas de negocio en horario fijo y deja una fila por
+  ejecución. Esta pantalla es la respuesta a "¿corrió anoche el cron?" sin entrar al servidor.
+- **Flujo principal:** `/scheduled-tasks` encabeza con una tarjeta por tarea (su horario y cómo
+  salió la última corrida, o *Nunca ha corrido*) y lista las ejecuciones más recientes primero,
+  filtrables por tarea, resultado y rango de fechas. Al tocar una fila, el detalle muestra las
+  opciones con las que se invocó, sus contadores y el error completo si falló.
+- **Las tres tareas:** suscripciones de gimnasio (00:00, cierra períodos vencidos y genera el
+  cobro siguiente), avisos de vencimiento al socio (18:00) y orden de productos por popularidad
+  (03:00).
+- **Reglas:** es de **solo lectura** —desde el panel no se dispara ninguna tarea— y lo que
+  muestra es de plataforma, no de la compañía activa: por eso el permiso es solo del
+  super-admin. Una ejecución *En curso* que ya pasó su hora es una corrida que murió a mitad.
+  El backend conserva 90 días.
 
 ## Roles y Permisos
 

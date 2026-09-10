@@ -49,6 +49,7 @@ const META = {
   '/shifts': { title: 'Turnos', crumb: 'Operación' },
   '/invoices': { title: 'Facturas', crumb: 'Ventas' },
   '/sales-report': { title: 'Reporte de ventas', crumb: 'Ventas' },
+  '/scheduled-tasks': { title: 'Tareas programadas', crumb: 'Configuración' },
   '/more': { title: 'Más', crumb: '' },
 };
 

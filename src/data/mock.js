@@ -298,6 +298,9 @@ export const mockAssignablePermissions = [
     { name: 'order-cancel', description: 'Cancelar facturas con motivo' },
     { name: 'order-sync-failure-admin', description: 'Administrar fallos de sincronización del POS' },
   ] },
+  { module_id: 14, module_name: 'Tareas programadas', permissions: [
+    { name: 'api-module-scheduled-tasks', description: 'Ver la bitácora de ejecuciones del scheduler' },
+  ] },
   { module_id: 5, module_name: 'Gastos', permissions: [
     { name: 'api-module-expenses', description: 'Administrar los gastos de la compañía' },
     { name: 'api-module-expenses-own', description: 'Registrar y ver solo sus propios gastos' },
@@ -462,7 +465,7 @@ export const mockMenuItems = [
 // el panel muestra Productos (y sus categorías), Menús y Usuarios; el resto queda oculto.
 const mockPermissions = {
   roles: ['Administrador'],
-  permissions: ['user-administrator', 'admin-general', 'role-list', 'role-create', 'role-update', 'role-delete', 'role-assign', 'permission-list', 'permission-update', 'api-module-menus', 'api-module-products', 'api-module-general-options', 'api-module-company', 'company-edit-functionalities', 'api-module-stores', 'table-list', 'table-create', 'table-update', 'api-module-orders', 'sales-report', 'order-cancel', 'order-sync-failure-admin', 'api-module-expenses', 'expenses-report', 'expense-annul', 'api-module-shifts', 'shift-global-admin', 'api-module-reservations', 'api-module-rentable-units', 'reservation-checkout', 'reservation-cancel', 'reservation-payment-annul', 'api-module-gym', 'api-module-gym-plans', 'gym-plans-create', 'gym-plans-edit', 'gym-members-create', 'gym-members-edit', 'gym-subscriptions-create', 'gym-subscriptions-cancel', 'gym-payments-create', 'gym-payments-annul', 'gym-checkins-create', 'gym-checkins-edit', 'gym-measurement-config', 'gym-periods-recalculate', 'company-catalog-purge', 'company-master'],
+  permissions: ['user-administrator', 'admin-general', 'role-list', 'role-create', 'role-update', 'role-delete', 'role-assign', 'permission-list', 'permission-update', 'api-module-menus', 'api-module-products', 'api-module-general-options', 'api-module-company', 'company-edit-functionalities', 'api-module-stores', 'table-list', 'table-create', 'table-update', 'api-module-orders', 'sales-report', 'order-cancel', 'order-sync-failure-admin', 'api-module-expenses', 'expenses-report', 'expense-annul', 'api-module-shifts', 'shift-global-admin', 'api-module-reservations', 'api-module-rentable-units', 'reservation-checkout', 'reservation-cancel', 'reservation-payment-annul', 'api-module-gym', 'api-module-gym-plans', 'gym-plans-create', 'gym-plans-edit', 'gym-members-create', 'gym-members-edit', 'gym-subscriptions-create', 'gym-subscriptions-cancel', 'gym-payments-create', 'gym-payments-annul', 'gym-checkins-create', 'gym-checkins-edit', 'gym-measurement-config', 'gym-periods-recalculate', 'company-catalog-purge', 'company-master', 'api-module-scheduled-tasks'],
 };
 
 // Empresa (tenant) activa y empresas disponibles para el usuario (SaaS multi-tenant).
@@ -2280,6 +2283,100 @@ function validateSyncFailurePayload(payload) {
   if (!payload.payment?.status) errors['payment.status'] = ['El campo payment.status es obligatorio.'];
   if (!payload.creator) errors.creator = ['El payload no trae creator; en el retry no hay fallback al usuario autenticado.'];
   return errors;
+}
+
+// CONTRATO BACKEND: /companies/{company}/scheduled-tasks (status, runs paginado, runs/{id}).
+// Bitácora del scheduler: una fila por ejecución de cada comando programado. Lo que devuelve NO
+// es de la compañía activa —los comandos recorren todas—, por eso solo lo abre el super-admin.
+// `status` 1 en curso, 2 exitosa, 3 fallida.
+
+const SCHEDULED_TASK_RETENTION_DAYS = 90;
+
+// Tres días de corridas: la de anoche bien, una fallida y una que quedó sin cerrar.
+const mockScheduledTaskRuns = [
+  {
+    id: 41, command: 'gym:transition-subscriptions', status: 2,
+    started_at: `${isoDay(0)}T00:00:00`, finished_at: `${isoDay(0)}T00:00:04`, duration_ms: 4120,
+    company_id: null, options: { date: isoDay(0) },
+    summary: { date: isoDay(0), processed: 12, generated: 9, cancelled: 1 },
+    error: null, host: 'piddet-app-01',
+  },
+  {
+    id: 42, command: 'sales:aggregate-item-stats', status: 2,
+    started_at: `${isoDay(0)}T03:00:00`, finished_at: `${isoDay(0)}T03:00:12`, duration_ms: 12480,
+    company_id: null, options: { date: isoDay(1) },
+    summary: { date: isoDay(1), days: 1, daily_rows: 812, companies: 6, stats_rows: 430, purged_rows: 0 },
+    error: null, host: 'piddet-app-01',
+  },
+  {
+    id: 43, command: 'gym:emit-subscription-events', status: 1,
+    started_at: `${isoDay(0)}T18:00:00`, finished_at: null, duration_ms: null,
+    company_id: null, options: { date: isoDay(0) },
+    summary: null, error: null, host: 'piddet-app-01',
+  },
+  {
+    id: 39, command: 'gym:emit-subscription-events', status: 2,
+    started_at: `${isoDay(1)}T18:00:00`, finished_at: `${isoDay(1)}T18:00:02`, duration_ms: 1980,
+    company_id: null, options: { date: isoDay(1) },
+    summary: { date: isoDay(1), expiring: 4 }, error: null, host: 'piddet-app-01',
+  },
+  {
+    id: 38, command: 'gym:transition-subscriptions', status: 3,
+    started_at: `${isoDay(1)}T00:00:00`, finished_at: `${isoDay(1)}T00:00:01`, duration_ms: 980,
+    company_id: null, options: { date: isoDay(1) },
+    summary: null,
+    error: 'SQLSTATE[HY000] [2002] Connection refused (SQL: select * from `gym_subscriptions` where `status` = 1)',
+    host: 'piddet-app-01',
+  },
+  {
+    id: 35, command: 'sales:aggregate-item-stats', status: 2,
+    started_at: `${isoDay(2)}T03:00:00`, finished_at: `${isoDay(2)}T03:00:09`, duration_ms: 9310,
+    company_id: 1, options: { date: isoDay(3), company: 1, days: 3 },
+    summary: { date: isoDay(3), days: 3, daily_rows: 2140, companies: 1, stats_rows: 128, purged_rows: 12 },
+    error: null, host: 'piddet-app-01',
+  },
+];
+
+const SCHEDULED_TASK_COMMANDS = [
+  'gym:transition-subscriptions',
+  'gym:emit-subscription-events',
+  'sales:aggregate-item-stats',
+];
+
+function resolveScheduledTasksMock(path, query) {
+  const m = path.match(/^\/companies\/[^/]+\/scheduled-tasks(\/.*)?$/);
+  if (!m) return undefined;
+  const sub = m[1] || '';
+
+  if (sub === '/status') {
+    // Última corrida de cada comando; el que nunca corrió aparece igual, sin estado.
+    const commands = SCHEDULED_TASK_COMMANDS.map((command) => {
+      const runs = mockScheduledTaskRuns
+        .filter((r) => r.command === command)
+        .sort((a, b) => String(b.started_at).localeCompare(String(a.started_at)));
+      return runs[0] ? { ...runs[0] } : { command, status: null };
+    });
+    return { commands, retention_days: SCHEDULED_TASK_RETENTION_DAYS };
+  }
+
+  if (sub === '/runs') {
+    const command = query.get('command');
+    const status = query.get('status');
+    const from = query.get('date_from');
+    const to = query.get('date_to');
+    const rows = mockScheduledTaskRuns
+      .filter((r) => !command || r.command === command)
+      .filter((r) => !status || r.status === Number(status))
+      .filter((r) => !from || String(r.started_at).slice(0, 10) >= from)
+      .filter((r) => !to || String(r.started_at).slice(0, 10) <= to)
+      .sort((a, b) => String(b.started_at).localeCompare(String(a.started_at)));
+    return mockPaginate(rows, query);
+  }
+
+  const idMatch = sub.match(/^\/runs\/([^/]+)$/);
+  if (!idMatch) return undefined;
+  const run = mockScheduledTaskRuns.find((r) => String(r.id) === idMatch[1]);
+  return run ? { ...run } : null;
 }
 
 function resolveSyncFailuresMock(path, query, { method = 'GET', body } = {}) {
@@ -5190,6 +5287,10 @@ export function resolveMock(rawPath, opts = {}) {
   // Debe resolverse ANTES que orders: su ruta cuelga de /orders y el matcher de órdenes la capturaría.
   const syncFailures = resolveSyncFailuresMock(path, query, opts);
   if (syncFailures !== undefined) return syncFailures;
+
+  // Bitácora del scheduler (company-scoped en la ruta, de plataforma en el contenido).
+  const scheduledTasks = resolveScheduledTasksMock(path, query);
+  if (scheduledTasks !== undefined) return scheduledTasks;
 
   // Módulo de facturas/órdenes (company-scoped: /companies/{company}/orders…)
   const orders = resolveOrdersMock(path, query, opts);
