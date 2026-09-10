@@ -54,6 +54,7 @@ import { Users } from './screens/Users.jsx';
 import { Roles } from './screens/Roles.jsx';
 import { Permissions } from './screens/Permissions.jsx';
 import { SyncFailures } from './screens/SyncFailures.jsx';
+import { ScheduledTasks } from './screens/ScheduledTasks.jsx';
 import { SyncFailureDetail } from './screens/SyncFailureDetail.jsx';
 import { CompanyProfile } from './screens/CompanyProfile.jsx';
 import { MoreMenu } from './screens/MoreMenu.jsx';
@@ -267,6 +268,7 @@ function AdminApp() {
             <Route path="users" element={<RequirePermission path="/users"><Users /></RequirePermission>} />
             <Route path="sync-failures" element={<RequirePermission path="/sync-failures"><SyncFailures /></RequirePermission>} />
             <Route path="sync-failures/:reportId" element={<RequirePermission path="/sync-failures"><SyncFailureDetail /></RequirePermission>} />
+            <Route path="scheduled-tasks" element={<RequirePermission path="/scheduled-tasks"><ScheduledTasks /></RequirePermission>} />
             <Route path="company" element={<CompanyProfile />} />
             <Route path="roles" element={<RequirePermission path="/roles"><Roles /></RequirePermission>} />
             <Route path="permissions" element={<RequirePermission path="/permissions"><Permissions /></RequirePermission>} />

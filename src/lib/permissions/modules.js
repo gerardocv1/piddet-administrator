@@ -125,6 +125,9 @@ export const MODULE_GROUPS = [
           { to: '/admin/companies', label: 'Compañías', icon: 'fas fa-building', perm: 'company-master' },
           // Soporte: fallos del POS al sincronizar órdenes; el detalle (/sync-failures/:reportId) reusa este permiso.
           { to: '/sync-failures', label: 'Fallos de órdenes', icon: 'fas fa-triangle-exclamation', perm: 'order-sync-failure-admin' },
+          // Bitácora del scheduler: qué cron corrió, cuándo y qué hizo. Permiso de PLATAFORMA
+          // (los comandos recorren todas las compañías), solo super-admin.
+          { to: '/scheduled-tasks', label: 'Tareas programadas', icon: 'fas fa-clock-rotate-left', perm: 'api-module-scheduled-tasks' },
         ],
       },
       // Accesos: el listado administra a los usuarios de la compañía (y les asigna roles); Roles y
