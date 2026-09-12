@@ -399,19 +399,31 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
 
 ### Tareas programadas (bitácora del scheduler)
 
-- **Descripción:** el backend corre tres tareas de negocio en horario fijo y deja una fila por
-  ejecución. Esta pantalla es la respuesta a "¿corrió anoche el cron?" sin entrar al servidor.
+- **Descripción:** el backend corre cuatro tareas de negocio en horario fijo y deja una fila por
+  ejecución. Esta pantalla es la respuesta a "¿corrió anoche el cron?" sin entrar al servidor, y
+  el sitio desde donde se lanza una tarea cuando no corrió.
 - **Flujo principal:** `/scheduled-tasks` encabeza con una tarjeta por tarea (su horario y cómo
   salió la última corrida, o *Nunca ha corrido*) y lista las ejecuciones más recientes primero,
-  filtrables por tarea, resultado y rango de fechas. Al tocar una fila, el detalle muestra las
-  opciones con las que se invocó, sus contadores y el error completo si falló.
-- **Las tres tareas:** suscripciones de gimnasio (00:00, cierra períodos vencidos y genera el
-  cobro siguiente), avisos de vencimiento al socio (18:00) y orden de productos por popularidad
-  (03:00).
-- **Reglas:** es de **solo lectura** —desde el panel no se dispara ninguna tarea— y lo que
-  muestra es de plataforma, no de la compañía activa: por eso el permiso es solo del
-  super-admin. Una ejecución *En curso* que ya pasó su hora es una corrida que murió a mitad.
-  El backend conserva 90 días.
+  filtrables por tarea, resultado y rango de fechas. Al tocar una fila, el detalle muestra quién
+  la lanzó, las opciones con las que se invocó, sus contadores y el error completo si falló.
+- **Las cuatro tareas:** suscripciones de gimnasio (00:00, cierra períodos vencidos y genera el
+  cobro siguiente), recordatorio de llegada a los titulares de reservas (10:00), avisos de
+  vencimiento al socio (18:00) y orden de productos por popularidad (03:00).
+- **Ejecutar a mano:** cada tarjeta trae **Ejecutar ahora**. Se abre un modal —incluso sin
+  opciones que llenar— porque la tarea corre sobre **todas las compañías** salvo que se acote a
+  una; ahí se puede fijar también la fecha (y los días hacia atrás, en la de ventas). La corrida
+  no responde al instante: nace *En cola*, pasa a *En curso* y termina, y la pantalla se refresca
+  sola durante unos minutos para verlo. Una que se queda *En cola* significa que el worker de
+  colas no está corriendo en el servidor.
+- **Probar primero:** las dos tareas que le escriben a una persona (recordatorio de llegada y
+  avisos de vencimiento) traen además **Probar**: calcula a quién le llegaría y con qué texto
+  exacto, **no envía nada** y no marca a nadie como avisado, así que se puede repetir y luego
+  ejecutar de verdad. El detalle de esa corrida lista los mensajes que habrían salido. Las otras
+  dos no lo ofrecen: son idempotentes, repetirlas no duplica nada.
+- **Reglas:** lo que muestra —y lo que lanza— es de plataforma, no de la compañía activa: por eso
+  el permiso es solo del super-admin. La misma tarea no se puede lanzar dos veces a la vez (el
+  backend responde 409 y los botones se apagan mientras hay una corrida viva). Una ejecución
+  *En curso* que ya pasó su hora es una corrida que murió a mitad. El backend conserva 90 días.
 
 ## Roles y Permisos
 
