@@ -1,0 +1,41 @@
+// Servicio: historial de notificaciones ENVIADAS por la compañía activa (SMS y push).
+//
+// Es de SOLO LECTURA: una notificación es el registro de algo que ya pasó, no se reenvía ni se
+// borra. Y es de la compañía activa: el backend saca el `company_id` de la ruta, no del cliente.
+//
+// No confundir con `notifications.js`, que es la campana del usuario: aquello es lo que UNA
+// PERSONA no ha leído; esto es lo que LA COMPAÑÍA ha enviado.
+
+import { http } from '../http/client.js';
+import { auth } from '../auth/index.js';
+
+const base = () => {
+  const c = auth.getCompany();
+  return `/companies/${c?.username ?? c?.id}/notifications`;
+};
+
+const qs = (params = {}) => {
+  const sp = new URLSearchParams();
+  Object.entries(params).forEach(([k, v]) => { if (v != null && v !== '') sp.set(k, v); });
+  const s = sp.toString();
+  return s ? `?${s}` : '';
+};
+
+// Filtros compartidos por el listado y el resumen: los contadores cuentan lo mismo que se ve.
+const filterParams = ({ dateFrom = '', dateTo = '', status = '', type = '', sourceReference = '', search = '' } = {}) => ({
+  date_from: dateFrom,
+  date_to: dateTo,
+  status,
+  type,
+  source_reference: sourceReference,
+  _search: search,
+});
+
+export const sentNotificationsService = {
+  // Listado paginado, más recientes primero.
+  getSentNotifications: ({ page = 1, perPage = 15, ...filters } = {}) =>
+    http.get(`${base()}${qs({ ...filterParams(filters), page, per_page: perPage })}`, { paginated: true }),
+  // Contadores por estado (con los mismos filtros) y motivos de envío usados por la compañía.
+  getSentNotificationsSummary: (filters = {}) =>
+    http.get(`${base()}/summary${qs(filterParams(filters))}`),
+};

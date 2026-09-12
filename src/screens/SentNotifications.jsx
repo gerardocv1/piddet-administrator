@@ -1,0 +1,225 @@
+import React from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { Card, DataTable, Badge, FilterBar, Pagination, RefreshButton, Alert, Modal, StatStrip } from '../components';
+import { api } from '../lib/api.js';
+import { useResource } from '../lib/useResource.js';
+import {
+  notificationStatusOf, NOTIFICATION_STATUS_OPTIONS, notificationTypeOf, NOTIFICATION_TYPE_OPTIONS,
+  sourceReferenceLabel, formatNotificationDate,
+} from '../lib/notificationLabels.js';
+import s from './screens.module.css';
+import t from './SentNotifications.module.css';
+
+const EMPTY = { items: [], pagination: null };
+const EMPTY_SUMMARY = { counters: null, source_references: [] };
+
+// Historial de notificaciones enviadas por la compañía activa: a quién salió cada mensaje, con qué
+// texto, por qué motivo y en qué estado quedó. Responde "¿le llegó el SMS?" sin abrir el panel de
+// la pasarela.
+//
+// Es de SOLO LECTURA a propósito: una notificación es el registro de algo que ya pasó. Los filtros
+// y la página viven en la URL para que compartir el enlace lleve a la misma consulta.
+export function SentNotifications() {
+  const [params, setParams] = useSearchParams();
+  const dateFrom = params.get('date_from') || '';
+  const dateTo = params.get('date_to') || '';
+  const status = params.get('status') || '';
+  const type = params.get('type') || '';
+  const sourceReference = params.get('source_reference') || '';
+  const search = params.get('q') || '';
+  const page = Math.max(1, Number(params.get('page')) || 1);
+  const [selected, setSelected] = React.useState(null);
+
+  const setQuery = (next, nextPage = 1) => {
+    const q = { date_from: dateFrom, date_to: dateTo, status, type, source_reference: sourceReference, q: search, ...next };
+    const clean = {};
+    Object.entries(q).forEach(([k, v]) => { if (v) clean[k] = v; });
+    if (nextPage > 1) clean.page = String(nextPage);
+    setParams(clean);
+  };
+
+  // El buscador escribe en la URL con un respiro: una letra no es una consulta.
+  const [searchInput, setSearchInput] = React.useState(search);
+  React.useEffect(() => {
+    const id = setTimeout(() => {
+      if (searchInput.trim() !== search) setQuery({ q: searchInput.trim() });
+    }, 300);
+    return () => clearTimeout(id);
+  }, [searchInput]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const filters = { dateFrom, dateTo, status, type, sourceReference, search };
+
+  const fetcher = React.useCallback(
+    () => api.getSentNotifications({ ...filters, page }),
+    [dateFrom, dateTo, status, type, sourceReference, search, page] // eslint-disable-line react-hooks/exhaustive-deps
+  );
+  const { data, loading, error, reload } = useResource(fetcher, EMPTY, [dateFrom, dateTo, status, type, sourceReference, search, page]);
+
+  // Los contadores llevan los MISMOS filtros que el listado: si contaran otra cosa, mentirían.
+  const summaryFetcher = React.useCallback(
+    () => api.getSentNotificationsSummary(filters),
+    [dateFrom, dateTo, status, type, sourceReference, search] // eslint-disable-line react-hooks/exhaustive-deps
+  );
+  const { data: summary, loading: summaryLoading, reload: reloadSummary } = useResource(
+    summaryFetcher, EMPTY_SUMMARY, [dateFrom, dateTo, status, type, sourceReference, search]
+  );
+
+  const rows = data.items || [];
+  const pg = data.pagination;
+  const counters = summary.counters;
+
+  const stats = [
+    { label: 'Enviadas', value: counters ? counters.sent : '—' },
+    { label: 'Fallidas', value: counters ? counters.error : '—' },
+    { label: 'Pendientes', value: counters ? counters.pending : '—' },
+    { label: 'Total', value: counters ? counters.total : '—' },
+  ];
+
+  const columns = [
+    { key: 'date', header: 'Fecha', width: 120, render: (r) => formatNotificationDate(r.date) },
+    {
+      key: 'addressee', header: 'Destinatario', width: 160,
+      render: (r) => <span className={s.cellStrong}>{r.addressee || <span className={s.faint}>—</span>}</span>,
+    },
+    {
+      key: 'status', header: 'Estado', width: 120,
+      render: (r) => { const st = notificationStatusOf(r.status); return <Badge variant={st.variant} dot>{st.label}</Badge>; },
+    },
+    { key: 'type', header: 'Canal', width: 90, render: (r) => notificationTypeOf(r.type) },
+    { key: 'source_reference', header: 'Motivo', width: 180, ellipsis: true, render: (r) => sourceReferenceLabel(r.source_reference) },
+    {
+      // En el teléfono la tabla hace scroll horizontal (patrón de DataTable) y el texto queda
+      // cortado; completo está a un toque, en el detalle de la fila.
+      key: 'message', header: 'Mensaje', ellipsis: true,
+      render: (r) => <span title={r.message || ''}>{r.message || <span className={s.faint}>—</span>}</span>,
+    },
+  ];
+
+  // El desplegable de motivos sale de lo que la compañía ha enviado de verdad, no de un catálogo
+  // inventado en el panel: si nunca mandó un recordatorio, no aparece.
+  const sourceOptions = (summary.source_references || []).map((reference) => ({
+    value: reference,
+    label: sourceReferenceLabel(reference),
+  }));
+
+  const filterDefs = [
+    { key: 'range', type: 'daterange', label: 'Fechas', icon: 'fas fa-calendar', fromKey: 'date_from', toKey: 'date_to' },
+    { key: 'status', type: 'select', label: 'Estado', icon: 'fas fa-filter', options: NOTIFICATION_STATUS_OPTIONS },
+    { key: 'type', type: 'select', label: 'Canal', icon: 'fas fa-comment-sms', options: NOTIFICATION_TYPE_OPTIONS },
+    { key: 'source_reference', type: 'select', label: 'Motivo', icon: 'fas fa-tag', options: sourceOptions },
+  ];
+
+  const refresh = () => { reload(); reloadSummary(); };
+
+  return (
+    <div className={s.page}>
+      <StatStrip stats={stats} loading={summaryLoading && !counters} />
+
+      <FilterBar
+        searchable
+        searchValue={searchInput}
+        onSearchChange={setSearchInput}
+        searchPlaceholder="Buscar por destinatario o texto"
+        filters={filterDefs}
+        values={{ date_from: dateFrom, date_to: dateTo, status, type, source_reference: sourceReference }}
+        onChange={(next) => setQuery({
+          date_from: next.date_from || '',
+          date_to: next.date_to || '',
+          status: next.status || '',
+          type: next.type || '',
+          source_reference: next.source_reference || '',
+        })}
+        resultCount={pg?.total}
+        actions={
+          <>
+            <RefreshButton loading={loading} onClick={refresh} />
+            {pg != null && (
+              <p className={s.toolbarText}>
+                {pg.total === 0 ? 'Sin notificaciones' : `${pg.total} ${pg.total === 1 ? 'notificación' : 'notificaciones'}`}
+              </p>
+            )}
+          </>
+        }
+      />
+
+      {error ? (
+        <Alert tone="danger" title="No se pudieron cargar las notificaciones">{error}</Alert>
+      ) : (
+        <Card>
+          <DataTable
+            columns={columns}
+            rows={rows}
+            loading={loading}
+            empty="No hay notificaciones con el filtro actual."
+            onRowClick={(r) => setSelected(r)}
+          />
+        </Card>
+      )}
+
+      {pg && pg.last_page > 1 && (
+        <Pagination page={pg.current_page} lastPage={pg.last_page} total={pg.total}
+          onChange={(p) => setQuery({}, p)} disabled={loading} />
+      )}
+
+      {selected && <NotificationDetailModal notification={selected} onClose={() => setSelected(null)} />}
+    </div>
+  );
+}
+
+function NotificationDetailModal({ notification, onClose }) {
+  const st = notificationStatusOf(notification.status);
+
+  return (
+    <Modal open title="Notificación enviada" subtitle={sourceReferenceLabel(notification.source_reference)} onClose={onClose} size="lg">
+      <div className={t.detail}>
+        <div className={t.detailGrid}>
+          <Field label="Estado"><Badge variant={st.variant} dot>{st.label}</Badge></Field>
+          <Field label="Canal">{notificationTypeOf(notification.type)}</Field>
+          <Field label="Destinatario">{notification.addressee || '—'}</Field>
+          <Field label="Fecha">{formatNotificationDate(notification.date)}</Field>
+          <Field label="Registrada">{formatNotificationDate(notification.created_at)}</Field>
+          {notification.integration ? <Field label="Pasarela">{notification.integration}</Field> : null}
+          {/* El acuse del proveedor: con él se rastrea este envío concreto en su panel. */}
+          {notification.shipping_reference ? <Field label="Referencia de envío">{notification.shipping_reference}</Field> : null}
+          {notification.read_at ? <Field label="Leída">{formatNotificationDate(notification.read_at)}</Field> : null}
+          {notification.clicked_at ? <Field label="Abierta">{formatNotificationDate(notification.clicked_at)}</Field> : null}
+        </div>
+
+        <div className={t.field}>
+          <span className={t.fieldLabel}>Mensaje</span>
+          <p className={t.message}>{notification.message || '—'}</p>
+        </div>
+
+        {notification.deep_link && (
+          <div className={t.field}>
+            <span className={t.fieldLabel}>Enlace</span>
+            <span className={t.fieldValue}>{notification.deep_link}</span>
+          </div>
+        )}
+
+        {notification.status === 1 && (
+          <Alert tone="warning" title="Todavía no ha salido">
+            Quedó registrada y espera a la pasarela. Si lleva mucho así, el worker de colas no está
+            corriendo en el servidor.
+          </Alert>
+        )}
+
+        {notification.status === 3 && (
+          <Alert tone="danger" title="No se pudo enviar">
+            La pasarela rechazó el mensaje. El motivo queda en el log del servidor
+            (<code>QUEUE_NOTIFICATION_INTEGRATIONS_ERROR</code>).
+          </Alert>
+        )}
+      </div>
+    </Modal>
+  );
+}
+
+function Field({ label, children }) {
+  return (
+    <div className={t.field}>
+      <span className={t.fieldLabel}>{label}</span>
+      <span className={t.fieldValue}>{children}</span>
+    </div>
+  );
+}

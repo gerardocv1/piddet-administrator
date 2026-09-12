@@ -64,6 +64,7 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
 | Configuración | **Tiendas** | `/stores` | `api-module-stores` |
 | Configuración | **Categorías globales de producto** | `/admin/product-categories` | `item-category-master` |
 | Configuración | **Fallos de órdenes** (soporte del POS) | `/sync-failures` | `order-sync-failure-admin` |
+| Configuración | **Notificaciones enviadas** | `/notifications` | `api-module-notifications` |
 | Configuración | **Tareas programadas** (bitácora del scheduler) | `/scheduled-tasks` | `api-module-scheduled-tasks` |
 | Accesos | **Usuarios de la compañía** | `/users` | `user-administrator` |
 | Accesos | **Roles** | `/roles` | `role-list` |
@@ -396,6 +397,25 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
   creación y cambiar el estado.
 - **Reglas:** el estado `resolved` es terminal. Es el mecanismo de rescate del modelo
   offline-first del POS: ninguna venta debería quedarse sin registrar.
+
+### Notificaciones enviadas
+
+- **Descripción:** historial de lo que la compañía ha enviado (SMS por Háblame, push/correo):
+  a quién salió cada mensaje, con qué texto, por qué motivo y en qué estado quedó. Responde
+  «¿le llegó el SMS?» sin abrir el panel de la pasarela.
+- **Flujo principal:** `/notifications` encabeza con los contadores del rango (enviadas, fallidas,
+  pendientes, total) y lista los envíos más recientes primero. Se filtra por rango de fechas,
+  estado, canal y motivo, y se busca por **destinatario o texto** —las dos preguntas reales:
+  «¿le llegó a este celular?» y «¿qué le dijimos?»—. Al tocar una fila, el detalle muestra el
+  mensaje completo, la pasarela y la referencia de envío con la que se rastrea en el proveedor.
+- **Los contadores llevan los mismos filtros que el listado:** si contaran otra cosa, mentirían.
+  El desplegable de motivos sale de lo que esa compañía ha enviado de verdad, no de un catálogo
+  escrito en el panel.
+- **Reglas:** es de **solo lectura** —no se reenvía ni se borra: una notificación es el registro
+  de algo que ya pasó— y es **siempre de la compañía activa** (el backend saca el `company_id` de
+  la ruta). Lo llevan el `super-admin` y el `company-admin`. No confundir con la campana de la
+  barra superior: eso es lo que **una persona** no ha leído; esto es lo que **la compañía** ha
+  enviado.
 
 ### Tareas programadas (bitácora del scheduler)
 
