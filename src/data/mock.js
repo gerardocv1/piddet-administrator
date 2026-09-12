@@ -3255,6 +3255,11 @@ const mockGuests = [
 const mockReservations = [];
 let mockReservationOrderSeq = 0;
 
+// Código único de consulta de una reserva (el del enlace corto del SMS), con el mismo alfabeto y
+// longitud que el backend: 12 caracteres sin `l`, `o`, `0` ni `1`.
+const mockReservationAccessCode = () =>
+  Array.from({ length: 12 }, () => 'abcdefghijkmnpqrstuvwxyz23456789'[Math.floor(Math.random() * 32)]).join('');
+
 // Vista de listado (sin espacios ni fotos completas, con conteo).
 const unitRow = (u) => ({
   id: u.id, rentable_unit_type_id: u.rentable_unit_type_id, name: u.name, type_name: u.type_name,
@@ -3599,11 +3604,14 @@ function resolveReservationsCore(sub, query, { method, body }) {
       const hasPayment = body.payment && body.payment.value;
       const id = 'rsv-' + Math.random().toString(36).slice(2, 10);
       const code = Array.from({ length: 10 }, () => 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random() * 32)]).join('');
+      // Código único de consulta: el del enlace corto del SMS (piddet.com/r/…). Distinto del
+      // público y secreto, porque abre la reserva sin pedir el nombre del titular.
+      const accessCode = mockReservationAccessCode();
       const holderName = `${body.holder.first_name} ${body.holder.last_name}`;
       const guests = [{ id: 1, user_id: 501, is_holder: true, first_name: body.holder.first_name, last_name: body.holder.last_name, name: holderName, document_number: body.holder.id_number || null }];
       (body.companions || []).forEach((c, i) => guests.push({ id: i + 2, user_id: 600 + i, is_holder: false, first_name: c.first_name, last_name: c.last_name, name: `${c.first_name} ${c.last_name}`, document_number: c.id_number || null }));
       const row = {
-        id, code, rentable_unit_id: unit.id, rentable_unit_name: unit.name,
+        id, code, access_code: accessCode, rentable_unit_id: unit.id, rentable_unit_name: unit.name,
         guests_count: Number(body.guests_count) || 1,
         holder_user_id: 501, holder_user_name: holderName, holder_document_number: body.holder.id_number || null,
         holder_first_name: body.holder.first_name, holder_last_name: body.holder.last_name,
@@ -3766,6 +3774,26 @@ function resolveReservationsCore(sub, query, { method, body }) {
   return undefined;
 }
 
+// Reserva encontrada pero ya cerrada (cancelada o finalizada): 409 con el motivo, igual que el
+// backend. Lo comparten las dos entradas al pre-check-in (digitada y por el enlace del SMS).
+function closedReservationError(reservation) {
+  const cancelled = reservation.status === 0;
+  const err = new Error(cancelled ? 'Esta reserva fue cancelada' : 'Esta reserva ya finalizó');
+  err.status = 409;
+  err.data = {
+    cancelled,
+    title: cancelled ? 'Esta reserva fue cancelada' : 'Esta reserva ya finalizó',
+    detail: cancelled
+      ? 'Ya no es posible hacer el pre-check-in. Si crees que es un error, comunícate con el alojamiento.'
+      : 'Tu estadía terminó, así que el pre-check-in ya no está disponible. ¡Gracias por visitarnos!',
+    company_name: mockCompany.name, company_phone: mockCompany.phone,
+    check_in_date: reservation.check_in_date, check_out_date: reservation.check_out_date,
+    unit_name: reservation.rentable_unit_name,
+  };
+
+  return err;
+}
+
 // Pre-check-in público (demo): resuelve /public/checkin/{code}… contra mockReservations.
 function resolveCheckinMock(path, query, { method = 'GET', body } = {}) {
   // Entrada digitando código + nombre: el nombre se compara sin tildes ni mayúsculas y basta con
@@ -3782,22 +3810,18 @@ function resolveCheckinMock(path, query, { method = 'GET', body } = {}) {
     if (!matches) return null;
 
     // Reserva del titular pero ya cerrada: 409 con el motivo, igual que el backend.
-    if (![1, 2, 3, 5].includes(found.status)) {
-      const cancelled = found.status === 0;
-      const err = new Error(cancelled ? 'Esta reserva fue cancelada' : 'Esta reserva ya finalizó');
-      err.status = 409;
-      err.data = {
-        cancelled,
-        title: cancelled ? 'Esta reserva fue cancelada' : 'Esta reserva ya finalizó',
-        detail: cancelled
-          ? 'Ya no es posible hacer el pre-check-in. Si crees que es un error, comunícate con el alojamiento.'
-          : 'Tu estadía terminó, así que el pre-check-in ya no está disponible. ¡Gracias por visitarnos!',
-        company_name: mockCompany.name, company_phone: mockCompany.phone,
-        check_in_date: found.check_in_date, check_out_date: found.check_out_date,
-        unit_name: found.rentable_unit_name,
-      };
-      throw err;
-    }
+    if (![1, 2, 3, 5].includes(found.status)) throw closedReservationError(found);
+
+    return resolveCheckinMock(`/public/checkin/${found.code}`, query, {});
+  }
+
+  // Entrada por el enlace corto del SMS: el código de consulta abre la reserva sin pedir el nombre.
+  const linkMatch = path.match(/^\/public\/checkin\/link\/([^/]+)$/);
+  if (linkMatch && method === 'GET') {
+    const wanted = decodeURIComponent(linkMatch[1]).replace(/[^A-Za-z0-9]/g, '').toLowerCase();
+    const found = mockReservations.find((x) => (x.access_code || '') === wanted);
+    if (!found) return null;
+    if (![1, 2, 3, 5].includes(found.status)) throw closedReservationError(found);
 
     return resolveCheckinMock(`/public/checkin/${found.code}`, query, {});
   }

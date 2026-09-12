@@ -255,6 +255,15 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
   del huésped no es viable, el menú de acciones de una reserva confirmada ofrece **Check-in
   forzado**: un modal advierte que la entrada se registra sin los datos del pre-check-in y aun
   así permite pasar (el enlace de pre-check-in sigue activo durante la estadía).
+- **Dos puertas al pre-check-in público** (ambas sin sesión, fuera del panel):
+  `/checkin?code={código}` pide el **código de la reserva más el nombre del titular** —el código
+  solo autocompleta el formulario—, y `/r/{código único de consulta}` **abre la reserva sin pedir
+  nada**. La segunda es el enlace que el backend le manda por SMS al titular la mañana de su
+  llegada: el código de consulta es secreto y solo llegó a su celular, y saltarse la validación es
+  justo lo que evita que abandone ahí y llegue sin el pre-check-in hecho. Si el enlace ya no vale,
+  la pantalla cae al formulario de siempre con un aviso; si la reserva ya cerró, explica el motivo.
+  Ese código **no se muestra en el panel ni se dicta**: para eso está el código público.
+
 - **En el teléfono** el detalle se descarga: la cabecera deja solo la acción principal del estado
   (confirmar, check-in, checkout o reabrir) y el menú ⋮, que absorbe actualizar y el enlace de
   pre-check-in; se omite lo que ya está en otro lado —la tarjeta de pre-check-in (el código está

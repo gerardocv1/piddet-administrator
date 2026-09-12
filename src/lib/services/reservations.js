@@ -174,9 +174,14 @@ export const reservationsService = {
     http.get(`/public/${encodeURIComponent(companyUsername)}/rentable-units/${unitId}/availability${qs({ check_in: checkIn, check_out: checkOut })}`),
 
   // ── Pre-check-in público (sin sesión, autenticado por el código de reserva) ──
-  // Única entrada a la reserva: código + nombre del titular (el código por sí solo no abre nada).
+  // Entrada digitada: código público + nombre del titular (el código por sí solo no abre nada).
   // Devuelve el resumen de la estadía con los datos del alojamiento y de la unidad.
   checkinAccess: (code, name) => http.post('/public/checkin/access', { code, name }),
+  // Entrada por el enlace corto del SMS (piddet.com/r/{código}): el código único de consulta abre
+  // la reserva SIN pedir el nombre, porque solo llegó al celular del titular. Devuelve el mismo
+  // resumen (incluido `code`, con el que sigue guardándose el pre-check-in). 404 si el enlace ya no
+  // vale; 409 con el motivo si la reserva está cerrada.
+  checkinAccessByLink: (accessCode) => http.get(`/public/checkin/link/${encodeURIComponent(accessCode)}`),
   checkinSubmit: (code, data) => http.post(`/public/checkin/${code}/guests`, data),
   checkinUploadDocument: (code, file) => {
     const fd = new FormData();

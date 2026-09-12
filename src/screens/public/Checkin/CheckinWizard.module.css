@@ -340,6 +340,28 @@
 }
 .errorState i { font-size: 2.6rem; color: var(--color-danger, var(--gray-500)); }
 
+/* Espera mientras el enlace del SMS abre la reserva. */
+.linkLoading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 24px 0;
+  color: var(--gray-500);
+}
+
+/* Aviso informativo sobre el formulario (p. ej. el enlace del SMS ya no vale). */
+.notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: var(--radius);
+  background: var(--gray-100);
+  color: var(--gray-700);
+  font-size: var(--text-sm);
+}
+
 .error {
   display: flex;
   align-items: center;

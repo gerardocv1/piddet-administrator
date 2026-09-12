@@ -109,6 +109,13 @@ El token viaja como `Authorization: Bearer <token>`.
 
 ## Rutas (frontend)
 
+Antes del router, `src/App.jsx` atiende el **mundo público** (sin sesión) mirando el `pathname`:
+la carta compartible (`/{compañía}/m/{menú}`), el hospedaje público (`/{compañía}/hospedaje…`), la
+portada de la compañía (`/{compañía}`), el pre-check-in digitado (`/checkin?code=…`) y el enlace
+corto del SMS (**`/r/{código único de consulta}`**, que abre la reserva sin pedir el nombre del
+titular contra `GET /public/checkin/link/{accessCode}`). El orden importa: `/r/…` son dos segmentos
+y se resuelve antes que la portada de un solo segmento.
+
 `react-router-dom` v6 en `src/App.jsx`. `/login` es público; `/` monta `Layout` (Sidebar en
 escritorio + Topbar + `<Outlet>` + dock en móvil) con las rutas hijas de cada módulo: `more`
 (menú completo móvil, destino de «Más» en el dock; en escritorio redirige a Inicio),
