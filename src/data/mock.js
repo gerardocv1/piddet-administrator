@@ -3344,6 +3344,36 @@ function resolveReservationsMock(path, query, { method = 'GET', body } = {}) {
     }
   }
 
+  // Duplicar la unidad: /rentable-units/{id}/duplicate (solo viaja el nombre nuevo).
+  m = sub.match(/^rentable-units\/(\d+)\/duplicate$/);
+  if (m && method === 'POST') {
+    const unit = mockRentableUnits.find((u) => u.id === Number(m[1]));
+    if (!unit) return null;
+    const id = (mockRentableUnits.reduce((mx, u) => Math.max(mx, u.id), 0) || 0) + 1;
+    // Los espacios se renumeran y las fotos se copian apuntando al espacio nuevo (en demo la
+    // "copia" del archivo es solo un nombre distinto: aquí no hay S3).
+    const spaceMap = {};
+    const spaces = (unit.spaces || []).map((sp, i) => {
+      spaceMap[sp.id] = i + 1;
+      return { id: i + 1, name: sp.name, description: sp.description, position: sp.position, files: [] };
+    });
+    const copy = {
+      ...unit,
+      id,
+      name: body.name,
+      position: id,
+      spaces,
+      inclusions: (unit.inclusions || []).map((inc) => ({ ...inc })),
+      files: (unit.files || []).map((f) => ({
+        ...f,
+        name: `${f.name.replace(/\.jpg$/, '')}-copia-${id}.jpg`,
+        rentable_unit_space_id: f.rentable_unit_space_id == null ? null : spaceMap[f.rentable_unit_space_id],
+      })),
+    };
+    mockRentableUnits.push(copy);
+    return unitDetail(copy);
+  }
+
   // Qué incluye la tarifa: /rentable-units/{id}/inclusions[/{inclusionId}]
   m = sub.match(/^rentable-units\/(\d+)\/inclusions(?:\/(\d+))?$/);
   if (m) {

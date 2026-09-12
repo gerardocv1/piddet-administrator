@@ -46,6 +46,11 @@ export const reservationsService = {
 
   updateRentableUnit: (unitId, data) => http.put(`${base()}/rentable-units/${unitId}`, data),
 
+  // Duplica la unidad completa (datos, inclusiones, espacios y fotos) con un nombre nuevo. Las
+  // fotos se copian también en el almacenamiento: la copia tiene archivos propios. Devuelve el
+  // detalle de la unidad nueva, que nace con el mismo estado que la original.
+  duplicateRentableUnit: (unitId, name) => http.post(`${base()}/rentable-units/${unitId}/duplicate`, { name }),
+
   // Cambia el estado (1 reservable / 0 inactiva). Devuelve el detalle.
   setRentableUnitStatus: (unitId, status) => http.patch(`${base()}/rentable-units/${unitId}/status`, { status }),
 
