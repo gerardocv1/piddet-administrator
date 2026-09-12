@@ -2285,12 +2285,16 @@ function validateSyncFailurePayload(payload) {
   return errors;
 }
 
-// CONTRATO BACKEND: /companies/{company}/scheduled-tasks (status, runs paginado, runs/{id}).
-// Bitácora del scheduler: una fila por ejecución de cada comando programado. Lo que devuelve NO
-// es de la compañía activa —los comandos recorren todas—, por eso solo lo abre el super-admin.
-// `status` 1 en curso, 2 exitosa, 3 fallida.
+// CONTRATO BACKEND: /companies/{company}/scheduled-tasks (status, runs paginado, runs/{id},
+// POST run). Bitácora del scheduler: una fila por ejecución de cada comando programado. Lo que
+// devuelve NO es de la compañía activa —los comandos recorren todas—, por eso solo lo abre el
+// super-admin. `status` 1 en curso, 2 exitosa, 3 fallida, 4 en cola (solo las lanzadas a mano);
+// `origin` 1 el scheduler, 2 una persona desde el panel.
 
 const SCHEDULED_TASK_RETENTION_DAYS = 90;
+
+// Lo que trae toda corrida del backend; las sembradas abajo son del scheduler, sin nadie detrás.
+const SCHEDULED_RUN_DEFAULTS = { origin: 1, dry_run: false, triggered_by: null, triggered_by_name: null };
 
 // Tres días de corridas: la de anoche bien, una fallida y una que quedó sin cerrar.
 const mockScheduledTaskRuns = [
@@ -2341,12 +2345,111 @@ const SCHEDULED_TASK_COMMANDS = [
   'gym:transition-subscriptions',
   'gym:emit-subscription-events',
   'sales:aggregate-item-stats',
+  'reservations:send-checkin-reminders',
 ];
 
-function resolveScheduledTasksMock(path, query) {
+// Las que saben correr en modo prueba: las que le escriben a una persona.
+const SCHEDULED_TASK_DRY_RUN_COMMANDS = [
+  'gym:emit-subscription-events',
+  'reservations:send-checkin-reminders',
+];
+
+// Contadores de ejemplo con que termina una corrida lanzada a mano, por comando.
+const MOCK_RUN_SUMMARIES = {
+  'gym:transition-subscriptions': (date) => ({ date, processed: 12, generated: 9, cancelled: 1 }),
+  'gym:emit-subscription-events': (date) => ({ date, expiring: 4 }),
+  'sales:aggregate-item-stats': (date) => ({ date, days: 1, daily_rows: 812, companies: 6, stats_rows: 430, purged_rows: 0 }),
+  'reservations:send-checkin-reminders': (date) => ({
+    date, candidates: 7, sent: 5, already_notified: 1, skipped_no_phone: 1, skipped_no_code: 0,
+  }),
+};
+
+// Lo que una prueba habría enviado: el panel lo muestra en el detalle de la corrida.
+const MOCK_RUN_PREVIEWS = {
+  'gym:emit-subscription-events': [
+    { name: 'Ana Torres', to: null, message: 'Ana, tu plan Mensual vence manana (30/09/2026). Saldo pendiente: $80.000. Acercate a renovar para no perder tu acceso.' },
+    { name: 'Luis Gómez', to: null, message: 'Luis, tu plan Trimestral vence en 3 dias (02/10/2026). Saldo pendiente: $100.000. Acercate a renovar para no perder tu acceso.' },
+  ],
+  'reservations:send-checkin-reminders': [
+    { name: 'Pepito Pérez', to: '573001234567', message: 'Pepito, hoy llegas a Cabanas El Roble (Cabana 2). Completa tu pre-check-in antes de viajar: https://piddet.com/r/k7m2rq9xv4bd' },
+    { name: 'Marta Ruiz', to: '573009876543', message: 'Marta, hoy llegas a Cabanas El Roble (Cabana 5). Completa tu pre-check-in antes de viajar: https://piddet.com/r/b4n8xq2wm7dc' },
+  ],
+};
+
+/**
+ * Una corrida lanzada a mano no responde al instante: en el backend pasa por la cola. La demo lo
+ * imita con el reloj —en cola, en curso, terminada— para que el refresco automático del panel se
+ * vea de verdad en vez de saltar directo al resultado.
+ */
+function advanceMockScheduledRuns() {
+  const now = Date.now();
+  mockScheduledTaskRuns.forEach((run) => {
+    if (!run._queuedAt) return;
+    const elapsed = now - run._queuedAt;
+
+    if (elapsed > 5000 && run.status !== 2) {
+      const date = run.options?.date || isoDay(0);
+      const stamp = new Date(run._queuedAt + 5000).toISOString().slice(0, 19);
+      run.status = 2;
+      run.finished_at = stamp;
+      run.duration_ms = 3400;
+      run.summary = { ...MOCK_RUN_SUMMARIES[run.command](date) };
+      if (run.dry_run) {
+        const preview = MOCK_RUN_PREVIEWS[run.command] || [];
+        run.summary = { ...run.summary, preview, preview_total: preview.length };
+      }
+      delete run._queuedAt;
+    } else if (elapsed > 1500 && run.status === 4) {
+      run.status = 1;
+    }
+  });
+}
+
+function resolveScheduledTasksMock(path, query, { method = 'GET', body } = {}) {
   const m = path.match(/^\/companies\/[^/]+\/scheduled-tasks(\/.*)?$/);
   if (!m) return undefined;
   const sub = m[1] || '';
+
+  advanceMockScheduledRuns();
+
+  // Lanzar una tarea a mano: nace "en cola" y el reloj la va moviendo (ver advanceMockScheduledRuns).
+  if (sub === '/run' && method === 'POST') {
+    const command = body?.command;
+    if (!SCHEDULED_TASK_COMMANDS.includes(command)) return null;
+
+    if (mockScheduledTaskRuns.some((r) => r.command === command && [1, 4].includes(r.status))) {
+      const err = new Error('Esa tarea ya está en cola o corriendo. Espera a que termine.');
+      err.status = 409;
+      throw err;
+    }
+
+    const dryRun = !!body?.dry_run;
+    if (dryRun && !SCHEDULED_TASK_DRY_RUN_COMMANDS.includes(command)) {
+      const err = new Error('Esta tarea no tiene modo prueba: es idempotente, repetirla no duplica nada.');
+      err.status = 400;
+      throw err;
+    }
+
+    const options = {};
+    if (body?.date) options.date = body.date;
+    if (body?.company_id) options.company = Number(body.company_id);
+    if (body?.days) options.days = Number(body.days);
+    if (dryRun) options['dry-run'] = true;
+
+    const run = {
+      id: Math.max(0, ...mockScheduledTaskRuns.map((r) => r.id)) + 1,
+      command, status: 4, origin: 2, dry_run: dryRun,
+      started_at: new Date().toISOString().slice(0, 19), finished_at: null, duration_ms: null,
+      company_id: body?.company_id ? Number(body.company_id) : null,
+      options: Object.keys(options).length ? options : null,
+      summary: null, error: null, host: 'piddet-app-01',
+      triggered_by: 1, triggered_by_name: mockUser.name,
+      _queuedAt: Date.now(),
+    };
+    mockScheduledTaskRuns.unshift(run);
+
+    return { ...run };
+  }
 
   if (sub === '/status') {
     // Última corrida de cada comando; el que nunca corrió aparece igual, sin estado.
@@ -2354,9 +2457,13 @@ function resolveScheduledTasksMock(path, query) {
       const runs = mockScheduledTaskRuns
         .filter((r) => r.command === command)
         .sort((a, b) => String(b.started_at).localeCompare(String(a.started_at)));
-      return runs[0] ? { ...runs[0] } : { command, status: null };
+      return runs[0] ? { ...SCHEDULED_RUN_DEFAULTS, ...runs[0] } : { command, status: null };
     });
-    return { commands, retention_days: SCHEDULED_TASK_RETENTION_DAYS };
+    return {
+      commands,
+      retention_days: SCHEDULED_TASK_RETENTION_DAYS,
+      dry_run_commands: SCHEDULED_TASK_DRY_RUN_COMMANDS,
+    };
   }
 
   if (sub === '/runs') {
@@ -2369,14 +2476,15 @@ function resolveScheduledTasksMock(path, query) {
       .filter((r) => !status || r.status === Number(status))
       .filter((r) => !from || String(r.started_at).slice(0, 10) >= from)
       .filter((r) => !to || String(r.started_at).slice(0, 10) <= to)
-      .sort((a, b) => String(b.started_at).localeCompare(String(a.started_at)));
+      .sort((a, b) => String(b.started_at).localeCompare(String(a.started_at)))
+      .map((r) => ({ ...SCHEDULED_RUN_DEFAULTS, ...r }));
     return mockPaginate(rows, query);
   }
 
   const idMatch = sub.match(/^\/runs\/([^/]+)$/);
   if (!idMatch) return undefined;
   const run = mockScheduledTaskRuns.find((r) => String(r.id) === idMatch[1]);
-  return run ? { ...run } : null;
+  return run ? { ...SCHEDULED_RUN_DEFAULTS, ...run } : null;
 }
 
 function resolveSyncFailuresMock(path, query, { method = 'GET', body } = {}) {
@@ -3255,6 +3363,11 @@ const mockGuests = [
 const mockReservations = [];
 let mockReservationOrderSeq = 0;
 
+// Código único de consulta de una reserva (el del enlace corto del SMS), con el mismo alfabeto y
+// longitud que el backend: 12 caracteres sin `l`, `o`, `0` ni `1`.
+const mockReservationAccessCode = () =>
+  Array.from({ length: 12 }, () => 'abcdefghijkmnpqrstuvwxyz23456789'[Math.floor(Math.random() * 32)]).join('');
+
 // Vista de listado (sin espacios ni fotos completas, con conteo).
 const unitRow = (u) => ({
   id: u.id, rentable_unit_type_id: u.rentable_unit_type_id, name: u.name, type_name: u.type_name,
@@ -3599,11 +3712,14 @@ function resolveReservationsCore(sub, query, { method, body }) {
       const hasPayment = body.payment && body.payment.value;
       const id = 'rsv-' + Math.random().toString(36).slice(2, 10);
       const code = Array.from({ length: 10 }, () => 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random() * 32)]).join('');
+      // Código único de consulta: el del enlace corto del SMS (piddet.com/r/…). Distinto del
+      // público y secreto, porque abre la reserva sin pedir el nombre del titular.
+      const accessCode = mockReservationAccessCode();
       const holderName = `${body.holder.first_name} ${body.holder.last_name}`;
       const guests = [{ id: 1, user_id: 501, is_holder: true, first_name: body.holder.first_name, last_name: body.holder.last_name, name: holderName, document_number: body.holder.id_number || null }];
       (body.companions || []).forEach((c, i) => guests.push({ id: i + 2, user_id: 600 + i, is_holder: false, first_name: c.first_name, last_name: c.last_name, name: `${c.first_name} ${c.last_name}`, document_number: c.id_number || null }));
       const row = {
-        id, code, rentable_unit_id: unit.id, rentable_unit_name: unit.name,
+        id, code, access_code: accessCode, rentable_unit_id: unit.id, rentable_unit_name: unit.name,
         guests_count: Number(body.guests_count) || 1,
         holder_user_id: 501, holder_user_name: holderName, holder_document_number: body.holder.id_number || null,
         holder_first_name: body.holder.first_name, holder_last_name: body.holder.last_name,
@@ -3766,6 +3882,26 @@ function resolveReservationsCore(sub, query, { method, body }) {
   return undefined;
 }
 
+// Reserva encontrada pero ya cerrada (cancelada o finalizada): 409 con el motivo, igual que el
+// backend. Lo comparten las dos entradas al pre-check-in (digitada y por el enlace del SMS).
+function closedReservationError(reservation) {
+  const cancelled = reservation.status === 0;
+  const err = new Error(cancelled ? 'Esta reserva fue cancelada' : 'Esta reserva ya finalizó');
+  err.status = 409;
+  err.data = {
+    cancelled,
+    title: cancelled ? 'Esta reserva fue cancelada' : 'Esta reserva ya finalizó',
+    detail: cancelled
+      ? 'Ya no es posible hacer el pre-check-in. Si crees que es un error, comunícate con el alojamiento.'
+      : 'Tu estadía terminó, así que el pre-check-in ya no está disponible. ¡Gracias por visitarnos!',
+    company_name: mockCompany.name, company_phone: mockCompany.phone,
+    check_in_date: reservation.check_in_date, check_out_date: reservation.check_out_date,
+    unit_name: reservation.rentable_unit_name,
+  };
+
+  return err;
+}
+
 // Pre-check-in público (demo): resuelve /public/checkin/{code}… contra mockReservations.
 function resolveCheckinMock(path, query, { method = 'GET', body } = {}) {
   // Entrada digitando código + nombre: el nombre se compara sin tildes ni mayúsculas y basta con
@@ -3782,22 +3918,18 @@ function resolveCheckinMock(path, query, { method = 'GET', body } = {}) {
     if (!matches) return null;
 
     // Reserva del titular pero ya cerrada: 409 con el motivo, igual que el backend.
-    if (![1, 2, 3, 5].includes(found.status)) {
-      const cancelled = found.status === 0;
-      const err = new Error(cancelled ? 'Esta reserva fue cancelada' : 'Esta reserva ya finalizó');
-      err.status = 409;
-      err.data = {
-        cancelled,
-        title: cancelled ? 'Esta reserva fue cancelada' : 'Esta reserva ya finalizó',
-        detail: cancelled
-          ? 'Ya no es posible hacer el pre-check-in. Si crees que es un error, comunícate con el alojamiento.'
-          : 'Tu estadía terminó, así que el pre-check-in ya no está disponible. ¡Gracias por visitarnos!',
-        company_name: mockCompany.name, company_phone: mockCompany.phone,
-        check_in_date: found.check_in_date, check_out_date: found.check_out_date,
-        unit_name: found.rentable_unit_name,
-      };
-      throw err;
-    }
+    if (![1, 2, 3, 5].includes(found.status)) throw closedReservationError(found);
+
+    return resolveCheckinMock(`/public/checkin/${found.code}`, query, {});
+  }
+
+  // Entrada por el enlace corto del SMS: el código de consulta abre la reserva sin pedir el nombre.
+  const linkMatch = path.match(/^\/public\/checkin\/link\/([^/]+)$/);
+  if (linkMatch && method === 'GET') {
+    const wanted = decodeURIComponent(linkMatch[1]).replace(/[^A-Za-z0-9]/g, '').toLowerCase();
+    const found = mockReservations.find((x) => (x.access_code || '') === wanted);
+    if (!found) return null;
+    if (![1, 2, 3, 5].includes(found.status)) throw closedReservationError(found);
 
     return resolveCheckinMock(`/public/checkin/${found.code}`, query, {});
   }
@@ -5319,7 +5451,7 @@ export function resolveMock(rawPath, opts = {}) {
   if (syncFailures !== undefined) return syncFailures;
 
   // Bitácora del scheduler (company-scoped en la ruta, de plataforma en el contenido).
-  const scheduledTasks = resolveScheduledTasksMock(path, query);
+  const scheduledTasks = resolveScheduledTasksMock(path, query, opts);
   if (scheduledTasks !== undefined) return scheduledTasks;
 
   // Módulo de facturas/órdenes (company-scoped: /companies/{company}/orders…)

@@ -1,10 +1,13 @@
 // Etiquetas de la bitácora del scheduler. Las claves son las del backend
-// (ScheduledTaskRun: status 1|2|3 y los nombres de comando); aquí se traducen a texto visible.
+// (ScheduledTaskRun: status 1|2|3|4, origin 1|2 y los nombres de comando); aquí se traducen a
+// texto visible.
 
 const STATUS = {
   1: { label: 'En curso', variant: 'info' },
   2: { label: 'Exitosa', variant: 'success' },
   3: { label: 'Fallida', variant: 'danger' },
+  // Solo las lanzadas a mano: si se queda aquí, el worker de colas no está corriendo.
+  4: { label: 'En cola', variant: 'warning' },
 };
 
 export function runStatusOf(status) {
@@ -15,7 +18,15 @@ export const RUN_STATUS_OPTIONS = [
   { value: '2', label: 'Exitosa' },
   { value: '3', label: 'Fallida' },
   { value: '1', label: 'En curso' },
+  { value: '4', label: 'En cola' },
 ];
+
+// Una corrida sigue viva mientras esté en cola o en curso: es lo que el panel refresca solo.
+export const ACTIVE_RUN_STATUSES = [1, 4];
+
+export function isRunActive(status) {
+  return ACTIVE_RUN_STATUSES.includes(Number(status));
+}
 
 // Qué es cada comando, en lenguaje del negocio y no del servidor.
 const COMMANDS = {
@@ -34,6 +45,11 @@ const COMMANDS = {
     detail: 'Consolida las ventas del día y reordena el menú por popularidad',
     schedule: '03:00',
   },
+  'reservations:send-checkin-reminders': {
+    label: 'Recordatorio de llegada',
+    detail: 'Avisa por SMS al titular que hoy llega y que complete su pre-check-in',
+    schedule: '10:00',
+  },
 };
 
 export function commandOf(command) {
@@ -45,6 +61,12 @@ export const COMMAND_OPTIONS = Object.entries(COMMANDS).map(([value, { label }])
 // Contadores del `summary`, con nombre visible. Lo que no esté aquí se muestra con su clave.
 const SUMMARY_LABELS = {
   date: 'Fecha procesada',
+  candidates: 'Reservas del día',
+  sent: 'Recordatorios enviados',
+  already_notified: 'Ya avisadas',
+  skipped_no_phone: 'Sin celular',
+  skipped_no_code: 'Sin código',
+  preview_total: 'Mensajes que saldrían',
   days: 'Días procesados',
   processed: 'Suscripciones procesadas',
   generated: 'Períodos generados',
@@ -58,6 +80,11 @@ const SUMMARY_LABELS = {
 
 export function summaryLabel(key) {
   return SUMMARY_LABELS[key] || key;
+}
+
+// Quién lanzó la corrida. El origen manual es lo que explica una corrida a deshora.
+export function originLabel(origin) {
+  return Number(origin) === 2 ? 'Lanzada a mano' : 'Programada';
 }
 
 // 4120 → "4,1 s"; 320 → "320 ms". La duración es lo que delata una corrida que se degradó.

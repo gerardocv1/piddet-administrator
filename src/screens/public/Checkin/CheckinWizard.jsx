@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, Input, Select } from '../../../components';
+import { Button, Input, Select, Spinner } from '../../../components';
 import { api } from '../../../lib/api.js';
 import { reservationMoney, ARRIVAL_SLOTS, ID_TYPES } from '../../../lib/reservationLabels.js';
 import s from './CheckinWizard.module.css';
@@ -12,11 +12,15 @@ const STEPS = [
   { title: 'Llegada', hint: 'Hora aproximada en que llegas' },
 ];
 
-// Pre-check-in del huésped (público, móvil-first). La entrada es siempre código de reserva +
-// nombre del titular: el enlace del alojamiento (/checkin?code=…) solo autocompleta el código,
-// nunca abre la reserva por sí solo. Ya dentro, registra al titular con la foto de su documento y
-// a todos sus acompañantes, porque la reserva se hizo para un número concreto de personas.
-export function CheckinWizard({ code: linkCode }) {
+// Pre-check-in del huésped (público, móvil-first). Dos entradas, y la diferencia importa:
+//  - Digitada (/checkin?code=…): código de reserva + nombre del titular. El código solo autocompleta
+//    el formulario, nunca abre la reserva por sí solo.
+//  - Por el enlace del SMS (/r/{código único de consulta}): abre la reserva sin pedir nada. El
+//    código es secreto y solo llegó al celular del titular, y saltarse la validación es justo lo que
+//    evita que el huésped abandone aquí y llegue al alojamiento sin el pre-check-in hecho.
+// Ya dentro, registra al titular con la foto de su documento y a todos sus acompañantes, porque la
+// reserva se hizo para un número concreto de personas.
+export function CheckinWizard({ code: linkCode, accessCode }) {
   const [code, setCode] = React.useState('');
   const [summary, setSummary] = React.useState(null);
   const [step, setStep] = React.useState(0); // 0 resumen, 1 titular, 2 acompañantes, 3 llegada, 4 ok
@@ -26,6 +30,11 @@ export function CheckinWizard({ code: linkCode }) {
   const [arrival, setArrival] = React.useState('');
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState('');
+  // Enlace del SMS: mientras resuelve no se muestra el formulario (sería pedirle lo que el enlace
+  // ya trae). `linkClosed` es la reserva cerrada; `linkFailed`, el enlace que ya no vale.
+  const [linkLoading, setLinkLoading] = React.useState(!!accessCode);
+  const [linkClosed, setLinkClosed] = React.useState(null);
+  const [linkFailed, setLinkFailed] = React.useState(false);
 
   // Precarga al titular y deja tantos acompañantes como personas se reservaron (menos el titular),
   // reusando los que ya estuvieran registrados.
@@ -59,6 +68,33 @@ export function CheckinWizard({ code: linkCode }) {
       };
     }));
   }, []);
+
+  // Entrada por el enlace corto: se abre la reserva al montar. El GET es idempotente, así que el
+  // doble montaje de StrictMode no hace daño; `alive` evita escribir estado tras desmontar.
+  React.useEffect(() => {
+    if (!accessCode) return undefined;
+    let alive = true;
+
+    (async () => {
+      try {
+        const data = await api.checkinAccessByLink(accessCode);
+        if (!alive) return;
+        setCode(data.code);
+        applySummary(data);
+        setStep(0);
+      } catch (e) {
+        if (!alive) return;
+        // 409: la reserva existe pero ya cerró; cualquier otro fallo es un enlace que ya no vale y
+        // se cae al formulario de siempre (código + nombre), que sigue funcionando.
+        if (e?.status === 409 && e.data) setLinkClosed(e.data);
+        else setLinkFailed(true);
+      } finally {
+        if (alive) setLinkLoading(false);
+      }
+    })();
+
+    return () => { alive = false; };
+  }, [accessCode, applySummary]);
 
   const setHolderField = (k, v) => setHolder((h) => ({ ...h, [k]: v }));
   const setCompanionField = (key, k, v) => setCompanions((c) => c.map((x) => (x.key === key ? { ...x, [k]: v } : x)));
@@ -103,12 +139,42 @@ export function CheckinWizard({ code: linkCode }) {
     }
   };
 
+  // El enlace del SMS todavía está resolviendo: no se pide nada, se espera.
+  if (linkLoading) {
+    return (
+      <div className={s.screen}>
+        <div className={s.card}>
+          <div className={s.brand}>piddet</div>
+          <div className={s.linkLoading}>
+            <Spinner />
+            <p className={s.subtitle}>Abriendo tu reserva…</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // El enlace era de una reserva ya cerrada: se explica, con la opción de buscar otra a mano.
+  if (linkClosed) {
+    return (
+      <div className={s.screen}>
+        <div className={s.card}>
+          <ClosedReservation info={linkClosed} code="" onRetry={() => setLinkClosed(null)} />
+        </div>
+      </div>
+    );
+  }
+
   // Puerta de entrada: sin reserva validada no se muestra nada de ella.
   if (!summary) {
     return (
       <div className={s.screen}>
         <div className={s.card}>
-          <AccessForm initialCode={linkCode} onAccess={(data, usedCode) => { setCode(usedCode); applySummary(data); setStep(0); }} />
+          <AccessForm
+            initialCode={linkCode}
+            notice={linkFailed ? 'Ese enlace ya no está disponible. Escribe tu código de reserva y tu nombre para continuar.' : ''}
+            onAccess={(data, usedCode) => { setCode(usedCode); applySummary(data); setStep(0); }}
+          />
         </div>
       </div>
     );
@@ -364,7 +430,7 @@ function PaymentPendingNotice({ validating, deadline, companyName, whatsapp, cod
 }
 
 // Entrada a la reserva: código (autocompletado desde el enlace) + nombre del titular.
-function AccessForm({ initialCode, onAccess }) {
+function AccessForm({ initialCode, notice = '', onAccess }) {
   const [code, setCode] = React.useState((initialCode || '').toUpperCase());
   const [name, setName] = React.useState('');
   const [loading, setLoading] = React.useState(false);
@@ -399,6 +465,7 @@ function AccessForm({ initialCode, onAccess }) {
         <h1 className={s.title}>Pre-check-in</h1>
         <p className={s.subtitle}>Adelanta tu registro y llega directo a disfrutar.</p>
       </div>
+      {notice && <div className={s.notice}><i className="fas fa-circle-info" /> {notice}</div>}
       <div className={s.form}>
         <Input label="Código de la reserva" icon="fas fa-hashtag" placeholder="Ej. K7M2PQ4XTR"
           value={code} autoCapitalize="characters" autoCorrect="off" spellCheck={false}
@@ -422,7 +489,10 @@ function AccessForm({ initialCode, onAccess }) {
 // información y no como fallo. El contacto es por WhatsApp al teléfono de la compañía.
 function ClosedReservation({ info, code, onRetry }) {
   const whatsappDigits = String(info.company_phone || '').replace(/\D+/g, '');
-  const whatsappText = encodeURIComponent(`Hola, tengo una consulta sobre mi reserva ${code}.`);
+  // Por el enlace del SMS no se conoce el código de la reserva: el mensaje se arma sin él.
+  const whatsappText = encodeURIComponent(code
+    ? `Hola, tengo una consulta sobre mi reserva ${code}.`
+    : 'Hola, tengo una consulta sobre mi reserva.');
 
   return (
     <>

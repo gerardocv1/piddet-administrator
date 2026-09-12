@@ -27,4 +27,15 @@ export const scheduledTasksService = {
     http.get(`${base()}/runs${qs({ command, status, date_from: dateFrom, date_to: dateTo, page, per_page: perPage })}`, { paginated: true }),
   // Detalle de una corrida (con el error completo).
   getScheduledTaskRun: (runId) => http.get(`${base()}/runs/${runId}`),
+  // Lanza una tarea a mano: cuando el cron no corrió o la hora se pasó. No espera a que termine
+  // (puede tardar minutos): devuelve la corrida "en cola" y la bitácora la sigue.
+  // { command, dryRun, date, companyId, days } — `dryRun` solo en las tareas que notifican.
+  runScheduledTask: ({ command, dryRun = false, date = '', companyId = '', days = '' } = {}) =>
+    http.post(`${base()}/run`, {
+      command,
+      ...(dryRun ? { dry_run: true } : {}),
+      ...(date ? { date } : {}),
+      ...(companyId ? { company_id: Number(companyId) } : {}),
+      ...(days ? { days: Number(days) } : {}),
+    }),
 };

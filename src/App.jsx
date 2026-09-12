@@ -78,8 +78,15 @@ const PUBLIC_MENU_RE = /^\/([^/]+)\/m\/([^/]+)\/?$/;
 // /checkin/{código} por los enlaces ya compartidos.
 const PUBLIC_CHECKIN_RE = /^\/checkin(?:\/([^/]+))?\/?$/;
 
+// Enlace corto del SMS: /r/{código único de consulta}. A diferencia de /checkin, este SÍ abre la
+// reserva sin pedir el nombre —el código es secreto y solo llegó al celular del titular—, y es lo
+// que evita que el huésped abandone el pre-check-in en la pantalla de validación. La ruta es de una
+// letra a propósito: un SMS se paga por caracteres.
+const PUBLIC_CHECKIN_LINK_RE = /^\/r\/([^/]+)\/?$/;
+
 // Patrón de la portada pública de una compañía: /{username-compañía} (un solo segmento). El panel
 // vive bajo /admin, así que cualquier raíz limpia de un segmento (salvo `admin`) es una empresa.
+// Ojo: /r/{código} (el enlace del SMS) son dos segmentos y se atiende antes, así que no colisiona.
 const PUBLIC_COMPANY_RE = /^\/([^/]+)\/?$/;
 
 // Hospedaje público: /{username-compañía}/hospedaje (listado de unidades reservables, con filtro
@@ -129,6 +136,12 @@ export default function App() {
     const queryCode = new URLSearchParams(window.location.search).get('code');
     const pathCode = checkinMatch[1] ? decodeURIComponent(checkinMatch[1]) : null;
     return <CheckinWizard code={queryCode || pathCode} />;
+  }
+
+  // 1a-ter) Enlace corto del SMS: abre la reserva directamente con el código único de consulta.
+  const checkinLinkMatch = path.match(PUBLIC_CHECKIN_LINK_RE);
+  if (checkinLinkMatch) {
+    return <CheckinWizard accessCode={decodeURIComponent(checkinLinkMatch[1])} />;
   }
 
   // 1a-ter) Hospedaje público de la compañía: listado de unidades y detalle de cada una.
