@@ -37,12 +37,28 @@ oscuro ya funciona gratis.
 **Implicación práctica:** si al añadir estilos usas un color fijo en vez de un token, romperás
 el modo oscuro. Usa siempre tokens.
 
+`tokens.css` declara además `color-scheme` (`light` en `:root`, `dark` en `[data-theme="dark"]`):
+le dice al navegador que la app gestiona su propio tema. Sin eso, el **modo oscuro automático de
+Android** repinta fondos por su cuenta y los controles nativos (scrollbars, selectores de fecha,
+autocompletado) se quedan en el esquema del sistema.
+
+## Una superficie no se pinta con un degradado
+
+Cualquier superficie sobre la que se lea texto —barras de navegación, tarjetas, cabeceras fijas—
+lleva su **`background-color` de color plano**. Un degradado puede ir encima como adorno, nunca
+como único fondo: basta que el navegador no entienda una función del valor (`color-mix()`, por
+ejemplo, que no existe antes de Chrome 111 ni en versiones viejas de Samsung Internet) para que
+descarte la declaración entera y deje la superficie transparente, con el texto sobre el
+contenido. El dock móvil lo aprendió por las malas: su fade vive ahora en `::after`, encima de la
+barra, y perderlo solo cuesta el difuminado.
+
 ## Checklist al añadir/editar estilos
 
 1. [ ] El estilo vive en el `*.module.css` del componente/pantalla (no inline).
 2. [ ] Colores/espaciados/tipografías vía `var(--...)`, no valores fijos.
 3. [ ] Si necesitas un token nuevo, lo defines en `tokens.css` (y su variante dark si aplica).
 4. [ ] Verificado en claro y oscuro.
+5. [ ] Si es una superficie con texto encima, su fondo es un color plano (no solo un degradado).
 
 ## Campos de formulario: una sola escala en el teléfono
 

@@ -225,6 +225,11 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
 - **Flujo principal:** `/rentable-units` configura las unidades (espacios, inclusiones, fotos);
   `/reservations` opera calendario, creación asistida, confirmación, check-in, consumos y
   cargos, abonos y checkout.
+- **Duplicar una unidad** (menú ⋮ del detalle → *Duplicar unidad*): pide solo el nombre de la
+  copia y el backend clona el resto —datos, horarios, tarifa, inclusiones, espacios y fotos—,
+  dejándola con el mismo estado que la original. Las fotos se copian también en el
+  almacenamiento, así que quitar una en la copia no toca la unidad original. Registrar la
+  segunda cabaña igual a la primera deja de ser volver a llenar el formulario.
 - **Alertas del listado.** Las dos las decide el backend y el panel solo las pinta:
   - **🎈 decoración** — la reserva con un servicio de decoración llega con `has_decoration`: badge
     con el emoji tras la fecha de entrada (listado), emoji en el chip y el resumen del calendario,

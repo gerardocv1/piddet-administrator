@@ -143,6 +143,33 @@ export function RentableUnitDetail() {
     }
   };
 
+  // ── Duplicar la unidad ────────────────────────────────────────────────
+  // El backend clona datos, inclusiones, espacios y fotos (copiadas en el almacenamiento, no
+  // compartidas); aquí solo se pide el nombre de la copia.
+  const [dupName, setDupName] = React.useState(null); // null = modal cerrado
+  const [dupSaving, setDupSaving] = React.useState(false);
+  const [dupError, setDupError] = React.useState('');
+
+  const duplicate = async () => {
+    if (dupSaving) return;
+    const name = (dupName || '').trim();
+    if (!name) {
+      setDupError('Escribe el nombre de la nueva unidad.');
+      return;
+    }
+    setDupSaving(true); setDupError('');
+    try {
+      const created = await api.duplicateRentableUnit(unitId, name);
+      setDupName(null);
+      toast({ tone: 'success', title: 'Unidad duplicada' });
+      navigate(`/rentable-units/${created.id}`);
+    } catch (e) {
+      setDupError(e?.message || 'No se pudo duplicar la unidad.');
+    } finally {
+      setDupSaving(false);
+    }
+  };
+
   const toggleStatus = async () => {
     const next = Number(data.status) === 1 ? 0 : 1;
     setData(await api.setRentableUnitStatus(unitId, next));
@@ -174,6 +201,11 @@ export function RentableUnitDetail() {
         action={isEdit ? <Switch checked={active} onChange={toggleStatus} label="Reservable" /> : null}
         menu={isEdit ? [
           { label: 'Actualizar', icon: 'fas fa-rotate-right', disabled: loading, onClick: reload },
+          {
+            label: 'Duplicar unidad',
+            icon: 'fas fa-copy',
+            onClick: () => { setDupError(''); setDupName(`${data.name} (copia)`); },
+          },
         ] : []}
       />
 
@@ -257,6 +289,28 @@ export function RentableUnitDetail() {
         <SpacesEditor unit={data} onChange={setData} />
       ) : (
         <NewSpaces spaces={newSpaces} onChange={setNewSpaces} />
+      )}
+
+      {/* Duplicar: solo existe en edición (una unidad nueva no tiene nada que copiar). */}
+      {isEdit && (
+      <Modal open={dupName !== null} size="sm" title="Duplicar unidad" onClose={() => setDupName(null)}
+        footer={<>
+          <Button variant="secondary" onClick={() => setDupName(null)}>Cancelar</Button>
+          <Button variant="primary" icon="fas fa-copy" loading={dupSaving} onClick={duplicate}>Duplicar</Button>
+        </>}>
+        <div className={s.formCol}>
+          <Input label="Nombre de la nueva unidad" icon="fas fa-tag" placeholder="Ej. Cabaña El Roble 2"
+            value={dupName || ''} onChange={(e) => setDupName(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') duplicate(); }} />
+          <p className={s.faint}>
+            Se copia todo lo de <strong>{data.name}</strong>: datos, horarios, tarifa,
+            qué incluye, espacios y fotos. La copia queda con el mismo estado
+            ({active ? 'reservable' : 'inactiva'}) y sus fotos son propias: quitarlas no afecta a
+            la unidad original.
+          </p>
+          {dupError && <Alert tone="danger" onClose={() => setDupError('')}>{dupError}</Alert>}
+        </div>
+      </Modal>
       )}
     </div>
   );
