@@ -7,6 +7,12 @@
    Fonts responda. Los tokens declaran solo los fallbacks. */
 
 :root {
+  /* El panel gestiona su propio tema (claro/oscuro con data-theme), así que se lo declara al
+     navegador: sin esto, el modo oscuro automático de Android repinta fondos por su cuenta y
+     superficies como el dock móvil salen con un color que no es el suyo. De paso, los controles
+     nativos (scrollbars, selectores de fecha, autocompletado) siguen el tema de la app. */
+  color-scheme: light;
+
   /* ---- Primario de acción (azul petróleo) ----
      Deriva del petróleo de la marca (--brand-dark) y combina con el naranja. Es el color de
      botones, enlaces, foco y estados activos: el naranja resultaba invasivo repetido en cada
@@ -200,6 +206,8 @@
    tintes semánticos; el resto de componentes usan estas vars.
    ============================================================ */
 [data-theme="dark"] {
+  color-scheme: dark;
+
   /* Neutros invertidos: 900 = texto claro · 100 = fondo sutil */
   --gray-900: #f4f6fa;
   --gray-800: #e6eaf1;

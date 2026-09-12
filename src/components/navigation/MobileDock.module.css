@@ -1,9 +1,13 @@
-/* Dock móvil — barra inferior a lo ancho, sin superficie propia: el fondo es un degradado que
-   va de transparente al fondo de la app, de modo que el contenido pasa por debajo y se
-   desvanece detrás en vez de chocar contra un borde. Solo existe en móvil; en escritorio la
-   navegación es el Sidebar. Un filete al terminar el fade separa el body del menú, y encima de
-   los destinos puede ir un submenú horizontal con las secciones del módulo activo. Va por debajo
-   del cajón lateral (z 55/60) y de los modales (1050): cualquier flotante lo cubre. */
+/* Dock móvil — barra inferior a lo ancho. La superficie es un COLOR PLANO y el desvanecido del
+   contenido vive aparte, en ::after, por encima de la barra: así el contenido sigue pasando por
+   debajo y difuminándose en vez de chocar contra un borde, pero la legibilidad del menú no
+   depende de que el navegador sepa pintar un degradado. Antes toda la superficie ERA el
+   degradado, y como usa color-mix(), un navegador que no la resuelva —Chrome o Samsung Internet
+   anteriores a 111, el modo oscuro automático de Android— descarta la declaración completa y
+   deja la barra transparente, con los iconos leyéndose sobre el contenido. Un filete separa el
+   body del menú, y encima de los destinos puede ir un submenú horizontal con las secciones del
+   módulo activo. Va por debajo del cajón lateral (z 55/60) y de los modales (1050): cualquier
+   flotante lo cubre. */
 
 .dock {
   display: none;
@@ -19,31 +23,46 @@
     display: flex;
     flex-direction: column;
     gap: 0;
-    /* El aire de arriba es un fade corto: ahí el contenido todavía se ve, difuminándose, y al
-       terminar lo remata el filete divisorio (::before). De ahí hacia abajo la barra es opaca,
-       así que iconos y nombres nunca se leen sobre el contenido. */
-    padding: 1rem max(0.35rem, env(safe-area-inset-left)) calc(0.2rem + env(safe-area-inset-bottom)) max(0.35rem, env(safe-area-inset-right));
-    /* Los tramos llevan el tinte del fondo (no la palabra `transparent`, que interpola hacia
-       negro y ensucia el degradado en algunos navegadores). */
-    background: linear-gradient(
-      to bottom,
-      color-mix(in srgb, var(--bg-body) 2%, transparent) 0,
-      var(--bg-body) 0.75rem
-    );
-    pointer-events: none;   /* el degradado no intercepta toques; los destinos sí (ver .item) */
+    /* La barra empieza en el filete divisorio (::before) y de ahí hacia abajo es opaca, así que
+       iconos y nombres nunca se leen sobre el contenido. El fade queda por encima (::after). */
+    padding: 0.25rem max(0.35rem, env(safe-area-inset-left)) calc(0.2rem + env(safe-area-inset-bottom)) max(0.35rem, env(safe-area-inset-right));
+    /* Color plano, sin funciones que un navegador pueda no entender: sobre esto se leen los
+       iconos y sus nombres. El área segura del gesto de Android/iOS entra en el padding, así que
+       queda pintada del mismo color hasta el borde de la pantalla. */
+    background-color: var(--bg-body);
+    pointer-events: none;   /* la barra no intercepta toques; los destinos sí (ver .item) */
   }
 }
 
-/* Línea que separa el body del menú: se dibuja donde el fade termina y la barra ya es opaca. */
+/* Línea que separa el body del menú: se dibuja donde empieza la superficie opaca. */
 @media (max-width: 860px) {
   .dock::before {
     content: '';
     position: absolute;
-    top: 0.75rem;
+    top: 0;
     left: 0;
     right: 0;
     height: 1px;
     background: var(--border-color);
+  }
+
+  /* Desvanecido del contenido, JUSTO ENCIMA de la barra (fuera de ella). Es adorno: si el
+     navegador no resuelve el degradado, lo único que se pierde es el difuminado, no el fondo del
+     menú. Los tramos llevan el tinte del fondo (no la palabra `transparent`, que interpola hacia
+     negro y ensucia el degradado en algunos navegadores). */
+  .dock::after {
+    content: '';
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    right: 0;
+    height: 0.75rem;
+    background: linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--bg-body) 2%, transparent),
+      var(--bg-body)
+    );
+    pointer-events: none;
   }
 }
 

@@ -34,10 +34,10 @@ function subItemsFor(pathname, permissions, activeFunctionalities) {
 }
 
 /**
- * MobileDock — navegación principal en móvil: barra inferior a lo ancho, sin superficie propia.
- * El fondo es un degradado que va de transparente (arriba) al fondo de la app (abajo), así que
- * el contenido **pasa por debajo** y se desvanece detrás de la barra en vez de chocar con un
- * borde. Reemplaza a la hamburguesa.
+ * MobileDock — navegación principal en móvil: barra inferior a lo ancho, con el fondo de la app
+ * como superficie. El contenido **pasa por debajo** y se desvanece justo antes de llegar a ella
+ * (un degradado corto por encima de la barra) en vez de chocar con un borde. Reemplaza a la
+ * hamburguesa.
  *
  * Lleva Inicio + los primeros módulos principales (los de Oferta y Operación), y «Más», que
  * navega al menú completo a pantalla propia (/more) — el dock sigue visible y «Más» queda
