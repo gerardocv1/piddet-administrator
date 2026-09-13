@@ -33,6 +33,7 @@ import { shiftsService } from './services/shifts.js';
 import { reservationsService } from './services/reservations.js';
 import { gymService } from './services/gym.js';
 import { orderSyncFailuresService } from './services/orderSyncFailures.js';
+import { sentNotificationsService } from './services/sentNotifications.js';
 import { scheduledTasksService } from './services/scheduledTasks.js';
 import { storesService } from './services/stores.js';
 import { usersService } from './services/users.js';
@@ -68,6 +69,7 @@ export const api = {
   ...reservationsService,
   ...gymService,
   ...orderSyncFailuresService,
+  ...sentNotificationsService,
   ...scheduledTasksService,
   ...storesService,
   ...usersService,

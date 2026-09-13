@@ -299,6 +299,7 @@ export const mockAssignablePermissions = [
     { name: 'order-sync-failure-admin', description: 'Administrar fallos de sincronización del POS' },
   ] },
   { module_id: 14, module_name: 'Tareas programadas', permissions: [
+    { name: 'api-module-notifications', description: 'Ver el historial de notificaciones enviadas por la compañía' },
     { name: 'api-module-scheduled-tasks', description: 'Ver la bitácora de ejecuciones del scheduler' },
   ] },
   { module_id: 5, module_name: 'Gastos', permissions: [
@@ -465,7 +466,7 @@ export const mockMenuItems = [
 // el panel muestra Productos (y sus categorías), Menús y Usuarios; el resto queda oculto.
 const mockPermissions = {
   roles: ['Administrador'],
-  permissions: ['user-administrator', 'admin-general', 'role-list', 'role-create', 'role-update', 'role-delete', 'role-assign', 'permission-list', 'permission-update', 'api-module-menus', 'api-module-products', 'api-module-general-options', 'api-module-company', 'company-edit-functionalities', 'api-module-stores', 'table-list', 'table-create', 'table-update', 'api-module-orders', 'sales-report', 'order-cancel', 'order-sync-failure-admin', 'api-module-expenses', 'expenses-report', 'expense-annul', 'api-module-shifts', 'shift-global-admin', 'api-module-reservations', 'api-module-rentable-units', 'reservation-checkout', 'reservation-cancel', 'reservation-payment-annul', 'api-module-gym', 'api-module-gym-plans', 'gym-plans-create', 'gym-plans-edit', 'gym-members-create', 'gym-members-edit', 'gym-subscriptions-create', 'gym-subscriptions-cancel', 'gym-payments-create', 'gym-payments-annul', 'gym-checkins-create', 'gym-checkins-edit', 'gym-measurement-config', 'gym-periods-recalculate', 'company-catalog-purge', 'company-master', 'api-module-scheduled-tasks'],
+  permissions: ['user-administrator', 'admin-general', 'role-list', 'role-create', 'role-update', 'role-delete', 'role-assign', 'permission-list', 'permission-update', 'api-module-menus', 'api-module-products', 'api-module-general-options', 'api-module-company', 'company-edit-functionalities', 'api-module-stores', 'table-list', 'table-create', 'table-update', 'api-module-orders', 'sales-report', 'order-cancel', 'order-sync-failure-admin', 'api-module-expenses', 'expenses-report', 'expense-annul', 'api-module-shifts', 'shift-global-admin', 'api-module-reservations', 'api-module-rentable-units', 'reservation-checkout', 'reservation-cancel', 'reservation-payment-annul', 'api-module-gym', 'api-module-gym-plans', 'gym-plans-create', 'gym-plans-edit', 'gym-members-create', 'gym-members-edit', 'gym-subscriptions-create', 'gym-subscriptions-cancel', 'gym-payments-create', 'gym-payments-annul', 'gym-checkins-create', 'gym-checkins-edit', 'gym-measurement-config', 'gym-periods-recalculate', 'company-catalog-purge', 'company-master', 'api-module-notifications', 'api-module-scheduled-tasks'],
 };
 
 // Empresa (tenant) activa y empresas disponibles para el usuario (SaaS multi-tenant).
@@ -2283,6 +2284,84 @@ function validateSyncFailurePayload(payload) {
   if (!payload.payment?.status) errors['payment.status'] = ['El campo payment.status es obligatorio.'];
   if (!payload.creator) errors.creator = ['El payload no trae creator; en el retry no hay fallback al usuario autenticado.'];
   return errors;
+}
+
+// CONTRATO BACKEND: /companies/{company}/notifications (listado paginado) y /summary.
+// Historial de lo que la compañía ha ENVIADO: a quién, con qué texto, por qué motivo y en qué
+// estado quedó. `status` 1 pendiente, 2 enviada, 3 fallida; `type` 1 SMS, 2 push, 3 correo.
+// Es de solo lectura y siempre de la compañía activa.
+
+const mockSentNotifications = [
+  {
+    id: 512, date: isoDay(0), created_at: `${isoDay(0)}T10:00:04`, status: 2, type: 1,
+    integration: 'Hablame', source_reference: 'RESERVATION_CHECKIN_REMINDER',
+    addressee: '573001234567',
+    message: 'Pepito, hoy llegas a Cabanas El Roble (Cabana 2). Completa tu pre-check-in antes de viajar: https://piddet.com/r/k7m2rq9xv4bd',
+    deep_link: null, recipient_id: 812, shipping_reference: 'sms-99120', read_at: null, clicked_at: null,
+  },
+  {
+    id: 511, date: isoDay(0), created_at: `${isoDay(0)}T10:00:03`, status: 2, type: 1,
+    integration: 'Hablame', source_reference: 'RESERVATION_CHECKIN_REMINDER',
+    addressee: '573009876543',
+    message: 'Marta, hoy llegas a Cabanas El Roble (Cabana 5). Completa tu pre-check-in antes de viajar: https://piddet.com/r/b4n8xq2wm7dc',
+    deep_link: null, recipient_id: 813, shipping_reference: 'sms-99121', read_at: null, clicked_at: null,
+  },
+  {
+    id: 508, date: isoDay(0), created_at: `${isoDay(0)}T09:12:41`, status: 3, type: 1,
+    integration: 'Hablame', source_reference: 'USER_CHANGE_PASSWORD',
+    addressee: '573005558899',
+    message: 'Hola Andres, tu contrasena fue cambiada. Si no fuiste tu, contacta con soporte en piddet.com',
+    deep_link: null, recipient_id: 44, shipping_reference: null, read_at: null, clicked_at: null,
+  },
+  {
+    id: 505, date: isoDay(1), created_at: `${isoDay(1)}T18:00:02`, status: 2, type: 1,
+    integration: 'Hablame', source_reference: 'REGISTER_USER',
+    addressee: '573002223344',
+    message: 'Hola Ana, tu codigo de acceso es 4821. Vence en 10 minutos.',
+    deep_link: null, recipient_id: 91, shipping_reference: 'sms-98810', read_at: null, clicked_at: null,
+  },
+  {
+    id: 501, date: isoDay(2), created_at: `${isoDay(2)}T12:31:10`, status: 1, type: 3,
+    integration: 'Gmail', source_reference: 'TICKET_REGISTERED',
+    addressee: 'laura@example.com',
+    message: 'Hola Laura, registramos tu solicitud #2291. Te avisamos cuando tengamos novedades.',
+    deep_link: 'https://app.piddet.com/tickets/2291', recipient_id: 501, shipping_reference: null,
+    read_at: null, clicked_at: null,
+  },
+];
+
+function resolveSentNotificationsMock(path, query) {
+  const m = path.match(/^\/companies\/[^/]+\/notifications(\/.*)?$/);
+  if (!m) return undefined;
+  const sub = m[1] || '';
+
+  const search = (query.get('_search') || '').toLowerCase();
+  const rows = mockSentNotifications
+    .filter((n) => !query.get('date_from') || n.date >= query.get('date_from'))
+    .filter((n) => !query.get('date_to') || n.date <= query.get('date_to'))
+    .filter((n) => !query.get('status') || n.status === Number(query.get('status')))
+    .filter((n) => !query.get('type') || n.type === Number(query.get('type')))
+    .filter((n) => !query.get('source_reference') || n.source_reference === query.get('source_reference'))
+    // Como el backend: la búsqueda mira destinatario Y texto.
+    .filter((n) => !search
+      || String(n.addressee).toLowerCase().includes(search)
+      || String(n.message).toLowerCase().includes(search));
+
+  if (sub === '/summary') {
+    const count = (status) => rows.filter((n) => n.status === status).length;
+    return {
+      counters: { total: rows.length, sent: count(2), pending: count(1), error: count(3) },
+      // Los motivos salen de lo enviado de verdad, sin filtrar: el desplegable no se vacía solo.
+      source_references: [...new Set(mockSentNotifications.map((n) => n.source_reference))].filter(Boolean).sort(),
+    };
+  }
+
+  if (sub !== '') return undefined;
+
+  return mockPaginate(
+    [...rows].sort((a, b) => String(b.date).localeCompare(String(a.date)) || b.id - a.id),
+    query
+  );
 }
 
 // CONTRATO BACKEND: /companies/{company}/scheduled-tasks (status, runs paginado, runs/{id},
@@ -5449,6 +5528,10 @@ export function resolveMock(rawPath, opts = {}) {
   // Debe resolverse ANTES que orders: su ruta cuelga de /orders y el matcher de órdenes la capturaría.
   const syncFailures = resolveSyncFailuresMock(path, query, opts);
   if (syncFailures !== undefined) return syncFailures;
+
+  // Historial de notificaciones enviadas por la compañía activa.
+  const sentNotifications = resolveSentNotificationsMock(path, query);
+  if (sentNotifications !== undefined) return sentNotifications;
 
   // Bitácora del scheduler (company-scoped en la ruta, de plataforma en el contenido).
   const scheduledTasks = resolveScheduledTasksMock(path, query, opts);

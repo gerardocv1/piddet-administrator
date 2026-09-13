@@ -1,0 +1,49 @@
+/* Historial de notificaciones enviadas: detalle de un envío. */
+
+.detail {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.detailGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px 18px;
+}
+
+.detailGrid > * {
+  min-width: 0;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.fieldLabel {
+  color: var(--gray-500);
+  font-size: var(--text-sm);
+}
+
+.fieldValue {
+  color: var(--gray-800);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+/* El texto tal como lo recibió la persona: se lee, no se resume. */
+.message {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  background: var(--gray-100);
+  color: var(--gray-800);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 640px) {
+  .detailGrid { grid-template-columns: 1fr; }
+}
