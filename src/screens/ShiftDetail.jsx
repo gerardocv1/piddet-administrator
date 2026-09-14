@@ -1,17 +1,18 @@
 import React from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Card, Badge, Button, Spinner, DataTable, PageHeader, Modal, MoneyInput, ConfirmDialog, Alert, useToast } from '../components';
+import { Card, Badge, Button, Spinner, DataTable, PageHeader, Modal, MoneyInput, Select, Input, ConfirmDialog, Alert, useToast } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { usePermissions } from '../lib/permissions/usePermissions.js';
-import { shiftMoney, shiftDateTime, shiftAssignedNames, SHIFT_TYPE_LABELS, MOVEMENT_TYPE_LABELS } from '../lib/shiftLabels.js';
+import { shiftMoney, shiftDateTime, shiftAssignedNames, isPurchaseShift, SHIFT_TYPE_LABELS, MOVEMENT_TYPE_LABELS } from '../lib/shiftLabels.js';
 import { useSetPageTitle } from '../lib/pageTitle.jsx';
 import { phrase } from '../lib/terms.js';
 import s from './screens.module.css';
 import t from './ShiftDetail.module.css';
 
-const MOVEMENT_BADGE = { order: 'success', expense: 'danger', adjustment: 'warning' };
+const MOVEMENT_BADGE = { order: 'success', addition: 'info', expense: 'danger', adjustment: 'warning' };
 const DOCUMENT_PATHS = { order: '/invoices', expense: '/expenses' };
+const EMPTY_ADDITION = { amount: '', payment_method: '', notes: '' };
 
 // Detalle de un turno de caja: datos de apertura, balance en vivo (base + ventas − gastos, con
 // desglose por método de pago), el arqueo con el que se cerró —cuántos billetes de cada
@@ -21,6 +22,10 @@ const DOCUMENT_PATHS = { order: '/invoices', expense: '/expenses' };
 // Cada movimiento enlaza a su documento: la venta a su factura, el gasto a su detalle y el
 // ajuste del cierre al documento contable que lo respalda (el sobrante se factura y el
 // faltante se registra como gasto, para que la contabilidad cuadre con la plata contada).
+//
+// En un turno de compras no hay ventas: el balance es base + adiciones − gastos. Mientras está
+// abierto, desde el balance se registran las adiciones a la base (monto, método de pago y nota;
+// el backend guarda quién la registró) y al cerrar la diferencia queda anotada sin documento.
 export function ShiftDetail() {
   const { shiftId } = useParams();
   const navigate = useNavigate();
@@ -36,8 +41,23 @@ export function ShiftDetail() {
   const [editBaseOpen, setEditBaseOpen] = React.useState(false);
   const [baseValue, setBaseValue] = React.useState('');
   const [cancelOpen, setCancelOpen] = React.useState(false);
+  const [additionOpen, setAdditionOpen] = React.useState(false);
+  const [addition, setAddition] = React.useState(EMPTY_ADDITION);
   const [busy, setBusy] = React.useState(false);
   const [actionError, setActionError] = React.useState(null);
+
+  const open = data?.status === 'OPEN';
+  const purchase = isPurchaseShift(data);
+  // El catálogo de métodos de pago solo hace falta para registrar adiciones.
+  const methodsFetcher = React.useCallback(
+    () => (open && purchase ? api.paymentMethods() : Promise.resolve([])),
+    [open, purchase],
+  );
+  const { data: paymentMethods } = useResource(methodsFetcher, [], [open, purchase]);
+  const methodOptions = React.useMemo(
+    () => [{ value: '', label: 'Selecciona el método' }, ...(paymentMethods || []).map((m) => ({ value: m.id, label: m.name }))],
+    [paymentMethods],
+  );
 
   // Conserva la consulta del listado al volver.
   const goBack = () => navigate(`/shifts${params.toString() ? `?${params.toString()}` : ''}`);
@@ -63,7 +83,6 @@ export function ShiftDetail() {
     ? canAny(['api-module-orders', 'api-module-orders-own'])
     : canAny(['api-module-expenses', 'api-module-expenses-own']));
 
-  const open = data.status === 'OPEN';
   const cancelled = data.status === 'CANCELLED';
   const balance = data.balance || {};
   const movements = data.movements || [];
@@ -104,6 +123,34 @@ export function ShiftDetail() {
     }
   };
 
+  const openAddition = () => {
+    setAddition(EMPTY_ADDITION);
+    setActionError(null);
+    setAdditionOpen(true);
+  };
+
+  const validAddition = addition.amount !== '' && Number(addition.amount) > 0 && addition.payment_method !== '';
+
+  const submitAddition = async () => {
+    if (busy || !validAddition) return;
+    setBusy(true);
+    setActionError(null);
+    try {
+      await api.addShiftAddition(data.id, {
+        amount: Number(addition.amount),
+        payment_method: addition.payment_method,
+        notes: addition.notes.trim() || undefined,
+      });
+      setAdditionOpen(false);
+      reload();
+      toast({ tone: 'success', title: 'Adición registrada' });
+    } catch (e) {
+      setActionError(e?.message || 'No se pudo registrar la adición.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const confirmCancel = async (reason) => {
     setBusy(true);
     setActionError(null);
@@ -129,9 +176,12 @@ export function ShiftDetail() {
       render: (r) => {
         const label = r.resource_label || r.resource_id || '—';
         const target = documentTarget(r);
-        return target && canOpenDocument(target.type)
-          ? withStrike(r, <Link className={t.docLink} to={target.to} onClick={(e) => e.stopPropagation()}>{label}</Link>)
-          : withStrike(r, label);
+        if (target && canOpenDocument(target.type)) {
+          return withStrike(r, <Link className={t.docLink} to={target.to} onClick={(e) => e.stopPropagation()}>{label}</Link>);
+        }
+        return withStrike(r, r.registered_by_name
+          ? <>{label} <span className={s.faint}>· {r.registered_by_name}</span></>
+          : label);
       },
     },
     { key: 'payment_method', header: 'Método', width: 140, ellipsis: true, render: (r) => withStrike(r, r.payment_method_name || r.payment_method || '—') },
@@ -170,7 +220,7 @@ export function ShiftDetail() {
                 : <Badge variant="neutral" dot>Cerrado</Badge>,
           },
           { label: 'Base', value: shiftMoney(data.base_amount) },
-          data.type === 'EMPLOYEE' && { label: 'Asignado a', value: shiftAssignedNames(data) || '—' },
+          data.type !== 'GLOBAL' && { label: 'Asignado a', value: shiftAssignedNames(data) || '—' },
           { label: 'Abierto por', value: data.opened_by_name || '—' },
           cancelled && { label: 'Cancelado por', value: data.cancelled_by_name || '—' },
           cancelled && { label: 'Cancelación', value: shiftDateTime(data.cancelled_at) },
@@ -201,18 +251,35 @@ export function ShiftDetail() {
 
         <div className={t.sideCol}>
           <Card>
-            <Card.Header title={open ? 'Balance en vivo' : cancelled ? 'Balance al cancelar' : 'Balance del cierre'} />
+            <Card.Header
+              title={open ? 'Balance en vivo' : cancelled ? 'Balance al cancelar' : 'Balance del cierre'}
+              action={open && purchase ? (
+                <Button variant="secondary" size="sm" icon="fas fa-plus" onClick={openAddition}>Adición</Button>
+              ) : null}
+            />
             <Card.Body>
               <div className={t.balance}>
                 <div className={t.balanceRow}>
                   <span>Base</span>
                   <strong>{shiftMoney(balance.base_amount)}</strong>
                 </div>
-                <div className={t.balanceRow}>
-                  <span>{phrase('Ventas')} ({balance.sales?.count ?? 0})</span>
-                  <strong className={t.income}>+ {shiftMoney(balance.sales?.total)}</strong>
-                </div>
-                <MethodBreakdown rows={balance.sales?.by_method} />
+                {purchase ? (
+                  <>
+                    <div className={t.balanceRow}>
+                      <span>Adiciones ({balance.additions?.count ?? 0})</span>
+                      <strong className={t.income}>+ {shiftMoney(balance.additions?.total)}</strong>
+                    </div>
+                    <MethodBreakdown rows={balance.additions?.by_method} />
+                  </>
+                ) : (
+                  <>
+                    <div className={t.balanceRow}>
+                      <span>{phrase('Ventas')} ({balance.sales?.count ?? 0})</span>
+                      <strong className={t.income}>+ {shiftMoney(balance.sales?.total)}</strong>
+                    </div>
+                    <MethodBreakdown rows={balance.sales?.by_method} />
+                  </>
+                )}
                 <div className={t.balanceRow}>
                   <span>Gastos ({balance.expenses?.count ?? 0})</span>
                   <strong className={t.outcome}>− {shiftMoney(balance.expenses?.total)}</strong>
@@ -293,6 +360,26 @@ export function ShiftDetail() {
         </div>
       </Modal>
 
+      <Modal open={additionOpen} size="sm" title="Registrar adición a la base"
+        onClose={() => !busy && setAdditionOpen(false)}
+        footer={<>
+          <Button variant="secondary" onClick={() => !busy && setAdditionOpen(false)}>Volver</Button>
+          <Button variant="primary" icon="fas fa-plus" loading={busy} disabled={!validAddition} onClick={submitAddition}>
+            Registrar
+          </Button>
+        </>}>
+        <div className={s.formCol}>
+          <MoneyInput label="Monto" icon="fas fa-dollar-sign" placeholder="0"
+            value={addition.amount} onChange={(v) => setAddition((a) => ({ ...a, amount: v }))}
+            hint="Se suma al esperado del turno." />
+          <Select label="Método de pago" icon="fas fa-credit-card" options={methodOptions}
+            value={addition.payment_method} onChange={(e) => setAddition((a) => ({ ...a, payment_method: e.target.value }))} />
+          <Input label="Nota" placeholder="Ej.: entrega para el mercado de la tarde (opcional)" maxLength={255}
+            value={addition.notes} onChange={(e) => setAddition((a) => ({ ...a, notes: e.target.value }))} />
+          {actionError && <Alert tone="danger" onClose={() => setActionError(null)}>{actionError}</Alert>}
+        </div>
+      </Modal>
+
       <ConfirmDialog
         open={cancelOpen}
         title="Cancelar turno"
@@ -307,7 +394,7 @@ export function ShiftDetail() {
       >
         <p>
           Esta acción es <strong>irreversible</strong>: el turno quedará cancelado, dejará de
-          registrar {phrase('ventas')} y gastos, y no contará para el arqueo de caja.
+          registrar {purchase ? 'adiciones' : phrase('ventas')} y gastos, y no contará para el arqueo de caja.
         </p>
       </ConfirmDialog>
     </div>

@@ -210,12 +210,21 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
 ### Turnos de caja
 
 - **Descripción:** sesiones de caja con base, movimientos y arqueo de cierre.
-- **Flujo principal:** `/shifts/open` abre un turno **global** (compañía) o **de empleado**
-  con una base de dinero. Un admin asigna el turno de empleado a uno o **varios** cajeros
-  (caja compartida: checkboxes de usuarios; sin selección es suyo); el cajero solo abre el
-  propio. El backend le asocia automáticamente las ventas y gastos de cualquiera de sus
-  asignados como movimientos, y rechaza (409, con el nombre) a quien ya esté en otro abierto. `/shifts/:shiftId` muestra el balance en vivo; `/shifts/:shiftId/close` guía el
-  cierre: contar dinero → balance (base + ventas − gastos) → confirmar.
+- **Flujo principal:** `/shifts/open` abre un turno **global** (compañía), **de cajero** o
+  **de compras** con una base de dinero. Un admin asigna el turno de cajero o de compras a uno
+  o **varios** usuarios (caja compartida: checkboxes de usuarios; sin selección es suyo); el
+  cajero solo abre el propio (elige entre cajero y compras). El backend le asocia
+  automáticamente las ventas y gastos de cualquiera de sus asignados como movimientos, y
+  rechaza (409, con el nombre) a quien ya esté en otro abierto. `/shifts/:shiftId` muestra el
+  balance en vivo; `/shifts/:shiftId/close` guía el cierre: contar dinero → balance (base +
+  ventas − gastos) → confirmar.
+- **Turno de compras (`PURCHASE`):** para quien solo compra. No recibe ventas: su balance es
+  **base + adiciones − gastos**. Mientras está abierto, desde el balance del detalle se
+  registran **adiciones a la base** (monto, método de pago y nota; el backend guarda quién la
+  registró) que aparecen como movimientos `addition` con su método, para diferenciar el efectivo
+  de las transferencias. Los gastos que registran sus asignados entran como en cualquier turno.
+  Al cerrar, el arqueo es el mismo, pero la diferencia **solo queda registrada** en el turno
+  (ajuste sin documento): no se factura el sobrante ni se registra el faltante como gasto.
 - **El conteo es un arqueo, no un total tecleado:** el primer paso pide **cuántos billetes** hay
   de cada denominación (el catálogo lo manda el backend en el balance, `cash_denominations`; las
   **monedas** van por monto suelto) y **cuánto se recibió por cada método distinto al efectivo**
@@ -224,10 +233,11 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
   recibido. Al cerrar viajan las **cantidades** (`cash_count`, `method_count`), no el total: el
   dinero lo suma la API. El arqueo queda guardado y el detalle del turno lo muestra tal cual se
   contó; los turnos cerrados antes de esto solo tienen su total.
-- **Reglas:** la diferencia se respalda con un documento contable real (sobrante → factura de
-  origen `SHIFT`; faltante → gasto en «Ajustes de caja»), que no se asocia a un turno abierto. El
-  turno global solo lo abre y cierra `shift-global-admin`, y no cierra con turnos de cajero
-  abiertos. Cancelar un turno es irreversible y conserva sus movimientos como historial.
+- **Reglas:** en los turnos global y de cajero la diferencia se respalda con un documento
+  contable real (sobrante → factura de origen `SHIFT`; faltante → gasto en «Ajustes de caja»),
+  que no se asocia a un turno abierto; en el de compras no. El turno global solo lo abre y
+  cierra `shift-global-admin`, y no cierra con turnos de cajero o de compras abiertos. Cancelar
+  un turno es irreversible y conserva sus movimientos como historial.
 
 ### Reservas y hospedaje
 

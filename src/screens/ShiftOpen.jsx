@@ -8,28 +8,41 @@ import { usePermissions } from '../lib/permissions/usePermissions.js';
 import { useSetPageTitle } from '../lib/pageTitle.jsx';
 import s from './screens.module.css';
 
-const TYPE_OPTIONS = [
-  { value: 'GLOBAL', label: 'Global (toda la compañía)' },
-  { value: 'EMPLOYEE', label: 'Cajero (uno o varios empleados)' },
+const GLOBAL_OPTION = { value: 'GLOBAL', label: 'Global (toda la compañía)' };
+const ASSIGNED_OPTIONS = [
+  { value: 'EMPLOYEE', label: 'Cajero (vende y gasta)' },
+  { value: 'PURCHASE', label: 'Compras (solo gasta)' },
 ];
 
-// Apertura de un turno de caja: tipo, base de dinero y, para turnos de cajero abiertos por un
-// admin, los empleados asignados (uno o varios: una caja compartida entre dos o más personas
-// registra lo que venda y gaste cualquiera de ellos). El tipo GLOBAL solo aparece con
-// `shift-global-admin` (único permiso que lo administra). El cajero (api-module-shifts-own sin
-// el permiso admin) solo puede abrir SU turno: el tipo va fijo en EMPLOYEE y el backend lo
-// asigna a él mismo. Un usuario no puede estar en dos turnos abiertos: el backend responde 409
-// con el nombre del que ya tiene uno.
+const TYPE_HINTS = {
+  GLOBAL: 'Registra todas las ventas y gastos de la compañía. No se puede cerrar con turnos de cajero o de compras abiertos.',
+  EMPLOYEE: 'Registra solo lo que vendan y gasten los empleados asignados mientras el turno esté abierto.',
+  PURCHASE: 'Para quien solo compra: arranca con una base, se le suman adiciones durante el turno y registra los gastos. Al cerrar solo se anota la diferencia, sin factura ni gasto de respaldo.',
+};
+
+const BASE_HINTS = {
+  PURCHASE: 'Dinero entregado para las compras. Se le podrán sumar adiciones mientras el turno esté abierto.',
+};
+
+// Apertura de un turno de caja: tipo, base de dinero y, para turnos de cajero o de compras
+// abiertos por un admin, los empleados asignados (uno o varios: una caja compartida entre dos o
+// más personas registra lo que venda y gaste cualquiera de ellos). El tipo GLOBAL solo aparece
+// con `shift-global-admin` (único permiso que lo administra). El cajero (api-module-shifts-own
+// sin el permiso admin) solo puede abrir SU turno, de cajero o de compras: el backend lo asigna
+// a él mismo. Un usuario no puede estar en dos turnos abiertos: el backend responde 409 con el
+// nombre del que ya tiene uno.
 export function ShiftOpen() {
   const navigate = useNavigate();
   const { can } = usePermissions();
   const { toast } = useToast();
   const isAdmin = can('api-module-shifts');
   const canGlobal = can('shift-global-admin');
+  const typeOptions = canGlobal ? [GLOBAL_OPTION, ...ASSIGNED_OPTIONS] : ASSIGNED_OPTIONS;
 
   useSetPageTitle('Abrir turno');
 
   const [type, setType] = React.useState(canGlobal ? 'GLOBAL' : 'EMPLOYEE');
+  const assigned = type !== 'GLOBAL';
   // Ids de los usuarios asignados. Vacío = el propio usuario (el backend lo resuelve así).
   const [assignedUserIds, setAssignedUserIds] = React.useState([]);
   const me = auth.getUser();
@@ -68,7 +81,7 @@ export function ShiftOpen() {
       const shift = await api.openShift({
         type,
         base_amount: Number(baseAmount),
-        ...(isAdmin && type === 'EMPLOYEE' && assignedUserIds.length ? { assigned_user_ids: assignedUserIds } : {}),
+        ...(isAdmin && assigned && assignedUserIds.length ? { assigned_user_ids: assignedUserIds } : {}),
       });
       toast({ tone: 'success', title: 'Turno abierto' });
       navigate(`/shifts/${shift.id}`, { replace: true });
@@ -87,25 +100,21 @@ export function ShiftOpen() {
         <Card.Header title="Datos de apertura" />
         <Card.Body>
           <div className={s.formCol}>
-            {canGlobal ? (
-              <Select label="Tipo de turno" icon="fas fa-cash-register"
-                value={type} onChange={(e) => setType(e.target.value)} options={TYPE_OPTIONS}
-                hint={type === 'GLOBAL'
-                  ? 'Registra todas las ventas y gastos de la compañía. No se puede cerrar con turnos de cajero abiertos.'
-                  : 'Registra solo lo que vendan y gasten los empleados asignados mientras el turno esté abierto.'} />
-            ) : isAdmin ? (
+            <Select label="Tipo de turno" icon="fas fa-cash-register"
+              value={type} onChange={(e) => setType(e.target.value)} options={typeOptions}
+              hint={TYPE_HINTS[type]} />
+
+            {!canGlobal && isAdmin && (
+              <p className={s.faint}>El turno global requiere el permiso de administración del turno global.</p>
+            )}
+            {!isAdmin && (
               <p className={s.muted}>
-                <i className="fas fa-cash-register" /> Abrirás un <strong>turno de cajero</strong>. El turno
-                global requiere el permiso de administración del turno global.
-              </p>
-            ) : (
-              <p className={s.muted}>
-                <i className="fas fa-cash-register" /> Abrirás <strong>tu turno de cajero</strong>: registrará
-                las ventas y gastos que hagas mientras esté abierto.
+                <i className="fas fa-user" /> El turno será <strong>tuyo</strong>: registrará lo que
+                {type === 'PURCHASE' ? ' gastes' : ' vendas y gastes'} mientras esté abierto.
               </p>
             )}
 
-            {isAdmin && type === 'EMPLOYEE' && (
+            {isAdmin && assigned && (
               <div className={s.formCol}>
                 <span className={s.muted}>
                   <i className="fas fa-users" /> Asignado a
@@ -122,14 +131,14 @@ export function ShiftOpen() {
                 <span className={s.faint}>
                   {assignedUserIds.length === 0
                     ? 'Sin selección, el turno será tuyo. Marca dos o más personas para una caja compartida.'
-                    : `Registrará lo que vendan y gasten: ${selectedNames.join(', ')}.`}
+                    : `Registrará lo que ${type === 'PURCHASE' ? 'gasten' : 'vendan y gasten'}: ${selectedNames.join(', ')}.`}
                 </span>
               </div>
             )}
 
-            <MoneyInput label="Base en caja" icon="fas fa-dollar-sign" placeholder="0"
+            <MoneyInput label={type === 'PURCHASE' ? 'Base para compras' : 'Base en caja'} icon="fas fa-dollar-sign" placeholder="0"
               value={baseAmount} onChange={setBaseAmount}
-              hint="Dinero en efectivo con el que arranca la caja." />
+              hint={BASE_HINTS[type] || 'Dinero en efectivo con el que arranca la caja.'} />
 
             {err && <Alert tone="danger" onClose={() => setErr(null)}>{err}</Alert>}
 

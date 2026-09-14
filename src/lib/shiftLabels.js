@@ -10,7 +10,12 @@ export const shiftMoney = (value) => {
 export const SHIFT_TYPE_LABELS = {
   GLOBAL: 'Global',
   EMPLOYEE: 'Cajero',
+  PURCHASE: 'Compras',
 };
+
+// El turno de compras no vende: su esperado es base + adiciones − gastos, y su cierre solo
+// registra la diferencia (sin factura del sobrante ni gasto del faltante).
+export const isPurchaseShift = (shift) => shift?.type === 'PURCHASE';
 
 export const SHIFT_STATUS_LABELS = {
   OPEN: 'Abierto',
@@ -32,6 +37,7 @@ export const shiftAssignedNames = (shift) =>
 
 export const MOVEMENT_TYPE_LABELS = {
   order: 'Venta',
+  addition: 'Adición',
   expense: 'Gasto',
   adjustment: 'Ajuste',
 };

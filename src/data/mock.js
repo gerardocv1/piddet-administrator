@@ -3122,9 +3122,11 @@ function resolveExpensesMock(path, query, { method = 'GET', body } = {}) {
 // ── Módulo de turnos de caja (datos en memoria; las mutaciones persisten durante la sesión) ──
 // Replican la forma del backend: turno GLOBAL o EMPLOYEE con base de dinero, movimientos con
 // monto/método denormalizados (una venta con pago mixto genera una fila por pago) y cierre con
-// arqueo (counted/expected/difference + ajuste). Un turno EMPLOYEE puede tener varios usuarios
-// asignados (`assigned_users`, caja compartida); `assigned_user_id`/`assigned_user_name`
-// conservan el primero por compatibilidad. El usuario demo (id 1) es admin del módulo.
+// arqueo (counted/expected/difference + ajuste). Un turno EMPLOYEE o PURCHASE puede tener varios
+// usuarios asignados (`assigned_users`, caja compartida); `assigned_user_id`/`assigned_user_name`
+// conservan el primero por compatibilidad. El de compras (PURCHASE) no vende: recibe adiciones a
+// la base y gastos, y al cerrar solo registra la diferencia. El usuario demo (id 1) es admin del
+// módulo.
 const shiftDateIso = (dayOffset = 0, time = '09:00:00') =>
   `${new Date(Date.now() - dayOffset * 864e5).toISOString().slice(0, 10)} ${time}`;
 
@@ -3164,6 +3166,14 @@ export const mockShifts = [
     closing_notes: null, closed_by: 1, closed_by_name: 'Gerardo Cruz',
     closed_at: shiftDateIso(1, '20:00:00'),
   },
+  {
+    id: 5, type: 'PURCHASE', status: 'OPEN', base_amount: '500000.00',
+    assigned_user_id: 5, assigned_user_name: 'Jorge Díaz', assigned_users: [{ id: 5, name: 'Jorge Díaz' }],
+    opened_by: 1, opened_by_name: 'Gerardo Cruz', opened_at: shiftDateIso(0, '07:00:00'),
+    counted_amount: null, counted_cash_amount: null, counted_non_cash_amount: null,
+    expected_amount: null, difference: null, closing_notes: null,
+    closed_by: null, closed_by_name: null, closed_at: null,
+  },
 ];
 
 export const mockShiftMovements = [
@@ -3188,6 +3198,10 @@ export const mockShiftMovements = [
   { id: 14, shift_id: 4, resource_type: 'order', resource_id: 'ord-8003', resource_label: 'F-0083', payment_method: 'cash', amount: '605000.00', status: 1, annulled_at: null, occurred_at: shiftDateIso(1, '16:10:00') },
   { id: 15, shift_id: 4, resource_type: 'expense', resource_id: '2', resource_label: 'Ferretería El Tornillo', payment_method: 'cash', amount: '60000.00', status: 1, annulled_at: null, occurred_at: shiftDateIso(1, '15:00:00') },
   { id: 16, shift_id: 4, resource_type: 'adjustment', resource_id: null, resource_label: 'Sobrante de caja · A0000001', reference_type: 'order', reference_id: 'ord-8001', payment_method: 'cash', amount: '15000.00', status: 1, annulled_at: null, occurred_at: shiftDateIso(1, '20:00:00') },
+  // Turno de compras abierto (5): la base recibió dos adiciones (una por transferencia) y pagó un gasto.
+  { id: 17, shift_id: 5, resource_type: 'addition', resource_id: null, resource_label: 'Para el mercado de la tarde', payment_method: 'cash', amount: '150000.00', status: 1, registered_by: 1, registered_by_name: 'Gerardo Cruz', annulled_at: null, occurred_at: shiftDateIso(0, '11:30:00') },
+  { id: 18, shift_id: 5, resource_type: 'addition', resource_id: null, resource_label: 'Adición a la base', payment_method: 'nequi', amount: '80000.00', status: 1, registered_by: 5, registered_by_name: 'Jorge Díaz', annulled_at: null, occurred_at: shiftDateIso(0, '13:10:00') },
+  { id: 19, shift_id: 5, resource_type: 'expense', resource_id: '1', resource_label: 'Distribuidora La Cosecha', payment_method: 'cash', amount: '60000.00', status: 1, annulled_at: null, occurred_at: shiftDateIso(0, '12:00:00') },
 ];
 
 // Catálogo de denominaciones del arqueo (espejo de config/shifts.php + lang/es/shifts.php): el
@@ -3274,15 +3288,18 @@ function buildShiftBalance(shift) {
   };
 
   const sales = section('order');
+  const additions = section('addition');
   const expenses = section('expense');
 
   // El mismo esperado partido como se cuenta al cerrar: el efectivo en billetes y monedas, y cada
-  // otro método por su cuenta. Los ajustes nunca entran (nacen al cerrar).
+  // otro método por su cuenta. Las ventas y las adiciones entran, los gastos salen y los ajustes
+  // nunca cuentan (nacen al cerrar).
   const base = Number(shift.base_amount);
   const totalOf = (type, cash) => active
     .filter((mv) => mv.resource_type === type && isShiftCashMethod(mv.payment_method) === cash)
     .reduce((sum, mv) => sum + Number(mv.amount), 0);
   const cashSales = totalOf('order', true);
+  const cashAdditions = totalOf('addition', true);
   const cashExpenses = totalOf('expense', true);
 
   const nonCash = new Map();
@@ -3295,13 +3312,15 @@ function buildShiftBalance(shift) {
   return {
     base_amount: shift.base_amount,
     sales,
+    additions,
     expenses,
     adjustments: section('adjustment'),
-    expected_amount: money(base + Number(sales.total) - Number(expenses.total)),
+    expected_amount: money(base + Number(sales.total) + Number(additions.total) - Number(expenses.total)),
     cash: {
       sales_total: money(cashSales),
+      additions_total: money(cashAdditions),
       expenses_total: money(cashExpenses),
-      expected: money(base + cashSales - cashExpenses),
+      expected: money(base + cashSales + cashAdditions - cashExpenses),
     },
     non_cash: {
       expected: money([...nonCash.values()].reduce((sum, n) => sum + n, 0)),
@@ -3348,8 +3367,9 @@ function resolveShiftsMock(path, query, { method = 'GET', body } = {}) {
   if (sub === 'shifts/current') {
     return {
       global: (canGlobal && mockShifts.find((sh) => sh.type === 'GLOBAL' && sh.status === 'OPEN')) || null,
-      mine: mockShifts.find((sh) => sh.type === 'EMPLOYEE' && sh.status === 'OPEN' && shiftHasUser(sh, 1)) || null,
+      mine: mockShifts.find((sh) => sh.type !== 'GLOBAL' && sh.status === 'OPEN' && shiftHasUser(sh, 1)) || null,
       open_employee_count: mockShifts.filter((sh) => sh.type === 'EMPLOYEE' && sh.status === 'OPEN').length,
+      open_purchase_count: mockShifts.filter((sh) => sh.type === 'PURCHASE' && sh.status === 'OPEN').length,
     };
   }
 
@@ -3358,13 +3378,14 @@ function resolveShiftsMock(path, query, { method = 'GET', body } = {}) {
     if (type === 'GLOBAL' && mockShifts.some((sh) => sh.type === 'GLOBAL' && sh.status === 'OPEN')) {
       shiftConflict('Ya hay un turno global abierto');
     }
-    // Uno o varios asignados (caja compartida); sin lista, el turno es del usuario demo.
+    // Uno o varios asignados (caja compartida); sin lista, el turno es del usuario demo. Un
+    // usuario no puede estar en dos turnos abiertos, sea de cajero o de compras.
     let assignedUsers = [];
-    if (type === 'EMPLOYEE') {
+    if (type !== 'GLOBAL') {
       const ids = [...new Set([body?.assigned_user_id, ...(body?.assigned_user_ids || [])].map(Number).filter((id) => id > 0))];
       assignedUsers = (ids.length ? ids : [1]).map((id) => ({ id, name: mockUsers.find((u) => u.id === id)?.name ?? `Usuario ${id}` }));
       const busy = assignedUsers.filter((u) =>
-        mockShifts.some((sh) => sh.type === 'EMPLOYEE' && sh.status === 'OPEN' && shiftHasUser(sh, u.id)));
+        mockShifts.some((sh) => sh.type !== 'GLOBAL' && sh.status === 'OPEN' && shiftHasUser(sh, u.id)));
       if (busy.length) shiftConflict(`${busy.map((u) => u.name).join(', ')} ya tiene un turno abierto`);
     }
     const row = {
@@ -3408,8 +3429,8 @@ function resolveShiftsMock(path, query, { method = 'GET', body } = {}) {
     if (!sh) return null;
     if (sh.status !== 'OPEN') shiftConflict('El turno ya está cerrado');
     if (sh.type === 'GLOBAL'
-      && mockShifts.some((x) => x.type === 'EMPLOYEE' && x.status === 'OPEN')) {
-      shiftConflict('No se puede cerrar el turno global con turnos de empleado abiertos');
+      && mockShifts.some((x) => x.type !== 'GLOBAL' && x.status === 'OPEN')) {
+      shiftConflict('No se puede cerrar el turno global con turnos de cajero o de compras abiertos');
     }
     const balance = buildShiftBalance(sh);
     // Como el backend: con arqueo el total contado es la SUMA de sus renglones y lo que mande el
@@ -3420,13 +3441,17 @@ function resolveShiftsMock(path, query, { method = 'GET', body } = {}) {
     const difference = counted - Number(balance.expected_amount);
     if (difference !== 0) {
       // Como en el backend: el sobrante se factura y el faltante se registra como gasto, y el
-      // ajuste guarda la referencia al documento (sin sumarlo al balance del turno).
-      const doc = difference > 0
-        ? { reference_type: 'order', reference_id: `ord-adj-${sh.id}`, label: `A${String(sh.id).padStart(7, '0')}` }
-        : { reference_type: 'expense', reference_id: String(nextId(mockExpenses)), label: `Gasto #${nextId(mockExpenses)}` };
+      // ajuste guarda la referencia al documento (sin sumarlo al balance del turno). En el turno
+      // de compras la diferencia solo se registra: sin documento.
+      const label = difference > 0 ? 'Sobrante de caja' : 'Faltante de caja';
+      const doc = sh.type === 'PURCHASE'
+        ? { reference_type: null, reference_id: null, label }
+        : difference > 0
+          ? { reference_type: 'order', reference_id: `ord-adj-${sh.id}`, label: `${label} · A${String(sh.id).padStart(7, '0')}` }
+          : { reference_type: 'expense', reference_id: String(nextId(mockExpenses)), label: `${label} · Gasto #${nextId(mockExpenses)}` };
       mockShiftMovements.push({
         id: nextId(mockShiftMovements), shift_id: sh.id, resource_type: 'adjustment', resource_id: null,
-        resource_label: `${difference > 0 ? 'Sobrante de caja' : 'Faltante de caja'} · ${doc.label}`,
+        resource_label: doc.label,
         reference_type: doc.reference_type, reference_id: doc.reference_id,
         payment_method: 'cash',
         amount: difference.toFixed(2), status: 1, annulled_at: null,
@@ -3445,6 +3470,22 @@ function resolveShiftsMock(path, query, { method = 'GET', body } = {}) {
     sh.closed_by = 1;
     sh.closed_by_name = 'Gerardo Cruz';
     sh.closed_at = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    return decorateShiftDetail(sh);
+  }
+
+  m = sub.match(/^shifts\/(\d+)\/additions$/);
+  if (m && method === 'POST') {
+    const sh = mockShifts.find((x) => x.id === Number(m[1]) && visible(x));
+    if (!sh) return null;
+    if (sh.type !== 'PURCHASE') shiftConflict('Solo un turno de compras admite adiciones a la base');
+    if (sh.status !== 'OPEN') shiftConflict('El turno no está abierto');
+    mockShiftMovements.push({
+      id: nextId(mockShiftMovements), shift_id: sh.id, resource_type: 'addition', resource_id: null,
+      resource_label: (body?.notes || '').trim() || 'Adición a la base',
+      payment_method: body?.payment_method, amount: Number(body?.amount || 0).toFixed(2),
+      status: 1, registered_by: 1, registered_by_name: 'Gerardo Cruz', annulled_at: null,
+      occurred_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
+    });
     return decorateShiftDetail(sh);
   }
 

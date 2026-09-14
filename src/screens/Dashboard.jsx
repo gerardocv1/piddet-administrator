@@ -53,6 +53,19 @@ const buildExpensesKpis = ({ totals, deltas } = {}) => (totals ? [
 
 // KPIs de hospedaje. Los deltas del reporte de reservas son diferencias absolutas (no {percent}),
 // así que aquí solo se muestran los totales.
+// "2 turnos de cajero y 1 de compras abiertos" para la tarjeta del turno global; '' sin ninguno.
+const openAssignedShiftsSummary = (current) => {
+  const employees = Number(current?.open_employee_count) || 0;
+  const purchases = Number(current?.open_purchase_count) || 0;
+  const total = employees + purchases;
+  if (!total) return '';
+  const turnos = (n) => `${n} turno${n === 1 ? '' : 's'}`;
+  const parts = [];
+  if (employees) parts.push(`${turnos(employees)} de cajero`);
+  if (purchases) parts.push(`${employees ? purchases : turnos(purchases)} de compras`);
+  return `${parts.join(' y ')} abierto${total === 1 ? '' : 's'}`;
+};
+
 const buildReservationsKpis = ({ totals } = {}) => (totals ? [
   { label: 'Ingresos hospedaje', value: money(totals.revenue) },
   { label: 'Reservas', value: String(totals.reservations), desktopOnly: true },
@@ -495,7 +508,7 @@ export function Dashboard() {
               <button type="button" className={s.quickExpense} onClick={() => navigate(`/shifts/${myShift.id}/close`)}>
                 <span className={s.quickIcon}><i className="fas fa-cash-register" /></span>
                 <span className={s.quickText}>
-                  <strong>Cerrar mi turno</strong>
+                  <strong>Cerrar mi turno{myShift.type === 'PURCHASE' ? ' de compras' : ''}</strong>
                   <span>Abierto con base de {shiftMoney(myShift.base_amount)}</span>
                 </span>
                 <i className={`fas fa-chevron-right ${s.quickChevron}`} />
@@ -505,9 +518,7 @@ export function Dashboard() {
                 <span className={s.quickIcon}><i className="fas fa-cash-register" /></span>
                 <span className={s.quickText}>
                   <strong>Turno global abierto</strong>
-                  <span>{currentShifts?.open_employee_count
-                    ? `${currentShifts.open_employee_count} turno${currentShifts.open_employee_count === 1 ? '' : 's'} de cajero abiertos`
-                    : 'Ver balance y cerrar'}</span>
+                  <span>{openAssignedShiftsSummary(currentShifts) || 'Ver balance y cerrar'}</span>
                 </span>
                 <i className={`fas fa-chevron-right ${s.quickChevron}`} />
               </button>
