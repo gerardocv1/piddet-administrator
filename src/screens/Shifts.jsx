@@ -19,14 +19,17 @@ const STATUS_OPTIONS = [
 const TYPE_OPTIONS = [
   { value: 'GLOBAL', label: 'Global' },
   { value: 'EMPLOYEE', label: 'Cajero' },
+  { value: 'PURCHASE', label: 'Compras' },
 ];
+
+const TYPE_BADGE = { GLOBAL: 'info', EMPLOYEE: 'neutral', PURCHASE: 'warning' };
 
 // Listado de turnos de caja de la compañía activa: abiertos primero, luego el histórico por
 // apertura descendente. El backend decide qué se ve: el cajero (api-module-shifts-own) solo
 // recibe los turnos en los que está asignado y los turnos GLOBAL solo llegan con
-// shift-global-admin. Un turno de cajero puede tener varios asignados (caja compartida): la
-// columna muestra sus nombres. Los filtros viven en la URL para que volver desde el detalle
-// conserve la consulta.
+// shift-global-admin. Un turno de cajero o de compras puede tener varios asignados (caja
+// compartida): la columna muestra sus nombres. Los filtros viven en la URL para que volver desde
+// el detalle conserve la consulta.
 export function Shifts() {
   const navigate = useNavigate();
   const { can } = usePermissions();
@@ -64,14 +67,12 @@ export function Shifts() {
     { key: 'opened_at', header: 'Apertura', width: 150, nowrap: true, render: (r) => <span className={s.cellStrong}>{shiftDateTime(r.opened_at)}</span> },
     {
       key: 'type', header: 'Tipo', width: 110,
-      render: (r) => (r.type === 'GLOBAL'
-        ? <Badge variant="info">{SHIFT_TYPE_LABELS.GLOBAL}</Badge>
-        : <Badge variant="neutral">{SHIFT_TYPE_LABELS.EMPLOYEE}</Badge>),
+      render: (r) => <Badge variant={TYPE_BADGE[r.type] || 'neutral'}>{SHIFT_TYPE_LABELS[r.type] || r.type}</Badge>,
     },
     {
       key: 'assigned_user_name', header: 'Asignado a', ellipsis: true,
       render: (r) => {
-        if (r.type !== 'EMPLOYEE') return <span className={s.faint}>Toda la compañía</span>;
+        if (r.type === 'GLOBAL') return <span className={s.faint}>Toda la compañía</span>;
         const names = shiftAssignedUsers(r).map((u) => firstNameOf(u.name)).filter(Boolean);
         return names.length ? names.join(', ') : <span className={s.faint}>—</span>;
       },
@@ -97,10 +98,11 @@ export function Shifts() {
 
   const filterDefs = [
     { key: 'range', type: 'daterange', label: 'Apertura', icon: 'fas fa-calendar', fromKey: 'date_from', toKey: 'date_to', max: todayIso() },
-    // Sin shift-global-admin no hay turnos globales que listar: el filtro de tipo sobra.
-    ...(canGlobal
-      ? [{ key: 'type', type: 'select', label: 'Tipo', icon: 'fas fa-cash-register', options: TYPE_OPTIONS, placeholder: 'Todos los tipos' }]
-      : []),
+    // Sin shift-global-admin no hay turnos globales que listar: el filtro solo separa cajero de compras.
+    {
+      key: 'type', type: 'select', label: 'Tipo', icon: 'fas fa-cash-register', placeholder: 'Todos los tipos',
+      options: canGlobal ? TYPE_OPTIONS : TYPE_OPTIONS.filter((o) => o.value !== 'GLOBAL'),
+    },
     { key: 'status', type: 'select', label: 'Estado', icon: 'fas fa-circle-check', options: STATUS_OPTIONS, placeholder: 'Todos los estados' },
   ];
 

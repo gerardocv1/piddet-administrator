@@ -1,14 +1,17 @@
 // Servicio: turnos de caja de la compañía activa (sesiones con base, movimientos y arqueo).
 //
 // Company-scoped: las rutas cuelgan de /companies/{company}. Un turno se abre con una base de
-// dinero y puede ser GLOBAL (toda la compañía) o EMPLOYEE (uno o varios cajeros: caja
-// compartida, `assigned_users`). Mientras está abierto, el backend le asocia automáticamente
-// las ventas y gastos que registran sus asignados (movimientos con monto y método de pago
-// denormalizados). El cierre es un arqueo: se cuenta el efectivo por denominación y se reporta lo
-// recibido por cada otro método de pago; el backend suma ese desglose, lo compara contra base +
-// ventas − gastos y registra la diferencia como ajuste (sobrante/faltante). Reglas del backend:
-// máximo 1 GLOBAL abierto por compañía, ningún usuario en dos turnos abiertos a la vez, y el
-// GLOBAL no se puede cerrar con turnos de empleado abiertos (409).
+// dinero y puede ser GLOBAL (toda la compañía), EMPLOYEE (uno o varios cajeros: caja
+// compartida, `assigned_users`) o PURCHASE (compras: uno o varios compradores que no venden).
+// Mientras está abierto, el backend le asocia automáticamente las ventas y gastos que registran
+// sus asignados (movimientos con monto y método de pago denormalizados); al de compras solo le
+// entran gastos y las adiciones a la base que se registran a mano. El cierre es un arqueo: se
+// cuenta el efectivo por denominación y se reporta lo recibido por cada otro método de pago; el
+// backend suma ese desglose, lo compara contra base + ventas + adiciones − gastos y registra la
+// diferencia como ajuste (sobrante/faltante); en el de compras la diferencia solo queda
+// registrada, sin factura ni gasto de respaldo. Reglas del backend: máximo 1 GLOBAL abierto por
+// compañía, ningún usuario en dos turnos abiertos a la vez (cajero o compras), y el GLOBAL no se
+// puede cerrar con turnos de cajero o de compras abiertos (409).
 
 import { http } from '../http/client.js';
 import { auth } from '../auth/index.js';
@@ -32,10 +35,11 @@ export const shiftsService = {
   shifts: ({ status = '', type = '', dateFrom = '', dateTo = '', assignedUserId = '', page = 1, perPage = 15 } = {}) =>
     http.get(`${base()}/shifts${qs({ status, type, date_from: dateFrom, date_to: dateTo, assigned_user_id: assignedUserId, page, per_page: perPage })}`, { paginated: true }),
 
-  // Turnos abiertos relevantes para el usuario (Dashboard): { global, mine, open_employee_count }.
+  // Turnos abiertos relevantes para el usuario (Dashboard): { global, mine (cajero o compras),
+  // open_employee_count, open_purchase_count }.
   currentShifts: () => http.get(`${base()}/shifts/current`),
 
-  // Detalle: turno + balance en vivo + movimientos (ventas, gastos, ajustes).
+  // Detalle: turno + balance en vivo + movimientos (ventas, adiciones, gastos, ajustes).
   shift: (shiftId) => http.get(`${base()}/shifts/${shiftId}`),
 
   // Balance del turno, con lo que necesita el wizard de cierre: el esperado total, el esperado
@@ -43,9 +47,14 @@ export const shiftsService = {
   // denominaciones con el que se cuentan los billetes (`cash_denominations`).
   shiftBalance: (shiftId) => http.get(`${base()}/shifts/${shiftId}/balance`),
 
-  // Abre un turno. { type: 'GLOBAL'|'EMPLOYEE', base_amount, assigned_user_ids? (solo admin:
-  // uno o varios usuarios; sin lista el turno es del propio usuario) }
+  // Abre un turno. { type: 'GLOBAL'|'EMPLOYEE'|'PURCHASE', base_amount, assigned_user_ids? (solo
+  // admin: uno o varios usuarios; sin lista el turno es del propio usuario) }
   openShift: (data) => http.post(`${base()}/shifts`, data),
+
+  // Suma dinero a la base de un turno de compras ABIERTO. { amount, payment_method, notes? }
+  // Queda como movimiento `addition` con quién lo registró. 409 si el turno no es de compras o
+  // ya está cerrado. Devuelve el detalle.
+  addShiftAddition: (shiftId, data) => http.post(`${base()}/shifts/${shiftId}/additions`, data),
 
   // Cierra el turno con su arqueo. { cash_count: [{ code, quantity }] (las monedas van con
   // `amount`), method_count: [{ payment_method, amount }], notes? } El total contado lo suma el

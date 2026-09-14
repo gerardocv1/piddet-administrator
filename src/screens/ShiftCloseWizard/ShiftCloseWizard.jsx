@@ -4,7 +4,7 @@ import { Button, Input, MoneyInput, Textarea, Spinner, Alert } from '../../compo
 import { api } from '../../lib/api.js';
 import { phrase } from '../../lib/terms.js';
 import { useResource } from '../../lib/useResource.js';
-import { shiftMoney, SHIFT_TYPE_LABELS, shiftAssignedNames } from '../../lib/shiftLabels.js';
+import { shiftMoney, SHIFT_TYPE_LABELS, shiftAssignedNames, isPurchaseShift } from '../../lib/shiftLabels.js';
 import t from './ShiftCloseWizard.module.css';
 
 const STEPS = [
@@ -21,7 +21,10 @@ const STEPS = [
 //    contra lo contado: el sobrante/faltante se resalta antes de confirmar.
 // 3) Confirmar — nota opcional y cierre. El backend registra la diferencia como ajuste con su
 //    documento contable (el sobrante se factura, el faltante entra como gasto), irreversible;
-//    el GLOBAL falla con 409 si hay turnos de cajero abiertos.
+//    el GLOBAL falla con 409 si hay turnos de cajero o de compras abiertos.
+//
+// En un turno de compras el balance es base + adiciones − gastos y la diferencia solo queda
+// registrada en el turno: no se genera factura ni gasto de respaldo.
 //
 // El catálogo de denominaciones y el esperado por método vienen del balance del backend: aquí no
 // hay lista de billetes quemada. Los subtotales que se ven mientras se teclea son solo eco de lo
@@ -88,6 +91,7 @@ export function ShiftCloseWizard() {
 
   const expected = balance ? Number(balance.expected_amount) : null;
   const difference = expected != null ? countedNumber - expected : null;
+  const purchase = isPurchaseShift(shift);
 
   const goBack = () => {
     if (step > 1) { setStep(step - 1); return; }
@@ -151,9 +155,11 @@ export function ShiftCloseWizard() {
           <p className={t.successMeta}>
             {diff === 0
               ? 'La caja cuadró exacta.'
-              : diff > 0
-                ? `Sobrante de ${shiftMoney(diff)} registrado como factura de ingreso.`
-                : `Faltante de ${shiftMoney(Math.abs(diff))} registrado como gasto.`}
+              : isPurchaseShift(closed)
+                ? `${diff > 0 ? 'Sobrante' : 'Faltante'} de ${shiftMoney(Math.abs(diff))} registrado en el turno.`
+                : diff > 0
+                  ? `Sobrante de ${shiftMoney(diff)} registrado como factura de ingreso.`
+                  : `Faltante de ${shiftMoney(Math.abs(diff))} registrado como gasto.`}
           </p>
           <div className={t.successActions}>
             <Button variant="primary" icon="fas fa-cash-register" onClick={() => navigate(`/shifts/${closed.id}`, { replace: true })}>
@@ -286,8 +292,17 @@ export function ShiftCloseWizard() {
               <>
                 <div className={t.summary}>
                   <div><span>Base</span><strong>{shiftMoney(balance.base_amount)}</strong></div>
-                  <div><span>{phrase('Ventas')} ({balance.sales?.count ?? 0})</span><strong className={t.income}>+ {shiftMoney(balance.sales?.total)}</strong></div>
-                  <MethodRows rows={balance.sales?.by_method} />
+                  {purchase ? (
+                    <>
+                      <div><span>Adiciones ({balance.additions?.count ?? 0})</span><strong className={t.income}>+ {shiftMoney(balance.additions?.total)}</strong></div>
+                      <MethodRows rows={balance.additions?.by_method} />
+                    </>
+                  ) : (
+                    <>
+                      <div><span>{phrase('Ventas')} ({balance.sales?.count ?? 0})</span><strong className={t.income}>+ {shiftMoney(balance.sales?.total)}</strong></div>
+                      <MethodRows rows={balance.sales?.by_method} />
+                    </>
+                  )}
                   <div><span>Gastos ({balance.expenses?.count ?? 0})</span><strong className={t.outcome}>− {shiftMoney(balance.expenses?.total)}</strong></div>
                   <MethodRows rows={balance.expenses?.by_method} />
                   <div className={t.summaryTotal}><span>Esperado en caja</span><strong>{shiftMoney(balance.expected_amount)}</strong></div>
@@ -317,9 +332,11 @@ export function ShiftCloseWizard() {
             </div>
             {difference !== 0 && (
               <p className={t.helper}>
-                {difference > 0
-                  ? 'El sobrante se registrará como una factura de ingreso, para que la contabilidad cuadre con la plata contada.'
-                  : 'El faltante se registrará como un gasto, para que la contabilidad cuadre con la plata contada.'}
+                {purchase
+                  ? 'La diferencia quedará registrada en el turno, sin factura ni gasto de respaldo: se concilia con quien entregó la base.'
+                  : difference > 0
+                    ? 'El sobrante se registrará como una factura de ingreso, para que la contabilidad cuadre con la plata contada.'
+                    : 'El faltante se registrará como un gasto, para que la contabilidad cuadre con la plata contada.'}
               </p>
             )}
             <Textarea label="Nota de cierre" placeholder="Comentario del arqueo (opcional)"
