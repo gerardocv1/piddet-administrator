@@ -37,6 +37,7 @@ const SOURCE_REFERENCES = {
   USER_CHANGE_PASSWORD: 'Cambio de contraseña',
   REGISTER_USER: 'Registro de usuario',
   TICKET_REGISTERED: 'Registro de ticket',
+  MANUAL_TEST: 'Envío de prueba',
 };
 
 export function sourceReferenceLabel(reference) {

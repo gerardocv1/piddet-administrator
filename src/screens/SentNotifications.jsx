@@ -1,6 +1,6 @@
 import React from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Card, DataTable, Badge, FilterBar, Pagination, RefreshButton, Alert, Modal, StatStrip, Button, ConfirmDialog, useToast } from '../components';
+import { Card, DataTable, Badge, FilterBar, Pagination, RefreshButton, Alert, Modal, Button, ConfirmDialog, Input, Textarea, useToast } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import {
@@ -11,15 +11,17 @@ import s from './screens.module.css';
 import t from './SentNotifications.module.css';
 
 const EMPTY = { items: [], pagination: null };
-const EMPTY_SUMMARY = { counters: null, source_references: [] };
+const EMPTY_SUMMARY = { source_references: [] };
 
 // Historial de notificaciones enviadas por la compañía activa: a quién salió cada mensaje, con qué
 // texto, por qué motivo y en qué estado quedó. Responde "¿le llegó el SMS?" sin abrir el panel de
 // la pasarela.
 //
 // Una notificación es el registro de algo que ya pasó: no se edita ni se borra. Lo único que se
-// puede hacer es reenviarla, y eso crea otra fila. Los filtros y la página viven en la URL para
-// que compartir el enlace lleve a la misma consulta.
+// puede hacer es reenviarla (otra fila) o disparar un SMS de prueba a un número escrito a mano,
+// que entra al historial como una más: así se comprueba la pasarela sin esperar a que el negocio
+// mande algo. Los filtros y la página viven en la URL para que compartir el enlace lleve a la
+// misma consulta.
 export function SentNotifications() {
   const [params, setParams] = useSearchParams();
   const dateFrom = params.get('date_from') || '';
@@ -30,6 +32,7 @@ export function SentNotifications() {
   const search = params.get('q') || '';
   const page = Math.max(1, Number(params.get('page')) || 1);
   const [selected, setSelected] = React.useState(null);
+  const [testing, setTesting] = React.useState(false);
 
   const setQuery = (next, nextPage = 1) => {
     const q = { date_from: dateFrom, date_to: dateTo, status, type, source_reference: sourceReference, q: search, ...next };
@@ -56,25 +59,12 @@ export function SentNotifications() {
   );
   const { data, loading, error, reload } = useResource(fetcher, EMPTY, [dateFrom, dateTo, status, type, sourceReference, search, page]);
 
-  // Los contadores llevan los MISMOS filtros que el listado: si contaran otra cosa, mentirían.
-  const summaryFetcher = React.useCallback(
-    () => api.getSentNotificationsSummary(filters),
-    [dateFrom, dateTo, status, type, sourceReference, search] // eslint-disable-line react-hooks/exhaustive-deps
-  );
-  const { data: summary, loading: summaryLoading, reload: reloadSummary } = useResource(
-    summaryFetcher, EMPTY_SUMMARY, [dateFrom, dateTo, status, type, sourceReference, search]
-  );
+  // Del resumen solo interesan los motivos que alimentan el filtro; no dependen de los filtros.
+  const summaryFetcher = React.useCallback(() => api.getSentNotificationsSummary(), []);
+  const { data: summary, reload: reloadSummary } = useResource(summaryFetcher, EMPTY_SUMMARY, []);
 
   const rows = data.items || [];
   const pg = data.pagination;
-  const counters = summary.counters;
-
-  const stats = [
-    { label: 'Enviadas', value: counters ? counters.sent : '—' },
-    { label: 'Fallidas', value: counters ? counters.error : '—' },
-    { label: 'Pendientes', value: counters ? counters.pending : '—' },
-    { label: 'Total', value: counters ? counters.total : '—' },
-  ];
 
   const columns = [
     { key: 'date', header: 'Fecha', width: 120, render: (r) => formatNotificationDate(r.date) },
@@ -114,8 +104,6 @@ export function SentNotifications() {
 
   return (
     <div className={s.page}>
-      <StatStrip stats={stats} loading={summaryLoading && !counters} />
-
       <FilterBar
         searchable
         searchValue={searchInput}
@@ -133,6 +121,7 @@ export function SentNotifications() {
         resultCount={pg?.total}
         actions={
           <>
+            <Button variant="primary" icon="fas fa-paper-plane" onClick={() => setTesting(true)}>Enviar prueba</Button>
             <RefreshButton loading={loading} onClick={refresh} />
             {pg != null && (
               <p className={s.toolbarText}>
@@ -169,7 +158,64 @@ export function SentNotifications() {
           onResent={() => { setSelected(null); refresh(); }}
         />
       )}
+
+      {testing && (
+        <TestNotificationModal
+          onClose={() => setTesting(false)}
+          onSent={() => { setTesting(false); refresh(); }}
+        />
+      )}
     </div>
+  );
+}
+
+// SMS de prueba a un número escrito a mano. Sale por el mismo camino que cualquier aviso: queda
+// en el historial con motivo "Envío de prueba" y se cobra como uno más. Si la pasarela lo rechaza
+// en el acto, el backend responde con el motivo, que es justo lo que se vino a averiguar.
+function TestNotificationModal({ onClose, onSent }) {
+  const { toast } = useToast();
+  const [form, setForm] = React.useState({ to: '', message: '' });
+  const [sending, setSending] = React.useState(false);
+  const [err, setErr] = React.useState(null);
+
+  const set = (key, value) => setForm((f) => ({ ...f, [key]: value }));
+
+  const submit = async () => {
+    const to = form.to.replace(/[\s-]/g, '');
+    const message = form.message.trim();
+    if (!/^\+?[0-9]{7,15}$/.test(to)) { setErr('Escribe el celular con indicativo de país y solo dígitos, por ejemplo 573001234567.'); return; }
+    if (!message) { setErr('Escribe el texto del mensaje.'); return; }
+
+    setSending(true);
+    setErr(null);
+    try {
+      await api.sendTestNotification({ to, message });
+      toast({ tone: 'success', title: 'Prueba en camino: aparece en el historial como una notificación más' });
+      onSent();
+    } catch (e) {
+      setErr(e?.message || 'No se pudo enviar la prueba.');
+    } finally { setSending(false); }
+  };
+
+  return (
+    <Modal open title="Enviar notificación de prueba" subtitle="SMS" size="md" onClose={sending ? undefined : onClose}
+      footer={<>
+        <Button variant="secondary" onClick={onClose} disabled={sending}>Cancelar</Button>
+        <Button variant="primary" icon="fas fa-paper-plane" loading={sending} onClick={submit}>Enviar prueba</Button>
+      </>}>
+      <div className={s.formCol}>
+        <Input label="Celular" type="tel" inputMode="numeric" placeholder="573001234567" value={form.to}
+          onChange={(e) => set('to', e.target.value)} autoFocus
+          hint="Con indicativo de país, sin espacios ni símbolos." />
+        <Textarea label="Mensaje" rows={3} maxLength={300} value={form.message}
+          onChange={(e) => set('message', e.target.value)}
+          hint="Sale tal cual, encabezado por el nombre de la compañía." />
+        <Alert tone="warning">
+          Es un envío real: queda en el historial y se cobra como cualquier otro SMS.
+        </Alert>
+        {err && <Alert tone="danger" title="No salió" onClose={() => setErr(null)}>{err}</Alert>}
+      </div>
+    </Modal>
   );
 }
 
