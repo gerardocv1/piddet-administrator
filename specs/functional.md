@@ -445,10 +445,14 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
 - **Descripción:** el backend corre cuatro tareas de negocio en horario fijo y deja una fila por
   ejecución. Esta pantalla es la respuesta a "¿corrió anoche el cron?" sin entrar al servidor, y
   el sitio desde donde se lanza una tarea cuando no corrió.
-- **Flujo principal:** `/scheduled-tasks` encabeza con una tarjeta por tarea (su horario y cómo
-  salió la última corrida, o *Nunca ha corrido*) y lista las ejecuciones más recientes primero,
-  filtrables por tarea, resultado y rango de fechas. Al tocar una fila, el detalle muestra quién
-  la lanzó, las opciones con las que se invocó, sus contadores y el error completo si falló.
+- **Flujo principal:** `/scheduled-tasks` lista las ejecuciones más recientes primero, filtrables
+  por tarea, resultado y rango de fechas. Encabeza con el botón **Tareas y ejecución manual** y
+  una línea de salud ("5 tareas · 1 fallida en su última corrida · 1 nunca ha corrido"); el botón
+  abre un modal con una tarjeta por tarea (su horario y cómo salió la última corrida, o *Nunca ha
+  corrido*) y los botones de lanzar. Las tarjetas viven en el modal porque en la página ocupaban
+  media pantalla y lo que se viene a mirar casi siempre es la bitácora. Al tocar una fila, el
+  detalle muestra quién la lanzó, las opciones con las que se invocó, sus contadores y el error
+  completo si falló.
 - **Las cuatro tareas:** suscripciones de gimnasio (00:00, cierra períodos vencidos y genera el
   cobro siguiente), recordatorio de llegada a los titulares de reservas (10:00), avisos de
   vencimiento al socio (18:00) y orden de productos por popularidad (03:00).
@@ -463,6 +467,12 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
   exacto, **no envía nada** y no marca a nadie como avisado, así que se puede repetir y luego
   ejecutar de verdad. El detalle de esa corrida lista los mensajes que habrían salido. Las otras
   dos no lo ofrecen: son idempotentes, repetirlas no duplica nada.
+- **Forzar:** esas mismas tareas marcan "avisado" **antes** de enviar; si el SMS no salió
+  (pasarela caída, llave mal puesta), la siguiente corrida cuenta *Ya avisadas* y no manda nada.
+  El modal de lanzamiento trae la casilla **Volver a avisar a quien ya figura como avisado
+  (forzar)** (`force: true`), con aviso en rojo de que los envíos se repiten y se cobran; en
+  *Probar* la misma casilla incluye en la vista previa lo que la tarea daría por enviado. El
+  detalle de la corrida lo marca como *Forzada* y cuenta *Avisadas de nuevo*.
 - **Reglas:** lo que muestra —y lo que lanza— es de plataforma, no de la compañía activa: por eso
   el permiso es solo del super-admin. La misma tarea no se puede lanzar dos veces a la vez (el
   backend responde 409 y los botones se apagan mientras hay una corrida viva). Una ejecución

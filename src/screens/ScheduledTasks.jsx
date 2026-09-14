@@ -1,6 +1,6 @@
 import React from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Card, DataTable, Badge, FilterBar, Pagination, RefreshButton, Alert, Modal, Spinner, Button, Input, useToast } from '../components';
+import { Card, DataTable, Badge, FilterBar, Pagination, RefreshButton, Alert, Modal, Spinner, Button, Input, Checkbox, useToast } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import {
@@ -11,7 +11,7 @@ import s from './screens.module.css';
 import t from './ScheduledTasks.module.css';
 
 const EMPTY = { items: [], pagination: null };
-const EMPTY_STATUS = { commands: [], retention_days: null, dry_run_commands: [] };
+const EMPTY_STATUS = { commands: [], retention_days: null, dry_run_commands: [], force_commands: [] };
 
 // Mientras haya una corrida en cola o en curso, la pantalla se refresca sola: es el seguimiento de
 // la tarea que acaban de lanzar, que no responde al instante (puede tardar minutos).
@@ -39,6 +39,9 @@ export function ScheduledTasks() {
   const [selected, setSelected] = React.useState(null);
   // Tarea que se va a lanzar: { command, dryRun }. El modal pide las opciones antes de correr.
   const [launching, setLaunching] = React.useState(null);
+  // Las tarjetas de estado por tarea viven en un modal: en la página ocupaban media pantalla y
+  // lo que se viene a mirar casi siempre es la bitácora.
+  const [tasksOpen, setTasksOpen] = React.useState(false);
   // Hasta cuándo seguir releyendo sola la pantalla tras lanzar una tarea (ver el efecto de abajo).
   const [pollUntil, setPollUntil] = React.useState(0);
 
@@ -89,12 +92,15 @@ export function ScheduledTasks() {
   }, [hasActiveRun, pollUntil, silentRefresh]);
 
   const canTest = (cmd) => (taskStatus.dry_run_commands || []).includes(cmd);
+  const canForce = (cmd) => (taskStatus.force_commands || []).includes(cmd);
 
   const launch = async (values) => {
     const meta = commandOf(launching.command);
     try {
       await api.runScheduledTask({ command: launching.command, dryRun: launching.dryRun, ...values });
       setLaunching(null);
+      // Se cierra también la lista de tareas: lo que sigue es ver avanzar la corrida en la bitácora.
+      setTasksOpen(false);
       setPollUntil(Date.now() + POLL_WINDOW_MS);
       toast({
         tone: 'success',
@@ -140,21 +146,12 @@ export function ScheduledTasks() {
 
   return (
     <div className={s.page}>
-      {statusLoading ? (
-        <Spinner center label="Cargando estado de las tareas…" />
-      ) : (
-        <div className={t.status}>
-          {(taskStatus.commands || []).map((c) => (
-            <TaskStatusCard
-              key={c.command}
-              run={c}
-              canTest={canTest(c.command)}
-              busy={isRunActive(c.status)}
-              onLaunch={(dryRun) => setLaunching({ command: c.command, dryRun })}
-            />
-          ))}
-        </div>
-      )}
+      <div className={s.toolbar}>
+        <Button variant="primary" icon="fas fa-list-check" onClick={() => setTasksOpen(true)} disabled={statusLoading}>
+          Tareas y ejecución manual
+        </Button>
+        <TasksHealthText commands={taskStatus.commands} loading={statusLoading} />
+      </div>
 
       <FilterBar
         filters={filters}
@@ -203,10 +200,20 @@ export function ScheduledTasks() {
       ) : null}
 
       {selected && <RunDetailModal run={selected} onClose={() => setSelected(null)} />}
+      {tasksOpen && (
+        <TasksModal
+          commands={taskStatus.commands || []}
+          loading={statusLoading}
+          canTest={canTest}
+          onLaunch={(command, dryRun) => setLaunching({ command, dryRun })}
+          onClose={() => setTasksOpen(false)}
+        />
+      )}
       {launching && (
         <LaunchModal
           command={launching.command}
           dryRun={launching.dryRun}
+          canForce={canForce(launching.command)}
           onSubmit={launch}
           onClose={() => setLaunching(null)}
         />
@@ -215,8 +222,50 @@ export function ScheduledTasks() {
   );
 }
 
-// Última corrida de una tarea. Sin corridas, la tarjeta lo dice: eso es "nunca ha corrido",
-// que es justo lo que hay que ver de un vistazo cuando el cron del servidor no está puesto.
+// De un vistazo, sin abrir el modal: cuántas tareas fallaron en su última corrida o nunca han
+// corrido, que es lo que delata un cron sin poner o un worker caído.
+function TasksHealthText({ commands, loading }) {
+  if (loading) return <p className={s.toolbarText}>Cargando estado de las tareas…</p>;
+  const list = commands || [];
+  if (!list.length) return null;
+  const never = list.filter((c) => c.status == null).length;
+  const failed = list.filter((c) => c.status === 3).length;
+  const running = list.filter((c) => isRunActive(c.status)).length;
+  const parts = [];
+  if (running) parts.push(`${running} en curso`);
+  if (failed) parts.push(`${failed} fallida${failed === 1 ? '' : 's'} en su última corrida`);
+  if (never) parts.push(`${never} nunca ${never === 1 ? 'ha' : 'han'} corrido`);
+  return (
+    <p className={s.toolbarText}>
+      {list.length} tareas{parts.length ? ` · ${parts.join(' · ')}` : ' · todas bien en su última corrida'}
+    </p>
+  );
+}
+
+// Las tarjetas de estado por tarea, con sus botones de lanzar. Sin corridas, la tarjeta lo dice:
+// eso es "nunca ha corrido", que es justo lo que hay que ver cuando el cron no está puesto.
+function TasksModal({ commands, loading, canTest, onLaunch, onClose }) {
+  return (
+    <Modal open title="Tareas programadas" subtitle="Última corrida de cada una y ejecución manual" onClose={onClose} size="lg">
+      {loading ? (
+        <Spinner center label="Cargando estado de las tareas…" />
+      ) : (
+        <div className={t.status}>
+          {commands.map((c) => (
+            <TaskStatusCard
+              key={c.command}
+              run={c}
+              canTest={canTest(c.command)}
+              busy={isRunActive(c.status)}
+              onLaunch={(dryRun) => onLaunch(c.command, dryRun)}
+            />
+          ))}
+        </div>
+      )}
+    </Modal>
+  );
+}
+
 function TaskStatusCard({ run, canTest, busy, onLaunch }) {
   const meta = commandOf(run.command);
   const st = runStatusOf(run.status);
@@ -250,11 +299,12 @@ function TaskStatusCard({ run, canTest, busy, onLaunch }) {
 
 // Opciones antes de lanzar. Se abre siempre —incluso sin opciones que llenar— porque estas tareas
 // corren sobre TODAS las compañías: el modal es la pausa que convierte un clic en una decisión.
-function LaunchModal({ command, dryRun, onSubmit, onClose }) {
+function LaunchModal({ command, dryRun, canForce, onSubmit, onClose }) {
   const meta = commandOf(command);
   const [date, setDate] = React.useState('');
   const [companyId, setCompanyId] = React.useState('');
   const [days, setDays] = React.useState('');
+  const [force, setForce] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
   const supportsDays = command === 'sales:aggregate-item-stats';
 
@@ -262,7 +312,7 @@ function LaunchModal({ command, dryRun, onSubmit, onClose }) {
     if (saving) return;
     setSaving(true);
     try {
-      await onSubmit({ date, companyId, days: supportsDays ? days : '' });
+      await onSubmit({ date, companyId, days: supportsDays ? days : '', force: canForce && force });
     } catch {
       // El error ya se mostró como toast; el modal se queda abierto para corregir y reintentar.
     } finally {
@@ -310,6 +360,29 @@ function LaunchModal({ command, dryRun, onSubmit, onClose }) {
             value={days} onChange={(e) => setDays(e.target.value)}
             hint="Reprocesa los N días anteriores a la fecha (cargas históricas)." />
         )}
+
+        {/* La tarea marca "avisado" ANTES de enviar; si el SMS no salió (pasarela caída, llave mal
+            puesta), la siguiente corrida ve "ya avisadas" y no manda nada. Forzar salta esa guarda. */}
+        {canForce && (
+          <div className={t.force}>
+            <Checkbox
+              label={dryRun ? 'Incluir en la prueba a quien ya figura como avisado' : 'Volver a avisar a quien ya figura como avisado (forzar)'}
+              checked={force}
+              onChange={(e) => setForce(e.target.checked)}
+            />
+            <p className={t.forceHint}>
+              {dryRun
+                ? 'Muestra también los mensajes que la tarea daría por ya enviados.'
+                : 'Para cuando la corrida anterior contó «ya avisadas» pero los mensajes nunca salieron. El destinatario que sí lo recibió lo recibirá otra vez.'}
+            </p>
+            {force && !dryRun && (
+              <Alert tone="danger" title="Se repiten envíos">
+                Todo lo que hoy figura como avisado vuelve a salir y se cobra de nuevo. Si dudas,
+                pruébalo primero con «Probar» y esta misma casilla.
+              </Alert>
+            )}
+          </div>
+        )}
       </div>
     </Modal>
   );
@@ -337,8 +410,8 @@ function RunDetailModal({ run, onClose }) {
   // La previsualización de una prueba es una lista de mensajes: se muestra aparte, no como campo.
   const preview = Array.isArray(run.summary?.preview) ? run.summary.preview : [];
   const summaryPairs = Object.entries(run.summary || {}).filter(([key]) => key !== 'preview');
-  // `--dry-run` no se repite como opción: el campo «Modo» ya lo dice con todas sus letras.
-  const optionPairs = Object.entries(run.options || {}).filter(([key]) => key !== 'dry-run');
+  // `--dry-run` y `--force` no se repiten como opción: «Modo» y «Forzada» ya lo dicen con letras.
+  const optionPairs = Object.entries(run.options || {}).filter(([key]) => key !== 'dry-run' && key !== 'force');
 
   return (
     <Modal open title={meta.label} subtitle={run.command} onClose={onClose} size="lg">
@@ -352,6 +425,7 @@ function RunDetailModal({ run, onClose }) {
             {originLabel(run.origin)}{run.triggered_by_name ? ` · ${run.triggered_by_name}` : ''}
           </Field>
           {run.dry_run ? <Field label="Modo"><Badge variant="info">Prueba (no se envió nada)</Badge></Field> : null}
+          {run.options?.force ? <Field label="Forzada"><Badge variant="warning">Volvió a avisar lo ya marcado</Badge></Field> : null}
           {run.company_id ? <Field label="Compañía acotada">{run.company_id}</Field> : null}
           {run.host ? <Field label="Servidor">{run.host}</Field> : null}
         </div>

@@ -177,3 +177,16 @@
   .detailGrid { grid-template-columns: 1fr; }
   .statusActions > * { flex: 1; }
 }
+
+/* Casilla de forzar en el modal de lanzamiento: casilla, explicación y aviso, juntos. */
+.force {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.forceHint {
+  margin: 0;
+  color: var(--gray-500);
+  font-size: var(--text-sm);
+}
