@@ -435,8 +435,9 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
   tabla (sin resumen de contadores: se quitó porque ocupaba espacio y lo que se viene a mirar es
   la fila). Se filtra por rango de fechas, estado, canal y motivo, y se busca por **destinatario o
   texto** —las dos preguntas reales: «¿le llegó a este celular?» y «¿qué le dijimos?»—. Al tocar
-  una fila, el detalle muestra el mensaje completo, la pasarela y la referencia de envío con la
-  que se rastrea en el proveedor.
+  una fila, el detalle muestra el mensaje completo, la pasarela, la referencia de envío con la
+  que se rastrea en el proveedor y, si falló, **el motivo que dio la pasarela** (`error`), sin
+  tener que ir al log del servidor.
 - **El desplegable de motivos** sale de lo que esa compañía ha enviado de verdad (`/summary`), no
   de un catálogo escrito en el panel.
 - **Enviar prueba:** botón en la barra de filtros que abre un modal con celular y texto y dispara

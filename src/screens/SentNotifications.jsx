@@ -300,9 +300,11 @@ function NotificationDetailModal({ notification, onClose, onResent }) {
 
           {notification.status === 3 && (
             <Alert tone="danger" title="No se pudo enviar">
-              La pasarela rechazó el mensaje. El motivo queda en el log del servidor
-              (<code>QUEUE_NOTIFICATION_INTEGRATIONS_ERROR</code>). Una vez corregido, puedes
-              reenviarla desde aquí.
+              {notification.error
+                ? <>{notification.error}. Una vez corregido, puedes reenviarla desde aquí.</>
+                : <>La pasarela rechazó el mensaje sin dejar el motivo en el registro; está en el log
+                  del servidor (<code>QUEUE_NOTIFICATION_INTEGRATIONS_ERROR</code>). Una vez
+                  corregido, puedes reenviarla desde aquí.</>}
             </Alert>
           )}
         </div>
