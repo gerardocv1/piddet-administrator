@@ -216,6 +216,14 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
   propio. El backend le asocia automáticamente las ventas y gastos de cualquiera de sus
   asignados como movimientos, y rechaza (409, con el nombre) a quien ya esté en otro abierto. `/shifts/:shiftId` muestra el balance en vivo; `/shifts/:shiftId/close` guía el
   cierre: contar dinero → balance (base + ventas − gastos) → confirmar.
+- **El conteo es un arqueo, no un total tecleado:** el primer paso pide **cuántos billetes** hay
+  de cada denominación (el catálogo lo manda el backend en el balance, `cash_denominations`; las
+  **monedas** van por monto suelto) y **cuánto se recibió por cada método distinto al efectivo**
+  —prellenado con lo que registró el sistema (`non_cash.by_method`), para confirmar contra el
+  reporte del datáfono o de la app y corregir si no coincide—. Debajo va creciendo el total
+  recibido. Al cerrar viajan las **cantidades** (`cash_count`, `method_count`), no el total: el
+  dinero lo suma la API. El arqueo queda guardado y el detalle del turno lo muestra tal cual se
+  contó; los turnos cerrados antes de esto solo tienen su total.
 - **Reglas:** la diferencia se respalda con un documento contable real (sobrante → factura de
   origen `SHIFT`; faltante → gasto en «Ajustes de caja»), que no se asocia a un turno abierto. El
   turno global solo lo abre y cierra `shift-global-admin`, y no cierra con turnos de cajero

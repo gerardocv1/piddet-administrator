@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Button, MoneyInput, Textarea, Spinner, Alert } from '../../components';
+import { Button, Input, MoneyInput, Textarea, Spinner, Alert } from '../../components';
 import { api } from '../../lib/api.js';
 import { phrase } from '../../lib/terms.js';
 import { useResource } from '../../lib/useResource.js';
@@ -14,18 +14,27 @@ const STEPS = [
 ];
 
 // Asistente de cierre de turno (/shifts/:shiftId/close), optimizado para móvil. Paso a paso:
-// 1) Conteo — cuánto dinero hay físicamente en la caja.
+// 1) Conteo — el arqueo: cuántos billetes hay de cada denominación (las monedas van por monto) y
+//    cuánto se recibió por cada método de pago distinto al efectivo, con el total de lo contado
+//    creciendo debajo.
 // 2) Balance — base + ventas (todos los métodos, con desglose) − gastos = esperado, comparado
 //    contra lo contado: el sobrante/faltante se resalta antes de confirmar.
 // 3) Confirmar — nota opcional y cierre. El backend registra la diferencia como ajuste con su
 //    documento contable (el sobrante se factura, el faltante entra como gasto), irreversible;
 //    el GLOBAL falla con 409 si hay turnos de cajero abiertos.
+//
+// El catálogo de denominaciones y el esperado por método vienen del balance del backend: aquí no
+// hay lista de billetes quemada. Los subtotales que se ven mientras se teclea son solo eco de lo
+// que va sumando el arqueo; el total que se guarda lo suma la API con las cantidades enviadas.
 export function ShiftCloseWizard() {
   const { shiftId } = useParams();
   const navigate = useNavigate();
 
   const [step, setStep] = React.useState(1);
-  const [counted, setCounted] = React.useState('');
+  // Lo que se teclea en el arqueo: por código de denominación (cantidad de billetes, o monto en
+  // las monedas) y por método de pago (monto recibido).
+  const [cash, setCash] = React.useState({});
+  const [received, setReceived] = React.useState({});
   const [notes, setNotes] = React.useState('');
   const [closed, setClosed] = React.useState(null); // detalle devuelto por el cierre → éxito
   const [saving, setSaving] = React.useState(false);
@@ -34,14 +43,49 @@ export function ShiftCloseWizard() {
   const shiftFetcher = React.useCallback(() => api.shift(shiftId), [shiftId]);
   const { data: shift, loading, error } = useResource(shiftFetcher, null, [shiftId]);
 
-  // El balance se pide al entrar al paso 2, para que sea lo más fresco posible.
-  const balanceFetcher = React.useCallback(
-    () => (step >= 2 ? api.shiftBalance(shiftId) : Promise.resolve(null)),
-    [shiftId, step >= 2],
-  );
-  const { data: balance, loading: loadingBalance } = useResource(balanceFetcher, null, [shiftId, step >= 2]);
+  // El balance se pide de entrada: el arqueo se arma con su catálogo de denominaciones y con el
+  // esperado de cada método distinto al efectivo.
+  const balanceFetcher = React.useCallback(() => api.shiftBalance(shiftId), [shiftId]);
+  const { data: balance, loading: loadingBalance } = useResource(balanceFetcher, null, [shiftId]);
 
-  const countedNumber = Number(counted) || 0;
+  const denominations = balance?.cash_denominations || [];
+  // Un movimiento sin método de pago no se puede reportar (no es una entidad de pago real), así
+  // que no se pregunta por él.
+  const methods = (balance?.non_cash?.by_method || []).filter((m) => m.payment_method);
+
+  // Los métodos distintos al efectivo arrancan con lo que el sistema registró: el cajero confirma
+  // contra el reporte del datáfono o de la app y corrige si no coincide.
+  React.useEffect(() => {
+    if (!methods.length) return;
+    setReceived((current) => {
+      const next = { ...current };
+      methods.forEach((m) => {
+        if (next[m.payment_method] === undefined) next[m.payment_method] = String(Number(m.expected));
+      });
+      return next;
+    });
+  }, [balance]);
+
+  // Renglones del arqueo: el billete se cuenta por cantidad (× su valor) y las monedas por monto.
+  const cashRows = denominations.map((d) => {
+    const raw = cash[d.code] ?? '';
+    const unit = d.value == null ? null : Number(d.value);
+    const quantity = unit == null ? null : Math.floor(Number(raw) || 0);
+    return { ...d, raw, unit, quantity, amount: unit == null ? Number(raw) || 0 : unit * quantity };
+  });
+  const methodRows = methods.map((m) => {
+    const raw = received[m.payment_method] ?? '';
+    return { ...m, raw, amount: Number(raw) || 0 };
+  });
+
+  const sum = (rows) => rows.reduce((acc, r) => acc + r.amount, 0);
+  const cashTotal = sum(cashRows);
+  const methodsTotal = sum(methodRows);
+  const countedNumber = cashTotal + methodsTotal;
+
+  // El arqueo empieza cuando se cuenta el efectivo: contar es un acto, no un campo en blanco.
+  const counting = cashRows.some((r) => r.raw !== '');
+
   const expected = balance ? Number(balance.expected_amount) : null;
   const difference = expected != null ? countedNumber - expected : null;
 
@@ -56,7 +100,14 @@ export function ShiftCloseWizard() {
     setErr(null);
     try {
       const detail = await api.closeShift(shiftId, {
-        counted_amount: countedNumber,
+        // Del efectivo viaja la CANTIDAD de billetes (el monto lo multiplica el backend); de las
+        // monedas y de cada otro método, el monto.
+        cash_count: cashRows
+          .filter((r) => r.amount > 0)
+          .map((r) => (r.unit == null ? { code: r.code, amount: r.amount } : { code: r.code, quantity: r.quantity })),
+        method_count: methodRows
+          .filter((r) => r.amount > 0)
+          .map((r) => ({ payment_method: r.payment_method, amount: r.amount })),
         notes: notes.trim() || undefined,
       });
       setClosed(detail);
@@ -117,6 +168,14 @@ export function ShiftCloseWizard() {
     );
   }
 
+  // Lo contado, partido como se contó: se repite en los tres pasos.
+  const countedRows = (
+    <ul className={t.methods}>
+      <li><span>Efectivo</span><span>{shiftMoney(cashTotal)}</span></li>
+      {methodRows.length > 0 && <li><span>Otros métodos</span><span>{shiftMoney(methodsTotal)}</span></li>}
+    </ul>
+  );
+
   return (
     <div className={t.wizard}>
       <ol className={t.stepper}>
@@ -130,7 +189,7 @@ export function ShiftCloseWizard() {
       </ol>
 
       <div className={t.body}>
-        {/* ---------- Paso 1: Conteo ---------- */}
+        {/* ---------- Paso 1: Conteo (arqueo) ---------- */}
         {step === 1 && (
           <div className={t.formCol}>
             <h3 className={t.heading}>¿Cuánto dinero hay en la caja?</h3>
@@ -139,9 +198,81 @@ export function ShiftCloseWizard() {
               {shiftAssignedNames(shift) ? <> de <strong>{shiftAssignedNames(shift)}</strong></> : null} · base
               de {shiftMoney(shift.base_amount)}.
             </p>
-            <MoneyInput label="Dinero contado" icon="fas fa-dollar-sign" placeholder="0" autoFocus
-              value={counted} onChange={setCounted}
-              hint="Cuenta todo el efectivo físico de la caja antes de continuar." />
+
+            {loadingBalance || !balance ? (
+              <Spinner center label="Preparando el arqueo…" />
+            ) : (
+              <>
+                <section className={t.count}>
+                  <header className={t.countHead}>
+                    <span>Efectivo</span>
+                    <strong>{shiftMoney(cashTotal)}</strong>
+                  </header>
+                  <ul className={t.countRows}>
+                    {cashRows.map((r) => (
+                      <li key={r.code} className={t.countRow}>
+                        <span className={t.countLabel}>{r.label}</span>
+                        {r.unit == null ? (
+                          <MoneyInput className={t.countField} wrapClassName={t.countWrap} placeholder="0" aria-label={`Monto en ${r.label}`}
+                            value={r.raw} onChange={(v) => setCash((c) => ({ ...c, [r.code]: v }))} />
+                        ) : (
+                          <Input className={t.countField} wrapClassName={t.countWrap} inputMode="numeric" placeholder="0"
+                            aria-label={`Cantidad de ${r.label}`} value={r.raw}
+                            onChange={(e) => setCash((c) => ({ ...c, [r.code]: e.target.value.replace(/\D/g, '') }))} />
+                        )}
+                        <span className={[t.countAmount, r.amount > 0 ? '' : t.countEmpty].filter(Boolean).join(' ')}>
+                          {r.amount > 0 ? shiftMoney(r.amount) : '—'}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+
+                {methodRows.length > 0 && (
+                  <section className={t.count}>
+                    <header className={t.countHead}>
+                      <span>Otros métodos de pago</span>
+                      <strong>{shiftMoney(methodsTotal)}</strong>
+                    </header>
+                    <ul className={t.countRows}>
+                      {methodRows.map((m) => (
+                        <li key={m.payment_method} className={t.countRowWide}>
+                          <span className={t.countLabel}>
+                            {m.payment_method_name || m.payment_method}
+                            <small>Registrado: {shiftMoney(m.expected)}</small>
+                          </span>
+                          <MoneyInput className={t.countField} wrapClassName={t.countWrap} placeholder="0"
+                            aria-label={`Recibido por ${m.payment_method_name || m.payment_method}`}
+                            value={m.raw}
+                            onChange={(v) => setReceived((c) => ({ ...c, [m.payment_method]: v }))} />
+                        </li>
+                      ))}
+                    </ul>
+                    <p className={t.helper}>
+                      Confirma cada método contra su reporte (datáfono, app) y corrige si no coincide.
+                    </p>
+                  </section>
+                )}
+
+                <div className={t.summary}>
+                  <div><span>Efectivo contado</span><strong>{shiftMoney(cashTotal)}</strong></div>
+                  {methodRows.length > 0 && (
+                    <div><span>Otros métodos</span><strong>{shiftMoney(methodsTotal)}</strong></div>
+                  )}
+                  <div className={t.summaryTotal}>
+                    <span>Total recibido</span>
+                    <strong>{shiftMoney(countedNumber)}</strong>
+                  </div>
+                </div>
+
+                {!counting && (
+                  <p className={t.helper}>
+                    <i className="fas fa-circle-info" /> Cuenta el efectivo de la caja para continuar
+                    (si no quedó nada, escribe 0 en Monedas).
+                  </p>
+                )}
+              </>
+            )}
           </div>
         )}
 
@@ -161,6 +292,7 @@ export function ShiftCloseWizard() {
                   <MethodRows rows={balance.expenses?.by_method} />
                   <div className={t.summaryTotal}><span>Esperado en caja</span><strong>{shiftMoney(balance.expected_amount)}</strong></div>
                   <div><span>Contado</span><strong>{shiftMoney(countedNumber)}</strong></div>
+                  {countedRows}
                 </div>
                 <DifferenceBanner difference={difference} />
               </>
@@ -175,6 +307,7 @@ export function ShiftCloseWizard() {
             <div className={t.summary}>
               <div><span>Esperado</span><strong>{expected != null ? shiftMoney(expected) : '—'}</strong></div>
               <div><span>Contado</span><strong>{shiftMoney(countedNumber)}</strong></div>
+              {countedRows}
               <div className={t.summaryTotal}>
                 <span>Diferencia</span>
                 <strong className={difference > 0 ? t.income : difference < 0 ? t.outcome : ''}>
@@ -203,7 +336,7 @@ export function ShiftCloseWizard() {
           Atrás
         </Button>
         {step === 1 && (
-          <Button variant="primary" icon="fas fa-arrow-right" disabled={counted === ''} onClick={() => setStep(2)}>
+          <Button variant="primary" icon="fas fa-arrow-right" disabled={!counting || loadingBalance || !balance} onClick={() => setStep(2)}>
             Ver balance
           </Button>
         )}
