@@ -2290,7 +2290,8 @@ function validateSyncFailurePayload(payload) {
 // CONTRATO BACKEND: /companies/{company}/notifications (listado paginado), /summary,
 // POST /{id}/resend y POST /test. Historial de lo que la compañía ha ENVIADO: a quién, con qué
 // texto, por qué motivo y en qué estado quedó. `status` 1 pendiente, 2 enviada, 3 fallida;
-// `type` 1 SMS, 2 push, 3 correo. Nada se edita ni se borra; siempre de la compañía activa.
+// `type` 1 SMS, 2 push, 3 correo; `error` trae el motivo cuando falló. Nada se edita ni se borra;
+// siempre de la compañía activa.
 
 const mockSentNotifications = [
   {
@@ -2312,7 +2313,8 @@ const mockSentNotifications = [
     integration: 'Hablame', source_reference: 'USER_CHANGE_PASSWORD',
     addressee: '573005558899',
     message: 'Hola Andres, tu contrasena fue cambiada. Si no fuiste tu, contacta con soporte en piddet.com',
-    deep_link: null, recipient_id: 44, shipping_reference: null, read_at: null, clicked_at: null,
+    deep_link: null, recipient_id: 44, shipping_reference: null,
+    error: 'El integration-hub respondió 422: numero invalido', read_at: null, clicked_at: null,
   },
   {
     id: 505, date: isoDay(1), created_at: `${isoDay(1)}T18:00:02`, status: 2, type: 1,
