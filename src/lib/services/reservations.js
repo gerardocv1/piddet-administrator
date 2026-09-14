@@ -188,4 +188,17 @@ export const reservationsService = {
     fd.append('file', file);
     return http.post(`/public/checkin/${code}/files`, fd);
   },
+
+  // ── Encargados de reservas ──────────────────────────────────────────────
+  // Los empleados que reciben cada noche (20:00) el resumen por SMS de las reservas que llegan
+  // mañana, con la decoración y los servicios que hay que preparar. Configuración de la compañía
+  // (permiso `reservation-managers-config`). Cada fila: { user_id, name, phone_code, phone_number,
+  // has_phone, added_at, created_by_name }; `has_phone` en false es un aviso que nunca va a salir.
+  reservationManagers: () => list(http.get(`${base()}/reservation-managers`)),
+  // Empleados de la compañía elegibles, con `is_manager` en los que ya lo son. `q` busca por
+  // nombre o celular.
+  reservationManagerCandidates: (q = '') => list(http.get(`${base()}/reservation-managers/candidates${qs({ q })}`)),
+  // Agrega o retira un encargado. Ambas devuelven el listado actualizado.
+  addReservationManager: (userId) => list(http.post(`${base()}/reservation-managers`, { user_id: userId })),
+  removeReservationManager: (userId) => list(http.del(`${base()}/reservation-managers/${userId}`)),
 };

@@ -290,7 +290,7 @@ function LaunchModal({ command, dryRun, onSubmit, onClose }) {
         {dryRun ? (
           <Alert tone="info" title="Modo prueba">
             Calcula a quién le llegaría el aviso y con qué texto, pero <b>no envía nada</b> y no
-            marca la reserva como avisada: puedes repetirla y después ejecutarla de verdad.
+            marca a nadie como avisado: puedes repetirla y después ejecutarla de verdad.
           </Alert>
         ) : (
           <Alert tone="warning" title="Se ejecuta de verdad">

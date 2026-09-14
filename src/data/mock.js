@@ -466,7 +466,7 @@ export const mockMenuItems = [
 // el panel muestra Productos (y sus categorías), Menús y Usuarios; el resto queda oculto.
 const mockPermissions = {
   roles: ['Administrador'],
-  permissions: ['user-administrator', 'admin-general', 'role-list', 'role-create', 'role-update', 'role-delete', 'role-assign', 'permission-list', 'permission-update', 'api-module-menus', 'api-module-products', 'api-module-general-options', 'api-module-company', 'company-edit-functionalities', 'api-module-stores', 'table-list', 'table-create', 'table-update', 'api-module-orders', 'sales-report', 'order-cancel', 'order-sync-failure-admin', 'api-module-expenses', 'expenses-report', 'expense-annul', 'api-module-shifts', 'shift-global-admin', 'api-module-reservations', 'api-module-rentable-units', 'reservation-checkout', 'reservation-cancel', 'reservation-payment-annul', 'api-module-gym', 'api-module-gym-plans', 'gym-plans-create', 'gym-plans-edit', 'gym-members-create', 'gym-members-edit', 'gym-subscriptions-create', 'gym-subscriptions-cancel', 'gym-payments-create', 'gym-payments-annul', 'gym-checkins-create', 'gym-checkins-edit', 'gym-measurement-config', 'gym-periods-recalculate', 'company-catalog-purge', 'company-master', 'api-module-notifications', 'api-module-scheduled-tasks'],
+  permissions: ['user-administrator', 'admin-general', 'role-list', 'role-create', 'role-update', 'role-delete', 'role-assign', 'permission-list', 'permission-update', 'api-module-menus', 'api-module-products', 'api-module-general-options', 'api-module-company', 'company-edit-functionalities', 'api-module-stores', 'table-list', 'table-create', 'table-update', 'api-module-orders', 'sales-report', 'order-cancel', 'order-sync-failure-admin', 'api-module-expenses', 'expenses-report', 'expense-annul', 'api-module-shifts', 'shift-global-admin', 'api-module-reservations', 'api-module-rentable-units', 'reservation-checkout', 'reservation-cancel', 'reservation-payment-annul', 'reservation-managers-config', 'api-module-gym', 'api-module-gym-plans', 'gym-plans-create', 'gym-plans-edit', 'gym-members-create', 'gym-members-edit', 'gym-subscriptions-create', 'gym-subscriptions-cancel', 'gym-payments-create', 'gym-payments-annul', 'gym-checkins-create', 'gym-checkins-edit', 'gym-measurement-config', 'gym-periods-recalculate', 'company-catalog-purge', 'company-master', 'api-module-notifications', 'api-module-scheduled-tasks'],
 };
 
 // Empresa (tenant) activa y empresas disponibles para el usuario (SaaS multi-tenant).
@@ -2398,6 +2398,13 @@ const mockScheduledTaskRuns = [
     summary: null, error: null, host: 'piddet-app-01',
   },
   {
+    id: 40, command: 'reservations:send-daily-summary', status: 2,
+    started_at: `${isoDay(1)}T20:00:00`, finished_at: `${isoDay(1)}T20:00:03`, duration_ms: 2760,
+    company_id: null, options: { date: isoDay(0) },
+    summary: { date: isoDay(0), companies: 2, reservations: 4, with_decoration: 1, with_services: 2, recipients: 3, sent: 3, already_notified: 0, skipped_no_phone: 0, skipped_no_managers: 0 },
+    error: null, host: 'piddet-app-01',
+  },
+  {
     id: 39, command: 'gym:emit-subscription-events', status: 2,
     started_at: `${isoDay(1)}T18:00:00`, finished_at: `${isoDay(1)}T18:00:02`, duration_ms: 1980,
     company_id: null, options: { date: isoDay(1) },
@@ -2425,12 +2432,14 @@ const SCHEDULED_TASK_COMMANDS = [
   'gym:emit-subscription-events',
   'sales:aggregate-item-stats',
   'reservations:send-checkin-reminders',
+  'reservations:send-daily-summary',
 ];
 
 // Las que saben correr en modo prueba: las que le escriben a una persona.
 const SCHEDULED_TASK_DRY_RUN_COMMANDS = [
   'gym:emit-subscription-events',
   'reservations:send-checkin-reminders',
+  'reservations:send-daily-summary',
 ];
 
 // Contadores de ejemplo con que termina una corrida lanzada a mano, por comando.
@@ -2440,6 +2449,10 @@ const MOCK_RUN_SUMMARIES = {
   'sales:aggregate-item-stats': (date) => ({ date, days: 1, daily_rows: 812, companies: 6, stats_rows: 430, purged_rows: 0 }),
   'reservations:send-checkin-reminders': (date) => ({
     date, candidates: 7, sent: 5, already_notified: 1, skipped_no_phone: 1, skipped_no_code: 0,
+  }),
+  'reservations:send-daily-summary': (date) => ({
+    date, companies: 3, reservations: 7, with_decoration: 2, with_services: 4, recipients: 5,
+    sent: 4, already_notified: 0, skipped_no_phone: 1, skipped_no_managers: 1,
   }),
 };
 
@@ -2452,6 +2465,9 @@ const MOCK_RUN_PREVIEWS = {
   'reservations:send-checkin-reminders': [
     { name: 'Pepito Pérez', to: '573001234567', message: 'Pepito, hoy llegas a Cabanas El Roble (Cabana 2). Completa tu pre-check-in antes de viajar: https://piddet.com/r/k7m2rq9xv4bd' },
     { name: 'Marta Ruiz', to: '573009876543', message: 'Marta, hoy llegas a Cabanas El Roble (Cabana 5). Completa tu pre-check-in antes de viajar: https://piddet.com/r/b4n8xq2wm7dc' },
+  ],
+  'reservations:send-daily-summary': [
+    { name: 'María López', to: '573112223344', message: 'Manana mar 15/09 llegan 2 reservas:\n1) Cabana 2 - Pepito Perez (2 pers) 15:00 DECORACION: Decoracion romantica. Servicios: Cena, Fogata.\n2) Cabana 5 - Marta Ruiz (4 pers) SIN CONFIRMAR' },
   ],
 };
 
@@ -3487,6 +3503,10 @@ function resolveReservationsMock(path, query, { method = 'GET', body } = {}) {
     return mockConsumableItems.filter((it) => !q || it.name.toLowerCase().includes(q));
   }
 
+  // Encargados de reservas: quiénes reciben cada noche el resumen de lo que llega mañana.
+  const managersResult = resolveReservationManagersMock(sub, query, { method, body });
+  if (managersResult !== undefined) return managersResult;
+
   // Huéspedes: /guests[?q=] y /guests/{userId}
   if (sub === 'guests') {
     const q = (query.get('q') || '').toLowerCase();
@@ -3684,6 +3704,60 @@ function unitDetail(unit) {
     ...unit,
     files: unit.files.filter((f) => f.rentable_unit_space_id == null),
   };
+}
+
+// CONTRATO BACKEND: /companies/{company}/reservation-managers (listado, candidates, POST, DELETE
+// {userId}). Los encargados son EMPLEADOS de la compañía (user_type_id 2) y reciben el resumen
+// nocturno por SMS; el backend devuelve el listado actualizado tras agregar o retirar. `has_phone`
+// en false avisa que ese SMS no va a salir.
+const mockReservationManagers = [{ user_id: 2, added_at: `${isoDay(6)}T09:12:00`, created_by_name: 'Gerardo Cruz' }];
+
+function managerRow(entry) {
+  const u = mockUsers.find((x) => x.id === entry.user_id);
+  return {
+    user_id: entry.user_id,
+    name: u?.name || `Usuario ${entry.user_id}`,
+    phone_code: u?.phone_code || null,
+    phone_number: u?.phone_number || null,
+    has_phone: !!u?.phone_number,
+    added_at: entry.added_at,
+    created_by_name: entry.created_by_name,
+  };
+}
+
+function resolveReservationManagersMock(sub, query, { method, body }) {
+  if (sub === 'reservation-managers/candidates') {
+    const q = (query.get('q') || '').toLowerCase();
+    return mockUsers
+      .filter((u) => u.user_type_id === 2)
+      .filter((u) => !q || u.name.toLowerCase().includes(q) || (u.phone_number || '').includes(q))
+      .map((u) => ({
+        user_id: u.id, name: u.name, phone_code: u.phone_code, phone_number: u.phone_number,
+        has_phone: !!u.phone_number, is_manager: mockReservationManagers.some((m) => m.user_id === u.id),
+      }));
+  }
+
+  if (sub === 'reservation-managers') {
+    if (method === 'POST') {
+      const userId = Number(body?.user_id);
+      const u = mockUsers.find((x) => x.id === userId);
+      if (!u) { const e = new Error('El usuario no pertenece a la compañía'); e.status = 422; throw e; }
+      if (u.user_type_id !== 2) { const e = new Error('Solo un empleado de la compañía puede ser encargado de reservas'); e.status = 422; throw e; }
+      if (mockReservationManagers.some((m) => m.user_id === userId)) { const e = new Error('El usuario ya es encargado de reservas'); e.status = 409; throw e; }
+      mockReservationManagers.push({ user_id: userId, added_at: new Date().toISOString().slice(0, 19), created_by_name: mockUser.name });
+    }
+    return mockReservationManagers.map(managerRow);
+  }
+
+  const dm = sub.match(/^reservation-managers\/(\d+)$/);
+  if (dm && method === 'DELETE') {
+    const idx = mockReservationManagers.findIndex((m) => m.user_id === Number(dm[1]));
+    if (idx < 0) { const e = new Error('El usuario no es encargado de reservas'); e.status = 404; throw e; }
+    mockReservationManagers.splice(idx, 1);
+    return mockReservationManagers.map(managerRow);
+  }
+
+  return undefined;
 }
 
 // Núcleo del mock de reservas (todas las subrutas /reservations…). Devuelve undefined si no matchea.

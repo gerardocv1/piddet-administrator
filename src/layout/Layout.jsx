@@ -41,6 +41,7 @@ const META = {
   '/company': { title: 'Empresa', crumb: 'Cuenta' },
   '/reservations': { title: 'Reservas', crumb: 'Hospedaje' },
   '/rentable-units': { title: 'Unidades', crumb: 'Hospedaje' },
+  '/reservations/managers': { title: 'Encargados de reservas', crumb: 'Hospedaje' },
   '/gym/plans': { title: 'Planes', crumb: 'Gimnasio' },
   '/gym/members': { title: 'Afiliados', crumb: 'Gimnasio' },
   '/gym/subscriptions': { title: 'Suscripciones', crumb: 'Gimnasio' },
