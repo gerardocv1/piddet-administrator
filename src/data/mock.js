@@ -2442,6 +2442,9 @@ const SCHEDULED_TASK_DRY_RUN_COMMANDS = [
   'reservations:send-daily-summary',
 ];
 
+// Las que admiten forzar: las mismas, porque son las que llevan bitácora de avisos.
+const SCHEDULED_TASK_FORCE_COMMANDS = SCHEDULED_TASK_DRY_RUN_COMMANDS;
+
 // Contadores de ejemplo con que termina una corrida lanzada a mano, por comando.
 const MOCK_RUN_SUMMARIES = {
   'gym:transition-subscriptions': (date) => ({ date, processed: 12, generated: 9, cancelled: 1 }),
@@ -2489,6 +2492,11 @@ function advanceMockScheduledRuns() {
       run.finished_at = stamp;
       run.duration_ms = 3400;
       run.summary = { ...MOCK_RUN_SUMMARIES[run.command](date) };
+      // Forzada: lo que estaba "ya avisado" vuelve a salir y se cuenta aparte.
+      if (run.options?.force) {
+        const again = run.summary.already_notified || 0;
+        run.summary = { ...run.summary, sent: (run.summary.sent || 0) + again, already_notified: 0, forced: again };
+      }
       if (run.dry_run) {
         const preview = MOCK_RUN_PREVIEWS[run.command] || [];
         run.summary = { ...run.summary, preview, preview_total: preview.length };
@@ -2525,11 +2533,19 @@ function resolveScheduledTasksMock(path, query, { method = 'GET', body } = {}) {
       throw err;
     }
 
+    const force = !!body?.force;
+    if (force && !SCHEDULED_TASK_FORCE_COMMANDS.includes(command)) {
+      const err = new Error('Esta tarea no tiene avisos que forzar: es idempotente, repetirla ya la rehace.');
+      err.status = 400;
+      throw err;
+    }
+
     const options = {};
     if (body?.date) options.date = body.date;
     if (body?.company_id) options.company = Number(body.company_id);
     if (body?.days) options.days = Number(body.days);
     if (dryRun) options['dry-run'] = true;
+    if (force) options.force = true;
 
     const run = {
       id: Math.max(0, ...mockScheduledTaskRuns.map((r) => r.id)) + 1,
@@ -2558,6 +2574,7 @@ function resolveScheduledTasksMock(path, query, { method = 'GET', body } = {}) {
       commands,
       retention_days: SCHEDULED_TASK_RETENTION_DAYS,
       dry_run_commands: SCHEDULED_TASK_DRY_RUN_COMMANDS,
+      force_commands: SCHEDULED_TASK_FORCE_COMMANDS,
     };
   }
 

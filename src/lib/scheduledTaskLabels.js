@@ -69,6 +69,7 @@ const SUMMARY_LABELS = {
   candidates: 'Reservas del día',
   sent: 'Recordatorios enviados',
   already_notified: 'Ya avisadas',
+  forced: 'Avisadas de nuevo',
   skipped_no_phone: 'Sin celular',
   skipped_no_code: 'Sin código',
   reservations: 'Reservas de mañana',
