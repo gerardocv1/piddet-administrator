@@ -429,11 +429,16 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
 - **Los contadores llevan los mismos filtros que el listado:** si contaran otra cosa, mentirían.
   El desplegable de motivos sale de lo que esa compañía ha enviado de verdad, no de un catálogo
   escrito en el panel.
-- **Reglas:** es de **solo lectura** —no se reenvía ni se borra: una notificación es el registro
-  de algo que ya pasó— y es **siempre de la compañía activa** (el backend saca el `company_id` de
-  la ruta). Lo llevan el `super-admin` y el `company-admin`. No confundir con la campana de la
-  barra superior: eso es lo que **una persona** no ha leído; esto es lo que **la compañía** ha
-  enviado.
+- **Reenviar:** desde el detalle. El reenvío es un **envío nuevo** (`POST
+  /notifications/{id}/resend`): otra fila en el historial, otra referencia en la pasarela; la
+  original no cambia. Una **fallida** se reenvía directo; una enviada o pendiente exige **Forzar
+  reenvío** (`force: true`), con confirmación que avisa que el destinatario recibirá el mensaje
+  otra vez y se cobra de nuevo (sin forzar, el backend responde 409). Si la pasarela lo rechaza en
+  el acto, el diálogo muestra el motivo y la fila nueva queda como fallida.
+- **Reglas:** no se edita ni se borra —una notificación es el registro de algo que ya pasó— y es
+  **siempre de la compañía activa** (el backend saca el `company_id` de la ruta). Lo llevan el
+  `super-admin` y el `company-admin`. No confundir con la campana de la barra superior: eso es lo
+  que **una persona** no ha leído; esto es lo que **la compañía** ha enviado.
 
 ### Tareas programadas (bitácora del scheduler)
 

@@ -1,7 +1,8 @@
 // Servicio: historial de notificaciones ENVIADAS por la compañía activa (SMS y push).
 //
-// Es de SOLO LECTURA: una notificación es el registro de algo que ya pasó, no se reenvía ni se
-// borra. Y es de la compañía activa: el backend saca el `company_id` de la ruta, no del cliente.
+// Una notificación es el registro de algo que ya pasó: no se edita ni se borra. Lo único que se
+// puede hacer es REENVIARLA, y eso crea otra fila (la original no cambia). Es de la compañía
+// activa: el backend saca el `company_id` de la ruta, no del cliente.
 //
 // No confundir con `notifications.js`, que es la campana del usuario: aquello es lo que UNA
 // PERSONA no ha leído; esto es lo que LA COMPAÑÍA ha enviado.
@@ -38,4 +39,8 @@ export const sentNotificationsService = {
   // Contadores por estado (con los mismos filtros) y motivos de envío usados por la compañía.
   getSentNotificationsSummary: (filters = {}) =>
     http.get(`${base()}/summary${qs(filterParams(filters))}`),
+  // Reenvío = envío nuevo (otra fila, otra referencia en la pasarela). Sin `force` el backend solo
+  // acepta una fallida: una enviada o pendiente responde 409, porque se paga otra vez.
+  resendSentNotification: (id, { force = false } = {}) =>
+    http.post(`${base()}/${id}/resend`, { force }),
 };

@@ -2330,10 +2330,33 @@ const mockSentNotifications = [
   },
 ];
 
-function resolveSentNotificationsMock(path, query) {
+function resolveSentNotificationsMock(path, query, { method = 'GET', body } = {}) {
   const m = path.match(/^\/companies\/[^/]+\/notifications(\/.*)?$/);
   if (!m) return undefined;
   const sub = m[1] || '';
+
+  // Reenviar: como el backend, una fila NUEVA con el mismo destinatario, texto y motivo; la
+  // original no cambia. Sin `force` solo se acepta una fallida (409 en cualquier otro estado).
+  const resend = sub.match(/^\/(\d+)\/resend$/);
+  if (resend && method === 'POST') {
+    const original = mockSentNotifications.find((n) => n.id === Number(resend[1]));
+    if (!original) {
+      const err = new Error('No se encontró la notificación');
+      err.status = 404;
+      throw err;
+    }
+    if (original.status !== 3 && !body?.force) {
+      const err = new Error('Esta notificación no falló: para volver a enviarla (y pagarla otra vez) hay que forzar el reenvío');
+      err.status = 409;
+      throw err;
+    }
+    const id = Math.max(...mockSentNotifications.map((n) => n.id)) + 1;
+    mockSentNotifications.unshift({
+      ...original, id, date: isoDay(0), created_at: new Date().toISOString().slice(0, 19),
+      status: 2, shipping_reference: `sms-${99000 + id}`, read_at: null, clicked_at: null,
+    });
+    return { id: original.id };
+  }
 
   const search = (query.get('_search') || '').toLowerCase();
   const rows = mockSentNotifications
@@ -5709,7 +5732,7 @@ export function resolveMock(rawPath, opts = {}) {
   if (syncFailures !== undefined) return syncFailures;
 
   // Historial de notificaciones enviadas por la compañía activa.
-  const sentNotifications = resolveSentNotificationsMock(path, query);
+  const sentNotifications = resolveSentNotificationsMock(path, query, opts);
   if (sentNotifications !== undefined) return sentNotifications;
 
   // Bitácora del scheduler (company-scoped en la ruta, de plataforma en el contenido).
