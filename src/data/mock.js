@@ -366,7 +366,8 @@ export const mockUsers = [
   { id: 2, name: 'María López', first_name: 'María', last_name: 'López', phone_code: '57', phone_number: '3112223344', email: 'maria@piddet.com', status: true, roles: [{ name: 'cashier', label: 'Cajero' }], direct_permissions: ['order-cancel'], user_type_id: 2 },
   { id: 3, name: 'Carlos Mejía', first_name: 'Carlos', last_name: 'Mejía', phone_code: '57', phone_number: '3205556677', email: null, status: true, roles: [{ name: 'waiter', label: 'Mesero' }], direct_permissions: [], user_type_id: 2 },
   { id: 4, name: 'Ana Ruiz', first_name: 'Ana', last_name: 'Ruiz', phone_code: '57', phone_number: '3158889900', email: null, status: false, roles: [{ name: 'cook', label: 'Cocinero' }], direct_permissions: [], user_type_id: 2 },
-  { id: 5, name: 'Jorge Díaz', first_name: 'Jorge', last_name: 'Díaz', phone_code: '57', phone_number: '3014441122', email: null, status: true, roles: [{ name: 'waiter', label: 'Mesero' }], direct_permissions: ['api-module-expenses-own'], user_type_id: 1 },
+  { id: 5, name: 'Jorge Díaz', first_name: 'Jorge', last_name: 'Díaz', phone_code: '57', phone_number: '3014441122', email: null, status: true, roles: [{ name: 'waiter', label: 'Mesero' }], direct_permissions: ['api-module-expenses-own'], user_type_id: 2 },
+  { id: 6, name: 'Lucía Torres', first_name: 'Lucía', last_name: 'Torres', phone_code: '57', phone_number: '3009876543', email: null, status: true, roles: [], direct_permissions: [], user_type_id: 1 },
 ];
 
 export const mockUser = { name: 'Gerardo Cruz', role: 'Administrador' };

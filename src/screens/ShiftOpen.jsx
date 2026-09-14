@@ -20,6 +20,9 @@ const TYPE_HINTS = {
   PURCHASE: 'Para quien solo compra: arranca con una base, se le suman adiciones durante el turno y registra los gastos. Al cerrar solo se anota la diferencia, sin factura ni gasto de respaldo.',
 };
 
+// Tipo de usuario dentro de la compañía (company_users.user_type_id).
+const USER_TYPE_EMPLOYEE = '2';
+
 const BASE_HINTS = {
   PURCHASE: 'Dinero entregado para las compras. Se le podrán sumar adiciones mientras el turno esté abierto.',
 };
@@ -51,11 +54,11 @@ export function ShiftOpen() {
   const [saving, setSaving] = React.useState(false);
   const [err, setErr] = React.useState(null);
 
-  // Usuarios de la compañía para el selector de asignados (solo admin y solo tipo Cajero).
-  // El usuario actual va primero, marcado como "yo", para que abrir el propio turno siga
-  // siendo un clic.
+  // Empleados de la compañía para el selector de asignados (solo admin y solo turnos de cajero
+  // o de compras): un cliente no lleva caja. El usuario actual va primero, marcado como "yo",
+  // para que abrir el propio turno siga siendo un clic.
   const usersFetcher = React.useCallback(
-    () => (isAdmin ? api.users({ row: 100 }) : Promise.resolve({ items: [] })),
+    () => (isAdmin ? api.users({ row: 100, userTypeId: USER_TYPE_EMPLOYEE }) : Promise.resolve({ items: [] })),
     [isAdmin],
   );
   const { data: usersData, loading: usersLoading } = useResource(usersFetcher, { items: [] }, [isAdmin]);
