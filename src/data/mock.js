@@ -2287,10 +2287,10 @@ function validateSyncFailurePayload(payload) {
   return errors;
 }
 
-// CONTRATO BACKEND: /companies/{company}/notifications (listado paginado) y /summary.
-// Historial de lo que la compañía ha ENVIADO: a quién, con qué texto, por qué motivo y en qué
-// estado quedó. `status` 1 pendiente, 2 enviada, 3 fallida; `type` 1 SMS, 2 push, 3 correo.
-// Es de solo lectura y siempre de la compañía activa.
+// CONTRATO BACKEND: /companies/{company}/notifications (listado paginado), /summary,
+// POST /{id}/resend y POST /test. Historial de lo que la compañía ha ENVIADO: a quién, con qué
+// texto, por qué motivo y en qué estado quedó. `status` 1 pendiente, 2 enviada, 3 fallida;
+// `type` 1 SMS, 2 push, 3 correo. Nada se edita ni se borra; siempre de la compañía activa.
 
 const mockSentNotifications = [
   {
@@ -2357,6 +2357,25 @@ function resolveSentNotificationsMock(path, query, { method = 'GET', body } = {}
       status: 2, shipping_reference: `sms-${99000 + id}`, read_at: null, clicked_at: null,
     });
     return { id: original.id };
+  }
+
+  // SMS de prueba: como el backend, una fila nueva con motivo MANUAL_TEST y el texto encabezado
+  // por el nombre de la compañía.
+  if (sub === '/test' && method === 'POST') {
+    const to = String(body?.to || '').replace(/^\+/, '');
+    if (!/^[0-9]{7,15}$/.test(to) || !String(body?.message || '').trim()) {
+      const err = new Error('Validation error');
+      err.status = 400;
+      throw err;
+    }
+    const id = Math.max(...mockSentNotifications.map((n) => n.id)) + 1;
+    mockSentNotifications.unshift({
+      id, date: isoDay(0), created_at: new Date().toISOString().slice(0, 19), status: 2, type: 1,
+      integration: 'Hablame', source_reference: 'MANUAL_TEST', addressee: to,
+      message: `Cabanas El Roble: ${String(body.message).trim()}`,
+      deep_link: null, recipient_id: null, shipping_reference: `sms-${99000 + id}`, read_at: null, clicked_at: null,
+    });
+    return {};
   }
 
   const search = (query.get('_search') || '').toLowerCase();

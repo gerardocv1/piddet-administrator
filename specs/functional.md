@@ -431,14 +431,21 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
 - **Descripción:** historial de lo que la compañía ha enviado (SMS por Háblame, push/correo):
   a quién salió cada mensaje, con qué texto, por qué motivo y en qué estado quedó. Responde
   «¿le llegó el SMS?» sin abrir el panel de la pasarela.
-- **Flujo principal:** `/notifications` encabeza con los contadores del rango (enviadas, fallidas,
-  pendientes, total) y lista los envíos más recientes primero. Se filtra por rango de fechas,
-  estado, canal y motivo, y se busca por **destinatario o texto** —las dos preguntas reales:
-  «¿le llegó a este celular?» y «¿qué le dijimos?»—. Al tocar una fila, el detalle muestra el
-  mensaje completo, la pasarela y la referencia de envío con la que se rastrea en el proveedor.
-- **Los contadores llevan los mismos filtros que el listado:** si contaran otra cosa, mentirían.
-  El desplegable de motivos sale de lo que esa compañía ha enviado de verdad, no de un catálogo
-  escrito en el panel.
+- **Flujo principal:** `/notifications` lista los envíos más recientes primero, solo filtros y
+  tabla (sin resumen de contadores: se quitó porque ocupaba espacio y lo que se viene a mirar es
+  la fila). Se filtra por rango de fechas, estado, canal y motivo, y se busca por **destinatario o
+  texto** —las dos preguntas reales: «¿le llegó a este celular?» y «¿qué le dijimos?»—. Al tocar
+  una fila, el detalle muestra el mensaje completo, la pasarela y la referencia de envío con la
+  que se rastrea en el proveedor.
+- **El desplegable de motivos** sale de lo que esa compañía ha enviado de verdad (`/summary`), no
+  de un catálogo escrito en el panel.
+- **Enviar prueba:** botón en la barra de filtros que abre un modal con celular y texto y dispara
+  un SMS real (`POST /notifications/test`, `{ to, message }`). Es la forma de comprobar que la
+  pasarela está configurada sin esperar a que el negocio mande algo: entra al historial como una
+  notificación más, con motivo «Envío de prueba» (`MANUAL_TEST`), y **se cobra** como cualquier
+  otra (el modal lo avisa). Si la pasarela la rechaza en el acto, el modal muestra el motivo
+  —«El integration-hub no está configurado» es el típico en un entorno recién montado— y la
+  fila queda como fallida.
 - **Reenviar:** desde el detalle. El reenvío es un **envío nuevo** (`POST
   /notifications/{id}/resend`): otra fila en el historial, otra referencia en la pasarela; la
   original no cambia. Una **fallida** se reenvía directo; una enviada o pendiente exige **Forzar
