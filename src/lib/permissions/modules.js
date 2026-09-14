@@ -50,6 +50,10 @@ export const MODULE_GROUPS = [
         children: [
           { to: '/reservations', label: 'Reservas', icon: 'fas fa-calendar-check', perm: 'api-module-reservations', func: 'functionality_reservations' },
           { to: '/rentable-units', label: 'Unidades', icon: 'fas fa-house-chimney', perm: 'api-module-rentable-units', func: 'functionality_reservations' },
+          // Encargados: los empleados que reciben cada noche el resumen por SMS de las reservas
+          // que llegan mañana. Es configuración de la compañía (super-admin y company-admin), no
+          // operación: por eso lleva su propio permiso y no el de operar reservas.
+          { to: '/reservations/managers', label: 'Encargados', icon: 'fas fa-user-clock', perm: 'reservation-managers-config', func: 'functionality_reservations' },
         ],
       },
       // Gimnasio: suscripciones y medidas físicas se suman en fases posteriores. Los afiliados son

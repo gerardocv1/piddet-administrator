@@ -50,6 +50,11 @@ const COMMANDS = {
     detail: 'Avisa por SMS al titular que hoy llega y que complete su pre-check-in',
     schedule: '10:00',
   },
+  'reservations:send-daily-summary': {
+    label: 'Resumen de reservas de mañana',
+    detail: 'Manda por SMS a los encargados las reservas que llegan mañana, con decoración y servicios',
+    schedule: '20:00',
+  },
 };
 
 export function commandOf(command) {
@@ -66,6 +71,11 @@ const SUMMARY_LABELS = {
   already_notified: 'Ya avisadas',
   skipped_no_phone: 'Sin celular',
   skipped_no_code: 'Sin código',
+  reservations: 'Reservas de mañana',
+  with_decoration: 'Con decoración',
+  with_services: 'Con servicios',
+  recipients: 'Encargados',
+  skipped_no_managers: 'Compañías sin encargados',
   preview_total: 'Mensajes que saldrían',
   days: 'Días procesados',
   processed: 'Suscripciones procesadas',

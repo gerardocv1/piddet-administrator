@@ -1,0 +1,72 @@
+/* Encargados de reservas: quiénes reciben el resumen nocturno y el selector para agregar. */
+
+.intro {
+  margin: 0;
+  color: var(--gray-600);
+  font-size: var(--text-base);
+  line-height: 1.5;
+}
+
+/* Vista previa del SMS que reciben: un bloque monoespaciado como el que se ve en el celular. */
+.sample {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  background: var(--gray-100);
+  color: var(--gray-700);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Lista de candidatos dentro del modal: filas tocables con la persona y su celular. */
+.candidates {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 50vh;
+  overflow-y: auto;
+}
+
+.candidate {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  background: var(--surface-card);
+}
+
+.candidateInfo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.candidateName {
+  font-weight: 600;
+  color: var(--gray-800);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.candidatePhone {
+  font-size: var(--text-sm);
+  color: var(--gray-600);
+}
+
+.candidateState {
+  padding: 18px 0;
+  text-align: center;
+  color: var(--gray-500);
+  font-size: var(--text-base);
+}

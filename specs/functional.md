@@ -50,6 +50,7 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
 | Oferta | **Carta / Menús** | `/menus` | `api-module-menus` |
 | Oferta | **Reservas** (hospedaje) | `/reservations` | `api-module-reservations` + `functionality_reservations` |
 | Oferta | **Unidades rentables** | `/rentable-units` | `api-module-rentable-units` + `functionality_reservations` |
+| Oferta | **Encargados de reservas** | `/reservations/managers` | `reservation-managers-config` + `functionality_reservations` |
 | Oferta | **Planes de gimnasio** | `/gym/plans` | `api-module-gym-plans` + `functionality_gym` |
 | Oferta | **Afiliados de gimnasio** | `/gym/members` | `api-module-gym` + `functionality_gym` |
 | Oferta | **Suscripciones de gimnasio** | `/gym/subscriptions` | `api-module-gym` + `functionality_gym` |
@@ -250,6 +251,15 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
   siendo tabla, con los anchos en **porcentaje** para que la proporción aguante cualquier ancho
   (`table-layout: fixed` reparte lo que sobra, así que mezclar píxeles y columnas flexibles
   ahogaba a estas últimas).
+- **Encargados de reservas** (`/reservations/managers`, permiso `reservation-managers-config`):
+  la lista de empleados que reciben cada noche a las 20:00 el resumen por SMS de las reservas que
+  llegan mañana, con la decoración y los servicios que hay que preparar. Se agregan eligiéndolos
+  de la lista de empleados de la compañía (búsqueda por nombre o celular) y se retiran con
+  confirmación; el backend devuelve el listado actualizado en ambos casos. La pantalla muestra un
+  ejemplo del SMS y avisa cuando no hay encargados (nadie recibe el resumen) o cuando alguno no
+  tiene celular (ese envío no sale). En el teléfono son tarjetas (`ListCard`), como Usuarios. Lo
+  enviado se ve en *Notificaciones* como «Resumen de reservas de mañana» y la corrida en *Tareas
+  programadas*, donde también se puede probar sin enviar.
 - **Reglas:** requiere la funcionalidad `functionality_reservations` activa además del permiso.
   El pre-check-in del huésped ocurre fuera del panel, en la superficie pública del backend.
   Registrar la entrada exige ese pre-check-in completo; para los casos donde conseguir los datos

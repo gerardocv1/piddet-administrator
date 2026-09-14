@@ -33,6 +33,7 @@ export const NOTIFICATION_TYPE_OPTIONS = [
 // (`source_reference`); los conocidos se muestran en lenguaje del negocio y el resto, tal cual.
 const SOURCE_REFERENCES = {
   RESERVATION_CHECKIN_REMINDER: 'Recordatorio de llegada',
+  RESERVATION_DAILY_SUMMARY: 'Resumen de reservas de mañana',
   USER_CHANGE_PASSWORD: 'Cambio de contraseña',
   REGISTER_USER: 'Registro de usuario',
   TICKET_REGISTERED: 'Registro de ticket',
