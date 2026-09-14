@@ -3093,7 +3093,8 @@ export const mockShifts = [
     id: 1, type: 'GLOBAL', status: 'OPEN', base_amount: '200000.00',
     assigned_user_id: null, assigned_user_name: null, assigned_users: [],
     opened_by: 1, opened_by_name: 'Gerardo Cruz', opened_at: shiftDateIso(0, '08:00:00'),
-    counted_amount: null, expected_amount: null, difference: null, closing_notes: null,
+    counted_amount: null, counted_cash_amount: null, counted_non_cash_amount: null,
+    expected_amount: null, difference: null, closing_notes: null,
     closed_by: null, closed_by_name: null, closed_at: null,
   },
   {
@@ -3101,14 +3102,16 @@ export const mockShifts = [
     assigned_user_id: 2, assigned_user_name: 'María López',
     assigned_users: [{ id: 2, name: 'María López' }, { id: 3, name: 'Carlos Mejía' }],
     opened_by: 1, opened_by_name: 'Gerardo Cruz', opened_at: shiftDateIso(0, '08:15:00'),
-    counted_amount: null, expected_amount: null, difference: null, closing_notes: null,
+    counted_amount: null, counted_cash_amount: null, counted_non_cash_amount: null,
+    expected_amount: null, difference: null, closing_notes: null,
     closed_by: null, closed_by_name: null, closed_at: null,
   },
   {
     id: 3, type: 'EMPLOYEE', status: 'CLOSED', base_amount: '100000.00',
     assigned_user_id: 2, assigned_user_name: 'María López', assigned_users: [{ id: 2, name: 'María López' }],
     opened_by: 1, opened_by_name: 'Gerardo Cruz', opened_at: shiftDateIso(1, '08:00:00'),
-    counted_amount: '575000.00', expected_amount: '580000.00', difference: '-5000.00',
+    counted_amount: '575000.00', counted_cash_amount: '395000.00', counted_non_cash_amount: '180000.00',
+    expected_amount: '580000.00', difference: '-5000.00',
     closing_notes: 'Faltó cambio de un billete.', closed_by: 2, closed_by_name: 'María López',
     closed_at: shiftDateIso(1, '18:00:00'),
   },
@@ -3116,7 +3119,8 @@ export const mockShifts = [
     id: 4, type: 'GLOBAL', status: 'CLOSED', base_amount: '200000.00',
     assigned_user_id: null, assigned_user_name: null, assigned_users: [],
     opened_by: 1, opened_by_name: 'Gerardo Cruz', opened_at: shiftDateIso(1, '07:30:00'),
-    counted_amount: '1240000.00', expected_amount: '1225000.00', difference: '15000.00',
+    counted_amount: '1240000.00', counted_cash_amount: '1060000.00', counted_non_cash_amount: '180000.00',
+    expected_amount: '1225000.00', difference: '15000.00',
     closing_notes: null, closed_by: 1, closed_by_name: 'Gerardo Cruz',
     closed_at: shiftDateIso(1, '20:00:00'),
   },
@@ -3146,6 +3150,63 @@ export const mockShiftMovements = [
   { id: 16, shift_id: 4, resource_type: 'adjustment', resource_id: null, resource_label: 'Sobrante de caja · A0000001', reference_type: 'order', reference_id: 'ord-8001', payment_method: 'cash', amount: '15000.00', status: 1, annulled_at: null, occurred_at: shiftDateIso(1, '20:00:00') },
 ];
 
+// Catálogo de denominaciones del arqueo (espejo de config/shifts.php + lang/es/shifts.php): el
+// billete se cuenta por cantidad y las monedas por monto suelto.
+const SHIFT_CASH_DENOMINATIONS = [
+  { code: 'bill_100000', value: '100000.00', label: 'Billetes de $100.000' },
+  { code: 'bill_50000', value: '50000.00', label: 'Billetes de $50.000' },
+  { code: 'bill_20000', value: '20000.00', label: 'Billetes de $20.000' },
+  { code: 'bill_10000', value: '10000.00', label: 'Billetes de $10.000' },
+  { code: 'bill_5000', value: '5000.00', label: 'Billetes de $5.000' },
+  { code: 'bill_2000', value: '2000.00', label: 'Billetes de $2.000' },
+  { code: 'coins', value: null, label: 'Monedas' },
+];
+
+// Entidades de pago que son efectivo (en el backend, las que cuelgan del método padre 'cash'):
+// esas se cuentan en billetes y monedas, las demás se reportan por monto.
+const SHIFT_CASH_METHODS = ['cash'];
+const isShiftCashMethod = (id) => SHIFT_CASH_METHODS.includes(id);
+
+// Arqueo de los turnos ya cerrados (espejo de shift_closing_counts).
+export const mockShiftClosingCounts = [
+  // Turno 3: contó $395.000 en efectivo + $180.000 por datáfono = $575.000 (faltaron $5.000).
+  { shift_id: 3, kind: 'CASH', code: 'bill_50000', label: 'Billetes de $50.000', unit_value: '50000.00', quantity: 7, amount: '350000.00' },
+  { shift_id: 3, kind: 'CASH', code: 'bill_20000', label: 'Billetes de $20.000', unit_value: '20000.00', quantity: 2, amount: '40000.00' },
+  { shift_id: 3, kind: 'CASH', code: 'coins', label: 'Monedas', unit_value: null, quantity: null, amount: '5000.00' },
+  { shift_id: 3, kind: 'METHOD', code: 'datafono', label: 'Datafono', unit_value: null, quantity: null, amount: '180000.00' },
+  // Turno 4: $1.060.000 en efectivo + $180.000 por datáfono = $1.240.000 (sobraron $15.000).
+  { shift_id: 4, kind: 'CASH', code: 'bill_100000', label: 'Billetes de $100.000', unit_value: '100000.00', quantity: 10, amount: '1000000.00' },
+  { shift_id: 4, kind: 'CASH', code: 'bill_50000', label: 'Billetes de $50.000', unit_value: '50000.00', quantity: 1, amount: '50000.00' },
+  { shift_id: 4, kind: 'CASH', code: 'bill_5000', label: 'Billetes de $5.000', unit_value: '5000.00', quantity: 2, amount: '10000.00' },
+  { shift_id: 4, kind: 'METHOD', code: 'datafono', label: 'Datafono', unit_value: null, quantity: null, amount: '180000.00' },
+];
+
+// Renglones del arqueo tal como los arma el backend con lo que manda el cierre: el billete se
+// multiplica por el valor del catálogo (el cliente solo dice cuántos hay), las monedas y los
+// métodos van por monto, y los renglones en cero no se guardan.
+function shiftClosingCountRows(body) {
+  const sentCash = new Map((body?.cash_count || []).map((c) => [c.code, c]));
+  const rows = [];
+  SHIFT_CASH_DENOMINATIONS.forEach((d) => {
+    const sent = sentCash.get(d.code);
+    if (!sent) return;
+    const quantity = d.value == null ? null : Math.floor(Number(sent.quantity) || 0);
+    const amount = d.value == null ? Number(sent.amount) || 0 : quantity * Number(d.value);
+    if (amount <= 0) return;
+    rows.push({ kind: 'CASH', code: d.code, label: d.label, unit_value: d.value, quantity, amount: amount.toFixed(2) });
+  });
+  new Map((body?.method_count || []).map((m) => [m.payment_method, Number(m.amount) || 0]))
+    .forEach((amount, id) => {
+      if (amount <= 0) return;
+      rows.push({ kind: 'METHOD', code: id, label: paymentMethodName(id) ?? id, unit_value: null, quantity: null, amount: amount.toFixed(2) });
+    });
+  return rows;
+}
+
+const shiftCountTotal = (rows, kind) => rows
+  .filter((r) => !kind || r.kind === kind)
+  .reduce((sum, r) => sum + Number(r.amount), 0);
+
 const shiftMovementRow = (mv) => ({ ...mv, payment_method_name: paymentMethodName(mv.payment_method) });
 
 // Balance del turno replicando el backend: SUM por tipo y método sobre movimientos activos;
@@ -3174,12 +3235,43 @@ function buildShiftBalance(shift) {
 
   const sales = section('order');
   const expenses = section('expense');
+
+  // El mismo esperado partido como se cuenta al cerrar: el efectivo en billetes y monedas, y cada
+  // otro método por su cuenta. Los ajustes nunca entran (nacen al cerrar).
+  const base = Number(shift.base_amount);
+  const totalOf = (type, cash) => active
+    .filter((mv) => mv.resource_type === type && isShiftCashMethod(mv.payment_method) === cash)
+    .reduce((sum, mv) => sum + Number(mv.amount), 0);
+  const cashSales = totalOf('order', true);
+  const cashExpenses = totalOf('expense', true);
+
+  const nonCash = new Map();
+  active.forEach((mv) => {
+    if (isShiftCashMethod(mv.payment_method) || mv.resource_type === 'adjustment') return;
+    const current = nonCash.get(mv.payment_method) || 0;
+    nonCash.set(mv.payment_method, current + (mv.resource_type === 'expense' ? -Number(mv.amount) : Number(mv.amount)));
+  });
+
   return {
     base_amount: shift.base_amount,
     sales,
     expenses,
     adjustments: section('adjustment'),
-    expected_amount: money(Number(shift.base_amount) + Number(sales.total) - Number(expenses.total)),
+    expected_amount: money(base + Number(sales.total) - Number(expenses.total)),
+    cash: {
+      sales_total: money(cashSales),
+      expenses_total: money(cashExpenses),
+      expected: money(base + cashSales - cashExpenses),
+    },
+    non_cash: {
+      expected: money([...nonCash.values()].reduce((sum, n) => sum + n, 0)),
+      by_method: [...nonCash.entries()].map(([id, expected]) => ({
+        payment_method: id || null,
+        payment_method_name: paymentMethodName(id),
+        expected: money(expected),
+      })),
+    },
+    cash_denominations: SHIFT_CASH_DENOMINATIONS,
   };
 }
 
@@ -3189,6 +3281,10 @@ const decorateShiftDetail = (shift) => ({
   movements: mockShiftMovements
     .filter((mv) => mv.shift_id === shift.id)
     .map(shiftMovementRow),
+  // El arqueo solo existe en turnos cerrados (y no en los que se cerraron antes de tenerlo).
+  closing_counts: mockShiftClosingCounts
+    .filter((row) => row.shift_id === shift.id)
+    .map(({ shift_id: _shiftId, ...row }) => row),
 });
 
 // Simula los códigos de conflicto del backend: el HttpClient del modo demo propaga el throw y
@@ -3238,7 +3334,8 @@ function resolveShiftsMock(path, query, { method = 'GET', body } = {}) {
       assigned_users: assignedUsers,
       opened_by: 1, opened_by_name: 'Gerardo Cruz',
       opened_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
-      counted_amount: null, expected_amount: null, difference: null, closing_notes: null,
+      counted_amount: null, counted_cash_amount: null, counted_non_cash_amount: null,
+      expected_amount: null, difference: null, closing_notes: null,
       closed_by: null, closed_by_name: null, closed_at: null,
     };
     mockShifts.unshift(row);
@@ -3275,7 +3372,11 @@ function resolveShiftsMock(path, query, { method = 'GET', body } = {}) {
       shiftConflict('No se puede cerrar el turno global con turnos de empleado abiertos');
     }
     const balance = buildShiftBalance(sh);
-    const counted = Number(body?.counted_amount || 0);
+    // Como el backend: con arqueo el total contado es la SUMA de sus renglones y lo que mande el
+    // cliente como total se ignora; sin arqueo manda `counted_amount`.
+    const counts = shiftClosingCountRows(body);
+    const hasCount = counts.length > 0 || body?.cash_count !== undefined || body?.method_count !== undefined;
+    const counted = hasCount ? shiftCountTotal(counts) : Number(body?.counted_amount || 0);
     const difference = counted - Number(balance.expected_amount);
     if (difference !== 0) {
       // Como en el backend: el sobrante se factura y el faltante se registra como gasto, y el
@@ -3292,8 +3393,12 @@ function resolveShiftsMock(path, query, { method = 'GET', body } = {}) {
         occurred_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
       });
     }
+    counts.forEach((row) => mockShiftClosingCounts.push({ shift_id: sh.id, ...row }));
+
     sh.status = 'CLOSED';
     sh.counted_amount = counted.toFixed(2);
+    sh.counted_cash_amount = hasCount ? shiftCountTotal(counts, 'CASH').toFixed(2) : null;
+    sh.counted_non_cash_amount = hasCount ? shiftCountTotal(counts, 'METHOD').toFixed(2) : null;
     sh.expected_amount = balance.expected_amount;
     sh.difference = difference.toFixed(2);
     sh.closing_notes = body?.notes || null;

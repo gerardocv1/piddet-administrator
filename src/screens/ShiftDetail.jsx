@@ -13,10 +13,11 @@ import t from './ShiftDetail.module.css';
 const MOVEMENT_BADGE = { order: 'success', expense: 'danger', adjustment: 'warning' };
 const DOCUMENT_PATHS = { order: '/invoices', expense: '/expenses' };
 
-// Detalle de un turno de caja: datos de apertura, balance en vivo (base + ventas − gastos,
-// con desglose por método de pago) y el historial de movimientos que el backend asoció
-// automáticamente (ventas, gastos y el ajuste del cierre). Los movimientos de recursos
-// cancelados/anulados con el turno abierto aparecen tachados y no cuentan en el balance.
+// Detalle de un turno de caja: datos de apertura, balance en vivo (base + ventas − gastos, con
+// desglose por método de pago), el arqueo con el que se cerró —cuántos billetes de cada
+// denominación había y cuánto se recibió por cada otro método— y el historial de movimientos que
+// el backend asoció automáticamente (ventas, gastos y el ajuste del cierre). Los movimientos de
+// recursos cancelados/anulados con el turno abierto aparecen tachados y no cuentan en el balance.
 // Cada movimiento enlaza a su documento: la venta a su factura, el gasto a su detalle y el
 // ajuste del cierre al documento contable que lo respalda (el sobrante se factura y el
 // faltante se registra como gasto, para que la contabilidad cuadre con la plata contada).
@@ -66,6 +67,11 @@ export function ShiftDetail() {
   const cancelled = data.status === 'CANCELLED';
   const balance = data.balance || {};
   const movements = data.movements || [];
+  // Renglones del arqueo del cierre (solo en turnos cerrados; los cerrados antes del arqueo
+  // llegan sin ellos y conservan solo su total contado).
+  const closingCounts = data.closing_counts || [];
+  const countedCash = closingCounts.filter((r) => r.kind === 'CASH');
+  const countedMethods = closingCounts.filter((r) => r.kind === 'METHOD');
   // El turno GLOBAL solo lo cierra quien tenga shift-global-admin; el de cajero, cualquiera de
   // sus asignados o un admin (los cajeros solo llegan a ver los suyos: el backend filtra).
   const canClose = open && (data.type === 'GLOBAL' ? can('shift-global-admin') : true);
@@ -222,6 +228,12 @@ export function ShiftDetail() {
                       <span>Contado al cierre</span>
                       <strong>{shiftMoney(data.counted_amount)}</strong>
                     </div>
+                    {data.counted_cash_amount != null && (
+                      <ul className={t.methods}>
+                        <li><span>Efectivo</span><span>{shiftMoney(data.counted_cash_amount)}</span></li>
+                        <li><span>Otros métodos</span><span>{shiftMoney(data.counted_non_cash_amount)}</span></li>
+                      </ul>
+                    )}
                     <div className={t.balanceRow}>
                       <span>Diferencia</span>
                       <strong className={difference > 0 ? t.income : difference < 0 ? t.outcome : ''}>
@@ -233,6 +245,35 @@ export function ShiftDetail() {
               </div>
             </Card.Body>
           </Card>
+
+          {closingCounts.length > 0 && (
+            <Card>
+              <Card.Header title="Arqueo del cierre" />
+              <Card.Body>
+                <div className={t.balance}>
+                  {countedCash.length > 0 && <span className={t.countGroup}>Efectivo</span>}
+                  {countedCash.map((row) => (
+                    <div key={`cash-${row.code}`} className={t.balanceRow}>
+                      {/* El valor del billete ya está en la etiqueta: aquí solo cuántos había. */}
+                      <span>{row.label}{row.quantity != null ? ` · ×${row.quantity}` : ''}</span>
+                      <strong>{shiftMoney(row.amount)}</strong>
+                    </div>
+                  ))}
+                  {countedMethods.length > 0 && <span className={t.countGroup}>Otros métodos de pago</span>}
+                  {countedMethods.map((row) => (
+                    <div key={`method-${row.code}`} className={t.balanceRow}>
+                      <span>{row.label}</span>
+                      <strong>{shiftMoney(row.amount)}</strong>
+                    </div>
+                  ))}
+                  <div className={`${t.balanceRow} ${t.balanceTotal}`}>
+                    <span>Total contado</span>
+                    <strong>{shiftMoney(data.counted_amount)}</strong>
+                  </div>
+                </div>
+              </Card.Body>
+            </Card>
+          )}
         </div>
       </div>
 

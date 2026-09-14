@@ -50,6 +50,17 @@
   color: var(--gray-500);
 }
 
+/* Encabezado de grupo dentro del arqueo del cierre (Efectivo / Otros métodos de pago). */
+.countGroup {
+  margin-top: 4px;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--gray-500);
+}
+.countGroup:first-child { margin-top: 0; }
+
 /* El enlace al documento usa el color del texto de la tabla, no el de marca. */
 .docLink { color: inherit; }
 .docLink:hover { text-decoration: underline; }

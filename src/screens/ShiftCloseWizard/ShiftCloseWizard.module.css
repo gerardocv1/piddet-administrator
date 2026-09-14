@@ -181,3 +181,89 @@
   max-width: 280px;
   margin-top: 18px;
 }
+
+/* ---- Arqueo del cierre (paso 1) ---- */
+/* Una tarjeta por naturaleza del dinero: el efectivo, que se cuenta en billetes y monedas, y los
+   demás métodos de pago, de los que se reporta cuánto entró por cada uno. */
+.count {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  background: var(--surface-card);
+}
+.countHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--gray-500);
+}
+.countHead strong {
+  font-size: var(--text-base);
+  font-weight: 700;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--gray-900);
+}
+.countRows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+/* Denominación · cuántos hay · subtotal. La tercera columna deja el subtotal alineado a la
+   derecha, que es como se lee un arqueo en papel. */
+.countRow,
+.countRowWide {
+  display: grid;
+  align-items: center;
+  gap: 10px;
+}
+.countRow { grid-template-columns: 1fr 84px 84px; }
+/* En los métodos de pago el campo ES el monto: no hace falta la columna del subtotal. */
+.countRowWide { grid-template-columns: 1fr 124px; }
+
+.countLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  font-size: var(--text-sm);
+  color: var(--gray-700);
+}
+.countLabel small { font-size: var(--text-xs); color: var(--gray-500); }
+
+/* Campos compactos: siete renglones de billetes no pueden ocupar toda la pantalla. Los
+   selectores llevan el contenedor a propósito, para ganarle a la altura del campo del sistema
+   (que en móvil es mayor) sin depender del orden de las hojas. */
+.countRow .countWrap,
+.countRowWide .countWrap { height: 40px; min-width: 0; padding: 0 0.625rem; }
+/* `width: 0` con `flex: 1` (que ya trae el campo) lo obliga a caber en su columna: sin eso el
+   ancho intrínseco del `input` lo desborda y el texto se sale de la caja. */
+.countRow .countField,
+.countRowWide .countField { width: 0; text-align: right; }
+
+.countAmount {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-align: right;
+  color: var(--gray-800);
+  font-variant-numeric: tabular-nums;
+}
+/* Una denominación sin contar no dice "$ 0": dice que todavía no se contó. */
+.countEmpty { color: var(--gray-400); font-weight: 500; }
+
+@media (max-width: 420px) {
+  .countRow { grid-template-columns: 1fr 72px 76px; }
+  .countRowWide { grid-template-columns: 1fr 112px; }
+  .countLabel { font-size: var(--text-xs); }
+}

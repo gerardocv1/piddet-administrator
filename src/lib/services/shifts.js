@@ -4,10 +4,11 @@
 // dinero y puede ser GLOBAL (toda la compañía) o EMPLOYEE (uno o varios cajeros: caja
 // compartida, `assigned_users`). Mientras está abierto, el backend le asocia automáticamente
 // las ventas y gastos que registran sus asignados (movimientos con monto y método de pago
-// denormalizados). El cierre compara el dinero contado contra base + ventas − gastos y registra
-// la diferencia como ajuste (sobrante/faltante). Reglas del backend: máximo 1 GLOBAL abierto por
-// compañía, ningún usuario en dos turnos abiertos a la vez, y el GLOBAL no se puede cerrar con
-// turnos de empleado abiertos (409).
+// denormalizados). El cierre es un arqueo: se cuenta el efectivo por denominación y se reporta lo
+// recibido por cada otro método de pago; el backend suma ese desglose, lo compara contra base +
+// ventas − gastos y registra la diferencia como ajuste (sobrante/faltante). Reglas del backend:
+// máximo 1 GLOBAL abierto por compañía, ningún usuario en dos turnos abiertos a la vez, y el
+// GLOBAL no se puede cerrar con turnos de empleado abiertos (409).
 
 import { http } from '../http/client.js';
 import { auth } from '../auth/index.js';
@@ -37,14 +38,18 @@ export const shiftsService = {
   // Detalle: turno + balance en vivo + movimientos (ventas, gastos, ajustes).
   shift: (shiftId) => http.get(`${base()}/shifts/${shiftId}`),
 
-  // Balance del turno para el paso 2 del wizard de cierre.
+  // Balance del turno, con lo que necesita el wizard de cierre: el esperado total, el esperado
+  // partido en efectivo y por cada otro método (`cash`, `non_cash.by_method`) y el catálogo de
+  // denominaciones con el que se cuentan los billetes (`cash_denominations`).
   shiftBalance: (shiftId) => http.get(`${base()}/shifts/${shiftId}/balance`),
 
   // Abre un turno. { type: 'GLOBAL'|'EMPLOYEE', base_amount, assigned_user_ids? (solo admin:
   // uno o varios usuarios; sin lista el turno es del propio usuario) }
   openShift: (data) => http.post(`${base()}/shifts`, data),
 
-  // Cierra el turno con el dinero contado. { counted_amount, notes? } Devuelve el detalle.
+  // Cierra el turno con su arqueo. { cash_count: [{ code, quantity }] (las monedas van con
+  // `amount`), method_count: [{ payment_method, amount }], notes? } El total contado lo suma el
+  // backend a partir del desglose: aquí no se manda `counted_amount`. Devuelve el detalle.
   closeShift: (shiftId, data) => http.post(`${base()}/shifts/${shiftId}/close`, data),
 
   // Corrige la base de un turno ABIERTO (solo admin del módulo). Devuelve el detalle.
