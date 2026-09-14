@@ -1,6 +1,6 @@
 import React from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Card, DataTable, Badge, FilterBar, Pagination, RefreshButton, Alert, Modal, StatStrip } from '../components';
+import { Card, DataTable, Badge, FilterBar, Pagination, RefreshButton, Alert, Modal, StatStrip, Button, ConfirmDialog, useToast } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import {
@@ -17,8 +17,9 @@ const EMPTY_SUMMARY = { counters: null, source_references: [] };
 // texto, por qué motivo y en qué estado quedó. Responde "¿le llegó el SMS?" sin abrir el panel de
 // la pasarela.
 //
-// Es de SOLO LECTURA a propósito: una notificación es el registro de algo que ya pasó. Los filtros
-// y la página viven en la URL para que compartir el enlace lleve a la misma consulta.
+// Una notificación es el registro de algo que ya pasó: no se edita ni se borra. Lo único que se
+// puede hacer es reenviarla, y eso crea otra fila. Los filtros y la página viven en la URL para
+// que compartir el enlace lleve a la misma consulta.
 export function SentNotifications() {
   const [params, setParams] = useSearchParams();
   const dateFrom = params.get('date_from') || '';
@@ -161,57 +162,130 @@ export function SentNotifications() {
           onChange={(p) => setQuery({}, p)} disabled={loading} />
       )}
 
-      {selected && <NotificationDetailModal notification={selected} onClose={() => setSelected(null)} />}
+      {selected && (
+        <NotificationDetailModal
+          notification={selected}
+          onClose={() => setSelected(null)}
+          onResent={() => { setSelected(null); refresh(); }}
+        />
+      )}
     </div>
   );
 }
 
-function NotificationDetailModal({ notification, onClose }) {
+// El reenvío es un envío NUEVO: otra fila en el historial, otra referencia en la pasarela; esta
+// no cambia. Una fallida se reenvía sin más; una enviada o pendiente hay que FORZARLA, porque el
+// mensaje se cobra otra vez (y una pendiente puede seguir en la cola).
+function NotificationDetailModal({ notification, onClose, onResent }) {
   const st = notificationStatusOf(notification.status);
+  const { toast } = useToast();
+  const [confirming, setConfirming] = React.useState(false);
+  const [sending, setSending] = React.useState(false);
+  const [sendError, setSendError] = React.useState(null);
+  const failed = notification.status === 3;
+
+  const resend = async () => {
+    setSending(true);
+    setSendError(null);
+    try {
+      await api.resendSentNotification(notification.id, { force: !failed });
+      toast({ tone: 'success', title: 'Reenvío en camino: aparece como una notificación nueva en el historial' });
+      setConfirming(false);
+      onResent();
+    } catch (e) {
+      // 409 (no falló, exige forzar) y 502 (la pasarela lo rechazó) traen su mensaje del backend.
+      setSendError(e?.message || 'No se pudo reenviar la notificación.');
+    } finally {
+      setSending(false);
+    }
+  };
 
   return (
-    <Modal open title="Notificación enviada" subtitle={sourceReferenceLabel(notification.source_reference)} onClose={onClose} size="lg">
-      <div className={t.detail}>
-        <div className={t.detailGrid}>
-          <Field label="Estado"><Badge variant={st.variant} dot>{st.label}</Badge></Field>
-          <Field label="Canal">{notificationTypeOf(notification.type)}</Field>
-          <Field label="Destinatario">{notification.addressee || '—'}</Field>
-          <Field label="Fecha">{formatNotificationDate(notification.date)}</Field>
-          <Field label="Registrada">{formatNotificationDate(notification.created_at)}</Field>
-          {notification.integration ? <Field label="Pasarela">{notification.integration}</Field> : null}
-          {/* El acuse del proveedor: con él se rastrea este envío concreto en su panel. */}
-          {notification.shipping_reference ? <Field label="Referencia de envío">{notification.shipping_reference}</Field> : null}
-          {notification.read_at ? <Field label="Leída">{formatNotificationDate(notification.read_at)}</Field> : null}
-          {notification.clicked_at ? <Field label="Abierta">{formatNotificationDate(notification.clicked_at)}</Field> : null}
-        </div>
-
-        <div className={t.field}>
-          <span className={t.fieldLabel}>Mensaje</span>
-          <p className={t.message}>{notification.message || '—'}</p>
-        </div>
-
-        {notification.deep_link && (
-          <div className={t.field}>
-            <span className={t.fieldLabel}>Enlace</span>
-            <span className={t.fieldValue}>{notification.deep_link}</span>
+    <>
+      <Modal
+        open
+        title="Notificación enviada"
+        subtitle={sourceReferenceLabel(notification.source_reference)}
+        onClose={onClose}
+        size="lg"
+        footer={<>
+          <Button variant="secondary" onClick={onClose}>Cerrar</Button>
+          <Button
+            variant={failed ? 'primary' : 'danger'}
+            icon={failed ? 'fas fa-paper-plane' : 'fas fa-repeat'}
+            onClick={() => setConfirming(true)}
+          >
+            {failed ? 'Reenviar' : 'Forzar reenvío'}
+          </Button>
+        </>}
+      >
+        <div className={t.detail}>
+          <div className={t.detailGrid}>
+            <Field label="Estado"><Badge variant={st.variant} dot>{st.label}</Badge></Field>
+            <Field label="Canal">{notificationTypeOf(notification.type)}</Field>
+            <Field label="Destinatario">{notification.addressee || '—'}</Field>
+            <Field label="Fecha">{formatNotificationDate(notification.date)}</Field>
+            <Field label="Registrada">{formatNotificationDate(notification.created_at)}</Field>
+            {notification.integration ? <Field label="Pasarela">{notification.integration}</Field> : null}
+            {/* El acuse del proveedor: con él se rastrea este envío concreto en su panel. */}
+            {notification.shipping_reference ? <Field label="Referencia de envío">{notification.shipping_reference}</Field> : null}
+            {notification.read_at ? <Field label="Leída">{formatNotificationDate(notification.read_at)}</Field> : null}
+            {notification.clicked_at ? <Field label="Abierta">{formatNotificationDate(notification.clicked_at)}</Field> : null}
           </div>
-        )}
 
-        {notification.status === 1 && (
-          <Alert tone="warning" title="Todavía no ha salido">
-            Quedó registrada y espera a la pasarela. Si lleva mucho así, el worker de colas no está
-            corriendo en el servidor.
-          </Alert>
-        )}
+          <div className={t.field}>
+            <span className={t.fieldLabel}>Mensaje</span>
+            <p className={t.message}>{notification.message || '—'}</p>
+          </div>
 
-        {notification.status === 3 && (
-          <Alert tone="danger" title="No se pudo enviar">
-            La pasarela rechazó el mensaje. El motivo queda en el log del servidor
-            (<code>QUEUE_NOTIFICATION_INTEGRATIONS_ERROR</code>).
-          </Alert>
+          {notification.deep_link && (
+            <div className={t.field}>
+              <span className={t.fieldLabel}>Enlace</span>
+              <span className={t.fieldValue}>{notification.deep_link}</span>
+            </div>
+          )}
+
+          {notification.status === 1 && (
+            <Alert tone="warning" title="Todavía no ha salido">
+              Quedó registrada y espera a la pasarela. Si lleva mucho así, el worker de colas no está
+              corriendo en el servidor.
+            </Alert>
+          )}
+
+          {notification.status === 3 && (
+            <Alert tone="danger" title="No se pudo enviar">
+              La pasarela rechazó el mensaje. El motivo queda en el log del servidor
+              (<code>QUEUE_NOTIFICATION_INTEGRATIONS_ERROR</code>). Una vez corregido, puedes
+              reenviarla desde aquí.
+            </Alert>
+          )}
+        </div>
+      </Modal>
+
+      <ConfirmDialog
+        open={confirming}
+        title={failed ? 'Reenviar la notificación' : 'Forzar el reenvío'}
+        confirmLabel={failed ? 'Reenviar' : 'Forzar reenvío'}
+        variant={failed ? 'primary' : 'danger'}
+        icon={failed ? 'fas fa-paper-plane' : 'fas fa-repeat'}
+        loading={sending}
+        error={sendError}
+        onConfirm={resend}
+        onClose={() => { if (!sending) { setConfirming(false); setSendError(null); } }}
+      >
+        <p>
+          Se enviará de nuevo el mismo mensaje a <strong>{notification.addressee}</strong>. Quedará
+          como una notificación nueva en el historial; esta no cambia.
+        </p>
+        {!failed && (
+          <p>
+            {notification.status === 1
+              ? 'Esta notificación sigue pendiente: puede que la pasarela todavía la entregue y el destinatario reciba el mensaje dos veces.'
+              : 'Esta notificación ya salió: el destinatario recibirá el mensaje otra vez y el envío se cobra de nuevo.'}
+          </p>
         )}
-      </div>
-    </Modal>
+      </ConfirmDialog>
+    </>
   );
 }
 
