@@ -3663,7 +3663,47 @@ const mockGuests = [
   { user_id: 501, first_name: 'Laura', last_name: 'Martínez', name: 'Laura Martínez', email: 'laura@example.com', phone_code: '57', phone_number: '3001112233', id_type_id: 1, id_number: '43567890' },
 ];
 
-const mockReservations = [];
+// Reservas de ejemplo: las que entran hoy y mañana alimentan el widget de reservas del inicio
+// (cuatro, para que «Ver todas (4)» muestre el total con tres visibles).
+const demoReservation = ({ id, code, unit, holder, checkInOffset, nights, status, arrival = null, services = [], notes = null }) => {
+  // `isoDay` resta días: el offset positivo de la reserva es "días a partir de hoy".
+  const checkIn = isoDay(-checkInOffset);
+  const lodging = Number(unit.base_price_per_night) * nights;
+  const servicesTotal = services.reduce((sum, sv) => sum + Number(sv.total), 0);
+  const [first, ...rest] = holder.name.split(' ');
+  return {
+    id, code, access_code: 'k7m2rq9xv4bd', rentable_unit_id: unit.id, rentable_unit_name: unit.name,
+    guests_count: holder.guests, holder_user_id: holder.user_id, holder_user_name: holder.name,
+    holder_document_number: holder.id_number, holder_first_name: first, holder_last_name: rest.join(' '),
+    holder_phone_number: holder.phone_number, check_in_date: checkIn, check_out_date: isoDay(-(checkInOffset + nights)),
+    expected_arrival_time: arrival, nights, price_per_night: Number(unit.base_price_per_night).toFixed(2),
+    lodging_subtotal: lodging.toFixed(2), services_total: servicesTotal.toFixed(2), total: (lodging + servicesTotal).toFixed(2),
+    status, precheckin_completed_at: null, checkin_at: null, checkout_at: null, checkout_order_id: null, notes,
+    created_by_name: 'Gerardo Carvajal', cancelled_by_name: null, cancelled_at: null, cancellation_reason: null,
+    guests: [{ id: 1, user_id: holder.user_id, is_holder: true, first_name: first, last_name: rest.join(' '), name: holder.name, document_number: holder.id_number }],
+    services, charges: [], linked_orders: [], payments: [],
+  };
+};
+
+const mockReservations = [
+  demoReservation({
+    id: 'rsv-demo-1', code: 'RSV7K2M9QX', unit: mockRentableUnits[0], checkInOffset: 0, nights: 2, status: 2, arrival: '15-18',
+    holder: { user_id: 501, name: 'Laura Martínez', guests: 2, id_number: '43567890', phone_number: '3001112233' },
+    services: [{ id: 1, item_id: 904, name: 'Decoración de aniversario', quantity: 1, unit_price: '80000.00', total: '80000.00' }],
+  }),
+  demoReservation({
+    id: 'rsv-demo-2', code: 'RSVB4N8XQW', unit: mockRentableUnits[1], checkInOffset: 0, nights: 1, status: 1,
+    holder: { user_id: 502, name: 'Andrés Cardona', guests: 1, id_number: '71234567', phone_number: '3005558899' },
+  }),
+  demoReservation({
+    id: 'rsv-demo-3', code: 'RSVM7DC2P4', unit: mockRentableUnits[0], checkInOffset: 1, nights: 3, status: 2, arrival: '12-15',
+    holder: { user_id: 503, name: 'Marta Ruiz', guests: 4, id_number: '52987123', phone_number: '3009876543' },
+  }),
+  demoReservation({
+    id: 'rsv-demo-4', code: 'RSVQ9WT5HZ', unit: mockRentableUnits[1], checkInOffset: 1, nights: 2, status: 5, arrival: '18-21',
+    holder: { user_id: 504, name: 'Julián Ospina', guests: 2, id_number: '80123456', phone_number: '3112223344' },
+  }),
+];
 let mockReservationOrderSeq = 0;
 
 // Código único de consulta de una reserva (el del enlace corto del SMS), con el mismo alfabeto y

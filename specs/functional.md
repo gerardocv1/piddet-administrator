@@ -106,8 +106,10 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
 - **Reservas** (con `api-module-reservations` + `functionality_reservations`): lista resumida de
   las que siguen **pendientes de recibir** (pendiente, validando pago o confirmada) y entran hoy o
   mañana — nombre, unidad, hora estimada de llegada, badge «Hoy» o «Mañana», 🎈 si lleva
-  decoración y el estado; tocar abre la reserva. Sin franja de totales: el widget avisa de lo que
-  hay que preparar, no reporta. Es operación del día, así que va **antes** del control de período
+  decoración y el estado; tocar abre la reserva. Mismas filas compactas que los widgets del
+  gimnasio: se muestran **tres** y «Ver todas (N)» lleva el total cuando hay más. Sin franja de
+  totales: el widget avisa de lo que hay que preparar, no reporta. Es operación del día, así que
+  va **antes** del control de período
   y no lo obedece. Sale de `GET /reservations/pending-arrivals`; el botón de refrescar lo recarga
   con los demás reportes. Su cuerpo no lleva relleno propio: en el teléfono las filas se alinean
   con el resto de la pantalla en vez de quedar doblemente metidas.

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { StatStrip, SalesComparisonChart, Card, Input, Select, IconButton, Spinner, Badge, Button, ListCard, Alert } from '../components';
+import { StatStrip, SalesComparisonChart, Card, Input, Select, IconButton, Spinner, Badge, Button, Alert } from '../components';
 import { useResource } from '../lib/useResource.js';
 import { usePermissions } from '../lib/permissions/usePermissions.js';
 import { useFunctionalities } from '../lib/permissions/useFunctionalities.js';
@@ -73,21 +73,25 @@ const buildReservationsKpis = ({ totals } = {}) => (totals ? [
   { label: 'Ocupación', value: `${totals.occupancy_rate}%` },
 ] : []);
 
-// Cuántas reservas caben en el widget antes de resumir el resto en una línea.
-const ARRIVALS_LIMIT = 6;
+// Cuántas reservas caben en el widget; el resto vive en el listado y «Ver todas» lleva el total.
+const ARRIVALS_LIMIT = 3;
+
+// «Ver todos (12)»: el total va en el enlace cuando hay más de los que se muestran.
+const seeAllLabel = (label, total, shown) => (total > shown ? `${label} (${total})` : label);
 
 /** Widget de reservas: las que siguen pendientes de recibir y entran hoy o mañana — lo que hay
- *  que preparar. Es operación del día, así que no depende de los filtros de período. */
+ *  que preparar. Es operación del día, así que no depende de los filtros de período. Mismas
+ *  filas compactas que los widgets del gimnasio: icono, nombre, una línea con unidad, franja de
+ *  llegada y estado, y a la derecha los badges de cuándo entra y si lleva decoración. */
 function PendingArrivalsCard({ rows, loading, error, onOpen, onSeeAll }) {
   const shown = rows.slice(0, ARRIVALS_LIMIT);
-  const rest = rows.length - shown.length;
 
   return (
     <Card className={s.widgetCard}>
       {/* En el teléfono el título va al ras del borde, sin filete ni sombra, y la lista a todo
           el ancho, alineada con los accesos rápidos de arriba (ver .widgetCard en el CSS). */}
       <Card.Header title="Reservas" className={s.widgetHead}
-        action={<Button variant="link" size="sm" iconRight="fas fa-chevron-right" className={s.widgetSeeAll} onClick={onSeeAll}>Ver todas</Button>} />
+        action={<Button variant="link" size="sm" iconRight="fas fa-chevron-right" className={s.widgetSeeAll} onClick={onSeeAll}>{seeAllLabel('Ver todas', rows.length, shown.length)}</Button>} />
       {/* Sin `cardBody`: este widget es una lista, no un reporte. */}
       <Card.Body className={s.widgetBody}>
         {error ? (
@@ -97,37 +101,34 @@ function PendingArrivalsCard({ rows, loading, error, onOpen, onSeeAll }) {
         ) : rows.length === 0 ? (
           <p className={s.widgetEmpty}>No hay reservas pendientes para hoy ni mañana.</p>
         ) : (
-          <>
-            <div className={s.widgetList}>
-              {shown.map((r) => {
-                const soon = checkInProximity(r.check_in_date, r.status);
-                const meta = reservationStatusMeta(r.status);
-                return (
-                  <ListCard key={r.id}
-                    media={<span className={s.arrivalIcon}><i className="fas fa-right-to-bracket" /></span>}
-                    title={r.holder_user_name}
-                    subtitle={r.expected_arrival_time
-                      ? `${r.rentable_unit_name} · ${arrivalSlotLabel(r.expected_arrival_time)}`
-                      : r.rentable_unit_name}
-                    badge={
-                      // Un solo hijo: el pie de la ListCard reparte a sus lados, y dos badges
-                      // sueltos se separarían uno del otro.
-                      <span className={s.arrivalBadges}>
-                        {soon && <Badge variant={soon.variant} dot>{soon.label}</Badge>}
-                        {r.has_decoration && (
-                          <Badge variant="primary" title={DECORATION_LABEL} aria-label={DECORATION_LABEL}>
-                            {DECORATION_EMOJI}
-                          </Badge>
-                        )}
-                      </span>
-                    }
-                    meta={meta.label}
-                    onClick={() => onOpen(r.id)} />
-                );
-              })}
-            </div>
-            {rest > 0 && <p className={s.widgetMore}>y {rest} más</p>}
-          </>
+          <div className={s.expList}>
+            {shown.map((r) => {
+              const soon = checkInProximity(r.check_in_date, r.status);
+              const meta = reservationStatusMeta(r.status);
+              return (
+                <button type="button" key={r.id} className={s.expRow} onClick={() => onOpen(r.id)}>
+                  <span className={s.arrivalIcon}><i className="fas fa-right-to-bracket" /></span>
+                  <span className={s.expText}>
+                    <span className={s.expName}>{r.holder_user_name}</span>
+                    <span className={s.expMeta}>
+                      {r.rentable_unit_name}
+                      {r.expected_arrival_time && <span className={s.expPlan}> · {arrivalSlotLabel(r.expected_arrival_time)}</span>}
+                      {' · '}{meta.label}
+                    </span>
+                  </span>
+                  <span className={s.arrivalBadges}>
+                    {soon && <Badge variant={soon.variant} dot>{soon.label}</Badge>}
+                    {r.has_decoration && (
+                      <Badge variant="primary" title={DECORATION_LABEL} aria-label={DECORATION_LABEL}>
+                        {DECORATION_EMOJI}
+                      </Badge>
+                    )}
+                  </span>
+                  <i className={`fas fa-chevron-right ${s.expChevron}`} aria-hidden="true" />
+                </button>
+              );
+            })}
+          </div>
         )}
       </Card.Body>
     </Card>
@@ -137,9 +138,6 @@ function PendingArrivalsCard({ rows, loading, error, onOpen, onSeeAll }) {
 // Cuántos cumpleaños se ven en el inicio: en un gimnasio grande un mes trae decenas y el inicio
 // no es la lista completa; «Ver todos» lleva el total.
 const BIRTHDAYS_LIMIT = 3;
-
-// «Ver todos (12)»: el total va en el enlace cuando hay más de los que se muestran.
-const seeAllLabel = (label, total, shown) => (total > shown ? `${label} (${total})` : label);
 
 // Badge de cada cumpleaños según qué tan lejos queda de hoy.
 const birthdayBadge = (row, today) => {
