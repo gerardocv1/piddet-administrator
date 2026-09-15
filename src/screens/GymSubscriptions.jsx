@@ -78,7 +78,7 @@ export function GymSubscriptions() {
       key: 'status', header: 'Estado', width: 130,
       render: (r) => {
         const m = subscriptionBadge(r);
-        return <Badge variant={m.variant} dot>{m.label}</Badge>;
+        return <Badge variant={m.variant}>{m.label}</Badge>;
       },
     },
   ];
@@ -147,7 +147,7 @@ export function GymSubscriptions() {
                     {pending > 0 && <span className={gl.saldo}> · saldo {gymMoney(pending)}</span>}
                   </span>
                 </div>
-                <Badge variant={m.variant} dot>{m.label}</Badge>
+                <Badge variant={m.variant}>{m.label}</Badge>
               </button>
             </Card>
           );

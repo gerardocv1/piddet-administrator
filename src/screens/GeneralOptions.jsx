@@ -99,7 +99,7 @@ export function GeneralOptions() {
             <div className={t.groupTitleRow}>
               <span className={t.groupName}>{gr.name}</span>
               {isRemoveGroup(gr) && <Badge variant="warning">Para quitar</Badge>}
-              {!gr.status && <Badge variant="neutral" dot>Inactivo</Badge>}
+              {!gr.status && <Badge variant="neutral">Inactivo</Badge>}
             </div>
             <span className={t.groupRules}>{rulesText(gr)}</span>
           </div>
@@ -133,7 +133,7 @@ export function GeneralOptions() {
                   <i className="fas fa-grip-vertical" />
                 </button>
                 <span className={t.optName}>{isRemoveGroup(gr) ? `− ${o.name}` : o.name}</span>
-                {Number(o.status) !== 1 && <Badge variant="neutral" dot>Inactiva</Badge>}
+                {Number(o.status) !== 1 && <Badge variant="neutral">Inactiva</Badge>}
                 <span className={t.optPrice}>{isRemoveGroup(gr) ? 'Se quita' : extraPrice(o.value)}</span>
                 <span className={t.optActions}>
                   <IconButton icon="fas fa-pen" variant="light" title="Editar opción" size="sm" onClick={() => setOptForm({ group: gr, option: o })} />

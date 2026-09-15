@@ -56,7 +56,11 @@ contrario (este repo → catálogo): se había adelantado en la capa móvil (bot
 `FilterBar`, campos que siguen la escala de la interfaz, `StatStrip` con `desktopOnly` y el
 `PageHeader` sin marco).
 
-Último porteo aplicado (catálogo `212274d` → este repo): token `--shadow-header` y la sombra
+Último porteo aplicado (catálogo `78ce395` → este repo): `Badge` sin el punto (`dot`) y con
+tokens propios `--badge-*-bg/fg` de tinte más suave en ambos temas; se quitó el prop `dot` de
+todos los usos del panel.
+
+Porteo anterior (catálogo `212274d` → este repo): token `--shadow-header` y la sombra
 corta que el encabezado de la `Card` proyecta sobre su cuerpo (cada sección se lee aparte), más
 las fechas en ISO de la `FilterBar`.
 

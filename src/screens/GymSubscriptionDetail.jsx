@@ -287,12 +287,12 @@ export function GymSubscriptionDetail() {
         ] : []}
         meta={[
           { label: 'Suscrito desde', value: formatShortDate(data.subscribed_at) },
-          { label: 'Estado', value: <Badge variant={headerMeta.variant} dot>{headerMeta.label}</Badge> },
+          { label: 'Estado', value: <Badge variant={headerMeta.variant}>{headerMeta.label}</Badge> },
           {
             label: 'Pago',
             value: pendingTotal > 0
-              ? <Badge variant="warning" dot>Saldo {gymMoney(pendingTotal)}</Badge>
-              : <Badge variant="success" dot>Al día</Badge>,
+              ? <Badge variant="warning">Saldo {gymMoney(pendingTotal)}</Badge>
+              : <Badge variant="success">Al día</Badge>,
           },
         ]}
         note={status === GYM_SUBSCRIPTION_STATUS.CANCELLED && data.cancellation_reason
@@ -348,7 +348,7 @@ export function GymSubscriptionDetail() {
             title={`Período ${p.number} · ${formatStayRangeShort(p.start_date, p.end_date)}`}
             action={(
               <span className={g.periodActions}>
-                <Badge variant={pMeta.variant} dot>{pMeta.label}</Badge>
+                <Badge variant={pMeta.variant}>{pMeta.label}</Badge>
                 {periodMenu(p).length > 0 && (
                   <Dropdown
                     trigger={<IconButton icon="fas fa-ellipsis-vertical" variant="light" size="sm" title="Acciones del período" />}
@@ -377,7 +377,7 @@ export function GymSubscriptionDetail() {
                         )}
                       </div>
                       {annulled ? (
-                        <Badge variant="neutral" dot>Anulado</Badge>
+                        <Badge variant="neutral">Anulado</Badge>
                       ) : (
                         <Button variant="outline-primary" size="sm" onClick={() => setAnnulTarget(pay)}>Anular</Button>
                       )}
@@ -390,7 +390,7 @@ export function GymSubscriptionDetail() {
               <span>Total pagado</span>
               <span className={g.payTotalRight}>
                 <strong>{gymMoney(p.paid_total)}</strong>
-                {pending > 0 && <Badge variant="danger" dot>Pendiente {gymMoney(pending)}</Badge>}
+                {pending > 0 && <Badge variant="danger">Pendiente {gymMoney(pending)}</Badge>}
               </span>
             </div>
           </Panel>

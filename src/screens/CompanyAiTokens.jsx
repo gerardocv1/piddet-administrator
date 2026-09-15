@@ -38,7 +38,7 @@ export function AiTokensCard() {
   const columns = [
     { key: 'name', header: 'Nombre', ellipsis: true },
     { key: 'token_prefix', header: 'Token', width: 140, render: (r) => <span className={t.tokenPrefix}>{r.token_prefix}…</span> },
-    { key: 'status', header: 'Estado', width: 110, render: (r) => { const st = statusOf(r); return <Badge variant={st.variant} dot>{st.label}</Badge>; } },
+    { key: 'status', header: 'Estado', width: 110, render: (r) => { const st = statusOf(r); return <Badge variant={st.variant}>{st.label}</Badge>; } },
     { key: 'expires_at', header: 'Expira', width: 110, render: (r) => fmtDate(r.expires_at) },
     { key: 'last_used_at', header: 'Último uso', width: 140, render: (r) => fmtDate(r.last_used_at, true) },
     {

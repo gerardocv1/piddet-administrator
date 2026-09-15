@@ -231,7 +231,7 @@ export function GymMembers() {
       key: 'subscription', header: 'Membresía', width: 140,
       render: (r) => {
         const ms = membership(r);
-        return <Badge variant={ms.badge.variant} dot>{ms.badge.label}</Badge>;
+        return <Badge variant={ms.badge.variant}>{ms.badge.label}</Badge>;
       },
     },
     {
@@ -306,7 +306,7 @@ export function GymMembers() {
               media={<Avatar name={r.member_name} size="sm" />}
               title={r.member_name}
               subtitle={birthdayText(r)}
-              badge={<Badge variant={ms.badge.variant} dot>{ms.badge.label}</Badge>}
+              badge={<Badge variant={ms.badge.variant}>{ms.badge.label}</Badge>}
               meta={ms.detail}
               action={!ms.alive ? (
                 <Button variant="secondary" size="sm" icon="fas fa-plus"

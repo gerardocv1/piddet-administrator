@@ -49,8 +49,10 @@ const LIVE_STATUSES = [
 export const checkInProximity = (checkInDate, status) => {
   if (!checkInDate || !LIVE_STATUSES.includes(Number(status))) return null;
   const today = todayIso();
-  if (checkInDate === today) return { label: 'Hoy', variant: 'danger' };
-  if (checkInDate === addDaysIso(today, 1)) return { label: 'Mañana', variant: 'warning' };
+  // Una llegada no es un problema, es lo que hay que preparar: acento de la marca para hoy y
+  // neutro para mañana, sin los tonos de peligro/aviso que se reservan para lo que va mal.
+  if (checkInDate === today) return { label: 'Hoy', variant: 'primary' };
+  if (checkInDate === addDaysIso(today, 1)) return { label: 'Mañana', variant: 'neutral' };
   return null;
 };
 

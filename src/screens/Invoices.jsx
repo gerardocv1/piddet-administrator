@@ -76,7 +76,7 @@ export function Invoices() {
     },
     {
       key: 'status', header: 'Estado', width: 130,
-      render: (r) => { const st = orderStatusOf(r.status); return <Badge variant={st.variant} dot>{st.label}</Badge>; },
+      render: (r) => { const st = orderStatusOf(r.status); return <Badge variant={st.variant}>{st.label}</Badge>; },
     },
     {
       key: 'discount', header: 'Descuento', width: 120, align: 'right',

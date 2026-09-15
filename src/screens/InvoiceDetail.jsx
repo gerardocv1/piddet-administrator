@@ -92,7 +92,7 @@ export function InvoiceDetail() {
           { label: 'Actualizar', icon: 'fas fa-rotate-right', disabled: loading, onClick: reload },
         ]}
         meta={[
-          { label: 'Estado', value: <Badge variant={st.variant} dot>{status?.name || st.label}</Badge> },
+          { label: 'Estado', value: <Badge variant={st.variant}>{status?.name || st.label}</Badge> },
           { label: 'Pago', value: <Badge variant={pay.variant}>{pay.label}</Badge> },
           { label: 'Origen', value: originLabel(order.origin_code) },
           { label: 'Servicio', value: serviceTypeLabel(order.service_type) },

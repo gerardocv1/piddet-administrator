@@ -243,7 +243,7 @@ export function ReservationWizard() {
                       <span className={t.unitName}>{u.name}</span>
                       <span className={s.muted}>{u.type_name} · {u.capacity} pers.</span>
                       <span className={t.unitPrice}>{reservationMoney(u.base_price_per_night)} / noche</span>
-                      {!u.available && <Badge variant="danger" dot>Ocupada</Badge>}
+                      {!u.available && <Badge variant="danger">Ocupada</Badge>}
                     </button>
                   ))}
                 </div>

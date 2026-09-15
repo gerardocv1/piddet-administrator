@@ -108,8 +108,8 @@ export function Expenses() {
     {
       key: 'status', header: 'Estado', width: 110,
       render: (r) => (Number(r.status) === 1
-        ? <Badge variant="success" dot>Activo</Badge>
-        : <Badge variant="danger" dot>Anulado</Badge>),
+        ? <Badge variant="success">Activo</Badge>
+        : <Badge variant="danger">Anulado</Badge>),
     },
     { key: 'total', header: 'Total', width: 130, align: 'right', render: (r) => <span className={s.priceCell}>{expenseMoney(r.total)}</span> },
   ];

@@ -214,10 +214,10 @@ export function ShiftDetail() {
           {
             label: 'Estado',
             value: open
-              ? <Badge variant="success" dot>Abierto</Badge>
+              ? <Badge variant="success">Abierto</Badge>
               : cancelled
-                ? <Badge variant="danger" dot>Cancelado</Badge>
-                : <Badge variant="neutral" dot>Cerrado</Badge>,
+                ? <Badge variant="danger">Cancelado</Badge>
+                : <Badge variant="neutral">Cerrado</Badge>,
           },
           { label: 'Base', value: shiftMoney(data.base_amount) },
           data.type !== 'GLOBAL' && { label: 'Asignado a', value: shiftAssignedNames(data) || '—' },

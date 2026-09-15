@@ -338,7 +338,7 @@ export function ReservationDetail() {
         menu={menuItems}
         menuWidth={250}
         meta={[
-          { label: 'Estado', value: <Badge variant={meta.variant} dot>{meta.label}</Badge> },
+          { label: 'Estado', value: <Badge variant={meta.variant}>{meta.label}</Badge> },
           {
             label: 'Personas',
             value: Number(extraInfo.count) > 0

@@ -146,7 +146,7 @@ export function GymPlans() {
       key: 'status', header: 'Estado', width: 120,
       render: (r) => {
         const m = gymPlanStatusMeta(r.status);
-        return <Badge variant={m.variant} dot>{m.label}</Badge>;
+        return <Badge variant={m.variant}>{m.label}</Badge>;
       },
     },
     {
@@ -221,7 +221,7 @@ export function GymPlans() {
                   <div className={gl.info}>
                     <span className={gl.name}>{r.name}</span>
                     <span className={gl.metaRow}>
-                      <Badge variant={m.variant} dot>{m.label}</Badge>
+                      <Badge variant={m.variant}>{m.label}</Badge>
                       <span className={gl.meta}>{gymPlanDurationLabel(r)} · {gymMoney(r.price)}</span>
                     </span>
                   </div>

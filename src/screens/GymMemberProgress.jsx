@@ -258,7 +258,7 @@ export function GymMemberProgress() {
                         <span className={p.compareValue}>{grp.last.value} {unit}</span>
                         <span className={p.compareDate}>{formatShortDate(grp.last.date)}</span>
                       </div>
-                      <Badge variant="neutral" dot>
+                      <Badge variant="neutral">
                         {fmtDelta(delta, unit)}{fmtPct(delta, first)} desde la primera medición
                       </Badge>
                     </div>

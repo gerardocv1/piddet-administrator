@@ -57,7 +57,7 @@ tarjetas distintas.
     <ListCard key={r.id}
       media={<Avatar name={r.member_name} size="sm" />}
       title={r.member_name} subtitle={r.member_code}
-      badge={<Badge variant={ms.badge.variant} dot>{ms.badge.label}</Badge>}
+      badge={<Badge variant={ms.badge.variant}>{ms.badge.label}</Badge>}
       meta={ms.detail}
       action={!ms.alive ? <Button size="sm" variant="secondary" …>Suscribir</Button> : null}
       onClick={() => navigate(`/gym/members/${r.id}`)} />

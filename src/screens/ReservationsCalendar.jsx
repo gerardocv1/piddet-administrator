@@ -162,7 +162,7 @@ function EventModal({ reservation, onClose, onOpen }) {
         <Button variant="primary" icon="fas fa-eye" onClick={() => onOpen(reservation.id)}>Ver reserva</Button>
       </>}>
       <div className={t.modalBody}>
-        <div className={t.modalRow}><span className={s.muted}>Estado</span><Badge variant={meta.variant} dot>{meta.label}</Badge></div>
+        <div className={t.modalRow}><span className={s.muted}>Estado</span><Badge variant={meta.variant}>{meta.label}</Badge></div>
         <div className={t.modalRow}><span className={s.muted}>Unidad</span><strong>{reservation.rentable_unit_name}</strong></div>
         <div className={t.modalRow}><span className={s.muted}>Estadía</span><span>{formatStayRange(reservation.check_in_date, reservation.check_out_date)} · {reservation.nights} {reservation.nights === 1 ? 'noche' : 'noches'}</span></div>
         <div className={t.modalRow}><span className={s.muted}>Personas</span><span>{guests} (titular incluido)</span></div>

@@ -53,8 +53,8 @@ export function RentableUnits() {
     {
       key: 'status', header: 'Estado', width: 120,
       render: (r) => (Number(r.status) === 1
-        ? <Badge variant="success" dot>Reservable</Badge>
-        : <Badge variant="neutral" dot>Inactiva</Badge>),
+        ? <Badge variant="success">Reservable</Badge>
+        : <Badge variant="neutral">Inactiva</Badge>),
     },
     { key: 'base_price_per_night', header: 'Tarifa / noche', width: 140, align: 'right', render: (r) => <span className={s.priceCell}>{reservationMoney(r.base_price_per_night)}</span> },
   ];

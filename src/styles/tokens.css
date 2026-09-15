@@ -94,6 +94,22 @@
   --color-danger-100: #fdd9e1;
   --color-danger-fg: var(--color-danger);
 
+  /* ---- Badges ---- */
+  /* Tinte más suave que el -100 y texto un punto más apagado que el color pleno: una etiqueta
+     de estado se lee de reojo muchas veces por pantalla y no puede pesar como un aviso. */
+  --badge-primary-bg: #e6f1f3;
+  --badge-primary-fg: var(--color-primary-700);
+  --badge-success-bg: #e6f6ee;
+  --badge-success-fg: #1e8a5c;
+  --badge-info-bg: #e4f8fc;
+  --badge-info-fg: #0b8aa3;
+  --badge-warning-bg: #fff0ea;
+  --badge-warning-fg: #c2401c;
+  --badge-danger-bg: #fee8ed;
+  --badge-danger-fg: #c92a4c;
+  --badge-neutral-bg: var(--gray-100);
+  --badge-neutral-fg: var(--gray-600);
+
   /* ---- Texto/superficie sobre paneles oscuros (sidebar, login) ---- */
   --on-dark: #ffffff;
   --on-dark-muted: rgba(255, 255, 255, 0.62);
@@ -244,6 +260,18 @@
   --color-info-100: rgba(17, 205, 239, 0.18);
   --color-warning-100: rgba(251, 99, 64, 0.18);
   --color-danger-100: rgba(245, 54, 92, 0.18);
+  --badge-primary-bg: rgba(47, 151, 165, 0.16);
+  --badge-primary-fg: #8fcbd6;
+  --badge-success-bg: rgba(39, 165, 111, 0.14);
+  --badge-success-fg: #5cc79a;
+  --badge-info-bg: rgba(17, 205, 239, 0.12);
+  --badge-info-fg: #5dd3ea;
+  --badge-warning-bg: rgba(251, 99, 64, 0.13);
+  --badge-warning-fg: #f59276;
+  --badge-danger-bg: rgba(245, 54, 92, 0.13);
+  --badge-danger-fg: #f2728e;
+  --badge-neutral-bg: var(--gray-200);
+  --badge-neutral-fg: var(--gray-700);
 
   /* Sombras más profundas */
   --shadow-xs: 0 0 0.5rem rgba(0, 0, 0, 0.4);

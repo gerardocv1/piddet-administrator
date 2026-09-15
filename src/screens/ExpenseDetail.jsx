@@ -137,8 +137,8 @@ export function ExpenseDetail() {
           {
             label: 'Estado',
             value: active
-              ? <Badge variant="success" dot>Activo</Badge>
-              : <Badge variant="danger" dot>Anulado</Badge>,
+              ? <Badge variant="success">Activo</Badge>
+              : <Badge variant="danger">Anulado</Badge>,
           },
           { label: 'Proveedor', value: data.supplier?.name || '—' },
           { label: 'Método de pago', value: data.payment_method_name || '—' },

@@ -344,7 +344,7 @@ export function GymMemberDetail() {
         <InfoCard.Field label="Talla">{data.height_cm ? `${data.height_cm} cm` : '—'}</InfoCard.Field>
         <InfoCard.Field label="Objetivo">{data.goal || 'Sin objetivo'}</InfoCard.Field>
         <InfoCard.Field label="Ingreso">{formatShortDate(data.joined_at)}</InfoCard.Field>
-        <InfoCard.Field label="Estado"><Badge variant={meta.variant} dot>{meta.label}</Badge></InfoCard.Field>
+        <InfoCard.Field label="Estado"><Badge variant={meta.variant}>{meta.label}</Badge></InfoCard.Field>
         {data.health_notes && <p className={g.healthNotes}><i className="fas fa-notes-medical" aria-hidden="true" /> {data.health_notes}</p>}
       </InfoCard>
 
@@ -373,7 +373,7 @@ export function GymMemberDetail() {
                 </span>
               </span>
               <span className={g.subRight}>
-                <Badge variant={subMeta.variant} dot>{subMeta.label}</Badge>
+                <Badge variant={subMeta.variant}>{subMeta.label}</Badge>
                 <i className={`fas fa-chevron-right ${g.subChevron}`} aria-hidden="true" />
               </span>
             </span>

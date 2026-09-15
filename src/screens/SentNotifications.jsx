@@ -74,7 +74,7 @@ export function SentNotifications() {
     },
     {
       key: 'status', header: 'Estado', width: 120,
-      render: (r) => { const st = notificationStatusOf(r.status); return <Badge variant={st.variant} dot>{st.label}</Badge>; },
+      render: (r) => { const st = notificationStatusOf(r.status); return <Badge variant={st.variant}>{st.label}</Badge>; },
     },
     { key: 'type', header: 'Canal', width: 90, render: (r) => notificationTypeOf(r.type) },
     { key: 'source_reference', header: 'Motivo', width: 180, ellipsis: true, render: (r) => sourceReferenceLabel(r.source_reference) },
@@ -267,7 +267,7 @@ function NotificationDetailModal({ notification, onClose, onResent }) {
       >
         <div className={t.detail}>
           <div className={t.detailGrid}>
-            <Field label="Estado"><Badge variant={st.variant} dot>{st.label}</Badge></Field>
+            <Field label="Estado"><Badge variant={st.variant}>{st.label}</Badge></Field>
             <Field label="Canal">{notificationTypeOf(notification.type)}</Field>
             <Field label="Destinatario">{notification.addressee || '—'}</Field>
             <Field label="Fecha">{formatNotificationDate(notification.date)}</Field>
