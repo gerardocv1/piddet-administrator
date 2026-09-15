@@ -2374,7 +2374,7 @@ function resolveSentNotificationsMock(path, query, { method = 'GET', body } = {}
     mockSentNotifications.unshift({
       id, date: isoDay(0), created_at: new Date().toISOString().slice(0, 19), status: 2, type: 1,
       integration: 'Hablame', source_reference: 'MANUAL_TEST', addressee: to,
-      message: `Cabanas El Roble: ${String(body.message).trim()}`,
+      message: `Cabanas El Roble:\n${String(body.message).trim()}`,
       deep_link: null, recipient_id: null, shipping_reference: `sms-${99000 + id}`, read_at: null, clicked_at: null,
     });
     return {};
