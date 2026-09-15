@@ -167,38 +167,27 @@
 .widgetCard .widgetHead { align-items: baseline; }
 .widgetCard .widgetSeeAll { padding-right: 0; position: relative; top: 3px; }
 
-/* Lista compacta: una columna en el teléfono, dos en escritorio para no estirar la tarjeta. */
-.widgetList {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 8px;
-}
-@media (min-width: 861px) {
-  .widgetList { grid-template-columns: 1fr 1fr; gap: 10px; }
-}
 
-.widgetMore { margin: 0.6rem 0 0; color: var(--gray-500); font-size: var(--text-xs); }
-.widgetMoreBtn { margin-top: 0.4rem; padding-left: 0; }
 .widgetEmpty { margin: 0; color: var(--gray-500); font-size: var(--text-sm); }
 
 .arrivalIcon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
   background: var(--company-accent-soft);
   color: var(--company-accent-strong);
-  font-size: 0.8rem;
+  font-size: 0.7rem;
 }
 
 .arrivalBadges { display: inline-flex; align-items: center; gap: 6px; }
 
 /* ── Gimnasio: vencimientos + cumpleaños ── */
 /* Los dos widgets comparten fila en escritorio (el aviso a la izquierda, los cumpleaños a la
-   derecha) y se apilan en el teléfono. Al ir a media anchura, cada lista vuelve a una columna:
-   dos filas de ListCard no caben lado a lado con nombre, estado y saldo legibles. */
+   derecha) y se apilan en el teléfono. */
 .gymRow {
   display: grid;
   grid-template-columns: 1fr;
@@ -207,12 +196,8 @@
 }
 @media (min-width: 861px) {
   .gymRow { grid-template-columns: 1fr 1fr; }
-  .gymRow .widgetList { grid-template-columns: 1fr; }
 }
-/* Entre el resumen del aviso y su lista, un aire corto: leen como un solo bloque. */
-.expiringSummary { margin-bottom: 0.75rem; }
-
-/* Filas compactas del aviso: una tarjetita de una sola altura de línea doble (nombre + dato),
+/* Filas compactas de los widgets (reservas, vencimientos, cumpleaños): una tarjetita de una sola altura de línea doble (nombre + dato),
    con el estado a la derecha; más bajas que una ListCard porque no tienen pie. */
 .expList { display: flex; flex-direction: column; gap: 6px; }
 .expRow {
@@ -231,6 +216,22 @@
 }
 .expRow:hover { border-color: var(--gray-300); }
 .expRow:active { background: var(--gray-100); }
+/* En escritorio el widget ya es una tarjeta: las filas van sin recuadro, a todo el ancho del
+   cuerpo, y solo un filete las separa cuando hay más de una. */
+@media (min-width: 861px) {
+  .expList { gap: 0; }
+  .expRow {
+    padding: 8px 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+  }
+  .expRow + .expRow { border-top: 1px solid var(--border-color); }
+  .expRow:hover { border-color: var(--border-color); }
+  .expRow:hover .expName { color: var(--company-accent-strong); }
+  .expRow:active { background: transparent; }
+  .bdayRow { padding-right: 0; }
+}
 .expText { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
 .expName {
   font-size: var(--text-sm);
