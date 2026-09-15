@@ -134,9 +134,12 @@ function PendingArrivalsCard({ rows, loading, error, onOpen, onSeeAll }) {
   );
 }
 
-// Cuántos cumpleaños se ven antes de plegar el resto: en un gimnasio grande un mes trae decenas
-// y el inicio no es la lista completa.
-const BIRTHDAYS_LIMIT = 6;
+// Cuántos cumpleaños se ven en el inicio: en un gimnasio grande un mes trae decenas y el inicio
+// no es la lista completa; «Ver todos» lleva el total.
+const BIRTHDAYS_LIMIT = 3;
+
+// «Ver todos (12)»: el total va en el enlace cuando hay más de los que se muestran.
+const seeAllLabel = (label, total, shown) => (total > shown ? `${label} (${total})` : label);
 
 // Badge de cada cumpleaños según qué tan lejos queda de hoy.
 const birthdayBadge = (row, today) => {
@@ -161,7 +164,6 @@ const birthdayGreeting = (row) => {
  *  cuando el afiliado tiene celular. Primero los de hoy, después los que vienen y al final,
  *  atenuados, los que ya pasaron. */
 function GymBirthdaysCard({ rows, loading, error, onOpen, onSeeAll }) {
-  const [expanded, setExpanded] = React.useState(false);
   const now = new Date();
   const month = now.getMonth() + 1;
   const today = `${now.getFullYear()}-${String(month).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
@@ -171,13 +173,12 @@ function GymBirthdaysCard({ rows, loading, error, onOpen, onSeeAll }) {
     const rank = (r) => (r.is_today ? 0 : r.is_past ? 2 : 1);
     return rows.slice().sort((a, b) => rank(a) - rank(b) || a.day - b.day || a.member_name.localeCompare(b.member_name));
   }, [rows]);
-  const shown = expanded ? ordered : ordered.slice(0, BIRTHDAYS_LIMIT);
-  const rest = ordered.length - shown.length;
+  const shown = ordered.slice(0, BIRTHDAYS_LIMIT);
 
   return (
     <Card className={s.widgetCard}>
       <Card.Header title={`Cumpleaños de ${monthName(month)}`} className={s.widgetHead}
-        action={<Button variant="link" size="sm" iconRight="fas fa-chevron-right" className={s.widgetSeeAll} onClick={() => onSeeAll(month)}>Ver todos</Button>} />
+        action={<Button variant="link" size="sm" iconRight="fas fa-chevron-right" className={s.widgetSeeAll} onClick={() => onSeeAll(month)}>{seeAllLabel('Ver todos', ordered.length, shown.length)}</Button>} />
       <Card.Body className={s.widgetBody}>
         {error ? (
           <Alert tone="danger" title="No se pudieron cargar los cumpleaños">{error}</Alert>
@@ -189,7 +190,8 @@ function GymBirthdaysCard({ rows, loading, error, onOpen, onSeeAll }) {
           <>
             {/* Filas compactas como las del aviso de vencimientos: baldosa del día, nombre y años
                 que cumple, el badge de cuándo y el WhatsApp a la derecha (sin chevron: la zona
-                de identidad sigue abriendo la ficha). */}
+                de identidad sigue abriendo la ficha). En escritorio van sin recuadro, separadas
+                por un filete, para no meter una tarjeta dentro de otra. */}
             <div className={s.expList}>
               {shown.map((r) => {
                 const wa = whatsappHref(r.phone_number ? `${r.phone_code || ''}${r.phone_number}` : '', birthdayGreeting(r));
@@ -216,11 +218,6 @@ function GymBirthdaysCard({ rows, loading, error, onOpen, onSeeAll }) {
                 );
               })}
             </div>
-            {rest > 0 && (
-              <Button variant="link" size="sm" className={s.widgetMoreBtn} onClick={() => setExpanded(true)}>
-                Ver {rest} más
-              </Button>
-            )}
           </>
         )}
       </Card.Body>
@@ -228,8 +225,9 @@ function GymBirthdaysCard({ rows, loading, error, onOpen, onSeeAll }) {
   );
 }
 
-// Cuántas suscripciones se ven en el aviso; el resto vive en el listado de suscripciones.
-const EXPIRING_LIMIT = 6;
+// Cuántas suscripciones se ven en el aviso; el resto vive en el listado de suscripciones y
+// «Ver todas» lleva el total.
+const EXPIRING_LIMIT = 3;
 
 // Etiqueta de urgencia de cada suscripción: la gracia manda (el corte automático está cerca), y
 // entre las que aún no vencen, cuenta cuánto falta.
@@ -244,27 +242,18 @@ const expiringBadge = (item) => {
   return { label: `Vence en ${item.days_left} días`, variant: 'warning' };
 };
 
-/** Widget-alerta de vencimientos: suscripciones en gracia o que vencen en los próximos días. El
- *  resumen de arriba es un Alert cuyo tono sube con la urgencia (gracia → danger, solo por vencer
- *  → warning, nada → success) y cada fila abre la suscripción para cobrar o renovar. */
+/** Widget-alerta de vencimientos: suscripciones en gracia o que vencen en los próximos días, del
+ *  más urgente al más lejano; cada fila abre la suscripción para cobrar o renovar. Sin resumen de
+ *  conteos arriba: la urgencia la dice el badge de cada fila y el total va en «Ver todas». */
 function GymExpiringCard({ data, loading, error, onOpen, onSeeAll }) {
   const items = data?.items || [];
-  const counts = data?.counts || { grace: 0, expiring: 0, pending_total: '0' };
   const days = data?.days || 7;
   const shown = items.slice(0, EXPIRING_LIMIT);
-  const rest = items.length - shown.length;
-
-  // Solo los conteos: una suscripción en gracia ya venció (el corte es lo que sigue), y las
-  // demás están por vencer. El detalle de cada una vive en su fila.
-  const summaryParts = [];
-  if (counts.grace > 0) summaryParts.push(counts.grace === 1 ? '1 vencida' : `${counts.grace} vencidas`);
-  if (counts.expiring > 0) summaryParts.push(`${counts.expiring} por vencer`);
-  const tone = counts.grace > 0 ? 'danger' : counts.expiring > 0 ? 'warning' : 'success';
 
   return (
     <Card className={s.widgetCard}>
       <Card.Header title="Vencimientos" className={s.widgetHead}
-        action={<Button variant="link" size="sm" iconRight="fas fa-chevron-right" className={s.widgetSeeAll} onClick={() => onSeeAll(days)}>Ver todas</Button>} />
+        action={<Button variant="link" size="sm" iconRight="fas fa-chevron-right" className={s.widgetSeeAll} onClick={() => onSeeAll(days)}>{seeAllLabel('Ver todas', items.length, shown.length)}</Button>} />
       <Card.Body className={s.widgetBody}>
         {error ? (
           <Alert tone="danger" title="No se pudieron cargar los vencimientos">{error}</Alert>
@@ -276,7 +265,6 @@ function GymExpiringCard({ data, loading, error, onOpen, onSeeAll }) {
           </Alert>
         ) : (
           <>
-            <Alert tone={tone} title={summaryParts.join(' · ')} className={s.expiringSummary} />
             {/* Filas compactas: una sola línea de datos bajo el nombre y el estado a la derecha,
                 sin el pie de la ListCard — aquí caben más afiliados en menos alto. */}
             <div className={s.expList}>
@@ -306,7 +294,6 @@ function GymExpiringCard({ data, loading, error, onOpen, onSeeAll }) {
                 );
               })}
             </div>
-            {rest > 0 && <p className={s.widgetMore}>y {rest} más en Suscripciones</p>}
           </>
         )}
       </Card.Body>

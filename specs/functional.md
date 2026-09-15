@@ -114,21 +114,24 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
 - **Gimnasio** (con `api-module-gym` + `functionality_gym`): dos widgets de operación del día,
   lado a lado en escritorio y apilados en el teléfono, que también van antes del control de
   período y se recargan con el mismo botón. **Vencimientos** (`GET /gym/dashboard/expiring`):
-  un aviso cuyo tono sube con la urgencia —`danger` si hay suscripciones en gracia, `warning` si
-  solo hay por vencer, `success` cuando todo está al día— con solo los conteos («2 vencidas ·
-  1 por vencer», sin más texto) y debajo la lista en filas compactas, del más urgente al más
-  lejano: en gracia primero (el corte automático está cerca), luego las que vencen hoy, mañana
-  o en N días; cada fila lleva el nombre, una línea con plan (solo en escritorio), fecha de
-  corte y saldo, y el estado a la derecha; tocarla abre la suscripción para cobrar o renovar.
-  «Ver todas» abre Suscripciones con el filtro «Vencen en 7 días» puesto.
+  la lista en filas compactas, del más urgente al más lejano —en gracia primero (el corte
+  automático está cerca), luego las que vencen hoy, mañana o en N días—, sin resumen de conteos
+  arriba (la urgencia la dice el badge de cada fila; un «1 por vencer» encima de una sola fila
+  se veía redundante). Cada fila lleva el nombre, una línea con plan (solo en escritorio), fecha
+  de corte y saldo, y el estado a la derecha; tocarla abre la suscripción para cobrar o renovar.
+  Se muestran **tres**; «Ver todas (N)» lleva el total cuando hay más y abre Suscripciones con
+  el filtro «Vencen en 7 días» puesto. Cuando todo está al día, un aviso `success` lo dice.
   **Cumpleaños del mes** (`GET /gym/dashboard/birthdays`): los afiliados activos que cumplen
   años este mes, en filas compactas de dos líneas —baldosa-calendario del día, nombre y años
   que cumple— con el badge de cuándo («Hoy», «Mañana», «En N días», «Ya pasó») y, a la derecha,
   el botón de WhatsApp con un saludo a nombre de la compañía cuando el afiliado tiene celular;
   tocar la identidad abre su ficha. Primero los de hoy, luego los próximos y al final,
-  atenuados, los que ya pasaron. Se muestran seis y el resto se despliega con «Ver N más»;
-  «Ver todos» abre Afiliados con el filtro «Cumpleaños: mes» puesto (`?birthday_month=`), que
+  atenuados, los que ya pasaron. Se muestran **tres**; «Ver todos (N)» lleva el total cuando
+  hay más y abre Afiliados con el filtro «Cumpleaños: mes» puesto (`?birthday_month=`), que
   lista a todos los que cumplen ese mes ordenados por día con su fecha y los años que cumplen.
+  En escritorio las filas de ambos widgets van **sin recuadro** (el widget ya es una tarjeta;
+  una tarjeta dentro de otra se veía mal), separadas solo por un filete cuando hay más de una;
+  en el teléfono conservan su tarjetita.
 - **Reglas:** en el teléfono cada franja se queda con la cifra que se mira de un vistazo —ventas
   totales y ticket promedio; gastos totales; ingresos de hospedaje y ocupación— y el desglose
   (productos, servicios, registros, gasto promedio, mayor gasto, reservas, noches vendidas) se
