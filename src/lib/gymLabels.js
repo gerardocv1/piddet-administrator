@@ -71,16 +71,18 @@ export const gymSubscriptionStatusMeta = (status) => {
 };
 
 // Cada ciclo de cobro es un PERÍODO que el sistema genera solo: vigente → en gracia (ventana
-// para pagar antes del corte) → cerrado (gracia agotada CON pagos; el saldo parcial persiste) o
-// cancelado (corte sin pagos, o cancelación de la suscripción). El backend expone `status`
-// (materializado por el cron) y `computed_status` (en vivo); el panel pinta `computed_status`.
+// para pagar antes del corte) → concluido (gracia agotada CON pagos; el saldo parcial persiste;
+// el backend lo llama CLOSED) o cancelado (corte sin pagos, o cancelación de la suscripción). El
+// backend expone `status` (materializado por el cron) y `computed_status` (en vivo); el panel
+// pinta `computed_status`. «Concluido» y no «cerrado»: es un ciclo que ya pasó, no algo que
+// alguien cerró.
 export const GYM_PERIOD_STATUS = { CURRENT: 1, GRACE: 2, CLOSED: 3, CANCELLED: 4 };
 
 export const gymPeriodStatusMeta = (status) => {
   switch (Number(status)) {
     case GYM_PERIOD_STATUS.CURRENT: return { label: 'Vigente', variant: 'success' };
     case GYM_PERIOD_STATUS.GRACE: return { label: 'En gracia', variant: 'warning' };
-    case GYM_PERIOD_STATUS.CLOSED: return { label: 'Cerrado', variant: 'neutral' };
+    case GYM_PERIOD_STATUS.CLOSED: return { label: 'Concluido', variant: 'neutral' };
     case GYM_PERIOD_STATUS.CANCELLED: return { label: 'Cancelado', variant: 'neutral' };
     default: return { label: '—', variant: 'neutral' };
   }
