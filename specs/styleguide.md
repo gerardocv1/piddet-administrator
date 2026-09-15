@@ -56,7 +56,11 @@ contrario (este repo → catálogo): se había adelantado en la capa móvil (bot
 `FilterBar`, campos que siguen la escala de la interfaz, `StatStrip` con `desktopOnly` y el
 `PageHeader` sin marco).
 
-Último porteo aplicado (catálogo `78ce395` → este repo): `Badge` sin el punto (`dot`) y con
+Último porteo aplicado (catálogo `d32df87` → este repo): `Button` con la variante
+`outline-success` y el prop `dashed` (borde punteado para la acción pendiente); de paso el
+catálogo recibió la variante `link` que este repo ya tenía.
+
+Porteo anterior (catálogo `78ce395` → este repo): `Badge` sin el punto (`dot`) y con
 tokens propios `--badge-*-bg/fg` de tinte más suave en ambos temas; se quitó el prop `dot` de
 todos los usos del panel.
 

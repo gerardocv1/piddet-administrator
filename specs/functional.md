@@ -378,6 +378,12 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
   período vigente, junto a **Cancelar período** (`gym-subscriptions-cancel`): confirmación con
   motivo obligatorio que deja claro que se cancela la suscripción completa y, si el período tiene
   pagos activos, pregunta si se anulan también con sus facturas (solo con `gym-payments-annul`).
+  **Anular un pago** también vive en ese menú ⋮ (un ítem por pago activo, nombrado por valor y
+  fecha cuando hay más de uno) y no como botón en cada fila: es la excepción, no la acción del
+  día. La acción del día es **Registrar pago**: además del menú de la cabecera, aparece como
+  botón verde punteado en el pie del período más antiguo con saldo (el que recibe el abono).
+  El estado final de un período se llama **Concluido** (el `CLOSED` del backend): un ciclo que
+  ya pasó, no algo que alguien cerró.
 - **Pagos:** cada pago manual (efectivo, tarjeta…) genera su propia factura en el módulo de
   Facturas (origen "Gimnasio", numeración propia), compartiendo la misma infraestructura de
   facturación que el resto de la plataforma. Anular un pago cancela también su factura;
@@ -406,7 +412,7 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
 - **Reglas:** requiere la funcionalidad `functionality_gym` activa además del permiso. Los
   afiliados son usuarios de la plataforma (mismo patrón "pasivo" de Reservas). Un job diario
   (`gym:transition-subscriptions`, backend) transiciona automáticamente los períodos (vigente →
-  en gracia → cerrado), aplica el corte por no pago y **genera el período siguiente**; nadie lo
+  en gracia → concluido), aplica el corte por no pago y **genera el período siguiente**; nadie lo
   crea a mano. Si esa corrida no pasó (el período vigente ya venció y no existe el siguiente), el
   detalle lo avisa y, con `gym-subscriptions-create`, ofrece **Generar período**: fuerza el mismo
   ciclo para esa suscripción, con confirmación —y advertencia en rojo si el resultado va a ser el

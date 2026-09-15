@@ -256,13 +256,25 @@ export function GymSubscriptionDetail() {
   const isLiveLatest = (p) => isActive && p.id === currentPeriod?.id
     && [GYM_PERIOD_STATUS.CURRENT, GYM_PERIOD_STATUS.GRACE].includes(Number(p.status));
   const canCancelPeriod = (p) => isLiveLatest(p) && can('gym-subscriptions-cancel');
-  const periodMenu = (p) => [
-    ...(canMoveStart(p) ? [{ label: 'Mover inicio', icon: 'fas fa-calendar-day', onClick: () => openStart(p) }] : []),
-    ...(canCancelPeriod(p) ? [{ label: 'Cancelar período', icon: 'fas fa-ban', variant: 'danger', onClick: () => openCancelPeriod(p) }] : []),
-  ];
   const activePaymentsOf = (p) => (p?.payments || []).filter((pay) => Number(pay.status) === 1);
   const invoicedPaymentsOf = (p) => activePaymentsOf(p).filter((pay) => pay.registers_income !== false);
   const canAnnulPayments = can('gym-payments-annul');
+
+  // Anular un pago es la excepción, no la acción de cada fila: vive en el menú ⋮ del período,
+  // un ítem por pago activo (nombrado por su valor y fecha cuando hay más de uno).
+  const annulItems = (p) => {
+    if (!canAnnulPayments) return [];
+    const active = activePaymentsOf(p);
+    return active.map((pay) => ({
+      label: active.length === 1 ? 'Anular pago' : `Anular pago de ${gymMoney(pay.value)} (${formatShortDate(pay.payment_date)})`,
+      icon: 'fas fa-rotate-left', variant: 'danger', onClick: () => setAnnulTarget(pay),
+    }));
+  };
+  const periodMenu = (p) => [
+    ...(canMoveStart(p) ? [{ label: 'Mover inicio', icon: 'fas fa-calendar-day', onClick: () => openStart(p) }] : []),
+    ...annulItems(p),
+    ...(canCancelPeriod(p) ? [{ label: 'Cancelar período', icon: 'fas fa-ban', variant: 'danger', onClick: () => openCancelPeriod(p) }] : []),
+  ];
 
   // Con una activa cuyo período está en gracia, el badge lo advierte; si no, manda el estado
   // de la suscripción.
@@ -376,11 +388,7 @@ export function GymSubscriptionDetail() {
                           <span className={g.payReason}>Anulado: {pay.annulment_reason}</span>
                         )}
                       </div>
-                      {annulled ? (
-                        <Badge variant="neutral">Anulado</Badge>
-                      ) : (
-                        <Button variant="outline-primary" size="sm" onClick={() => setAnnulTarget(pay)}>Anular</Button>
-                      )}
+                      {annulled && <Badge variant="neutral">Anulado</Badge>}
                     </li>
                   );
                 })}
@@ -390,7 +398,14 @@ export function GymSubscriptionDetail() {
               <span>Total pagado</span>
               <span className={g.payTotalRight}>
                 <strong>{gymMoney(p.paid_total)}</strong>
-                {pending > 0 && <Badge variant="danger">Pendiente {gymMoney(pending)}</Badge>}
+                {pending > 0 && <Badge variant="warning">Pendiente {gymMoney(pending)}</Badge>}
+                {/* El abono siempre cae en el período más antiguo con saldo: ahí, y solo ahí,
+                    está la acción pendiente, punteada para leerse como un hueco por llenar. */}
+                {pending > 0 && isActive && payTarget?.id === p.id && (
+                  <Button variant="outline-success" dashed size="sm" icon="fas fa-dollar-sign" onClick={openPay}>
+                    Registrar pago
+                  </Button>
+                )}
               </span>
             </div>
           </Panel>
