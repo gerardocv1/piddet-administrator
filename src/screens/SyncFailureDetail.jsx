@@ -139,7 +139,7 @@ export function SyncFailureDetail() {
           <span className={s.muted}>{formatDateTime(report.created_at)}</span>
         </div>
         <RefreshButton loading={loading} onClick={reload} />
-        <Badge variant={st.variant} dot>{st.label}</Badge>
+        <Badge variant={st.variant}>{st.label}</Badge>
       </div>
 
       <Card>

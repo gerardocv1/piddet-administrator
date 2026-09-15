@@ -41,7 +41,7 @@ export function SyncFailures() {
     { key: 'reported_username', header: 'Reportó', width: 120, render: (r) => r.reported_username || <span className={s.faint}>—</span> },
     {
       key: 'support_status', header: 'Estado', width: 140,
-      render: (r) => { const st = supportStatusOf(r.support_status); return <Badge variant={st.variant} dot>{st.label}</Badge>; },
+      render: (r) => { const st = supportStatusOf(r.support_status); return <Badge variant={st.variant}>{st.label}</Badge>; },
     },
   ];
 

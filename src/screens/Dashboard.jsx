@@ -117,7 +117,7 @@ function PendingArrivalsCard({ rows, loading, error, onOpen, onSeeAll }) {
                     </span>
                   </span>
                   <span className={s.arrivalBadges}>
-                    {soon && <Badge variant={soon.variant} dot>{soon.label}</Badge>}
+                    {soon && <Badge variant={soon.variant}>{soon.label}</Badge>}
                     {r.has_decoration && (
                       <Badge variant="primary" title={DECORATION_LABEL} aria-label={DECORATION_LABEL}>
                         {DECORATION_EMOJI}
@@ -206,7 +206,7 @@ function GymBirthdaysCard({ rows, loading, error, onOpen, onSeeAll }) {
                         <span className={s.expMeta}>Cumple {r.turns} años</span>
                       </span>
                     </button>
-                    <Badge variant={b.variant} dot={r.is_today}>{b.label}</Badge>
+                    <Badge variant={b.variant}>{b.label}</Badge>
                     {wa ? (
                       <IconButton icon="fab fa-whatsapp" variant="light" size="sm" className={s.waBtn}
                         title="Felicitar por WhatsApp"
@@ -286,7 +286,7 @@ function GymExpiringCard({ data, loading, error, onOpen, onSeeAll }) {
                         {owes && <span className={s.saldo}> · {gymMoney(it.pending)}</span>}
                       </span>
                     </span>
-                    <Badge variant={b.variant} dot>{b.label}</Badge>
+                    <Badge variant={b.variant}>{b.label}</Badge>
                     <i className={`fas fa-chevron-right ${s.expChevron}`} aria-hidden="true" />
                   </button>
                 );

@@ -11,12 +11,7 @@ const VARIANT_CLASS = {
 };
 
 /** Etiqueta de estado tipo píldora con tinte suave. */
-export function Badge({ variant = 'neutral', dot = false, children, className = '', ...rest }) {
+export function Badge({ variant = 'neutral', children, className = '', ...rest }) {
   const cls = [styles.badge, VARIANT_CLASS[variant] || VARIANT_CLASS.neutral, className].filter(Boolean).join(' ');
-  return (
-    <span className={cls} {...rest}>
-      {dot && <span className={styles.dot} />}
-      {children}
-    </span>
-  );
+  return <span className={cls} {...rest}>{children}</span>;
 }

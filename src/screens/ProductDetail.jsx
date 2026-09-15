@@ -179,7 +179,7 @@ export function ProductDetail() {
                       <div className={t.groupTitleRow}>
                         <span className={t.groupName}>{g.name}</span>
                         {isRemoveGroup(g) && <Badge variant="warning">Para quitar</Badge>}
-                        {!g.status && <Badge variant="neutral" dot>Inactivo</Badge>}
+                        {!g.status && <Badge variant="neutral">Inactivo</Badge>}
                       </div>
                       <span className={t.groupRules}>{rulesText(g)}</span>
                     </div>

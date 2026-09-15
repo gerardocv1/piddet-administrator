@@ -125,7 +125,7 @@ export function ScheduledTasks() {
     },
     {
       key: 'status', header: 'Resultado', width: 120,
-      render: (r) => { const st = runStatusOf(r.status); return <Badge variant={st.variant} dot>{st.label}</Badge>; },
+      render: (r) => { const st = runStatusOf(r.status); return <Badge variant={st.variant}>{st.label}</Badge>; },
     },
     { key: 'duration_ms', header: 'Duración', width: 120, align: 'right', render: (r) => formatDuration(r.duration_ms) },
     {
@@ -277,7 +277,7 @@ function TaskStatusCard({ run, canTest, busy, onLaunch }) {
           <p className={t.statusName}>{meta.label}</p>
           <p className={t.statusDetail}>{meta.detail}</p>
         </div>
-        <Badge variant={st.variant} dot>{st.label}</Badge>
+        <Badge variant={st.variant}>{st.label}</Badge>
       </div>
       <div className={t.statusFoot}>
         {meta.schedule && <span className={t.schedule}><i className="fas fa-clock" />{meta.schedule}</span>}
@@ -417,7 +417,7 @@ function RunDetailModal({ run, onClose }) {
     <Modal open title={meta.label} subtitle={run.command} onClose={onClose} size="lg">
       <div className={t.detail}>
         <div className={t.detailGrid}>
-          <Field label="Resultado"><Badge variant={st.variant} dot>{st.label}</Badge></Field>
+          <Field label="Resultado"><Badge variant={st.variant}>{st.label}</Badge></Field>
           <Field label="Duración">{formatDuration(run.duration_ms)}</Field>
           <Field label="Inicio">{formatDateTime(run.started_at)}</Field>
           <Field label="Fin">{run.finished_at ? formatDateTime(run.finished_at) : '—'}</Field>

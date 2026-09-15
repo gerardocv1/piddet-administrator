@@ -53,7 +53,7 @@ export function FunctionalitiesCard() {
                 <span className={t.funcLabel}>{labelOf(f)}</span>
                 {f.description && <span className={t.funcDesc}>{f.description}</span>}
               </div>
-              <Badge variant={isOn(f) ? 'success' : 'neutral'} dot>
+              <Badge variant={isOn(f) ? 'success' : 'neutral'}>
                 {isOn(f) ? 'Activa' : 'Inactiva'}
               </Badge>
             </li>

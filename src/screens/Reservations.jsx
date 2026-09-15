@@ -100,7 +100,7 @@ export function Reservations() {
         return (
           <span className={s.muted}>
             {soon
-              ? <Badge variant={soon.variant} dot>{soon.label}</Badge>
+              ? <Badge variant={soon.variant}>{soon.label}</Badge>
               : formatShortDate(r.check_in_date)}
             {r.has_decoration && <> {decorationBadge}</>}
             {/* Una noche es lo normal: solo se anuncia la estadía cuando son varias. */}
@@ -113,7 +113,7 @@ export function Reservations() {
       key: 'status', header: 'Estado', width: '14%',
       render: (r) => {
         const m = reservationStatusMeta(r.status);
-        return <Badge variant={m.variant} dot>{m.label}</Badge>;
+        return <Badge variant={m.variant}>{m.label}</Badge>;
       },
     },
     { key: 'total', header: 'Total', width: '10%', align: 'right', render: (r) => <span className={s.priceCell}>{reservationMoney(r.total)}</span> },
@@ -198,9 +198,9 @@ export function Reservations() {
               subtitle={stay}
               badge={
                 <span className={s.rowBadges}>
-                  {soon && <Badge variant={soon.variant} dot>{soon.label}</Badge>}
+                  {soon && <Badge variant={soon.variant}>{soon.label}</Badge>}
                   {r.has_decoration && decorationBadge}
-                  <Badge variant={st.variant} dot>{st.label}</Badge>
+                  <Badge variant={st.variant}>{st.label}</Badge>
                 </span>
               }
               meta={reservationMoney(r.total)}

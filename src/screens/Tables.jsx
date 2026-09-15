@@ -128,8 +128,8 @@ export function Tables() {
               <header className={t.cardHead}>
                 <h3 className={t.cardName}>{table.name}</h3>
                 {isActive(table)
-                  ? <Badge variant={isOccupied(table) ? 'warning' : 'success'} dot>{isOccupied(table) ? 'Ocupada' : 'Disponible'}</Badge>
-                  : <Badge variant="neutral" dot>Inactiva</Badge>}
+                  ? <Badge variant={isOccupied(table) ? 'warning' : 'success'}>{isOccupied(table) ? 'Ocupada' : 'Disponible'}</Badge>
+                  : <Badge variant="neutral">Inactiva</Badge>}
               </header>
 
               <p className={t.cardMeta}>

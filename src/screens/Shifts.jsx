@@ -89,10 +89,10 @@ export function Shifts() {
     {
       key: 'status', header: 'Estado', width: 110,
       render: (r) => (r.status === 'OPEN'
-        ? <Badge variant="success" dot>Abierto</Badge>
+        ? <Badge variant="success">Abierto</Badge>
         : r.status === 'CANCELLED'
-          ? <Badge variant="danger" dot>Cancelado</Badge>
-          : <Badge variant="neutral" dot>Cerrado</Badge>),
+          ? <Badge variant="danger">Cancelado</Badge>
+          : <Badge variant="neutral">Cerrado</Badge>),
     },
   ];
 

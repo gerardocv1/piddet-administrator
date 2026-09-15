@@ -48,7 +48,7 @@ export function ReservationManagers() {
     ) },
     { key: 'phone', header: 'Celular', width: 190, nowrap: true, render: (r) => (r.has_phone
       ? <span className={s.muted}>+{r.phone_code} {r.phone_number}</span>
-      : <Badge variant="warning" dot>Sin celular</Badge>) },
+      : <Badge variant="warning">Sin celular</Badge>) },
     { key: 'added_at', header: 'Desde', width: 240, ellipsis: true, render: (r) => (
       <span className={s.muted}>{formatNotificationDate(r.added_at)}{r.created_by_name ? ` · ${r.created_by_name}` : ''}</span>
     ) },
@@ -110,7 +110,7 @@ export function ReservationManagers() {
             media={<Avatar name={m.name} size="sm" />}
             title={m.name}
             subtitle={m.has_phone ? `+${m.phone_code} ${m.phone_number}` : 'Sin celular registrado'}
-            badge={m.has_phone ? <Badge variant="success" dot>Recibe el SMS</Badge> : <Badge variant="warning" dot>Sin celular</Badge>}
+            badge={m.has_phone ? <Badge variant="success">Recibe el SMS</Badge> : <Badge variant="warning">Sin celular</Badge>}
             action={<Button size="sm" variant="secondary" icon="fas fa-user-minus" onClick={() => setRemoving(m)}>Retirar</Button>}
           />
         ))}
