@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   Panel, Badge, Button, IconButton, Dropdown, Spinner, Alert, Select, MoneyInput, DatePicker, Checkbox,
-  Modal, ConfirmDialog, PageHeader, InfoCard, useToast,
+  Modal, ConfirmDialog, InfoCard, useToast,
 } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
@@ -12,15 +12,16 @@ import {
   gymSubscriptionPending, GYM_SUBSCRIPTION_STATUS, GYM_PERIOD_STATUS,
 } from '../lib/gymLabels.js';
 import { formatShortDate, formatStayRangeShort, todayIso, addDaysIso } from '../lib/dates.js';
-import { useSetPageTitle } from '../lib/pageTitle.jsx';
+import { useSetPageTitle, useSetPageBack } from '../lib/pageTitle.jsx';
 import s from './screens.module.css';
 import g from './GymSubscriptionDetail.module.css';
 
-// Detalle de LA suscripción continua del afiliado. La pantalla se lee de arriba abajo en tres
-// alturas, de lo vigente a lo viejo:
-//   1. la suscripción (cabecera): plan, desde cuándo, estado y si está al día;
-//   2. el período EN CURSO, con sus pagos y —si debe— el recordatorio de cobro;
-//   3. el historial, plegado: los períodos anteriores, uno por tarjeta desplegable.
+// Detalle de LA suscripción continua del afiliado. Una sola tarjeta cuenta lo vigente, de
+// arriba abajo: el plan y desde cuándo (con las acciones secundarias en el ⋮), el período EN
+// CURSO con sus datos y —si debe— el recordatorio de cobro, y al pie las acciones primarias
+// (cobrar, generar el período que falta). Debajo, aparte y en letra menor, el historial: los
+// períodos anteriores, cada uno plegado y desplegable. El afiliado da nombre a la pantalla en
+// la barra superior.
 // No hay "renovar": el período siguiente aparece automáticamente con la corrida diaria del
 // backend; si uno agota su gracia sin ningún abono, la suscripción entera se cancela sola.
 // Cuando esa corrida no ha pasado (el período vigente ya venció y no existe el siguiente), el
@@ -41,15 +42,13 @@ export function GymSubscriptionDetail() {
     [paymentMethods],
   );
 
-  // La barra superior lleva un título fijo: el nombre del afiliado ya está en la cabecera de la
-  // ficha, justo debajo, y repetirlo arriba era ruido.
-  useSetPageTitle('Suscripción');
-
-  // El historial nace plegado: arriba lo vigente, y lo viejo solo si alguien lo pide.
-  const [historyOpen, setHistoryOpen] = React.useState(false);
-  const historyId = React.useId();
+  // La tarjeta habla del plan, así que el afiliado da nombre a la pantalla desde la barra
+  // superior; en el teléfono, solo su nombre de pila.
+  const memberName = data?.member_name ? String(data.member_name).trim() : '';
+  useSetPageTitle(memberName || 'Suscripción', { shortTitle: memberName ? memberName.split(/\s+/)[0] : null });
 
   const goBack = () => navigate(`/gym/subscriptions${params.toString() ? `?${params.toString()}` : ''}`);
+  useSetPageBack(goBack);
 
   const status = data ? Number(data.status) : null;
   const isActive = status === GYM_SUBSCRIPTION_STATUS.ACTIVE;
@@ -319,137 +318,177 @@ export function GymSubscriptionDetail() {
   const currentMeta = currentFull
     ? gymPeriodStatusMeta(Number(currentFull.computed_status ?? currentFull.status))
     : null;
+  const currentPayments = currentFull?.payments || [];
+
+  // Lo secundario, en el ⋮ de la tarjeta: ir al afiliado, lo que admite el período vigente
+  // (mover el inicio, anular un pago) y cancelar. Cancelar la suscripción pasa por cancelar su
+  // período vivo cuando lo hay: es el mismo corte, con la opción de anular los pagos.
+  const secondaryMenu = [
+    { label: 'Ver afiliado', icon: 'fas fa-user', onClick: () => navigate(`/gym/members/${data.gym_member_id}`) },
+    ...(currentFull ? periodMenu(currentFull).filter((item) => item.label !== 'Cancelar período') : []),
+    ...(isActive ? [{
+      label: 'Cancelar suscripción', icon: 'fas fa-ban', variant: 'danger',
+      onClick: () => (currentFull && canCancelPeriod(currentFull) ? openCancelPeriod(currentFull) : setCancelOpen(true)),
+    }] : []),
+  ];
+
+  // Lo primario, al pie de la tarjeta: cobrar lo que se debe y, si el sistema no ha corrido,
+  // generar el período que falta. Sin nada que hacer, el pie no existe.
+  const primaryActions = [
+    ...(isActive && pendingTotal > 0
+      ? [<Button key="pay" variant="primary" icon="fas fa-dollar-sign" onClick={openPay}>Registrar pago</Button>]
+      : []),
+    ...(canProcess
+      ? [<Button key="process" variant={wouldCancel || pendingTotal > 0 ? 'secondary' : 'primary'} icon="fas fa-calendar-plus" onClick={openProcess}>Generar período</Button>]
+      : []),
+  ];
 
   return (
     <div className={s.page}>
-      <PageHeader
-        onBack={goBack}
-        title={data.member_name}
-        onTitleClick={() => navigate(`/gym/members/${data.gym_member_id}`)}
-        subtitle={data.plan_name}
-        menu={isActive ? [
-          ...(pendingTotal > 0 ? [{ label: 'Registrar pago', icon: 'fas fa-dollar-sign', onClick: openPay }] : []),
-          ...(canProcess ? [{ label: 'Generar período siguiente', icon: 'fas fa-calendar-plus', onClick: openProcess }] : []),
-          {
-            label: 'Cancelar suscripción', icon: 'fas fa-ban', variant: 'danger',
-            onClick: () => (currentPeriod && canCancelPeriod(currentPeriod) ? openCancelPeriod(currentPeriod) : setCancelOpen(true)),
-          },
-        ] : []}
-        meta={[
-          { label: 'Suscrito desde', value: formatShortDate(data.subscribed_at) },
-          { label: 'Estado', value: <Badge variant={headerMeta.variant}>{headerMeta.label}</Badge> },
-          {
-            label: 'Pago',
-            value: pendingTotal > 0
-              ? <Badge variant="warning">Saldo {gymMoney(pendingTotal)}</Badge>
-              : <Badge variant="success">Al día</Badge>,
-          },
-        ]}
-        note={status === GYM_SUBSCRIPTION_STATUS.CANCELLED && data.cancellation_reason
-          ? `Cancelada${data.cancelled_automatically ? ' automáticamente' : ''}: ${data.cancellation_reason}`
-          : undefined}
-      />
-
-      {/* Falta el período siguiente: no es un recordatorio de cobro, es trabajo del sistema que
-          no ha corrido, así que se queda arriba, fuera de la tarjeta del período. */}
-      {nextPending && (
-        <Alert tone={wouldCancel ? 'danger' : 'warning'}
-          title={wouldCancel ? 'Período vencido sin pago' : 'Período siguiente sin generar'}
-          action={canProcess && (
-            <Button variant={wouldCancel ? 'secondary' : 'primary'} size="sm" icon="fas fa-calendar-plus" onClick={openProcess}>
-              Generar período
-            </Button>
-          )}>
-          El período {currentPeriod.number} venció el {formatShortDate(currentPeriod.end_date)} y el
-          sistema aún no generó el siguiente: lo hace en su corrida diaria, o se puede generar ahora.{' '}
-          {wouldCancel && (
-            <>Ojo: agotó la gracia el {formatShortDate(currentPeriod.grace_ends_at)} sin ningún abono,
-              así que al procesarla la suscripción se cancelará por no pago.</>
-          )}
-        </Alert>
-      )}
-
-      {/* ── El período en curso: lo que está pasando hoy ── */}
-      {currentFull && (
-        <section className={g.section}>
-          <h2 className={g.sectionTitle}>{isActive ? 'Período en curso' : 'Último período'}</h2>
-          <Panel
-            title={periodTitle(currentFull)}
-            action={(
-              <span className={g.periodActions}>
-                {currentMeta && <Badge variant={currentMeta.variant}>{currentMeta.label}</Badge>}
-                {periodMenu(currentFull).length > 0 && (
-                  <Dropdown
-                    trigger={<IconButton icon="fas fa-ellipsis-vertical" variant="light" size="sm" title="Acciones del período" />}
-                    items={periodMenu(currentFull)} />
-                )}
-              </span>
-            )}>
-            {/* El recordatorio de cobro: el color va en la línea, no en el fondo — salta a la
-                vista dentro de la tarjeta sin convertirla en un aviso de pantalla. */}
-            {isActive && pendingTotal > 0 && (
-              <Alert variant="outline" tone={currentInGrace ? 'danger' : 'warning'}
-                title={currentInGrace ? 'Pago vencido' : 'Pendiente de pago'}
-                action={(
-                  <Button variant="outline-success" dashed size="sm" icon="fas fa-dollar-sign" onClick={openPay}>
-                    Registrar pago
-                  </Button>
-                )}>
-                {currentPending <= 0 ? (
-                  <>Este período está pagado, pero quedan {gymMoney(olderPending)} de períodos
-                    anteriores: el abono se aplica ahí primero.</>
-                ) : currentInGrace ? (
-                  currentUnpaid ? (
-                    <>El período venció el {formatShortDate(currentFull.end_date)} sin ningún abono:
-                      si no se registra el pago antes del {formatShortDate(currentFull.grace_ends_at)},
-                      la suscripción se cancelará automáticamente.</>
-                  ) : (
-                    <>El período venció el {formatShortDate(currentFull.end_date)} con un saldo de{' '}
-                      {gymMoney(currentPending)}; el acceso termina el{' '}
-                      {formatShortDate(currentFull.grace_ends_at)}.</>
-                  )
-                ) : (
-                  <>Falta por cobrar {gymMoney(currentPending)} de este período, que vence el{' '}
-                    {formatShortDate(currentFull.end_date)}.</>
-                )}
-                {currentPending > 0 && olderPending > 0 && (
-                  <> Además hay {gymMoney(olderPending)} de períodos anteriores, y el abono se
-                    aplica ahí primero.</>
-                )}
-              </Alert>
+      <Panel className={g.sub}>
+        {/* ── El plan y desde cuándo; a la derecha, el estado y lo secundario ── */}
+        <div className={g.subHead}>
+          <div className={g.subText}>
+            <h3 className={g.subPlan}>{data.plan_name}</h3>
+            <p className={g.subSince}>Suscrito desde {formatShortDate(data.subscribed_at)}</p>
+          </div>
+          <span className={g.periodActions}>
+            <Badge variant={headerMeta.variant}>{headerMeta.label}</Badge>
+            {secondaryMenu.length > 0 && (
+              <Dropdown items={secondaryMenu} width={230}
+                trigger={<IconButton icon="fas fa-ellipsis-vertical" variant="light" size="sm" title="Más acciones" />} />
             )}
-            {/* La pregunta del período en curso es "¿ya pagó?": el badge del total la responde.
-                El saldo solo se repite aquí si arriba no hay recordatorio que ya lo diga. */}
-            <PeriodPayments period={currentFull} badge={currentPending > 0
-              ? (isActive && pendingTotal > 0 ? null : <Badge variant="warning">Pendiente {gymMoney(currentPending)}</Badge>)
-              : (Number(currentFull.paid_total || 0) > 0 ? <Badge variant="success">Pagado</Badge> : null)} />
-          </Panel>
-        </section>
-      )}
+          </span>
+        </div>
+        {status === GYM_SUBSCRIPTION_STATUS.CANCELLED && data.cancellation_reason && (
+          <p className={g.subNote}>
+            Cancelada{data.cancelled_automatically ? ' automáticamente' : ''}: {data.cancellation_reason}
+          </p>
+        )}
 
-      {/* ── Historial: los períodos anteriores, plegados y en letra menor ── */}
+        {/* ── El período en curso: fechas, estado, dinero ── */}
+        <div className={g.period}>
+          {currentFull ? (
+            <>
+              <div className={g.periodHead}>
+                <span className={g.periodEyebrow}>{isActive ? 'Período en curso' : 'Último período'}</span>
+                <div className={g.periodTitleRow}>
+                  <h4 className={g.periodTitle}>{periodTitle(currentFull)}</h4>
+                  {currentMeta && <Badge variant={currentMeta.variant}>{currentMeta.label}</Badge>}
+                </div>
+              </div>
+              <dl className={g.rows}>
+                <div className={g.row}>
+                  <dt>{currentFull.end_date < today ? 'Venció' : 'Vence'}</dt>
+                  <dd>
+                    {formatShortDate(currentFull.end_date)}
+                    {currentInGrace && <span className={g.rowHint}> · gracia hasta el {formatShortDate(currentFull.grace_ends_at)}</span>}
+                  </dd>
+                </div>
+                <div className={g.row}>
+                  <dt>Valor</dt>
+                  <dd>{gymMoney(currentFull.price)}</dd>
+                </div>
+                {currentPayments.length === 0 ? (
+                  <div className={g.row}>
+                    <dt>Pagos</dt>
+                    <dd className={s.faint}>Sin pagos</dd>
+                  </div>
+                ) : currentPayments.map((pay) => {
+                  const annulled = Number(pay.status) !== 1;
+                  return (
+                    <div key={pay.id} className={g.row}>
+                      <dt>Pago{annulled ? ' anulado' : ''}</dt>
+                      <dd className={annulled ? g.payAnnulled : ''}>
+                        {gymMoney(pay.value)}
+                        <span className={g.rowHint}>
+                          {' '}· {formatShortDate(pay.payment_date)} · {pay.payment_method_name || '—'}
+                          {pay.registers_income === false && ' · sin factura'}
+                        </span>
+                      </dd>
+                    </div>
+                  );
+                })}
+                <div className={g.row}>
+                  <dt>Saldo</dt>
+                  <dd>
+                    {currentPending > 0
+                      ? <Badge variant="warning">{gymMoney(currentPending)}</Badge>
+                      : (Number(currentFull.status) === GYM_PERIOD_STATUS.CANCELLED
+                        ? <Badge variant="neutral">Cancelado</Badge>
+                        : <Badge variant="success">Al día</Badge>)}
+                  </dd>
+                </div>
+              </dl>
+            </>
+          ) : (
+            <p className={s.faint}>Esta suscripción todavía no tiene períodos.</p>
+          )}
+
+          {/* Falta el período siguiente: no es un cobro, es trabajo del sistema que no ha corrido.
+              La acción está al pie; aquí solo se explica. */}
+          {nextPending && (
+            <Alert tone={wouldCancel ? 'danger' : 'info'}
+              title={wouldCancel ? 'Período vencido sin pago' : 'Período siguiente sin generar'}>
+              El sistema aún no generó el período {currentPeriod.number + 1}: lo hace en su corrida
+              diaria, o se puede generar ahora.{' '}
+              {wouldCancel && (
+                <>Ojo: este agotó la gracia el {formatShortDate(currentPeriod.grace_ends_at)} sin
+                  ningún abono, así que al procesarla la suscripción se cancelará por no pago.</>
+              )}
+            </Alert>
+          )}
+
+          {/* El recordatorio de cobro: el color va en la línea, no en el fondo — salta a la
+              vista dentro de la tarjeta sin convertirla en un aviso de pantalla. */}
+          {isActive && pendingTotal > 0 && currentFull && (
+            <Alert variant="outline" tone={currentInGrace ? 'danger' : 'warning'}
+              title={currentInGrace ? 'Pago vencido' : 'Pendiente de pago'}>
+              {currentPending <= 0 ? (
+                <>Este período está pagado, pero quedan {gymMoney(olderPending)} de períodos
+                  anteriores: el abono se aplica ahí primero.</>
+              ) : currentInGrace ? (
+                currentUnpaid ? (
+                  <>El período venció sin ningún abono: si no se registra el pago antes del{' '}
+                    {formatShortDate(currentFull.grace_ends_at)}, la suscripción se cancelará
+                    automáticamente.</>
+                ) : (
+                  <>El período venció con un saldo de {gymMoney(currentPending)}; el acceso termina
+                    el {formatShortDate(currentFull.grace_ends_at)}.</>
+                )
+              ) : (
+                <>Falta por cobrar {gymMoney(currentPending)} de este período antes del{' '}
+                  {formatShortDate(currentFull.end_date)}.</>
+              )}
+              {currentPending > 0 && olderPending > 0 && (
+                <> Además hay {gymMoney(olderPending)} de períodos anteriores, y el abono se
+                  aplica ahí primero.</>
+              )}
+            </Alert>
+          )}
+        </div>
+
+        {/* ── Las acciones primarias ── */}
+        {primaryActions.length > 0 && <div className={g.actions}>{primaryActions}</div>}
+      </Panel>
+
+      {/* ── Historial: los períodos anteriores, cada uno plegado ── */}
       {pastPeriods.length > 0 && (
-        <section className={[g.section, g.history, historyOpen ? g.historyOpen : ''].filter(Boolean).join(' ')}>
-          <button type="button" className={g.historyHead} onClick={() => setHistoryOpen((o) => !o)}
-            aria-expanded={historyOpen} aria-controls={historyId}>
-            <span className={g.sectionTitle}>Historial</span>
+        <section className={g.section}>
+          <div className={g.historyHead}>
+            <h2 className={g.sectionTitle}>Historial</h2>
             <span className={g.historyCount}>
               {pastPeriods.length === 1 ? '1 período anterior' : `${pastPeriods.length} períodos anteriores`}
             </span>
-            <i className={`fas fa-chevron-down ${g.historyChev}`} aria-hidden="true" />
-          </button>
-          <div id={historyId} className={g.historyBody} aria-hidden={!historyOpen}>
-            <div className={g.historyInner}>
-              {pastPeriods.map((p) => (
-                <InfoCard key={p.id} title={periodTitle(p)} description={periodSummary(p)}
-                  actions={periodMenu(p)}>
-                  <PeriodPayments period={p} badge={periodPending(p) > 0
-                    ? <Badge variant="warning">Pendiente {gymMoney(periodPending(p))}</Badge>
-                    : null} />
-                </InfoCard>
-              ))}
-            </div>
           </div>
+          {pastPeriods.map((p) => (
+            <InfoCard key={p.id} title={periodTitle(p)} description={periodSummary(p)}
+              actions={periodMenu(p)}>
+              <PeriodPayments period={p} badge={periodPending(p) > 0
+                ? <Badge variant="warning">Pendiente {gymMoney(periodPending(p))}</Badge>
+                : null} />
+            </InfoCard>
+          ))}
         </section>
       )}
 
@@ -575,12 +614,9 @@ export function GymSubscriptionDetail() {
 }
 
 /**
- * Los abonos de un período y su total, tal como se ven dentro de la tarjeta del período: filas
- * apiladas (móvil primero, sin tabla) y el total al pie.
- *
- * `badge` es el nodo que acompaña al total —«Pagado» o el saldo pendiente— y lo decide quien
- * pinta la tarjeta: el período en curso omite el saldo cuando arriba ya está el recordatorio de
- * cobro, porque la misma deuda dicha dos veces en la misma tarjeta se lee como si fueran dos.
+ * Los abonos de un período del historial y su total, dentro de su tarjeta desplegable: filas
+ * apiladas (móvil primero, sin tabla) y el total al pie. `badge` es el nodo que acompaña al
+ * total (el saldo pendiente, si lo hay).
  */
 function PeriodPayments({ period, badge = null }) {
   const payments = period.payments || [];

@@ -354,11 +354,15 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
   vive en la **vista de progreso** (`/gym/members/:memberId/progress`). El detalle de la suscripción
   (`/gym/subscriptions/:subscriptionId`) es la vista transaccional: sus pagos (registrar con el
   precio precargado, anular), renovar y cancelar; el nombre del afiliado arriba navega a su
-  perfil. Se lee en **tres alturas, de lo vigente a lo viejo**: la suscripción (cabecera con plan,
-  desde cuándo, estado y si está al día), el **período en curso** —con sus abonos, el badge
-  *Pagado* o el saldo, y el recordatorio de cobro cuando debe— y, al final, el **historial**
-  plegado: los períodos anteriores, uno por tarjeta desplegable con sus pagos dentro. Con la
-  suscripción cancelada la tarjeta destacada es el último período que existió (*Último período*). `/gym/subscriptions` es el listado operativo (con el botón *Revisar fechas* para el super-admin:
+  perfil. **Una sola tarjeta cuenta lo vigente**, de arriba abajo: el plan y desde cuándo (con el
+  estado y las acciones secundarias en el ⋮: ver afiliado, mover inicio, anular un pago,
+  cancelar), el **período en curso** en filas etiqueta · valor —vence, valor, cada pago con su
+  fecha y método, y el saldo (*Al día* o lo que debe)— más el recordatorio de cobro cuando debe,
+  y al pie las **acciones primarias** (*Registrar pago*, *Generar período* si el sistema no ha
+  corrido). El afiliado da nombre a la pantalla desde la barra superior (su nombre de pila en el
+  teléfono). Debajo, aparte y en letra menor, el **historial**: los períodos anteriores, cada uno
+  plegado en su tarjeta desplegable con sus pagos y su saldo dentro. Con la suscripción cancelada
+  la tarjeta muestra el último período que existió (*Último período*). `/gym/subscriptions` es el listado operativo (con el botón *Revisar fechas* para el super-admin:
   recalcula por calendario las fechas de los períodos vigentes, con simulación previa), filtrable por estado y por próximas a
   vencer. Las medidas se toman con el **asistente paso a paso**
   (`/gym/members/:memberId/checkin`): una medida por pantalla —solo las que la compañía activó en
@@ -384,9 +388,9 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
   pagos activos, pregunta si se anulan también con sus facturas (solo con `gym-payments-annul`).
   **Anular un pago** también vive en ese menú ⋮ (un ítem por pago activo, nombrado por valor y
   fecha cuando hay más de uno) y no como botón en cada fila: es la excepción, no la acción del
-  día. La acción del día es **Registrar pago**: además del menú de la cabecera, aparece como
-  botón verde punteado en el **recordatorio de cobro** del período en curso (un `Alert` de
-  variante `outline`: el color del tono va en la línea, no en el fondo). El recordatorio dice
+  día. La acción del día es **Registrar pago**: el botón primario al pie de la tarjeta, que solo
+  existe mientras haya saldo. Lo acompaña el **recordatorio de cobro** del período en curso (un
+  `Alert` de variante `outline`: el color del tono va en la línea, no en el fondo), que dice
   cuánto falta y hasta cuándo —y, si la deuda viene de atrás, que el abono se aplica primero al
   período más antiguo con saldo, que es la regla del backend—.
   El estado final de un período se llama **Concluido** (el `CLOSED` del backend): un ciclo que
