@@ -354,7 +354,11 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
   vive en la **vista de progreso** (`/gym/members/:memberId/progress`). El detalle de la suscripción
   (`/gym/subscriptions/:subscriptionId`) es la vista transaccional: sus pagos (registrar con el
   precio precargado, anular), renovar y cancelar; el nombre del afiliado arriba navega a su
-  perfil. `/gym/subscriptions` es el listado operativo (con el botón *Revisar fechas* para el super-admin:
+  perfil. Se lee en **tres alturas, de lo vigente a lo viejo**: la suscripción (cabecera con plan,
+  desde cuándo, estado y si está al día), el **período en curso** —con sus abonos, el badge
+  *Pagado* o el saldo, y el recordatorio de cobro cuando debe— y, al final, el **historial**
+  plegado: los períodos anteriores, uno por tarjeta desplegable con sus pagos dentro. Con la
+  suscripción cancelada la tarjeta destacada es el último período que existió (*Último período*). `/gym/subscriptions` es el listado operativo (con el botón *Revisar fechas* para el super-admin:
   recalcula por calendario las fechas de los períodos vigentes, con simulación previa), filtrable por estado y por próximas a
   vencer. Las medidas se toman con el **asistente paso a paso**
   (`/gym/members/:memberId/checkin`): una medida por pantalla —solo las que la compañía activó en
@@ -381,7 +385,10 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
   **Anular un pago** también vive en ese menú ⋮ (un ítem por pago activo, nombrado por valor y
   fecha cuando hay más de uno) y no como botón en cada fila: es la excepción, no la acción del
   día. La acción del día es **Registrar pago**: además del menú de la cabecera, aparece como
-  botón verde punteado en el pie del período más antiguo con saldo (el que recibe el abono).
+  botón verde punteado en el **recordatorio de cobro** del período en curso (un `Alert` de
+  variante `outline`: el color del tono va en la línea, no en el fondo). El recordatorio dice
+  cuánto falta y hasta cuándo —y, si la deuda viene de atrás, que el abono se aplica primero al
+  período más antiguo con saldo, que es la regla del backend—.
   El estado final de un período se llama **Concluido** (el `CLOSED` del backend): un ciclo que
   ya pasó, no algo que alguien cerró.
 - **Pagos:** cada pago manual (efectivo, tarjeta…) genera su propia factura en el módulo de

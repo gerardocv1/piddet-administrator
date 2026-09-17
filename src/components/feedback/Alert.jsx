@@ -17,7 +17,12 @@ const TONE_ICON = {
  *
  * Props:
  *   tone: 'info' | 'success' | 'warning' | 'danger' | 'primary'  (obligatorio)
- *   variant: 'quiet' (por defecto) | 'tint'   — `tint` solo para avisos que bloquean la operación
+ *   variant: 'quiet' (por defecto) | 'outline' | 'tint'
+ *     - `quiet`: superficie blanca y línea hairline; el color vive solo en la pastilla del icono.
+ *     - `outline`: el color del tono pasa a la LÍNEA (marco completo) y el icono pierde la
+ *       pastilla. Para el recordatorio que acompaña a un dato y debe saltar a la vista sin
+ *       teñir media pantalla (un saldo por cobrar dentro de su tarjeta).
+ *     - `tint`: fondo tintado completo, solo para avisos que bloquean la operación.
  *   title?, icon?, action?, onClose?, children
  *
  * Escalera de mensajes (cuándo usar cuál):
