@@ -43,14 +43,25 @@ Dos reglas que resuelven casi todo:
 
 <Alert tone="danger" title="No se pudo guardar" onClose={() => setError('')}>{error}</Alert>
 
+{/* Recordatorio dentro de una tarjeta: el color en la línea, no en el fondo */}
+<Alert tone="warning" variant="outline" title="Pendiente de pago"
+  action={<Button size="sm" variant="outline-success" dashed icon="fas fa-dollar-sign">Registrar pago</Button>}>
+  Falta por cobrar $ 70.000 de este período, que vence el 20 sep 2026.
+</Alert>
+
 {/* Solo cuando el aviso BLOQUEA la operación */}
 <Alert tone="warning" variant="tint" title="La unidad ya está reservada">…</Alert>
 ```
 
 - `tone`: `info | success | warning | danger | primary`. **Obligatorio.**
 - `variant`: `quiet` (por defecto) — superficie blanca, borde hairline, el color vive solo en la
-  pastilla del icono. `tint` — fondo tintado completo; resérvalo para lo que impide continuar.
+  pastilla del icono. `outline` — el color del tono pasa a la **línea** del marco y el icono
+  pierde la pastilla: para el recordatorio que acompaña a un dato dentro de su tarjeta (un saldo
+  por cobrar) y debe saltar a la vista sin teñir media pantalla. `tint` — fondo tintado completo;
+  resérvalo para lo que impide continuar.
 - El icono lo decide el tono. No pases `icon` salvo que tengas una razón concreta.
+- En móvil (≤ 860 px) la **acción baja a su propia línea**, alineada con el texto y a lo ancho:
+  al lado del mensaje deja la columna en tres palabras por línea.
 - No se auto-cierra: la visibilidad la controla quien lo usa (`onClose` → estado local).
 
 ## Toast

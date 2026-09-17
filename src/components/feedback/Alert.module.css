@@ -1,5 +1,6 @@
 /* Alert — línea flat: superficie blanca, borde hairline, sin sombra. El color del tono vive
-   solo en la pastilla del icono. `tint` pinta el fondo completo y es para avisos bloqueantes. */
+   solo en la pastilla del icono. `outline` lo pasa a la línea del marco (recordatorio que debe
+   verse sin teñir la tarjeta) y `tint` pinta el fondo completo, para avisos bloqueantes. */
 
 .alert {
   display: flex;
@@ -74,3 +75,33 @@
 .alert[data-variant='tint'][data-tone='warning'] { background: var(--color-warning-100); }
 .alert[data-variant='tint'][data-tone='danger'] { background: var(--color-danger-100); }
 .alert[data-variant='tint'][data-tone='primary'] { background: var(--color-primary-100); }
+
+/* ---- variant="outline": el color del tono va en la línea, no en el fondo ---- */
+/* Mismo aire y misma caja del icono que `quiet` —la pastilla solo pierde su fondo—, así que un
+   Alert puede cambiar de variante sin mover nada a su alrededor. El icono toma el tono del badge
+   (legible en claro y en oscuro); el marco, el color plano del tono. */
+.alert[data-variant='outline'] .icon { background: transparent; }
+.alert[data-variant='outline'][data-tone='info'] { border-color: var(--color-info); }
+.alert[data-variant='outline'][data-tone='info'] .icon { color: var(--badge-info-fg); }
+.alert[data-variant='outline'][data-tone='success'] { border-color: var(--color-success); }
+.alert[data-variant='outline'][data-tone='success'] .icon { color: var(--badge-success-fg); }
+.alert[data-variant='outline'][data-tone='warning'] { border-color: var(--color-warning); }
+.alert[data-variant='outline'][data-tone='warning'] .icon { color: var(--badge-warning-fg); }
+.alert[data-variant='outline'][data-tone='danger'] { border-color: var(--color-danger); }
+.alert[data-variant='outline'][data-tone='danger'] .icon { color: var(--badge-danger-fg); }
+.alert[data-variant='outline'][data-tone='primary'] { border-color: var(--color-primary); }
+.alert[data-variant='outline'][data-tone='primary'] .icon { color: var(--badge-primary-fg); }
+
+/* ---- Móvil (≤ 860 px, el corte del panel): la acción baja a su propia línea ----
+   Al lado del texto, un botón como "Registrar pago" deja la columna del mensaje en tres palabras
+   por línea. Debajo, alineado con el texto (no con el icono) y a lo ancho, se lee de corrido y el
+   botón queda del tamaño del pulgar. */
+@media (max-width: 860px) {
+  .alert { flex-wrap: wrap; }
+  .action {
+    flex: 1 1 100%;
+    margin-left: calc(2.1rem + 0.85rem);
+    margin-top: 0.75rem;
+  }
+  .action > * { width: 100%; }
+}
