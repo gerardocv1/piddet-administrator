@@ -9,7 +9,9 @@ import {
   TEXT_SCALES, CATEGORY_SPACINGS, DEFAULT_SCALE, DEFAULT_SPACING, normalizeShow, buildLayoutVars,
 } from '../MenuPreview/options.js';
 import s from '../MenuPreview/MenuPreview.module.css';
-import { shareImage, applyMetaTags, buildShareMeta, shareOrCopy } from '../public/shareMeta.js';
+import {
+  shareImage, applyMetaTags, applySeoTags, buildShareMeta, shareOrCopy,
+} from '../public/shareMeta.js';
 import { PublicBottomBar } from '../public/PublicBottomBar.jsx';
 
 // Vista pública de la carta (sin sesión): se accede por la URL /{compañía}/m/{menú} y se renderiza
@@ -69,16 +71,20 @@ export function PublicMenu({ companyUsername, menuUsername }) {
   const shareInfo = React.useMemo(() => {
     const name = menu?.name ? `${company?.name ? `${company.name} - ` : ''}${menu.name}` : (company?.name || 'Menú');
     const description = menu?.description || (company?.name ? `Conoce el menú de ${company.name}.` : 'Mira nuestro menú.');
-    return { title: name, description, image: shareImage(company), url: typeof window !== 'undefined' ? window.location.href : '' };
-  }, [menu, company]);
+    const url = typeof window !== 'undefined'
+      ? `${window.location.origin}/${encodeURIComponent(companyUsername)}/m/${encodeURIComponent(menuUsername)}`
+      : '';
+    return { title: name, description, image: shareImage(company), url };
+  }, [company, companyUsername, menu, menuUsername]);
 
   // Título de pestaña + Open Graph/Twitter para apps que sí renderizan el enlace por JS.
   React.useEffect(() => {
     if (!data) return undefined;
     const prevTitle = document.title;
     document.title = shareInfo.title;
-    const created = applyMetaTags(buildShareMeta(shareInfo));
-    return () => { document.title = prevTitle; created.forEach((el) => el.remove()); };
+    const cleanupMeta = applyMetaTags(buildShareMeta(shareInfo));
+    const cleanupSeo = applySeoTags({ canonical: shareInfo.url });
+    return () => { document.title = prevTitle; cleanupMeta(); cleanupSeo(); };
   }, [data, shareInfo]);
 
   const [shareMsg, setShareMsg] = React.useState('');

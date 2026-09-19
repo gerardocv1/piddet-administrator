@@ -23,6 +23,10 @@ portadas de compañía existentes conservan sus rutas y comportamiento.
 3. Como visitante, quiero entrar a la portada pública de una compañía desde su tarjeta.
 4. Como posible cliente, quiero contactar a Piddet por WhatsApp para vincular mi negocio.
 5. Como administrador, quiero encontrar un acceso discreto al inicio de sesión.
+6. Como visitante, quiero que el perfil de cada compañía conserve el lenguaje visual responsive
+   de la portada y priorice identidad, oferta, ubicaciones y contacto.
+7. Como buscador, quiero metadata descriptiva, canonical y datos estructurados para comprender la
+   portada y los perfiles públicos.
 
 ### Contrato de datos
 
@@ -44,6 +48,11 @@ portadas de compañía existentes conservan sus rutas y comportamiento.
 - [x] El botón de WhatsApp usa `VITE_CONTACT_WHATSAPP` mediante `screens/public/whatsapp.js` y
       se oculta cuando la variable falta o no contiene un número válido.
 - [x] El título y metadata social se gestionan con `shareMeta.js`.
+- [x] La portada y la compañía publican canonical, robots y JSON-LD (`WebSite` /
+      `CollectionPage` y `LocalBusiness` especializado por tipo).
+- [x] `index.html` ofrece metadata SEO estática de la portada como respaldo para crawlers sin JS.
+- [x] El perfil de compañía usa cabecera Piddet, hero de marca y layout mobile-first que pasa de
+      una a dos columnas sin cambiar sus menús, hospedaje, ubicaciones ni acciones.
 - [x] La UI responde correctamente en 375 px, 768 px y escritorio, usando CSS Modules y tokens.
 - [x] `/admin` y las rutas públicas existentes no cambian.
 
@@ -97,8 +106,8 @@ paginación.
 
 ### Riesgos
 
-- Open Graph generado por JavaScript no es leído por todos los crawlers; la previsualización
-  definitiva sigue requiriendo metadata servida desde backend/CDN.
+- La raíz tiene Open Graph estático, pero la metadata específica de cada compañía se genera con
+  JavaScript; su previsualización definitiva sigue requiriendo prerender desde backend/CDN.
 - La portada normal hace una petición por tipo además del catálogo; con cuatro tipos son cinco
   peticiones concurrentes. El backend debe mantener el catálogo acotado o evolucionar a un
   endpoint agregado si crece sustancialmente.

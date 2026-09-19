@@ -31,7 +31,20 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Piddet" />
     <meta name="application-name" content="Piddet" />
-    <title>Piddet · Panel de administración</title>
+    <meta name="description" content="Descubre restaurantes, gimnasios, tiendas y hospedajes que hacen parte de Piddet." />
+    <meta name="robots" content="index, follow" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Piddet" />
+    <meta property="og:title" content="Descubre negocios en Piddet" />
+    <meta property="og:description" content="Explora compañías activas, conoce lo que ofrecen y encuentra tu próximo lugar favorito." />
+    <meta property="og:image" content="https://piddet.com/favicon/apple-touch-icon.png" />
+    <meta property="og:url" content="https://piddet.com/" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Descubre negocios en Piddet" />
+    <meta name="twitter:description" content="Explora compañías activas, conoce lo que ofrecen y encuentra tu próximo lugar favorito." />
+    <meta name="twitter:image" content="https://piddet.com/favicon/apple-touch-icon.png" />
+    <link rel="canonical" href="https://piddet.com/" />
+    <title>Descubre negocios en Piddet</title>
     <!-- Fuentes e iconos con carga asíncrona (media=print + swap en onload): si un CDN tarda o
          falla, la app arranca igual con los fallbacks, en vez de bloquear el primer render y la
          ejecución del script. Los @import de Google Fonts salieron de tokens.css por lo mismo. -->
@@ -74,7 +87,8 @@
         var ADMIN = '/admin';
         var SPLASH = '#fbfbfc';        // igual que --bg-body: la barra de estado se funde con él
         var SHORT_MAX = 12;            // lo que cabe bajo el icono en la pantalla de inicio
-        var DEFAULT_TITLE = document.title;
+        var PUBLIC_TITLE = document.title;
+        var PANEL_TITLE = 'Piddet · Panel de administración';
         var blobUrl = null;
 
         function linkEl(rel) {
@@ -163,13 +177,13 @@
           document.title = name + ' · Panel de administración';
         }
 
-        function restore() {
+        function restore(title) {
           if (blobUrl) { URL.revokeObjectURL(blobUrl); blobUrl = null; }
           linkEl('manifest').href = '/manifest.webmanifest';
           linkEl('apple-touch-icon').href = '/favicon/apple-touch-icon.png';
           setMeta('apple-mobile-web-app-title', 'Piddet');
           setMeta('application-name', 'Piddet');
-          document.title = DEFAULT_TITLE;
+          document.title = title || PANEL_TITLE;
         }
 
         function storedCompany() {
@@ -187,10 +201,15 @@
         // no son la app instalable, y además fijan su propio título para compartir.
         var path = window.location.pathname;
         var inPanel = path === ADMIN || path.indexOf(ADMIN + '/') === 0;
+        var isPrivatePublicFlow = path === '/checkin' || path.indexOf('/checkin/') === 0
+          || path.indexOf('/r/') === 0;
+        setMeta('robots', (inPanel || isPrivatePublicFlow) ? 'noindex, nofollow' : 'index, follow');
         try {
-          apply(inPanel ? storedCompany() : null);
+          var company = inPanel ? storedCompany() : null;
+          if (company) apply(company);
+          else restore(inPanel ? PANEL_TITLE : PUBLIC_TITLE);
         } catch (e) {
-          restore(); // pase lo que pase, el documento queda con un manifest válido
+          restore(inPanel ? PANEL_TITLE : PUBLIC_TITLE); // pase lo que pase, queda un manifest válido
         }
       })();
     </script>

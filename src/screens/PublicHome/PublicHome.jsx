@@ -2,7 +2,7 @@ import React from 'react';
 import { Button, Pagination, Spinner } from '../../components';
 import { api } from '../../lib/api.js';
 import { useResource } from '../../lib/useResource.js';
-import { applyMetaTags, buildShareMeta } from '../public/shareMeta.js';
+import { applyMetaTags, applySeoTags, buildShareMeta } from '../public/shareMeta.js';
 import { whatsappHref } from '../public/whatsapp.js';
 import s from './PublicHome.module.css';
 
@@ -195,25 +195,57 @@ export function PublicHome() {
     import.meta.env.VITE_CONTACT_WHATSAPP,
     'Hola, quiero conocer cómo vincular mi negocio a Piddet.',
   );
+  const invalidType = selectedTypeKey && !typesResource.loading && !typesResource.error && !selectedType;
 
   React.useEffect(() => {
     const title = selectedType ? `${selectedType.name} en Piddet` : 'Descubre negocios en Piddet';
     const description = selectedType
       ? `Explora ${selectedType.name.toLowerCase()} disponibles en Piddet.`
       : 'Descubre restaurantes, gimnasios, tiendas y hospedajes que hacen parte de Piddet.';
+    const canonical = new URL('/', window.location.origin);
+    if (selectedType) {
+      canonical.searchParams.set('type', selectedType.key);
+      if (page > 1) canonical.searchParams.set('page', String(page));
+    }
     const previousTitle = document.title;
     document.title = title;
-    const created = applyMetaTags(buildShareMeta({
+    const cleanupMeta = applyMetaTags(buildShareMeta({
       title,
       description,
       image: `${window.location.origin}/favicon/apple-touch-icon.png`,
-      url: window.location.href,
+      url: canonical.href,
     }));
+    const cleanupSeo = applySeoTags({
+      canonical: canonical.href,
+      robots: invalidType ? 'noindex, follow' : 'index, follow',
+      structuredData: {
+        '@context': 'https://schema.org',
+        '@graph': [
+          {
+            '@type': 'WebSite',
+            '@id': `${window.location.origin}/#website`,
+            name: 'Piddet',
+            url: `${window.location.origin}/`,
+            inLanguage: 'es',
+          },
+          {
+            '@type': 'CollectionPage',
+            '@id': `${canonical.href}#directory`,
+            name: title,
+            description,
+            url: canonical.href,
+            isPartOf: { '@id': `${window.location.origin}/#website` },
+            inLanguage: 'es',
+          },
+        ],
+      },
+    });
     return () => {
       document.title = previousTitle;
-      created.forEach((element) => element.remove());
+      cleanupMeta();
+      cleanupSeo();
     };
-  }, [page, selectedType]);
+  }, [invalidType, page, selectedType]);
 
   const changePage = React.useCallback((nextPage, { replace = false, scroll = true } = {}) => {
     const normalizedPage = validPage(nextPage);
@@ -232,8 +264,6 @@ export function PublicHome() {
     window.addEventListener('popstate', syncPageFromHistory);
     return () => window.removeEventListener('popstate', syncPageFromHistory);
   }, []);
-
-  const invalidType = selectedTypeKey && !typesResource.loading && !typesResource.error && !selectedType;
 
   return (
     <div className={s.screen}>

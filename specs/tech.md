@@ -122,6 +122,14 @@ El directorio consume `publicCompanyTypes` y `publicCompanies` desde `companySer
 `useResource`; en modo demo `resolvePublicDirectoryMock` imita el filtro y la metadata paginada.
 Las demás rutas públicas y todo el panel permanecen bajo sus contratos existentes.
 
+`screens/public/shareMeta.js` centraliza Open Graph/Twitter y el SEO dinámico: canonical,
+directiva `robots` y JSON-LD. `PublicHome` publica `WebSite` + `CollectionPage`;
+`PublicCompany` publica `LocalBusiness` o su subtipo (`Restaurant`, `ExerciseGym`, `Store`,
+`LodgingBusiness`); menú y hospedaje publican su canonical limpia. `index.html` conserva metadata
+genérica de la portada para crawlers sin JavaScript, mientras `/admin`, `/checkin` y `/r/{code}`
+se marcan `noindex, nofollow`. Metadata específica por compañía requiere prerender en
+infraestructura.
+
 `react-router-dom` v6 en `src/App.jsx`. `/login` es público; `/` monta `Layout` (Sidebar en
 escritorio + Topbar + `<Outlet>` + dock en móvil) con las rutas hijas de cada módulo: `more`
 (menú completo móvil, destino de «Más» en el dock; en escritorio redirige a Inicio),

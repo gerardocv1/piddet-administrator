@@ -111,6 +111,13 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
   acceso discreto para administradores.
 - **Reglas:** el backend decide qué compañías están activas y expone únicamente datos públicos
   de presentación; la pantalla no usa sesión, permisos ni compañía activa.
+- **Perfil público:** `/{username}` conserva la marca de la compañía y organiza en una experiencia
+  mobile-first su hospedaje, menús, ubicaciones, horarios y contacto; en escritorio distribuye
+  oferta e información práctica en dos columnas.
+- **SEO:** la portada y los perfiles publican descripción, Open Graph/Twitter, canonical, robots
+  y JSON-LD. La raíz tiene metadata estática de respaldo; la compañía se completa en runtime con
+  su tipo de `LocalBusiness`. Crawlers que no ejecuten JavaScript necesitan prerender/CDN para
+  obtener la metadata específica de cada compañía.
 
 ### Dashboard
 
