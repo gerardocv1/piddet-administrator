@@ -186,7 +186,7 @@
         // Solo el panel: las páginas públicas (carta, portada, check-in) comparten documento pero
         // no son la app instalable, y además fijan su propio título para compartir.
         var path = window.location.pathname;
-        var inPanel = path === '/' || path === ADMIN || path.indexOf(ADMIN + '/') === 0;
+        var inPanel = path === ADMIN || path.indexOf(ADMIN + '/') === 0;
         try {
           apply(inPanel ? storedCompany() : null);
         } catch (e) {

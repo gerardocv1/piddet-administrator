@@ -56,7 +56,11 @@ contrario (este repo → catálogo): se había adelantado en la capa móvil (bot
 `FilterBar`, campos que siguen la escala de la interfaz, `StatStrip` con `desktopOnly` y el
 `PageHeader` sin marco).
 
-Último porteo aplicado (catálogo `d32df87` → este repo): `Button` con la variante
+Último porteo aplicado (catálogo `09f842b` → este repo): escala
+`--space-1`…`--space-18`, basada en múltiplos de 4 px, para que `padding`, `margin` y `gap`
+sean tokens compartidos en vez de medidas locales.
+
+Porteo anterior (catálogo `d32df87` → este repo): `Button` con la variante
 `outline-success` y el prop `dashed` (borde punteado para la acción pendiente); de paso el
 catálogo recibió la variante `link` que este repo ya tenía.
 

@@ -93,8 +93,9 @@ Reglas:
     http.get(`/auth/me/login-history?page=${page}&per_page=${perPage}`, { paginated: true }),
   ```
 
-- **No** pases `{ auth: false }` salvo en login/refresh (eso ya vive en `auth/`). Por defecto
-  todas las llamadas adjuntan el Bearer y reintentan ante 401.
+- Pasa `{ auth: false }` únicamente en login/refresh (eso ya vive en `auth/`) o en endpoints que
+  el backend declare explícitamente públicos. Por defecto todas las llamadas adjuntan el Bearer y
+  reintentan ante 401.
 
 ## Paso 2 — Agregar el servicio al barril `api`
 

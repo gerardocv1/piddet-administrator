@@ -72,7 +72,8 @@ Pantallas (src/screens)  ──usa──▶  useResource (hook)  ──llama─�
 
 - **Atajos:** `http.get(path, opts)`, `http.post(path, body, opts)`, `http.put(...)`, `http.del(...)`.
 - **Opciones de `request`:**
-  - `auth: false` → no adjunta Bearer y no reintenta por 401 (úsalo solo en login/refresh).
+  - `auth: false` → no adjunta Bearer ni reintenta por 401; úsalo en login/refresh y en endpoints
+    declarados explícitamente públicos por el backend.
   - `paginated: true` → devuelve `{ items, pagination }` (data + `metadata` del backend).
 - **Desempaquetado:** respuestas con forma `{ status, message, data }` se reducen a `data`;
   `status === 'error'` lanza `Error` con `message` y `.status`.
@@ -110,11 +111,16 @@ El token viaja como `Authorization: Bearer <token>`.
 ## Rutas (frontend)
 
 Antes del router, `src/App.jsx` atiende el **mundo público** (sin sesión) mirando el `pathname`:
-la carta compartible (`/{compañía}/m/{menú}`), el hospedaje público (`/{compañía}/hospedaje…`), la
-portada de la compañía (`/{compañía}`), el pre-check-in digitado (`/checkin?code=…`) y el enlace
-corto del SMS (**`/r/{código único de consulta}`**, que abre la reserva sin pedir el nombre del
-titular contra `GET /public/checkin/link/{accessCode}`). El orden importa: `/r/…` son dos segmentos
-y se resuelve antes que la portada de un solo segmento.
+el directorio de compañías (`/`, con filtro opcional `?type=<key>&page=<n>`), la carta compartible
+(`/{compañía}/m/{menú}`), el hospedaje público (`/{compañía}/hospedaje…`), la portada de la
+compañía (`/{compañía}`), el pre-check-in digitado (`/checkin?code=…`) y el enlace corto del SMS
+(**`/r/{código único de consulta}`**, que abre la reserva sin pedir el nombre del titular contra
+`GET /public/checkin/link/{accessCode}`). El orden importa: la raíz se resuelve explícitamente,
+`/r/…` se atiende antes que la portada de un solo segmento y `admin` queda reservado.
+
+El directorio consume `publicCompanyTypes` y `publicCompanies` desde `companyService` mediante
+`useResource`; en modo demo `resolvePublicDirectoryMock` imita el filtro y la metadata paginada.
+Las demás rutas públicas y todo el panel permanecen bajo sus contratos existentes.
 
 `react-router-dom` v6 en `src/App.jsx`. `/login` es público; `/` monta `Layout` (Sidebar en
 escritorio + Topbar + `<Outlet>` + dock en móvil) con las rutas hijas de cada módulo: `more`
@@ -190,8 +196,11 @@ npm run build    # build de producción en /dist
 npm run preview  # sirve /dist localmente
 ```
 
-Entrypoint: `index.html` → `src/main.jsx`. Variable de entorno: `VITE_API_URL`
-(ver `.env.example`).
+Entrypoint: `index.html` → `src/main.jsx`. Variables de entorno (ver `.env.example`):
+
+- `VITE_API_URL`: base versionada del backend; vacía activa el modo demo.
+- `VITE_CONTACT_WHATSAPP`: número comercial con código de país para el CTA del directorio
+  público; vacío oculta el botón.
 
 ## PWA (instalable en Android/iOS)
 

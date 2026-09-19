@@ -25,7 +25,17 @@ export const companyService = {
   updateCompanyProfile: (data) => http.put(base(), data),
   // Portada pública (sin sesión): se resuelve por username de compañía. Devuelve el perfil de la
   // empresa (datos de marca + contacto) y sus menús públicos (activos). NO usa base().
-  publicCompany: (companyUsername) => http.get(`/public/${companyUsername}`),
+  publicCompany: (companyUsername) => http.get(`/public/${companyUsername}`, { auth: false }),
+  // Directorio público: tipos con compañías activas y listado paginado por tipo.
+  publicCompanyTypes: () => http.get('/public/directory/company-types', { auth: false }),
+  publicCompanies: ({ companyTypeKey, page = 1, perPage = 8 } = {}) => {
+    const query = new URLSearchParams({
+      company_type_key: companyTypeKey || '',
+      page: String(page),
+      per_page: String(perPage),
+    });
+    return http.get(`/public/directory/companies?${query}`, { auth: false, paginated: true });
+  },
   // Tokens de agentes de IA de la empresa activa (listado sin hash, solo prefijo).
   aiTokens: () => http.get(`${base()}/ai-agent-tokens`),
   // Genera un token nuevo: { name, expires_in_days? }. El token plano viene UNA sola vez
