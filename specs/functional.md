@@ -7,7 +7,8 @@
 Piddet es un panel de administración SaaS **multi-compañía** para negocios de atención al
 público (restaurantes, gimnasios y hospedaje). Permite gestionar la oferta (productos, menús,
 unidades rentables), la operación (facturas, gastos, turnos de caja, mesas, reservas) y los
-accesos (usuarios, roles y permisos), además de consultar reportes.
+accesos (usuarios, roles y permisos), además de consultar reportes. La raíz pública funciona
+como directorio para descubrir las compañías activas y entrar a sus portadas compartibles.
 
 Es cliente de `backend-piddet` (única fuente de verdad); el POS `piddet-pos` es la otra
 aplicación de la plataforma y toma los pedidos.
@@ -96,9 +97,32 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
 - **Reglas:** un usuario puede pertenecer a varias compañías pero opera en una sola a la vez;
   su rol y permisos son por compañía. La compañía por defecto es `company_default_id`.
 
+### Directorio público de compañías
+
+- **Descripción:** la raíz `/`, sin sesión, presenta las compañías activas de Piddet agrupadas
+  por tipo (`restaurant`, `gym`, `store`, `lodging` y los que agregue el backend).
+- **Flujo principal:** la portada carga `GET /public/directory/company-types` y la primera página
+  de `GET /public/directory/companies?company_type_key=...&page=1&per_page=8` para cada tipo. «Ver todos»
+  abre `/?type=<key>`, donde el listado se pagina; cada tarjeta navega a `/{username}`.
+- **Estados:** cada catálogo contempla carga, error y ausencia de resultados. Un tipo inválido
+  ofrece volver al directorio completo.
+- **Contacto:** «¿Quieres hacer parte?» muestra un enlace de WhatsApp solo cuando
+  `VITE_CONTACT_WHATSAPP` contiene un número utilizable. `/admin/login` sigue disponible como
+  acceso discreto para administradores.
+- **Reglas:** el backend decide qué compañías están activas y expone únicamente datos públicos
+  de presentación; la pantalla no usa sesión, permisos ni compañía activa.
+- **Perfil público:** `/{username}` conserva la marca de la compañía y organiza en una experiencia
+  mobile-first su hospedaje, menús, ubicaciones, horarios y contacto; en escritorio distribuye
+  oferta e información práctica en dos columnas.
+- **SEO:** la portada y los perfiles publican descripción, Open Graph/Twitter, canonical, robots
+  y JSON-LD. La raíz tiene metadata estática de respaldo; la compañía se completa en runtime con
+  su tipo de `LocalBusiness`. Crawlers que no ejecuten JavaScript necesitan prerender/CDN para
+  obtener la metadata específica de cada compañía.
+
 ### Dashboard
 
-- **Descripción:** vista inicial (`/`), siempre visible. Solo lectura.
+- **Descripción:** vista inicial del panel (`/admin/`), siempre visible para usuarios
+  autenticados. Solo lectura.
 - **Flujo principal:** acciones rápidas de móvil (cobrar membresía, registrar gasto, abrir/cerrar
   turno), el widget de **reservas por llegar** y, bajo un único control de período (fecha fin +
   semanas + refrescar), los reportes que permitan los permisos y funcionalidades: balance del

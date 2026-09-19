@@ -3,7 +3,9 @@ import { Spinner } from '../../../components';
 import { api } from '../../../lib/api.js';
 import { useResource } from '../../../lib/useResource.js';
 import { reservationMoney } from '../../../lib/reservationLabels.js';
-import { shareImage, applyMetaTags, buildShareMeta, shareOrCopy } from '../shareMeta.js';
+import {
+  shareImage, applyMetaTags, applySeoTags, buildShareMeta, shareOrCopy,
+} from '../shareMeta.js';
 import { PublicBottomBar } from '../PublicBottomBar.jsx';
 import { capacityText } from './UnitCard.jsx';
 import { companyBrandTheme } from '../../../lib/brand/palettes.js';
@@ -121,15 +123,18 @@ export function PublicLodgingUnit({ companyUsername, unitId }) {
     title: unit?.name ? `${unit.name}${company?.name ? ` · ${company.name}` : ''}` : 'Hospedaje',
     description: unit?.description || (unit?.name ? `Conoce ${unit.name} y resérvala.` : 'Conoce esta unidad de hospedaje.'),
     image: (unit?.files || [])[0]?.url || shareImage(company),
-    url: typeof window !== 'undefined' ? window.location.href : '',
-  }), [unit, company]);
+    url: typeof window !== 'undefined'
+      ? `${window.location.origin}/${encodeURIComponent(companyUsername)}/hospedaje/${encodeURIComponent(unitId)}`
+      : '',
+  }), [company, companyUsername, unit, unitId]);
 
   React.useEffect(() => {
     if (!data) return undefined;
     const prevTitle = document.title;
     document.title = shareInfo.title;
-    const created = applyMetaTags(buildShareMeta(shareInfo));
-    return () => { document.title = prevTitle; created.forEach((el) => el.remove()); };
+    const cleanupMeta = applyMetaTags(buildShareMeta(shareInfo));
+    const cleanupSeo = applySeoTags({ canonical: shareInfo.url });
+    return () => { document.title = prevTitle; cleanupMeta(); cleanupSeo(); };
   }, [data, shareInfo]);
 
   const [shareMsg, setShareMsg] = React.useState('');

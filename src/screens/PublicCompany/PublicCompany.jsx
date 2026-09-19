@@ -2,7 +2,9 @@ import React from 'react';
 import { Spinner } from '../../components';
 import { api } from '../../lib/api.js';
 import { useResource } from '../../lib/useResource.js';
-import { shareImage, applyMetaTags, buildShareMeta, shareOrCopy } from '../public/shareMeta.js';
+import {
+  shareImage, applyMetaTags, applySeoTags, buildShareMeta, shareOrCopy,
+} from '../public/shareMeta.js';
 import { PublicBottomBar } from '../public/PublicBottomBar.jsx';
 import { UnitCard } from '../public/Lodging/UnitCard.jsx';
 import { companyBrandTheme } from '../../lib/brand/palettes.js';
@@ -12,6 +14,18 @@ import s from './PublicCompany.module.css';
 
 const initial = (name = '') => (name.trim()[0] || '?').toUpperCase();
 const httpHref = (url = '') => (/^https?:\/\//i.test(url) ? url : `https://${url}`);
+const SCHEMA_TYPES = {
+  restaurant: 'Restaurant',
+  gym: 'ExerciseGym',
+  store: 'Store',
+  lodging: 'LodgingBusiness',
+};
+
+function CompanyLogo({ company }) {
+  const [failed, setFailed] = React.useState(false);
+  if (!company.icon || failed) return initial(company.name);
+  return <img src={company.icon} alt="" onError={() => setFailed(true)} />;
+}
 
 // Contacto de empresa que sí se mantiene en la portada (lo demás —dirección/teléfono/horario—
 // se muestra por tienda). Correo y sitio web son a nivel de compañía.
@@ -119,24 +133,57 @@ export function PublicCompany({ companyUsername }) {
   const unitsCount = data?.rentable_units_count || 0;
 
   const shareInfo = React.useMemo(() => {
-    const title = company?.name || 'piddet';
+    const title = company?.name ? `${company.name} | Piddet` : 'Piddet';
     const description = company?.description
-      || (company?.name ? `Conoce los menús de ${company.name}.` : 'Mira nuestros menús.');
+      || (company?.name
+        ? `Conoce ${company.name}${company.company_type_name ? `, ${company.company_type_name.toLowerCase()}` : ''} en Piddet.`
+        : 'Descubre negocios en Piddet.');
     return {
       title,
       description,
       image: shareImage(company),
-      url: typeof window !== 'undefined' ? window.location.href : '',
+      url: typeof window !== 'undefined'
+        ? `${window.location.origin}/${encodeURIComponent(companyUsername)}`
+        : '',
     };
-  }, [company]);
+  }, [company, companyUsername]);
 
   React.useEffect(() => {
     if (!data) return undefined;
     const prevTitle = document.title;
     document.title = shareInfo.title;
-    const created = applyMetaTags(buildShareMeta(shareInfo));
-    return () => { document.title = prevTitle; created.forEach((el) => el.remove()); };
-  }, [data, shareInfo]);
+    const cleanupMeta = applyMetaTags(buildShareMeta(shareInfo));
+    const firstStore = stores[0];
+    const cleanupSeo = applySeoTags({
+      canonical: shareInfo.url,
+      structuredData: {
+        '@context': 'https://schema.org',
+        '@type': SCHEMA_TYPES[company.company_type_key] || 'LocalBusiness',
+        '@id': `${shareInfo.url}#business`,
+        name: company.name,
+        description: shareInfo.description,
+        url: shareInfo.url,
+        image: shareInfo.image,
+        email: company.email || undefined,
+        telephone: company.phone || storePhone(firstStore || {}) || undefined,
+        address: firstStore?.address
+          ? { '@type': 'PostalAddress', streetAddress: firstStore.address }
+          : undefined,
+        sameAs: company.website ? [httpHref(company.website)] : undefined,
+      },
+    });
+    return () => {
+      document.title = prevTitle;
+      cleanupMeta();
+      cleanupSeo();
+    };
+  }, [company, data, shareInfo, stores]);
+
+  React.useEffect(() => {
+    if (!res.error) return undefined;
+    const canonical = `${window.location.origin}/${encodeURIComponent(companyUsername)}`;
+    return applySeoTags({ canonical, robots: 'noindex, follow' });
+  }, [companyUsername, res.error]);
 
   const [shareMsg, setShareMsg] = React.useState('');
   const share = React.useCallback(async () => {
@@ -149,12 +196,15 @@ export function PublicCompany({ companyUsername }) {
   }, [shareInfo]);
 
   if (res.loading) {
-    return <div className={s.screen}><Spinner center label="Cargando empresa…" /></div>;
+    return <div className={s.screen}><div className={s.pageState}><Spinner center label="Cargando empresa…" /></div></div>;
   }
   if (res.error || !company) {
     return (
       <div className={s.screen}>
-        <div className={s.state}><i className="fas fa-triangle-exclamation" /> No encontramos esta empresa.</div>
+        <div className={s.pageState}>
+          <div className={s.state}><i className="fas fa-triangle-exclamation" /> No encontramos esta empresa.</div>
+          <a className={s.exploreLink} href="/">Volver al directorio</a>
+        </div>
       </div>
     );
   }
@@ -168,90 +218,147 @@ export function PublicCompany({ companyUsername }) {
   );
 
   return (
-    // Los colores del perfil de la compañía redefinen la escala de --color-primary para toda la
-    // página: sin ellos, la portada llevaría el naranja de piddet en botones, enlaces y realces.
+    // Las variables de marca son la única excepción de estilo inline: companyBrandTheme devuelve
+    // custom properties, no reglas visuales sueltas.
     <div className={s.screen} style={companyBrandTheme(company)}>
-      <div className={s.container}>
-        <header className={s.hero}>
-          <span className={[s.logo, company.icon ? s.logoImg : ''].filter(Boolean).join(' ')}>
-            {company.icon
-              ? <img src={company.icon} alt={company.name} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-              : initial(company.name)}
-          </span>
-          <h1 className={s.name}>{company.name}</h1>
-          {(company.description || company.legal_name) && (
-            <p className={s.tagline}>{company.description || company.legal_name}</p>
-          )}
-        </header>
+      <header className={s.topbar}>
+        <a className={s.wordmark} href="/" aria-label="Piddet, inicio">piddet</a>
+        <a className={s.exploreLink} href="/">
+          <i className="fas fa-compass" aria-hidden="true" /> <span>Explorar negocios</span>
+        </a>
+      </header>
 
-        {units.length > 0 && (
-          <section>
-            <div className={s.sectionHead}>
-              <h2 className={s.sectionTitle}>Hospedaje</h2>
-              <a className={s.sectionLink} href={`/${encodeURIComponent(companyUsername)}/hospedaje`}>
-                {unitsCount > units.length ? `Ver las ${unitsCount}` : 'Ver todo'}
-                <i className="fas fa-chevron-right" />
-              </a>
+      <main className={s.container}>
+        <section className={s.hero}>
+          <span className={s.heroOrb} aria-hidden="true" />
+          <div className={s.heroIdentity}>
+            <span className={[s.logo, company.icon ? s.logoImg : ''].filter(Boolean).join(' ')}>
+              <CompanyLogo company={company} />
+            </span>
+            <div className={s.heroCopy}>
+              <p className={s.eyebrow}>{company.company_type_name || 'Negocio en Piddet'}</p>
+              <h1 className={s.name}>{company.name}</h1>
+              {(company.description || company.legal_name) && (
+                <p className={s.tagline}>{company.description || company.legal_name}</p>
+              )}
             </div>
-            <div className={s.unitList}>
-              {units.map((u) => (
-                <UnitCard key={u.id} unit={u} companyUsername={companyUsername} compact />
-              ))}
-            </div>
-          </section>
-        )}
-
-        <section>
-          <h2 className={s.sectionTitle}>Nuestros menús</h2>
-          {menus.length === 0 ? (
-            <div className={s.state}><i className="fas fa-utensils" /> Aún no hay menús publicados.</div>
-          ) : (
-            <ul className={s.menuList}>
-              {menus.map((m) => (
-                <li key={m.id}>
-                  <a className={s.menuCard} href={`/${encodeURIComponent(companyUsername)}/m/${encodeURIComponent(m.username)}`}>
-                    {m.file && <img className={s.menuThumb} src={m.file} alt="" onError={(e) => { e.currentTarget.style.display = 'none'; }} />}
-                    <span className={s.menuInfo}>
-                      <span className={s.menuName}>{m.name}</span>
-                      {m.description && <span className={s.menuDesc}>{m.description}</span>}
-                    </span>
-                    <i className={`fas fa-chevron-right ${s.menuArrow}`} />
-                  </a>
-                </li>
-              ))}
-            </ul>
-          )}
+          </div>
+          <div className={s.heroFacts} aria-label="Información disponible">
+            {menus.length > 0 && (
+              <span><i className="fas fa-utensils" aria-hidden="true" />{menus.length} {menus.length === 1 ? 'menú' : 'menús'}</span>
+            )}
+            {stores.length > 0 && (
+              <span><i className="fas fa-location-dot" aria-hidden="true" />{storesCountText}</span>
+            )}
+            {unitsCount > 0 && (
+              <span><i className="fas fa-bed" aria-hidden="true" />{unitsCount} {unitsCount === 1 ? 'hospedaje' : 'hospedajes'}</span>
+            )}
+          </div>
         </section>
 
-        {stores.length > 0 && (
-          <section>
-            <div className={s.sectionHead}>
-              <h2 className={s.sectionTitle}>Dónde estamos</h2>
-              <span className={s.sectionMeta}>{storesCountText}</span>
-            </div>
-            <div className={s.storeList}>
-              {stores.map((st) => (
-                <StoreCard key={st.id} store={st} companyName={company.name} companyPhone={company.phone} />
-              ))}
-            </div>
-          </section>
-        )}
+        <div className={s.contentGrid}>
+          <div className={s.primaryColumn}>
+            {units.length > 0 && (
+              <section className={s.panel} aria-labelledby="lodging-title">
+                <div className={s.sectionHead}>
+                  <div className={s.sectionTitleGroup}>
+                    <span className={s.sectionIcon}><i className="fas fa-bed" aria-hidden="true" /></span>
+                    <div>
+                      <p className={s.sectionKicker}>Reserva tu estadía</p>
+                      <h2 id="lodging-title" className={s.sectionTitle}>Hospedaje</h2>
+                    </div>
+                  </div>
+                  <a className={s.sectionLink} href={`/${encodeURIComponent(companyUsername)}/hospedaje`}>
+                    {unitsCount > units.length ? `Ver las ${unitsCount}` : 'Ver todo'}
+                    <i className="fas fa-chevron-right" aria-hidden="true" />
+                  </a>
+                </div>
+                <div className={s.unitList}>
+                  {units.map((u) => (
+                    <UnitCard key={u.id} unit={u} companyUsername={companyUsername} compact />
+                  ))}
+                </div>
+              </section>
+            )}
 
-        {contacts.length > 0 && (
-          <ul className={s.contact}>
-            {contacts.map((f) => (
-              <li key={f.key} className={s.contactItem}>
-                <span className={s.contactIco}><i className={f.icon} /></span>
-                <a href={f.href(company[f.key])} target={f.key === 'website' ? '_blank' : undefined} rel="noopener noreferrer">{company[f.key]}</a>
-              </li>
-            ))}
-          </ul>
-        )}
+            <section className={s.panel} aria-labelledby="menus-title">
+              <div className={s.sectionHead}>
+                <div className={s.sectionTitleGroup}>
+                  <span className={s.sectionIcon}><i className="fas fa-utensils" aria-hidden="true" /></span>
+                  <div>
+                    <p className={s.sectionKicker}>Conoce lo que ofrecemos</p>
+                    <h2 id="menus-title" className={s.sectionTitle}>Nuestros menús</h2>
+                  </div>
+                </div>
+              </div>
+              {menus.length === 0 ? (
+                <div className={s.state}><i className="fas fa-utensils" /> Aún no hay menús publicados.</div>
+              ) : (
+                <ul className={s.menuList}>
+                  {menus.map((m) => (
+                    <li key={m.id}>
+                      <a className={s.menuCard} href={`/${encodeURIComponent(companyUsername)}/m/${encodeURIComponent(m.username)}`}>
+                        {m.file && <img className={s.menuThumb} src={m.file} alt="" loading="lazy" onError={(e) => { e.currentTarget.style.display = 'none'; }} />}
+                        <span className={s.menuInfo}>
+                          <span className={s.menuName}>{m.name}</span>
+                          {m.description && <span className={s.menuDesc}>{m.description}</span>}
+                        </span>
+                        <i className={`fas fa-arrow-right ${s.menuArrow}`} aria-hidden="true" />
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          </div>
+
+          {(stores.length > 0 || contacts.length > 0) && (
+            <aside className={s.sideColumn}>
+              {stores.length > 0 && (
+                <section className={s.panel} aria-labelledby="stores-title">
+                  <div className={s.sectionHead}>
+                    <div className={s.sectionTitleGroup}>
+                      <span className={s.sectionIcon}><i className="fas fa-location-dot" aria-hidden="true" /></span>
+                      <div>
+                        <p className={s.sectionKicker}>{storesCountText}</p>
+                        <h2 id="stores-title" className={s.sectionTitle}>Dónde estamos</h2>
+                      </div>
+                    </div>
+                  </div>
+                  <div className={s.storeList}>
+                    {stores.map((st) => (
+                      <StoreCard key={st.id} store={st} companyName={company.name} companyPhone={company.phone} />
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {contacts.length > 0 && (
+                <section className={s.panel} aria-labelledby="contact-title">
+                  <div className={s.sectionHead}>
+                    <div className={s.sectionTitleGroup}>
+                      <span className={s.sectionIcon}><i className="fas fa-address-card" aria-hidden="true" /></span>
+                      <h2 id="contact-title" className={s.sectionTitle}>Contacto</h2>
+                    </div>
+                  </div>
+                  <ul className={s.contact}>
+                    {contacts.map((f) => (
+                      <li key={f.key} className={s.contactItem}>
+                        <span className={s.contactIco}><i className={f.icon} aria-hidden="true" /></span>
+                        <a href={f.href(company[f.key])} target={f.key === 'website' ? '_blank' : undefined} rel="noopener noreferrer">{company[f.key]}</a>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
+            </aside>
+          )}
+        </div>
 
         <footer className={s.footer}>
-          <span>Hecho con</span> <strong>piddet</strong>
+          <span>Negocios que se mueven con</span> <strong>piddet</strong>
         </footer>
-      </div>
+      </main>
 
       {/* Escribir por WhatsApp es la acción principal de la portada: es el canal por el que la
           gente pregunta y reserva. Compartir queda como acción secundaria. */}

@@ -2,7 +2,9 @@ import React from 'react';
 import { Spinner } from '../../../components';
 import { api } from '../../../lib/api.js';
 import { useResource } from '../../../lib/useResource.js';
-import { shareImage, applyMetaTags, buildShareMeta, shareOrCopy } from '../shareMeta.js';
+import {
+  shareImage, applyMetaTags, applySeoTags, buildShareMeta, shareOrCopy,
+} from '../shareMeta.js';
 import { PublicBottomBar } from '../PublicBottomBar.jsx';
 import { UnitCard } from './UnitCard.jsx';
 import { companyBrandTheme } from '../../../lib/brand/palettes.js';
@@ -30,15 +32,18 @@ export function PublicLodging({ companyUsername }) {
       ? `Conoce las opciones de hospedaje de ${company.name}.`
       : 'Conoce nuestras opciones de hospedaje.',
     image: shareImage(company),
-    url: typeof window !== 'undefined' ? window.location.href : '',
-  }), [company]);
+    url: typeof window !== 'undefined'
+      ? `${window.location.origin}/${encodeURIComponent(companyUsername)}/hospedaje`
+      : '',
+  }), [company, companyUsername]);
 
   React.useEffect(() => {
     if (!data) return undefined;
     const prevTitle = document.title;
     document.title = shareInfo.title;
-    const created = applyMetaTags(buildShareMeta(shareInfo));
-    return () => { document.title = prevTitle; created.forEach((el) => el.remove()); };
+    const cleanupMeta = applyMetaTags(buildShareMeta(shareInfo));
+    const cleanupSeo = applySeoTags({ canonical: shareInfo.url });
+    return () => { document.title = prevTitle; cleanupMeta(); cleanupSeo(); };
   }, [data, shareInfo]);
 
   const [shareMsg, setShareMsg] = React.useState('');

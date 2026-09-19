@@ -18,6 +18,7 @@ import { MenuImportWizard } from './screens/MenuImportWizard/MenuImportWizard.js
 import { MenuPreview } from './screens/MenuPreview/MenuPreview.jsx';
 import { PublicMenu } from './screens/PublicMenu/PublicMenu.jsx';
 import { PublicCompany } from './screens/PublicCompany/PublicCompany.jsx';
+import { PublicHome } from './screens/PublicHome/PublicHome.jsx';
 import { CheckinWizard } from './screens/public/Checkin/CheckinWizard.jsx';
 import { PublicLodging } from './screens/public/Lodging/PublicLodging.jsx';
 import { PublicLodgingUnit } from './screens/public/Lodging/PublicLodgingUnit.jsx';
@@ -109,6 +110,14 @@ function applyThemeColor(theme) {
   meta.setAttribute('content', token || FALLBACK_THEME_COLORS[theme] || FALLBACK_THEME_COLORS.light);
 }
 
+function getStoredTheme() {
+  try {
+    return localStorage.getItem('piddet_theme') || 'light';
+  } catch {
+    return 'light';
+  }
+}
+
 // Landing de la raíz: muestra el Inicio si está habilitado; si no, redirige al primer módulo
 // accesible; si no hay ninguno, muestra el estado "sin módulos".
 function Home() {
@@ -119,9 +128,18 @@ function Home() {
 }
 
 export default function App() {
-  // 1) Mundo público (raíz limpia): la carta compartible se renderiza sin router ni sesión.
+  // El tema pertenece al documento completo, incluidas las vistas públicas que retornan antes de
+  // montar AdminApp. Aplicarlo aquí evita que `/` y `/{company}` ignoren la preferencia guardada.
+  const storedTheme = getStoredTheme();
+  document.documentElement.dataset.theme = storedTheme;
+  applyThemeColor(storedTheme);
+
+  // 1) Mundo público (raíz limpia): la portada y las vistas compartibles se renderizan sin
+  //    router ni sesión. El panel administrativo conserva su propio router bajo /admin.
   //    El primer segmento `admin` se excluye para no colisionar con el panel.
   const path = window.location.pathname;
+  if (path === '/') return <PublicHome />;
+
   const publicMatch = path.match(PUBLIC_MENU_RE);
   if (publicMatch && publicMatch[1] !== ADMIN_BASE.slice(1)) {
     return (
@@ -167,8 +185,8 @@ export default function App() {
     return <PublicCompany companyUsername={decodeURIComponent(companyMatch[1])} />;
   }
 
-  // 2) Todo lo administrativo vive bajo /admin: si entran fuera de ese prefijo (p. ej. la raíz),
-  //    se redirige conservando la ruta para que el router (con basename) la resuelva.
+  // 2) Todo lo administrativo vive bajo /admin. Cualquier ruta no pública que quede fuera de
+  //    ese prefijo se redirige conservando ruta, query y hash.
   const isAdminPath = path === ADMIN_BASE || path.startsWith(ADMIN_BASE + '/');
   if (!isAdminPath) {
     const rest = path === '/' ? '/' : path;

@@ -480,6 +480,32 @@ export const mockCompanyTypes = [
   { id: 4, key: 'lodging', name: 'Hospedaje', description: 'Hoteles, cabañas y glamping: unidades, reservas y servicios.' },
 ];
 
+// Directorio público demo. Todos representan compañías activas y exponen únicamente los campos
+// de presentación permitidos por GET /public/directory/companies.
+export const mockPublicCompanies = [
+  { username: 'grupo_sabor', name: 'Grupo Sabor', description: 'Cocina colombiana contemporánea con ingredientes de temporada.', icon: null, thumbnail_icon: null, city: 'Medellín', company_type_key: 'restaurant', company_type_name: 'Restaurante', brand_primary: 'forest', brand_secondary: 'gold' },
+  { username: 'casa_almendra', name: 'Casa Almendra', description: 'Café de origen, panadería artesanal y desayunos todo el día.', icon: null, thumbnail_icon: null, city: 'Bogotá', company_type_key: 'restaurant', company_type_name: 'Restaurante', brand_primary: 'cocoa', brand_secondary: 'sand' },
+  { username: 'marea_cocina', name: 'Marea Cocina', description: 'Sabores del Caribe servidos para compartir.', icon: null, thumbnail_icon: null, city: 'Cartagena', company_type_key: 'restaurant', company_type_name: 'Restaurante', brand_primary: 'ocean', brand_secondary: 'coral' },
+  { username: 'la_huerta_bistro', name: 'La Huerta Bistró', description: 'Platos frescos, opciones vegetarianas y mercado local.', icon: null, thumbnail_icon: null, city: 'Cali', company_type_key: 'restaurant', company_type_name: 'Restaurante', brand_primary: 'forest', brand_secondary: 'cream' },
+  { username: 'brasa_norte', name: 'Brasa Norte', description: 'Parrilla, ahumados y una selección de cervezas locales.', icon: null, thumbnail_icon: null, city: 'Barranquilla', company_type_key: 'restaurant', company_type_name: 'Restaurante', brand_primary: 'wine', brand_secondary: 'copper' },
+  { username: 'oliva_mesa', name: 'Oliva Mesa', description: 'Cocina mediterránea casual para almuerzos y cenas.', icon: null, thumbnail_icon: null, city: 'Pereira', company_type_key: 'restaurant', company_type_name: 'Restaurante', brand_primary: 'olive', brand_secondary: 'linen' },
+  { username: 'taller_del_cafe', name: 'Taller del Café', description: 'Laboratorio de café, brunch y repostería hecha en casa.', icon: null, thumbnail_icon: null, city: 'Manizales', company_type_key: 'restaurant', company_type_name: 'Restaurante', brand_primary: 'cocoa', brand_secondary: 'orange' },
+  { username: 'savia_restaurante', name: 'Savia Restaurante', description: 'Una carta corta que cambia con la cosecha.', icon: null, thumbnail_icon: null, city: 'Rionegro', company_type_key: 'restaurant', company_type_name: 'Restaurante', brand_primary: 'sage', brand_secondary: 'clay' },
+  { username: 'patio_once', name: 'Patio Once', description: 'Comida honesta, música y encuentros en el centro.', icon: null, thumbnail_icon: null, city: 'Bucaramanga', company_type_key: 'restaurant', company_type_name: 'Restaurante', brand_primary: 'navy', brand_secondary: 'mustard' },
+  { username: 'movimiento_lab', name: 'Movimiento Lab', description: 'Entrenamiento funcional en grupos pequeños.', icon: null, thumbnail_icon: null, city: 'Medellín', company_type_key: 'gym', company_type_name: 'Gimnasio', brand_primary: 'navy', brand_secondary: 'lime' },
+  { username: 'norte_fitness', name: 'Norte Fitness', description: 'Fuerza, cardio y acompañamiento para todos los niveles.', icon: null, thumbnail_icon: null, city: 'Bogotá', company_type_key: 'gym', company_type_name: 'Gimnasio', brand_primary: 'blue', brand_secondary: 'orange' },
+  { username: 'origen_yoga', name: 'Origen Yoga', description: 'Yoga, movilidad y bienestar en un espacio tranquilo.', icon: null, thumbnail_icon: null, city: 'Cali', company_type_key: 'gym', company_type_name: 'Gimnasio', brand_primary: 'violet', brand_secondary: 'sand' },
+  { username: 'box_43', name: 'Box 43', description: 'Acondicionamiento, levantamiento y comunidad.', icon: null, thumbnail_icon: null, city: 'Pereira', company_type_key: 'gym', company_type_name: 'Gimnasio', brand_primary: 'charcoal', brand_secondary: 'red' },
+  { username: 'mercado_nativo', name: 'Mercado Nativo', description: 'Productos locales, despensa y regalos con origen.', icon: null, thumbnail_icon: null, city: 'Medellín', company_type_key: 'store', company_type_name: 'Tienda', brand_primary: 'forest', brand_secondary: 'cream' },
+  { username: 'casa_papel', name: 'Casa Papel', description: 'Papelería bonita, libros y objetos para crear.', icon: null, thumbnail_icon: null, city: 'Bogotá', company_type_key: 'store', company_type_name: 'Tienda', brand_primary: 'rose', brand_secondary: 'navy' },
+  { username: 'ruta_ciclista', name: 'Ruta Ciclista', description: 'Bicicletas, accesorios y taller especializado.', icon: null, thumbnail_icon: null, city: 'Cali', company_type_key: 'store', company_type_name: 'Tienda', brand_primary: 'blue', brand_secondary: 'yellow' },
+  { username: 'pequeno_taller', name: 'Pequeño Taller', description: 'Cerámica utilitaria y piezas hechas a mano.', icon: null, thumbnail_icon: null, city: 'Barichara', company_type_key: 'store', company_type_name: 'Tienda', brand_primary: 'clay', brand_secondary: 'linen' },
+  { username: 'refugio_del_bosque', name: 'Refugio del Bosque', description: 'Cabañas privadas entre montañas y senderos.', icon: null, thumbnail_icon: null, city: 'Jardín', company_type_key: 'lodging', company_type_name: 'Hospedaje', brand_primary: 'forest', brand_secondary: 'wood' },
+  { username: 'casa_marea', name: 'Casa Marea', description: 'Habitaciones frente al mar y ritmo tranquilo.', icon: null, thumbnail_icon: null, city: 'Santa Marta', company_type_key: 'lodging', company_type_name: 'Hospedaje', brand_primary: 'ocean', brand_secondary: 'sand' },
+  { username: 'alto_cielo', name: 'Alto Cielo Glamping', description: 'Domos con vista, fogata y desayuno incluido.', icon: null, thumbnail_icon: null, city: 'Guatapé', company_type_key: 'lodging', company_type_name: 'Hospedaje', brand_primary: 'navy', brand_secondary: 'gold' },
+  { username: 'hotel_centro_72', name: 'Hotel Centro 72', description: 'Una estadía práctica cerca de todo.', icon: null, thumbnail_icon: null, city: 'Barranquilla', company_type_key: 'lodging', company_type_name: 'Hospedaje', brand_primary: 'slate', brand_secondary: 'teal' },
+];
+
 export const mockCompany = {
   id: 'pid-001', name: 'Grupo Sabor', username: 'grupo_sabor', legal_name: 'Grupo Sabor S.A.S', plan: 'Pro', tiendas: 4,
   identification: 'NIT 900.123.456-7',
@@ -633,22 +659,25 @@ function resolvePublicMenuMock(path) {
 function resolvePublicCompanyMock(path) {
   const m = path.match(/^\/public\/([^/]+)$/);
   if (!m) return undefined;
+  const directoryCompany = mockPublicCompanies.find((company) => company.username === m[1]);
+  if (!directoryCompany) return null;
+  const isDemoCompany = directoryCompany.username === mockCompany.username;
   const menus = mockMenus
-    .filter((x) => x.status === 1 && x.is_active)
+    .filter((x) => isDemoCompany && x.status === 1 && x.is_active)
     .sort((a, b) => a.position - b.position)
     .map((x) => ({ id: x.id, name: x.name, username: x.username, description: x.description, file: x.file, position: x.position, status: x.status, is_active: x.is_active }));
   // Tiendas públicas: todas menos las inactivas (store_status_id 2). Incluye horarios y ubicación.
   const stores = mockStoresList
-    .filter((st) => st.store_status_id !== 2)
+    .filter((st) => isDemoCompany && st.store_status_id !== 2)
     .map((st) => ({
       id: st.id, store_status_id: st.store_status_id, status: storeStatusObj(st.store_status_id),
       name: st.name, address: st.address, phone_code: st.phone_code, phone_number: st.phone_number,
       latitude: st.latitude, longitude: st.longitude,
       schedules: (st.schedules || []).map((r) => ({ day_id: r.day_id, start_time: r.start_time, end_time: r.end_time })),
     }));
-  const activeUnits = mockRentableUnits.filter((u) => u.status === 1);
+  const activeUnits = mockRentableUnits.filter((u) => isDemoCompany && u.status === 1);
   return {
-    company: { ...mockCompany },
+    company: isDemoCompany ? { ...mockCompany } : { ...directoryCompany },
     menus,
     stores,
     // Hospedaje: en demo la funcionalidad de reservas está activa, así que la portada trae la
@@ -656,6 +685,27 @@ function resolvePublicCompanyMock(path) {
     rentable_units: activeUnits.slice(0, 3).map(publicUnitCard),
     rentable_units_count: activeUnits.length,
   };
+}
+
+function resolvePublicDirectoryMock(path, query) {
+  if (path === '/public/directory/company-types') {
+    return mockCompanyTypes.map(({ key, name }) => ({
+      key,
+      name,
+      active_companies_count: mockPublicCompanies.filter((company) => company.company_type_key === key).length,
+    }));
+  }
+  if (path === '/public/directory/companies') {
+    const typeKey = query.get('company_type_key');
+    const companies = typeKey
+      ? mockPublicCompanies.filter((company) => company.company_type_key === typeKey)
+      : mockPublicCompanies;
+    return mockPaginate(
+      [...companies].sort((a, b) => a.name.localeCompare(b.name, 'es')),
+      query,
+    );
+  }
+  return undefined;
 }
 
 // ── Hospedaje público (sin sesión): /public/{company}/rentable-units[/{unitId}] ──
@@ -5813,6 +5863,11 @@ export function resolveMock(rawPath, opts = {}) {
   // Pre-check-in público (sin sesión): /public/checkin/{code}…
   const checkin = resolveCheckinMock(path, query, opts);
   if (checkin !== undefined) return checkin;
+
+  // Directorio público: debe resolverse antes de /public/{company} para que los nombres
+  // reservados `company-types` y `companies` no se interpreten como usernames.
+  const publicDirectory = resolvePublicDirectoryMock(path, query);
+  if (publicDirectory !== undefined) return publicDirectory;
 
   // Hospedaje público (sin sesión): /public/{company}/rentable-units[/{unitId}]
   const publicLodging = resolvePublicLodgingMock(path, query);

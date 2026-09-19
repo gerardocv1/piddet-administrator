@@ -11,20 +11,71 @@ export const shareImage = (company) =>
   [company?.thumbnail_icon, company?.icon, company?.standard_icon].find((u) => u && !DEFAULT_LOGO_RE.test(u)) ||
   `${window.location.origin}/favicon/apple-touch-icon.png`;
 
-// Crea/actualiza un <meta> en el <head> y devuelve los que creó (para limpiarlos al desmontar).
+// Crea/actualiza metas y devuelve una limpieza que restaura el head anterior. Esto importa desde
+// que index.html trae fallback SEO: desmontar una vista pública no puede dejar sus valores pegados.
 export function applyMetaTags(tags) {
-  const created = [];
+  const cleanups = [];
   tags.forEach(([attr, key, content]) => {
     let el = document.head.querySelector(`meta[${attr}="${key}"]`);
+    const created = !el;
+    const previousContent = el?.getAttribute('content');
     if (!el) {
       el = document.createElement('meta');
       el.setAttribute(attr, key);
       document.head.appendChild(el);
-      created.push(el);
     }
     el.setAttribute('content', content);
+    cleanups.push(() => {
+      if (created) el.remove();
+      else el.setAttribute('content', previousContent || '');
+    });
   });
-  return created;
+  return () => cleanups.reverse().forEach((cleanup) => cleanup());
+}
+
+// Canonical, directiva de indexación y datos estructurados para vistas públicas. Devuelve una
+// función de limpieza que restaura las etiquetas estáticas de index.html al desmontar la vista.
+export function applySeoTags({ canonical, robots = 'index, follow', structuredData = null }) {
+  const cleanups = [];
+
+  let canonicalLink = document.head.querySelector('link[rel="canonical"]');
+  const createdCanonical = !canonicalLink;
+  const previousCanonical = canonicalLink?.getAttribute('href');
+  if (!canonicalLink) {
+    canonicalLink = document.createElement('link');
+    canonicalLink.rel = 'canonical';
+    document.head.appendChild(canonicalLink);
+  }
+  canonicalLink.href = canonical;
+  cleanups.push(() => {
+    if (createdCanonical) canonicalLink.remove();
+    else canonicalLink.setAttribute('href', previousCanonical || '/');
+  });
+
+  let robotsMeta = document.head.querySelector('meta[name="robots"]');
+  const createdRobots = !robotsMeta;
+  const previousRobots = robotsMeta?.getAttribute('content');
+  if (!robotsMeta) {
+    robotsMeta = document.createElement('meta');
+    robotsMeta.name = 'robots';
+    document.head.appendChild(robotsMeta);
+  }
+  robotsMeta.content = robots;
+  cleanups.push(() => {
+    if (createdRobots) robotsMeta.remove();
+    else robotsMeta.setAttribute('content', previousRobots || 'index, follow');
+  });
+
+  if (structuredData) {
+    const script = document.createElement('script');
+    script.type = 'application/ld+json';
+    script.dataset.piddetSeo = 'true';
+    script.textContent = JSON.stringify(structuredData).replace(/</g, '\\u003c');
+    document.head.appendChild(script);
+    cleanups.push(() => script.remove());
+  }
+
+  return () => cleanups.reverse().forEach((cleanup) => cleanup());
 }
 
 // Open Graph/Twitter estándar a partir de la info de compartir. Nota: WhatsApp/Facebook NO
