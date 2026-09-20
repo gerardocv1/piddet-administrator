@@ -1,6 +1,6 @@
 import React from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Card, DataTable, Badge, FilterBar, Pagination, RefreshButton, Alert, Modal, Button, ConfirmDialog, Input, Textarea, useToast } from '../components';
+import { Card, DataTable, Badge, FilterBar, Pagination, RefreshButton, Alert, Modal, Button, ConfirmDialog, Input, Select, Textarea, useToast } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import {
@@ -18,9 +18,9 @@ const EMPTY_SUMMARY = { source_references: [] };
 // la pasarela.
 //
 // Una notificación es el registro de algo que ya pasó: no se edita ni se borra. Lo único que se
-// puede hacer es reenviarla (otra fila) o disparar un SMS de prueba a un número escrito a mano,
-// que entra al historial como una más: así se comprueba la pasarela sin esperar a que el negocio
-// mande algo. Los filtros y la página viven en la URL para que compartir el enlace lleve a la
+// puede hacer es reenviarla (otra fila) o disparar un SMS de prueba a un número escrito a mano
+// —texto libre o cualquier mensaje del negocio con datos de ejemplo—, que entra al historial como
+// una más: así se comprueba la pasarela y se ve en un celular real cómo llega cada aviso. Los filtros y la página viven en la URL para que compartir el enlace lleve a la
 // misma consulta.
 export function SentNotifications() {
   const [params, setParams] = useSearchParams();
@@ -170,26 +170,37 @@ export function SentNotifications() {
 }
 
 // SMS de prueba a un número escrito a mano. Sale por el mismo camino que cualquier aviso: queda
-// en el historial con motivo "Envío de prueba" y se cobra como uno más. Si la pasarela lo rechaza
-// en el acto, el backend responde con el motivo, que es justo lo que se vino a averiguar.
+// en el historial con motivo "Envío de prueba" y se cobra como uno más. Se elige QUÉ probar: un
+// texto libre o cualquiera de los mensajes del negocio con datos de ejemplo (el backend lo arma
+// con la misma clase que usa el envío real, así que lo que llega al celular es lo que recibiría
+// un huésped o un socio). Si la pasarela lo rechaza en el acto, el backend responde con el
+// motivo, que es justo lo que se vino a averiguar.
+const CUSTOM_KIND = 'custom';
+
 function TestNotificationModal({ onClose, onSent }) {
   const { toast } = useToast();
-  const [form, setForm] = React.useState({ to: '', message: '' });
+  const { data: kinds, loading: loadingKinds } = useResource(api.getTestNotificationKinds, [], []);
+  const [form, setForm] = React.useState({ to: '', kind: CUSTOM_KIND, message: '' });
   const [sending, setSending] = React.useState(false);
   const [err, setErr] = React.useState(null);
 
   const set = (key, value) => setForm((f) => ({ ...f, [key]: value }));
+  const isCustom = form.kind === CUSTOM_KIND;
+  const sample = kinds.find((k) => k.key === form.kind)?.message || '';
+  const kindOptions = kinds.length
+    ? kinds.map((k) => ({ value: k.key, label: k.label }))
+    : [{ value: CUSTOM_KIND, label: 'Texto libre' }];
 
   const submit = async () => {
     const to = form.to.replace(/[\s-]/g, '');
     const message = form.message.trim();
     if (!/^\+?[0-9]{7,15}$/.test(to)) { setErr('Escribe el celular con indicativo de país y solo dígitos, por ejemplo 573001234567.'); return; }
-    if (!message) { setErr('Escribe el texto del mensaje.'); return; }
+    if (isCustom && !message) { setErr('Escribe el texto del mensaje.'); return; }
 
     setSending(true);
     setErr(null);
     try {
-      await api.sendTestNotification({ to, message });
+      await api.sendTestNotification({ to, kind: form.kind, message: isCustom ? message : undefined });
       toast({ tone: 'success', title: 'Prueba en camino: aparece en el historial como una notificación más' });
       onSent();
     } catch (e) {
@@ -207,9 +218,19 @@ function TestNotificationModal({ onClose, onSent }) {
         <Input label="Celular" type="tel" inputMode="numeric" placeholder="573001234567" value={form.to}
           onChange={(e) => set('to', e.target.value)} autoFocus
           hint="Con indicativo de país, sin espacios ni símbolos." />
-        <Textarea label="Mensaje" rows={3} maxLength={300} value={form.message}
-          onChange={(e) => set('message', e.target.value)}
-          hint="Sale tal cual, encabezado por el nombre de la compañía." />
+        <Select label="Mensaje" value={form.kind} options={kindOptions} disabled={loadingKinds}
+          onChange={(e) => set('kind', e.target.value)}
+          hint="Un mensaje del negocio con datos de ejemplo, o un texto libre." />
+        {isCustom ? (
+          <Textarea label="Texto" rows={3} maxLength={300} value={form.message}
+            onChange={(e) => set('message', e.target.value)}
+            hint="Sale tal cual, encabezado por el nombre de la compañía." />
+        ) : (
+          <div className={t.field}>
+            <span className={t.fieldLabel}>Así llegará (encabezado por el nombre de la compañía)</span>
+            <p className={t.message}>{sample || '…'}</p>
+          </div>
+        )}
         <Alert tone="warning">
           Es un envío real: queda en el historial y se cobra como cualquier otro SMS.
         </Alert>
