@@ -3425,6 +3425,12 @@ const shiftConflict = (message) => { throw Object.assign(new Error(message), { s
 // ¿El usuario está asignado al turno? (como el backend: por la lista, no por la columna).
 const shiftHasUser = (shift, userId) => (shift.assigned_users || []).some((u) => u.id === userId);
 
+const shiftHasSameUsers = (shift, userIds) => {
+  const shiftIds = (shift.assigned_users || []).map((u) => u.id).sort((a, b) => a - b);
+  const requested = [...userIds].sort((a, b) => a - b);
+  return shiftIds.length === requested.length && shiftIds.every((id, i) => id === requested[i]);
+};
+
 function resolveShiftsMock(path, query, { method = 'GET', body } = {}) {
   const scoped = path.match(/^\/companies\/[^/]+\/(.+)$/);
   if (!scoped) return undefined;
@@ -3451,14 +3457,15 @@ function resolveShiftsMock(path, query, { method = 'GET', body } = {}) {
       shiftConflict('Ya hay un turno global abierto');
     }
     // Uno o varios asignados (caja compartida); sin lista, el turno es del usuario demo. Un
-    // usuario no puede estar en dos turnos abiertos, sea de cajero o de compras.
+    // usuario puede estar en varios turnos abiertos; lo que no se admite es un segundo turno del
+    // mismo tipo con exactamente los mismos usuarios.
     let assignedUsers = [];
     if (type !== 'GLOBAL') {
       const ids = [...new Set([body?.assigned_user_id, ...(body?.assigned_user_ids || [])].map(Number).filter((id) => id > 0))];
       assignedUsers = (ids.length ? ids : [1]).map((id) => ({ id, name: mockUsers.find((u) => u.id === id)?.name ?? `Usuario ${id}` }));
-      const busy = assignedUsers.filter((u) =>
-        mockShifts.some((sh) => sh.type !== 'GLOBAL' && sh.status === 'OPEN' && shiftHasUser(sh, u.id)));
-      if (busy.length) shiftConflict(`${busy.map((u) => u.name).join(', ')} ya tiene un turno abierto`);
+      const duplicated = mockShifts.some((sh) =>
+        sh.type === type && sh.status === 'OPEN' && shiftHasSameUsers(sh, assignedUsers.map((u) => u.id)));
+      if (duplicated) shiftConflict(`Ya hay un turno abierto de este tipo para ${assignedUsers.map((u) => u.name).join(', ')}`);
     }
     const row = {
       id: nextId(mockShifts), type, status: 'OPEN',

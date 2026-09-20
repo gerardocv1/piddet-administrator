@@ -32,8 +32,9 @@ const BASE_HINTS = {
 // más personas registra lo que venda y gaste cualquiera de ellos). El tipo GLOBAL solo aparece
 // con `shift-global-admin` (único permiso que lo administra). El cajero (api-module-shifts-own
 // sin el permiso admin) solo puede abrir SU turno, de cajero o de compras: el backend lo asigna
-// a él mismo. Un usuario no puede estar en dos turnos abiertos: el backend responde 409 con el
-// nombre del que ya tiene uno.
+// a él mismo. Un usuario puede estar en varios turnos abiertos (uno compartido y otro propio);
+// lo que el backend rechaza (409 con los nombres) es un segundo turno del mismo tipo con
+// exactamente los mismos usuarios.
 export function ShiftOpen() {
   const navigate = useNavigate();
   const { can } = usePermissions();

@@ -265,8 +265,11 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
 - **Reglas:** en los turnos global y de cajero la diferencia se respalda con un documento
   contable real (sobrante → factura de origen `SHIFT`; faltante → gasto en «Ajustes de caja»),
   que no se asocia a un turno abierto; en el de compras no. El turno global solo lo abre y
-  cierra `shift-global-admin`, y no cierra con turnos de cajero o de compras abiertos. Cancelar
-  un turno es irreversible y conserva sus movimientos como historial.
+  cierra `shift-global-admin`, y no cierra con turnos de cajero o de compras abiertos. Un
+  usuario puede estar en varios turnos abiertos a la vez (uno compartido y otro propio); solo
+  se rechaza un segundo turno del mismo tipo con exactamente los mismos usuarios, y sus ventas
+  y gastos se registran en todos sus turnos abiertos. Cancelar un turno es irreversible y
+  conserva sus movimientos como historial.
 
 ### Reservas y hospedaje
 
