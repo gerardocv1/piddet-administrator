@@ -2338,48 +2338,86 @@ function validateSyncFailurePayload(payload) {
 }
 
 // CONTRATO BACKEND: /companies/{company}/notifications (listado paginado), /summary,
-// POST /{id}/resend y POST /test. Historial de lo que la compañía ha ENVIADO: a quién, con qué
+// POST /{id}/resend, GET /test/kinds y POST /test. Historial de lo que la compañía ha ENVIADO: a quién, con qué
 // texto, por qué motivo y en qué estado quedó. `status` 1 pendiente, 2 enviada, 3 fallida;
 // `type` 1 SMS, 2 push, 3 correo; `error` trae el motivo cuando falló. Nada se edita ni se borra;
 // siempre de la compañía activa.
+
+const MOCK_COMPANY_NAME = 'Cabanas El Roble';
+
+// Los mensajes de ejemplo que el backend renderiza para el envío de prueba (GET /test/kinds):
+// los mismos textos que salen de verdad, con datos ficticios. `custom` no trae texto.
+const mockTestNotificationKinds = [
+  { key: 'custom', label: 'Texto libre', message: null },
+  {
+    key: 'reservation_checkin_pending', label: 'Reservas: recordatorio de llegada (pre-check-in pendiente)',
+    message: 'Hola Juan! Hoy es tu llegada, te esperamos.\n\nReserva: RES-4F7K2M\nAlojamiento: Cabana 3 (2 personas)\nCheck-in: hoy desde las 3:00 pm\nCheck-out: mar 22/09 hasta las 12:00 m\n\nAun no has completado tu pre-check-in. Hazlo ahora para agilizar tu ingreso:\nhttps://piddet.com/r/EJEMPLO12345',
+  },
+  {
+    key: 'reservation_checkin_done', label: 'Reservas: recordatorio de llegada (pre-check-in completo)',
+    message: 'Hola Juan! Hoy es tu llegada, te esperamos.\n\nReserva: RES-4F7K2M\nAlojamiento: Cabana 3 (2 personas)\nCheck-in: hoy desde las 3:00 pm\nCheck-out: mar 22/09 hasta las 12:00 m\n\nTu pre-check-in ya esta completo.\nConsulta tu reserva aqui:\nhttps://piddet.com/r/EJEMPLO12345',
+  },
+  {
+    key: 'reservation_daily_summary', label: 'Reservas: resumen de mañana para encargados',
+    message: 'Reservas de manana lun 21/09 (3):\n\n1) Cabana 3 - Juan Perez, 2 pers, llega 3:00 pm\n   Decoracion: Globos y petalos\n   Servicios: Cena romantica, Fogata\n\n2) Cabana 5 - Maria Lopez, 4 pers\n   SIN CONFIRMAR\n\n3) Suite - Carlos Ruiz, 2 pers, llega 6:00 pm\n\nSalidas manana: 2',
+  },
+  {
+    key: 'gym_period_expiring', label: 'Gimnasio: plan vence en 3 días',
+    message: 'Hola Juan! Tu plan Mensual vence el 23/09/2026 (en 3 dias).\nSaldo pendiente: $80.000\nRenueva en recepcion para no perder tu acceso.',
+  },
+  {
+    key: 'gym_period_expiring_tomorrow', label: 'Gimnasio: plan vence mañana',
+    message: 'Hola Juan! Tu plan Mensual vence manana 21/09/2026.\nSaldo pendiente: $80.000\nRenueva en recepcion para no perder tu acceso.',
+  },
+  {
+    key: 'gym_period_expired', label: 'Gimnasio: plan vencido con saldo',
+    message: 'Hola Juan! Tu plan Mensual vencio el 17/09/2026 y tu acceso esta suspendido.\nSaldo pendiente: $80.000\nRenuevalo en recepcion cuando quieras.',
+  },
+  {
+    key: 'gym_period_generated', label: 'Gimnasio: cobro del período generado',
+    message: 'Hola Juan! Ya esta disponible el cobro de tu plan Mensual.\nPeriodo: 21/09/2026 al 20/10/2026\nValor: $120.000\nPuedes pagarlo en recepcion.',
+  },
+];
+
+// Como el backend: todo mensaje va encabezado por el nombre de la compañía en su propia línea.
+const withCompanyHeader = (message) => `${MOCK_COMPANY_NAME}:\n${message}`;
 
 const mockSentNotifications = [
   {
     id: 512, date: isoDay(0), created_at: `${isoDay(0)}T10:00:04`, status: 2, type: 1,
     integration: 'Hablame', source_reference: 'RESERVATION_CHECKIN_REMINDER',
     addressee: '573001234567',
-    message: 'Pepito, hoy llegas a Cabanas El Roble (Cabana 2). Completa tu pre-check-in antes de viajar: https://piddet.com/r/k7m2rq9xv4bd',
+    message: withCompanyHeader('Hola Pepito! Hoy es tu llegada, te esperamos.\n\nReserva: RES-7Q2M9X\nAlojamiento: Cabana 2 (2 personas)\nCheck-in: hoy desde las 3:00 pm\nCheck-out: mie 23/09 hasta las 12:00 m\n\nAun no has completado tu pre-check-in. Hazlo ahora para agilizar tu ingreso:\nhttps://piddet.com/r/k7m2rq9xv4bd'),
     deep_link: null, recipient_id: 812, shipping_reference: 'sms-99120', read_at: null, clicked_at: null,
   },
   {
     id: 511, date: isoDay(0), created_at: `${isoDay(0)}T10:00:03`, status: 2, type: 1,
     integration: 'Hablame', source_reference: 'RESERVATION_CHECKIN_REMINDER',
     addressee: '573009876543',
-    message: 'Marta, hoy llegas a Cabanas El Roble (Cabana 5). Completa tu pre-check-in antes de viajar: https://piddet.com/r/b4n8xq2wm7dc',
+    message: withCompanyHeader('Hola Marta! Hoy es tu llegada, te esperamos.\n\nReserva: RES-B4N8XQ\nAlojamiento: Cabana 5 (4 personas)\nCheck-in: hoy desde las 3:00 pm\nCheck-out: mar 22/09 hasta las 12:00 m\n\nTu pre-check-in ya esta completo.\nConsulta tu reserva aqui:\nhttps://piddet.com/r/b4n8xq2wm7dc'),
     deep_link: null, recipient_id: 813, shipping_reference: 'sms-99121', read_at: null, clicked_at: null,
   },
   {
-    id: 508, date: isoDay(0), created_at: `${isoDay(0)}T09:12:41`, status: 3, type: 1,
-    integration: 'Hablame', source_reference: 'USER_CHANGE_PASSWORD',
+    id: 508, date: isoDay(1), created_at: `${isoDay(1)}T20:00:02`, status: 2, type: 1,
+    integration: 'Hablame', source_reference: 'RESERVATION_DAILY_SUMMARY',
     addressee: '573005558899',
-    message: 'Hola Andres, tu contrasena fue cambiada. Si no fuiste tu, contacta con soporte en piddet.com',
-    deep_link: null, recipient_id: 44, shipping_reference: null,
+    message: withCompanyHeader('Reservas de manana lun 21/09 (2):\n\n1) Cabana 2 - Pepito Perez, 2 pers, llega 3:00 pm\n   Decoracion: Globos y petalos\n\n2) Cabana 5 - Marta Ruiz, 4 pers\n\nSalidas manana: 1'),
+    deep_link: null, recipient_id: 44, shipping_reference: 'sms-99080', read_at: null, clicked_at: null,
+  },
+  {
+    id: 505, date: isoDay(1), created_at: `${isoDay(1)}T18:00:02`, status: 3, type: 1,
+    integration: 'Hablame', source_reference: 'GYM_PERIOD_EXPIRING',
+    addressee: '573002223344',
+    message: withCompanyHeader('Hola Ana! Tu plan Mensual vence manana 21/09/2026.\nSaldo pendiente: $80.000\nRenueva en recepcion para no perder tu acceso.'),
+    deep_link: null, recipient_id: 91, shipping_reference: null,
     error: 'El integration-hub respondió 422: numero invalido', read_at: null, clicked_at: null,
   },
   {
-    id: 505, date: isoDay(1), created_at: `${isoDay(1)}T18:00:02`, status: 2, type: 1,
-    integration: 'Hablame', source_reference: 'REGISTER_USER',
-    addressee: '573002223344',
-    message: 'Hola Ana, tu codigo de acceso es 4821. Vence en 10 minutos.',
-    deep_link: null, recipient_id: 91, shipping_reference: 'sms-98810', read_at: null, clicked_at: null,
-  },
-  {
-    id: 501, date: isoDay(2), created_at: `${isoDay(2)}T12:31:10`, status: 1, type: 3,
-    integration: 'Gmail', source_reference: 'TICKET_REGISTERED',
-    addressee: 'laura@example.com',
-    message: 'Hola Laura, registramos tu solicitud #2291. Te avisamos cuando tengamos novedades.',
-    deep_link: 'https://app.piddet.com/tickets/2291', recipient_id: 501, shipping_reference: null,
-    read_at: null, clicked_at: null,
+    id: 501, date: isoDay(2), created_at: `${isoDay(2)}T12:31:10`, status: 2, type: 1,
+    integration: 'Hablame', source_reference: 'MANUAL_TEST',
+    addressee: '573001112233',
+    message: withCompanyHeader('Prueba de la pasarela desde el panel.'),
+    deep_link: null, recipient_id: null, shipping_reference: 'sms-98810', read_at: null, clicked_at: null,
   },
 ];
 
@@ -2411,11 +2449,15 @@ function resolveSentNotificationsMock(path, query, { method = 'GET', body } = {}
     return { id: original.id };
   }
 
+  if (sub === '/test/kinds' && method === 'GET') return mockTestNotificationKinds;
+
   // SMS de prueba: como el backend, una fila nueva con motivo MANUAL_TEST y el texto encabezado
-  // por el nombre de la compañía.
+  // por el nombre de la compañía. Con `kind` distinto de `custom`, el texto es el ejemplo del tipo.
   if (sub === '/test' && method === 'POST') {
     const to = String(body?.to || '').replace(/^\+/, '');
-    if (!/^[0-9]{7,15}$/.test(to) || !String(body?.message || '').trim()) {
+    const kind = mockTestNotificationKinds.find((k) => k.key === body?.kind);
+    const text = kind?.message ?? String(body?.message || '').trim();
+    if (!/^[0-9]{7,15}$/.test(to) || !kind || !text) {
       const err = new Error('Validation error');
       err.status = 400;
       throw err;
@@ -2424,7 +2466,7 @@ function resolveSentNotificationsMock(path, query, { method = 'GET', body } = {}
     mockSentNotifications.unshift({
       id, date: isoDay(0), created_at: new Date().toISOString().slice(0, 19), status: 2, type: 1,
       integration: 'Hablame', source_reference: 'MANUAL_TEST', addressee: to,
-      message: `Cabanas El Roble: ${String(body.message).trim()}`,
+      message: withCompanyHeader(text),
       deep_link: null, recipient_id: null, shipping_reference: `sms-${99000 + id}`, read_at: null, clicked_at: null,
     });
     return {};

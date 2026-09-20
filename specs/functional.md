@@ -489,11 +489,15 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
   tener que ir al log del servidor.
 - **El desplegable de motivos** sale de lo que esa compañía ha enviado de verdad (`/summary`), no
   de un catálogo escrito en el panel.
-- **Enviar prueba:** botón en la barra de filtros que abre un modal con celular y texto y dispara
-  un SMS real (`POST /notifications/test`, `{ to, message }`). Es la forma de comprobar que la
-  pasarela está configurada sin esperar a que el negocio mande algo: entra al historial como una
-  notificación más, con motivo «Envío de prueba» (`MANUAL_TEST`), y **se cobra** como cualquier
-  otra (el modal lo avisa). Si la pasarela la rechaza en el acto, el modal muestra el motivo
+- **Enviar prueba:** botón en la barra de filtros que abre un modal con celular y un selector de
+  **qué mensaje probar**: texto libre o cualquiera de los mensajes del negocio (recordatorio de
+  llegada con pre-check-in pendiente/completo, resumen diario para encargados, avisos del
+  gimnasio). El catálogo con el texto de ejemplo lo da el backend (`GET /notifications/test/kinds`,
+  renderizado por la misma clase que usa el envío real) y el modal lo muestra tal como llegará.
+  Dispara un SMS real (`POST /notifications/test`, `{ to, kind, message? }`): sirve para comprobar
+  que la pasarela está configurada y para ver en un celular real cómo recibe cada aviso un huésped
+  o un socio. Entra al historial como una notificación más, con motivo «Envío de prueba»
+  (`MANUAL_TEST`), y **se cobra** como cualquier otra (el modal lo avisa). Si la pasarela la rechaza en el acto, el modal muestra el motivo
   —«El integration-hub no está configurado» es el típico en un entorno recién montado— y la
   fila queda como fallida.
 - **Reenviar:** desde el detalle. El reenvío es un **envío nuevo** (`POST
