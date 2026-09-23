@@ -137,7 +137,12 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
   y no lo obedece. Sale de `GET /reservations/pending-arrivals`; el botón de refrescar lo recarga
   con los demás reportes. Su cuerpo no lleva relleno propio: en el teléfono las filas se alinean
   con el resto de la pantalla en vez de quedar doblemente metidas.
-- **Gimnasio** (con `api-module-gym` + `functionality_gym`): dos widgets de operación del día,
+- **Gimnasio** (con `api-module-gym` + `functionality_gym`): primero el widget **Afiliados**
+  (`GET /gym/dashboard/members-summary`): cuatro baldosas —Activos, En gracia, Pendientes de pago
+  (con el total por cobrar) y Cancelados— en fila en escritorio y en 2 × 2 en el teléfono (ahí
+  sin la línea de detalle). Cada baldosa abre Afiliados con el filtro «Membresía» puesto
+  (`?membership=`) y «Ver todos (N)» abre el listado completo. «Pendientes de pago» se cruza con
+  activos y en gracia, así que los números no suman el total. Debajo, dos widgets de operación del día,
   lado a lado en escritorio y apilados en el teléfono, que también van antes del control de
   período y se recargan con el mismo botón. **Vencimientos** (`GET /gym/dashboard/expiring`):
   la lista en filas compactas, del más urgente al más lejano —en gracia primero (el corte
@@ -360,8 +365,15 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
   crear su ficha con un código de afiliado autogenerado (`M00001`, `M00002`…), que vive en la ficha
   y no se lista. **El listado de afiliados
   muestra el estado de la membresía, no el activo/inactivo administrativo**: cada fila trae la
-  suscripción más reciente (badge Activa/En gracia/Vencida/Cancelada/Sin suscripción y su
-  vencimiento "Vence/Venció el …"), y la acción por fila es **Renovar** (membresía vigente) o
+  suscripción más reciente (badge Activa/En gracia/Cancelada/Sin suscripción según el campo
+  `membership` que calcula el backend, su vencimiento "Vence/Venció el …" y, en escritorio, la
+  columna **Saldo** por cobrar; en el teléfono el saldo va en la línea de la tarjeta). El filtro
+  **Membresía** (`?membership=active|grace|pending|cancelled|none`) aplica las reglas de
+  `GymMember::MEMBERSHIP_*` del backend: *activa* (suscripción activa sin períodos vencidos con
+  saldo), *en gracia* (activa con un período vencido y con saldo), *pendiente de pago* (activa
+  con saldo en cualquier período; se cruza con las dos anteriores), *cancelada* (sin activa y con
+  alguna cancelada) y *sin suscripción*. Es el destino de los contadores del widget «Afiliados»
+  del inicio. La acción por fila es **Renovar** (membresía vigente) o
   **Suscribir** (sin membresía al día); tocar la tarjeta abre la ficha. El **objetivo del afiliado
   es cerrado**: se elige de un catálogo (`GET /gym/goals`: bajar de peso, subir de peso, aumentar
   masa muscular, tonificar…), no es texto libre — la clave estable de cada objetivo permitirá a

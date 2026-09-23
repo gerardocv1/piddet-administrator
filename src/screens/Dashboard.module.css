@@ -315,3 +315,98 @@
 /* Icono de WhatsApp en su verde de marca: es un canal externo, no una acción del panel. */
 .waBtn { color: var(--brand-whatsapp-fg); }
 .waBtn i { color: var(--brand-whatsapp); }
+
+/* ── Widget «Afiliados»: baldosas por estado de membresía ──
+   Cuatro en fila en escritorio (icono, número grande, etiqueta y una línea de detalle bajo un
+   filete punteado); 2 × 2 en el teléfono, sin el detalle y con el icono arriba. Toda la baldosa
+   es el botón que abre el listado filtrado. */
+.memberTiles {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+.memberTile {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    "icon count chevron"
+    "icon label chevron"
+    "meta meta  meta";
+  align-items: center;
+  column-gap: var(--space-3);
+  row-gap: 2px;
+  width: 100%;
+  padding: var(--space-4);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  background: var(--surface-card);
+  font-family: var(--font-sans);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.memberTile:hover { border-color: var(--gray-300); background: var(--gray-100); }
+.memberTile:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+.memberTileIcon {
+  grid-area: icon;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-lg);
+  font-size: 1rem;
+}
+.memberTileCount {
+  grid-area: count;
+  color: var(--gray-900);
+  font-size: var(--text-2xl);
+  font-weight: 800;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+}
+.memberTileLabel {
+  grid-area: label;
+  color: var(--gray-700);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.memberTileChevron { grid-area: chevron; color: var(--gray-400); font-size: 0.72rem; }
+.memberTileMeta {
+  grid-area: meta;
+  margin-top: var(--space-2);
+  padding-top: var(--space-2);
+  border-top: 1px dashed var(--border-color);
+  color: var(--gray-500);
+  font-size: var(--text-xs);
+}
+.memberTileMeta strong { font-weight: 700; }
+
+.memberTile_success .memberTileIcon { background: var(--color-success-100); color: var(--color-success-fg); }
+.memberTile_warning .memberTileIcon { background: var(--color-warning-100); color: var(--color-warning-fg); }
+.memberTile_danger .memberTileIcon { background: var(--color-danger-100); color: var(--color-danger-fg); }
+.memberTile_danger .memberTileMeta strong { color: var(--color-danger-fg); }
+.memberTile_neutral .memberTileIcon { background: var(--gray-100); color: var(--gray-600); }
+
+/* Entre escritorio angosto y tableta: 2 × 2 conservando el detalle. */
+@media (max-width: 1100px) {
+  .memberTiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 860px) {
+  .memberTiles { gap: var(--space-2); }
+  .memberTile {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "icon  chevron"
+      "count count"
+      "label label";
+    padding: var(--space-3);
+  }
+  .memberTileIcon { width: 30px; height: 30px; font-size: 0.8rem; border-radius: var(--radius-sm); }
+  .memberTileCount { margin-top: var(--space-2); font-size: var(--text-xl); }
+  .memberTileLabel { font-size: var(--text-xs); white-space: normal; }
+  .memberTileMeta { display: none; }
+}

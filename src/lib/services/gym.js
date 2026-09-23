@@ -54,9 +54,11 @@ export const gymService = {
   // mismo patrón que los huéspedes de Reservas): el backend hace find-or-create por documento o
   // celular, así que crear con los datos de alguien ya existente lo reutiliza en vez de duplicarlo.
   // `birthdayMonth` (1-12) deja solo a quienes cumplen años ese mes, ordenados por día, y cada
-  // fila trae además `birthdate`.
-  gymMembers: ({ status = '', search = '', birthdayMonth = '', page = 1, perPage = 15 } = {}) =>
-    http.get(`${base()}/members${qs({ status, _search: search, birthday_month: birthdayMonth, page, per_page: perPage })}`, { paginated: true }),
+  // fila trae además `birthdate`. `membership` (active | grace | pending | cancelled | none)
+  // filtra por el estado de la membresía con las mismas reglas del widget del inicio; cada fila
+  // trae `membership` y el saldo en `subscription.pending_total`.
+  gymMembers: ({ status = '', membership = '', search = '', birthdayMonth = '', page = 1, perPage = 15 } = {}) =>
+    http.get(`${base()}/members${qs({ status, membership, _search: search, birthday_month: birthdayMonth, page, per_page: perPage })}`, { paginated: true }),
 
   gymMember: (memberId) => http.get(`${base()}/members/${memberId}`),
 
@@ -135,6 +137,11 @@ export const gymService = {
   // days_left, grace_days_left, pending, current_period }] }, del más urgente al más lejano.
   gymDashboardExpiring: ({ days = '' } = {}) =>
     obj(http.get(`${base()}/dashboard/expiring${qs({ days })}`)),
+
+  // Afiliados por estado de membresía (mismas reglas que el filtro `membership` de gymMembers):
+  // { today, counts: { active, grace, pending, cancelled, none, total }, pending_amount }.
+  // `pending` se cruza con `active` y `grace`: es a quién hay que cobrar, no un estado aparte.
+  gymDashboardMembersSummary: () => obj(http.get(`${base()}/dashboard/members-summary`)),
 
   // ── Pagos de suscripción ─────────────────────────────────────────────────
   // Abona al período pendiente más antiguo (el backend decide cuál; no se indica period_id).

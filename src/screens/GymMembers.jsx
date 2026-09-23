@@ -6,11 +6,15 @@ import {
 } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
-import { gymSubscriptionStatusMeta, gymPeriodStatusMeta, GYM_SUBSCRIPTION_STATUS, GYM_PERIOD_STATUS, GYM_SEX_OPTIONS } from '../lib/gymLabels.js';
+import {
+  gymMoney, gymSubscriptionStatusMeta, gymPeriodStatusMeta, gymMembershipMeta, GYM_SUBSCRIPTION_STATUS, GYM_PERIOD_STATUS,
+  GYM_SEX_OPTIONS, GYM_MEMBERSHIP_OPTIONS,
+} from '../lib/gymLabels.js';
 import { ID_TYPES } from '../lib/reservationLabels.js';
 import { todayIso, yearsAgoIso } from '../lib/orderLabels.js';
 import { formatShortDate, formatDayMonth, ageFromBirthdate, monthName } from '../lib/dates.js';
 import s from './screens.module.css';
+import gl from './GymLists.module.css';
 
 const EMPTY = { items: [], pagination: null };
 
@@ -48,6 +52,9 @@ export function GymMembers() {
   const { toast } = useToast();
   const [params, setParams] = useSearchParams();
   const status = params.get('status') || undefined;
+  // Estado de la membresía (active | grace | pending | cancelled | none): llega desde el widget
+  // «Afiliados» del inicio o del filtro, con las mismas reglas que sus contadores.
+  const membershipFilter = params.get('membership') || undefined;
   // Mes de cumpleaños (1-12): llega desde el widget del inicio («Ver todos») o del filtro.
   const birthdayMonth = params.get('birthday_month') || undefined;
   const page = Math.max(1, Number(params.get('page')) || 1);
@@ -55,8 +62,10 @@ export function GymMembers() {
   const setQuery = (next = {}, nextPage = 1) => {
     const q = {};
     const st = 'status' in next ? next.status : status;
+    const mb = 'membership' in next ? next.membership : membershipFilter;
     const bm = 'birthday_month' in next ? next.birthday_month : birthdayMonth;
     if (st) q.status = st;
+    if (mb) q.membership = mb;
     if (bm) q.birthday_month = bm;
     if (nextPage > 1) q.page = String(nextPage);
     setParams(q);
@@ -67,15 +76,18 @@ export function GymMembers() {
   React.useEffect(() => {
     const id = setTimeout(() => {
       if ((searchInput.trim() || undefined) !== search) {
-        const q = {}; if (status) q.status = status; if (birthdayMonth) q.birthday_month = birthdayMonth; if (searchInput.trim()) q.q = searchInput.trim();
+        const q = {}; if (status) q.status = status; if (membershipFilter) q.membership = membershipFilter; if (birthdayMonth) q.birthday_month = birthdayMonth; if (searchInput.trim()) q.q = searchInput.trim();
         setParams(q);
       }
     }, 300);
     return () => clearTimeout(id);
   }, [searchInput]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const fetcher = React.useCallback(() => api.gymMembers({ status, search, birthdayMonth, page }), [status, search, birthdayMonth, page]);
-  const { data, loading, error, reload } = useResource(fetcher, EMPTY, [status, search, birthdayMonth, page]);
+  const fetcher = React.useCallback(
+    () => api.gymMembers({ status, membership: membershipFilter, search, birthdayMonth, page }),
+    [status, membershipFilter, search, birthdayMonth, page],
+  );
+  const { data, loading, error, reload } = useResource(fetcher, EMPTY, [status, membershipFilter, search, birthdayMonth, page]);
   const rows = data.items || [];
   const pg = data.pagination;
 
@@ -200,7 +212,11 @@ export function GymMembers() {
     }
     const active = Number(r.subscription.subscription_status) === GYM_SUBSCRIPTION_STATUS.ACTIVE;
     const inGrace = active && Number(r.subscription.computed_status) === GYM_PERIOD_STATUS.GRACE;
-    const badge = inGrace ? gymPeriodStatusMeta(GYM_PERIOD_STATUS.GRACE) : gymSubscriptionStatusMeta(r.subscription.subscription_status);
+    // El badge sigue la membresía que calcula el backend (la misma del filtro y del widget del
+    // inicio): «En gracia» también cuando lo que se debe es un período anterior al vigente.
+    const badge = r.membership
+      ? gymMembershipMeta(r.membership)
+      : (inGrace ? gymPeriodStatusMeta(GYM_PERIOD_STATUS.GRACE) : gymSubscriptionStatusMeta(r.subscription.subscription_status));
     const vigencia = r.subscription.end_date
       ? `${inGrace ? 'Venció' : 'Vence'} el ${formatShortDate(r.subscription.end_date)}`
       : null;
@@ -211,6 +227,7 @@ export function GymMembers() {
       text: active ? vigencia : `Cancelada · ${r.subscription.plan_name}`,
       detail: active ? vigencia : r.subscription.plan_name,
       alive: active,
+      pending: active ? Number(r.subscription.pending_total) || 0 : 0,
     };
   };
 
@@ -241,10 +258,22 @@ export function GymMembers() {
         return ms.text || <span className={s.faint}>—</span>;
       },
     },
+    {
+      // Saldo por cobrar de la suscripción activa; una cancelada no es deuda.
+      key: 'saldo', header: 'Saldo', width: 120, align: 'right',
+      render: (r) => {
+        const { pending } = membership(r);
+        return pending > 0 ? <span className={gl.saldo}>{gymMoney(pending)}</span> : <span className={s.faint}>—</span>;
+      },
+    },
   ];
+
+  const filtered = !!(status || membershipFilter || birthdayMonth || search);
+  const emptyText = filtered ? 'No hay afiliados para los filtros seleccionados.' : 'No hay afiliados registrados.';
 
   const filterDefs = [
     { key: 'status', type: 'select', label: 'Afiliado', icon: 'fas fa-circle-check', options: STATUS_OPTIONS },
+    { key: 'membership', type: 'select', label: 'Membresía', icon: 'fas fa-id-card', options: GYM_MEMBERSHIP_OPTIONS },
     { key: 'birthday_month', type: 'select', label: 'Cumpleaños', icon: 'fas fa-cake-candles', options: MONTH_OPTIONS, placeholder: 'Cualquier mes' },
   ];
 
@@ -256,8 +285,8 @@ export function GymMembers() {
         onSearchChange={setSearchInput}
         searchPlaceholder="Buscar por nombre, código o documento"
         filters={filterDefs}
-        values={{ status, birthday_month: birthdayMonth }}
-        onChange={(next) => setQuery({ status: next.status, birthday_month: next.birthday_month })}
+        values={{ status, membership: membershipFilter, birthday_month: birthdayMonth }}
+        onChange={(next) => setQuery({ status: next.status, membership: next.membership, birthday_month: next.birthday_month })}
         inlineThreshold={0}
         resultCount={pg?.total}
         actions={
@@ -282,7 +311,7 @@ export function GymMembers() {
             rows={rows}
             loading={loading}
             error={error}
-            empty="No hay afiliados registrados."
+            empty={emptyText}
             onRowClick={(r) => navigate(`/gym/members/${r.id}?${params.toString()}`)}
           />
         </Card>
@@ -294,7 +323,7 @@ export function GymMembers() {
           <Card><Alert tone="danger" title="No se pudieron cargar los afiliados">{error}</Alert></Card>
         )}
         {!loading && !error && rows.length === 0 && (
-          <Card><div className={s.mobileState}>No hay afiliados registrados.</div></Card>
+          <Card><div className={s.mobileState}>{emptyText}</div></Card>
         )}
         {/* Cada afiliado es una tarjeta con marco: arriba quién es (avatar y nombre) y abajo su
             membresía. Toda la zona de identidad navega a la ficha; la única acción aparte es
@@ -307,7 +336,9 @@ export function GymMembers() {
               title={r.member_name}
               subtitle={birthdayText(r)}
               badge={<Badge variant={ms.badge.variant}>{ms.badge.label}</Badge>}
-              meta={ms.detail}
+              meta={ms.pending > 0
+                ? <>{ms.detail && <>{ms.detail} · </>}<span className={gl.saldo}>saldo {gymMoney(ms.pending)}</span></>
+                : ms.detail}
               action={!ms.alive ? (
                 <Button variant="secondary" size="sm" icon="fas fa-plus"
                   onClick={() => navigate(`/gym/members/${r.id}?action=subscribe`)}>
