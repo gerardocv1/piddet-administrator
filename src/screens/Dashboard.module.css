@@ -430,26 +430,26 @@
   font-size: 0.72rem;
 }
 
-/* Tableta: 2 × 2 conservando el detalle y la barra. */
+/* Solo hay dos estados, los dos del diseño aprobado: escritorio (cuatro en fila con detalle y
+   barra) y compacto (2 × 2, icono y flecha arriba, número y etiqueta debajo, sin detalle ni
+   barra). El compacto entra en cuanto cuatro baldosas ya no caben en fila, no solo en el
+   teléfono: así nunca aparece una distribución intermedia. La tarjeta conserva su marco. */
 @media (max-width: 1024px) {
-  .memberTiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-/* Teléfono: la tarjeta mantiene su marco (a diferencia de los widgets de lista) y las baldosas
-   se compactan: icono y flecha arriba, el número y la etiqueta debajo. */
-@media (max-width: 860px) {
   .memberHead { padding: 12px 14px 4px; }
   .memberSubtitle { display: none; }
   .memberBody { padding: 6px 14px 14px; }
-  .memberTiles { gap: 8px; }
+  .memberTiles { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
   .memberTile {
     grid-template-columns: minmax(0, 1fr) auto;
     grid-template-areas:
       "icon  chevron"
       "count count"
       "label label";
+    align-items: start;
     padding: 12px;
   }
   .memberTileIcon { width: 30px; height: 30px; border-radius: var(--radius-lg); font-size: 0.8rem; }
+  .memberTileChevron { align-self: center; }
   .memberTileCount { margin-top: 8px; font-size: 1.5rem; }
   .memberTileLabel { font-size: var(--text-xs); }
   .memberTileMeta, .memberBarWrap { display: none; }
