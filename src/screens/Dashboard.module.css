@@ -317,13 +317,33 @@
 .waBtn i { color: var(--brand-whatsapp); }
 
 /* ── Widget «Afiliados»: baldosas por estado de membresía ──
-   Cuatro en fila en escritorio (icono, número grande, etiqueta y una línea de detalle bajo un
-   filete punteado); 2 × 2 en el teléfono, sin el detalle y con el icono arriba. Toda la baldosa
-   es el botón que abre el listado filtrado. */
+   Tarjeta propia, calcada del diseño aprobado: encabezado sin filete (título, subtítulo y «Ver
+   todos»), cuatro baldosas en fila en escritorio (icono, número, etiqueta y una línea de detalle
+   bajo un filete punteado) y la barra de proporción debajo. En el teléfono conserva el marco y
+   las baldosas pasan a 2 × 2, con el icono arriba y sin detalle ni barra. */
+.memberCard {
+  background: var(--surface-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xs);
+}
+.memberHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px 18px 6px;
+}
+.memberHeadText { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.memberTitle { margin: 0; color: var(--gray-900); font-size: var(--text-md); font-weight: 700; }
+.memberSubtitle { color: var(--gray-500); font-size: var(--text-xs); }
+.memberSeeAll { padding-right: 0; white-space: nowrap; }
+.memberBody { padding: 8px 18px 16px; }
+
 .memberTiles {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: var(--space-3);
+  gap: 12px;
 }
 .memberTile {
   display: grid;
@@ -333,10 +353,10 @@
     "icon label chevron"
     "meta meta  meta";
   align-items: center;
-  column-gap: var(--space-3);
+  column-gap: 12px;
   row-gap: 2px;
   width: 100%;
-  padding: var(--space-4);
+  padding: 14px;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
   background: var(--surface-card);
@@ -354,13 +374,13 @@
   justify-content: center;
   width: 40px;
   height: 40px;
-  border-radius: var(--radius-lg);
+  border-radius: 10px;
   font-size: 1rem;
 }
 .memberTileCount {
   grid-area: count;
   color: var(--gray-900);
-  font-size: var(--text-2xl);
+  font-size: 1.625rem;
   font-weight: 800;
   line-height: 1.05;
   font-variant-numeric: tabular-nums;
@@ -368,19 +388,16 @@
 .memberTileLabel {
   grid-area: label;
   color: var(--gray-700);
-  font-size: var(--text-sm);
+  font-size: 0.8125rem;
   font-weight: 600;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
-.memberTileChevron { grid-area: chevron; color: var(--gray-400); font-size: 0.72rem; }
+.memberTileChevron { grid-area: chevron; color: var(--gray-500); font-size: 0.75rem; }
 .memberTileMeta {
   grid-area: meta;
-  margin-top: var(--space-2);
-  padding-top: var(--space-2);
+  margin-top: 8px;
+  padding-top: 8px;
   border-top: 1px dashed var(--border-color);
-  color: var(--gray-500);
+  color: var(--gray-600);
   font-size: var(--text-xs);
 }
 .memberTileMeta strong { font-weight: 700; }
@@ -389,24 +406,51 @@
 .memberTile_warning .memberTileIcon { background: var(--color-warning-100); color: var(--color-warning-fg); }
 .memberTile_danger .memberTileIcon { background: var(--color-danger-100); color: var(--color-danger-fg); }
 .memberTile_danger .memberTileMeta strong { color: var(--color-danger-fg); }
-.memberTile_neutral .memberTileIcon { background: var(--gray-100); color: var(--gray-600); }
+.memberTile_neutral .memberTileIcon { background: var(--gray-200); color: var(--gray-700); }
 
-/* Entre escritorio angosto y tableta: 2 × 2 conservando el detalle. */
-@media (max-width: 1100px) {
+/* Barra de proporción: activos, en gracia y cancelados («pendientes» se cruza, no entra). */
+.memberBarWrap { margin-top: 14px; }
+.memberBar {
+  display: flex;
+  height: 6px;
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  background: var(--gray-200);
+}
+.memberBar i { display: block; flex-basis: 0; }
+.memberBarActive { background: var(--color-success); }
+.memberBarGrace { background: var(--color-warning); }
+.memberBarCancelled { background: var(--gray-500); }
+.memberLegend {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 6px;
+  color: var(--gray-600);
+  font-size: 0.72rem;
+}
+
+/* Tableta: 2 × 2 conservando el detalle y la barra. */
+@media (max-width: 1024px) {
   .memberTiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+/* Teléfono: la tarjeta mantiene su marco (a diferencia de los widgets de lista) y las baldosas
+   se compactan: icono y flecha arriba, el número y la etiqueta debajo. */
 @media (max-width: 860px) {
-  .memberTiles { gap: var(--space-2); }
+  .memberHead { padding: 12px 14px 4px; }
+  .memberSubtitle { display: none; }
+  .memberBody { padding: 6px 14px 14px; }
+  .memberTiles { gap: 8px; }
   .memberTile {
     grid-template-columns: minmax(0, 1fr) auto;
     grid-template-areas:
       "icon  chevron"
       "count count"
       "label label";
-    padding: var(--space-3);
+    padding: 12px;
   }
-  .memberTileIcon { width: 30px; height: 30px; font-size: 0.8rem; border-radius: var(--radius-sm); }
-  .memberTileCount { margin-top: var(--space-2); font-size: var(--text-xl); }
-  .memberTileLabel { font-size: var(--text-xs); white-space: normal; }
-  .memberTileMeta { display: none; }
+  .memberTileIcon { width: 30px; height: 30px; border-radius: var(--radius-lg); font-size: 0.8rem; }
+  .memberTileCount { margin-top: 8px; font-size: 1.5rem; }
+  .memberTileLabel { font-size: var(--text-xs); }
+  .memberTileMeta, .memberBarWrap { display: none; }
 }

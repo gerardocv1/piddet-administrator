@@ -242,37 +242,65 @@ const MEMBERSHIP_TILES = [
 
 /** Widget «Afiliados»: cuántos hay en cada estado de membresía. Son accesos, no un reporte: cada
  *  baldosa abre el listado ya filtrado. «Pendientes de pago» se cruza con activos y en gracia
- *  (agrupa a quien debe), así que los cuatro números no suman el total. */
+ *  (agrupa a quien debe), así que no entra en la barra de proporción ni los cuatro números
+ *  suman el total. Tarjeta propia (no Card): conserva su marco también en el teléfono. */
 function GymMembersSummaryCard({ data, loading, error, onOpen, onSeeAll }) {
   const counts = data?.counts;
+  const withActive = counts ? counts.active + counts.grace : 0;
+  // La barra reparte a los afiliados con historial de suscripción; sin nadie, no se dibuja.
+  const barSegments = counts ? [
+    { key: 'active', value: counts.active, className: s.memberBarActive },
+    { key: 'grace', value: counts.grace, className: s.memberBarGrace },
+    { key: 'cancelled', value: counts.cancelled, className: s.memberBarCancelled },
+  ].filter((seg) => seg.value > 0) : [];
+
   return (
-    <Card className={s.widgetCard}>
-      <Card.Header title="Afiliados" className={s.widgetHead}
-        action={<Button variant="link" size="sm" iconRight="fas fa-chevron-right" className={s.widgetSeeAll} onClick={onSeeAll}>
+    <section className={s.memberCard} aria-label="Afiliados">
+      <div className={s.memberHead}>
+        <div className={s.memberHeadText}>
+          <h3 className={s.memberTitle}>Afiliados</h3>
+          <span className={s.memberSubtitle}>Estado de la membresía hoy</span>
+        </div>
+        <Button variant="link" size="sm" iconRight="fas fa-chevron-right" className={s.memberSeeAll} onClick={onSeeAll}>
           {counts ? `Ver todos (${counts.total})` : 'Ver todos'}
-        </Button>} />
-      <Card.Body className={s.widgetBody}>
+        </Button>
+      </div>
+      <div className={s.memberBody}>
         {error ? (
           <Alert tone="danger" title="No se pudo cargar el resumen de afiliados">{error}</Alert>
         ) : loading && !counts ? (
           <Spinner center label="Contando afiliados…" />
         ) : (
-          <div className={s.memberTiles}>
-            {MEMBERSHIP_TILES.map((t) => (
-              <button type="button" key={t.key} className={[s.memberTile, s[`memberTile_${t.tone}`]].join(' ')}
-                onClick={() => onOpen(t.key)}>
-                <span className={s.memberTileIcon}><i className={t.icon} /></span>
-                <span className={s.memberTileCount}>{Number(counts?.[t.key] ?? 0).toLocaleString('es-CO')}</span>
-                <span className={s.memberTileLabel}>{t.label}</span>
-                <i className={`fas fa-chevron-right ${s.memberTileChevron}`} aria-hidden="true" />
-                {/* El detalle solo en escritorio: en el teléfono la baldosa se queda con el número. */}
-                <span className={s.memberTileMeta}>{t.meta(data)}</span>
-              </button>
-            ))}
-          </div>
+          <>
+            <div className={s.memberTiles}>
+              {MEMBERSHIP_TILES.map((t) => (
+                <button type="button" key={t.key} className={[s.memberTile, s[`memberTile_${t.tone}`]].join(' ')}
+                  onClick={() => onOpen(t.key)}>
+                  <span className={s.memberTileIcon}><i className={t.icon} /></span>
+                  <span className={s.memberTileCount}>{Number(counts?.[t.key] ?? 0).toLocaleString('es-CO')}</span>
+                  <span className={s.memberTileLabel}>{t.label}</span>
+                  <i className={`fas fa-chevron-right ${s.memberTileChevron}`} aria-hidden="true" />
+                  {/* El detalle solo en escritorio: en el teléfono la baldosa se queda con el número. */}
+                  <span className={s.memberTileMeta}>{t.meta(data)}</span>
+                </button>
+              ))}
+            </div>
+            {barSegments.length > 0 && (
+              <div className={s.memberBarWrap}>
+                <div className={s.memberBar} aria-hidden="true">
+                  {/* El ancho de cada tramo es el dato mismo (como las barras de los gráficos). */}
+                  {barSegments.map((seg) => <i key={seg.key} className={seg.className} style={{ flexGrow: seg.value }} />)}
+                </div>
+                <div className={s.memberLegend}>
+                  <span>{withActive.toLocaleString('es-CO')} con suscripción activa</span>
+                  <span>{counts.cancelled.toLocaleString('es-CO')} cancelado{counts.cancelled === 1 ? '' : 's'}</span>
+                </div>
+              </div>
+            )}
+          </>
         )}
-      </Card.Body>
-    </Card>
+      </div>
+    </section>
   );
 }
 
