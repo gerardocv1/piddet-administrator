@@ -389,7 +389,12 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
   número de documento, **fecha de nacimiento**—, actualizando su usuario de plataforma y los
   snapshots del gimnasio; el **celular no se edita** porque es la credencial con la que inicia
   sesión. La fecha de nacimiento es de la persona, no de la compañía: vive en su perfil de
-  plataforma y se comparte con los demás módulos. El análisis visual
+  plataforma y se comparte con los demás módulos. Con el afiliado **debiendo**, el ⋮ ofrece
+  además **"Cobrar saldo pendiente"** (permiso `gym-payments-create`): abre un modal con el SMS
+  que recibiría —el texto lo arma el backend con la deuda real y **no se edita**, así que lo único
+  que se decide es si se manda—, avisa de que es un envío real que se cobra, y al enviarlo queda
+  en el historial de notificaciones. Es el cobro deliberadamente manual: los recordatorios
+  automáticos son suaves y no nombran plata; este persigue a quien se demora. El análisis visual
   vive en la **vista de progreso** (`/gym/members/:memberId/progress`). El detalle de la suscripción
   (`/gym/subscriptions/:subscriptionId`) es la vista transaccional: sus pagos (registrar con el
   precio precargado, anular), renovar y cancelar; el nombre del afiliado arriba navega a su

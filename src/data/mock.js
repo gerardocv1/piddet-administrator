@@ -4509,6 +4509,9 @@ const addDaysIso = (iso, days) => {
   const p = (n) => String(n).padStart(2, '0');
   return `${dt.getFullYear()}-${p(dt.getMonth() + 1)}-${p(dt.getDate())}`;
 };
+// Nombres de mes para el cobro manual (espejo de GymPaymentReminderMessage::MONTHS).
+const GYM_MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+
 // Suma meses de CALENDARIO (espejo de App\Utils\Gym\GymPeriodCalendar en el backend): el 2 de
 // octubre + 1 mes es el 2 de noviembre. Si el día no existe en el mes destino (31 de agosto +
 // 1 mes), devuelve el día 1 del mes siguiente, así el período cubre septiembre completo.
@@ -5173,6 +5176,55 @@ function resolveGymMock(path, query, { method = 'GET', body } = {}) {
       }
     }
     return gymMemberDetailPresent(member);
+  }
+
+  // Cobro a mano del saldo pendiente: como el backend, el texto lo arma el servidor con la deuda
+  // real (suma de los períodos no cancelados) y el mes del período más viejo que sigue debiendo.
+  const paymentReminderMatch = sub.match(/^members\/(\d+)\/payment-reminder$/);
+  if (paymentReminderMatch) {
+    const memberId = Number(paymentReminderMatch[1]);
+    const member = mockGymMembers.find((m) => m.id === memberId);
+    if (!member) return null;
+
+    const unpaid = mockGymSubscriptions
+      .filter((x) => x.gym_member_id === memberId)
+      .flatMap((x) => mockGymSubscriptionPeriods.filter((p) => p.subscription_id === x.id))
+      .filter((p) => p.status !== GYM_PER_CANCELLED)
+      .map((p) => ({ end_date: p.end_date, balance: Math.max(0, Number(p.price) - periodPaidTotal(p)) }))
+      .filter((p) => p.balance > 0)
+      .sort((a, b) => String(a.end_date).localeCompare(String(b.end_date)));
+
+    if (!unpaid.length) {
+      const err = new Error('Este afiliado no tiene saldo pendiente');
+      err.status = 409;
+      throw err;
+    }
+
+    const balance = unpaid.reduce((total, p) => total + p.balance, 0);
+    const monthName = GYM_MONTHS[Number(String(unpaid[0].end_date).slice(5, 7)) - 1];
+    const first = String(member.member_name || '').trim().split(' ')[0] || 'socio';
+    const amount = '$' + Math.round(balance).toLocaleString('es-CO').replace(/,/g, '.');
+    const message = unpaid.length > 1
+      ? `Hola ${first}!\nRecuerda que tienes un saldo pendiente de ${amount} en tu suscripcion, desde el mes de ${monthName}.\nPuedes pagarlo en recepcion cuando quieras.`
+      : `Hola ${first}!\nRecuerda que tienes un saldo pendiente de ${amount} en tu suscripcion del mes de ${monthName}.\nPuedes pagarlo en recepcion cuando quieras.`;
+    const preview = {
+      message,
+      balance: balance.toFixed(2),
+      addressee: member.phone_number ? `+57${String(member.phone_number).replace(/\D/g, '')}` : null,
+      periods_pending: unpaid.length > 1,
+    };
+
+    if (method === 'POST') {
+      if (!preview.addressee) {
+        const err = new Error('El afiliado no tiene celular registrado: no hay a dónde enviar el aviso');
+        err.status = 409;
+        throw err;
+      }
+
+      return preview;
+    }
+
+    return preview;
   }
 
   const memberSubsMatch = sub.match(/^members\/(\d+)\/subscriptions$/);

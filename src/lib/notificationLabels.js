@@ -36,6 +36,7 @@ const SOURCE_REFERENCES = {
   RESERVATION_DAILY_SUMMARY: 'Resumen de reservas de mañana',
   GYM_PERIOD_EXPIRING: 'Gimnasio: la suscripción vence hoy',
   GYM_PERIOD_PENDING_PAYMENT: 'Gimnasio: renovación pendiente',
+  GYM_PAYMENT_REMINDER: 'Gimnasio: cobro de saldo pendiente',
   MANUAL_TEST: 'Envío de prueba',
 };
 
