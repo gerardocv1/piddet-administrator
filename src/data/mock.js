@@ -2362,20 +2362,12 @@ const mockTestNotificationKinds = [
     message: 'Reservas de manana lun 21/09 (3):\n\n1) Cabana 3 - Juan Perez, 2 pers, llega 3:00 pm\n   Decoracion: Globos y petalos\n   Servicios: Cena romantica, Fogata\n\n2) Cabana 5 - Maria Lopez, 4 pers\n   SIN CONFIRMAR\n\n3) Suite - Carlos Ruiz, 2 pers, llega 6:00 pm\n\nSalidas manana: 2',
   },
   {
-    key: 'gym_period_expiring', label: 'Gimnasio: plan vence en 3 días',
-    message: 'Hola Juan! Tu plan Mensual vence el 23/09/2026 (en 3 dias).\nSaldo pendiente: $80.000\nRenueva en recepcion para no perder tu acceso.',
+    key: 'gym_period_expiring', label: 'Gimnasio: la suscripción vence hoy',
+    message: 'Hola Juan!\nTe recordamos que hoy vence tu suscripcion.\nPuedes renovarla en recepcion cuando quieras.',
   },
   {
-    key: 'gym_period_expiring_tomorrow', label: 'Gimnasio: plan vence mañana',
-    message: 'Hola Juan! Tu plan Mensual vence manana 21/09/2026.\nSaldo pendiente: $80.000\nRenueva en recepcion para no perder tu acceso.',
-  },
-  {
-    key: 'gym_period_expired', label: 'Gimnasio: plan vencido con saldo',
-    message: 'Hola Juan! Tu plan Mensual vencio el 17/09/2026 y tu acceso esta suspendido.\nSaldo pendiente: $80.000\nRenuevalo en recepcion cuando quieras.',
-  },
-  {
-    key: 'gym_period_generated', label: 'Gimnasio: cobro del período generado',
-    message: 'Hola Juan! Ya esta disponible el cobro de tu plan Mensual.\nPeriodo: 21/09/2026 al 20/10/2026\nValor: $120.000\nPuedes pagarlo en recepcion.',
+    key: 'gym_period_pending_payment', label: 'Gimnasio: renovación pendiente del mes nuevo',
+    message: 'Hola Juan!\nYa inicio un nuevo mes de tu suscripcion y esta pendiente de renovar.\nPuedes renovarla en recepcion y de paso tomarte las medidas del mes.',
   },
 ];
 
@@ -2408,7 +2400,7 @@ const mockSentNotifications = [
     id: 505, date: isoDay(1), created_at: `${isoDay(1)}T18:00:02`, status: 3, type: 1,
     integration: 'Hablame', source_reference: 'GYM_PERIOD_EXPIRING',
     addressee: '573002223344',
-    message: withCompanyHeader('Hola Ana! Tu plan Mensual vence manana 21/09/2026.\nSaldo pendiente: $80.000\nRenueva en recepcion para no perder tu acceso.'),
+    message: withCompanyHeader('Hola Ana!\nTe recordamos que hoy vence tu suscripcion.\nPuedes renovarla en recepcion cuando quieras.'),
     deep_link: null, recipient_id: 91, shipping_reference: null,
     error: 'El integration-hub respondió 422: numero invalido', read_at: null, clicked_at: null,
   },

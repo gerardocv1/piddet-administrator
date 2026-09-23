@@ -34,9 +34,8 @@ export const NOTIFICATION_TYPE_OPTIONS = [
 const SOURCE_REFERENCES = {
   RESERVATION_CHECKIN_REMINDER: 'Recordatorio de llegada',
   RESERVATION_DAILY_SUMMARY: 'Resumen de reservas de mañana',
-  GYM_PERIOD_EXPIRING: 'Gimnasio: plan por vencer',
-  GYM_PERIOD_EXPIRED: 'Gimnasio: plan vencido',
-  GYM_PERIOD_GENERATED: 'Gimnasio: cobro generado',
+  GYM_PERIOD_EXPIRING: 'Gimnasio: la suscripción vence hoy',
+  GYM_PERIOD_PENDING_PAYMENT: 'Gimnasio: renovación pendiente',
   MANUAL_TEST: 'Envío de prueba',
 };
 
