@@ -113,3 +113,31 @@
 .valueNumber { font-weight: 700; color: var(--gray-900); white-space: nowrap; }
 
 /* Saldo pendiente del período vigente, en la línea-resumen de la suscripción. */
+
+/* Cobro del saldo pendiente: el mensaje se lee entero antes de gastar el SMS. */
+.reminderField {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.reminderLabel {
+  color: var(--gray-500);
+  font-size: var(--text-sm);
+}
+
+.reminderValue {
+  color: var(--gray-800);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.reminderMessage {
+  margin: 4px 0 0;
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  background: var(--gray-100);
+  color: var(--gray-800);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

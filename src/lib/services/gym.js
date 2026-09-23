@@ -77,6 +77,16 @@ export const gymService = {
   // credencial de acceso de la cuenta. Refresca los snapshots (nombre en ficha y suscripciones).
   updateGymMemberPersonal: (memberId, data) => http.put(`${base()}/members/${memberId}/personal`, data),
 
+  // ── Cobro del saldo pendiente, a mano ─
+  // El SMS que recibiría el afiliado: `{ message, balance, addressee, periods_pending }`. El texto
+  // lo arma el backend con el saldo real y NO se edita; esto es para verlo antes de gastar el SMS.
+  // Responde 409 si no debe nada (el motivo viene en el mensaje del error).
+  gymMemberPaymentReminder: (memberId) => obj(http.get(`${base()}/members/${memberId}/payment-reminder`)),
+
+  // Lo envía. Queda en el historial de notificaciones con motivo GYM_PAYMENT_REMINDER y se cobra
+  // como cualquier otro SMS; 409 si no hay saldo o el afiliado no tiene celular.
+  sendGymMemberPaymentReminder: (memberId) => http.post(`${base()}/members/${memberId}/payment-reminder`, {}),
+
   // ── Suscripciones (continuas, con períodos de cobro que genera el sistema) ─
   // Cada fila trae su período vigente embebido y el saldo pendiente total.
   gymSubscriptions: ({ status = '', expiringWithin = '', search = '', page = 1, perPage = 15 } = {}) =>

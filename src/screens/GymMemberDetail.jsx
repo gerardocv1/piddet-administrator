@@ -6,6 +6,7 @@ import {
 } from '../components';
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
+import { usePermissions } from '../lib/permissions/usePermissions.js';
 import { useIsMobile } from '../lib/useIsMobile.js';
 import { gymMemberStatusMeta, GYM_MEMBER_STATUS, GYM_SEX_OPTIONS, gymSexLabel, gymMoney, gymSubscriptionStatusMeta, gymPeriodStatusMeta, gymSubscriptionPending, GYM_SUBSCRIPTION_STATUS, GYM_PERIOD_STATUS } from '../lib/gymLabels.js';
 import { ID_TYPES } from '../lib/reservationLabels.js';
@@ -129,6 +130,11 @@ export function GymMemberDetail() {
   // (sexo, talla, objetivo, notas, estado). Son dos recursos del backend (usuario y afiliado),
   // así que se guardan con dos llamadas encadenadas, pero para quien edita es una sola acción.
   // El celular no se edita: es la credencial con la que la persona inicia sesión.
+  const { can } = usePermissions();
+  // Cobro a mano del saldo pendiente: el texto lo arma el backend con lo que el afiliado debe de
+  // verdad, así que aquí solo se muestra y se confirma. Cada envío es un SMS que se cobra.
+  const [reminderOpen, setReminderOpen] = React.useState(false);
+
   const [editOpen, setEditOpen] = React.useState(false);
   const [editForm, setEditForm] = React.useState(null);
   const [editBusy, setEditBusy] = React.useState(false);
@@ -303,6 +309,9 @@ export function GymMemberDetail() {
   }
 
   const meta = gymMemberStatusMeta(data.status);
+  // El cobro a mano solo tiene sentido con deuda, y lo manda quien registra pagos: es la gente
+  // del mostrador. El saldo que manda es el de la suscripción, no el del período vigente.
+  const canRemind = can('gym-payments-create') && gymSubscriptionPending(current) > 0;
   // Con una activa cuyo período está en gracia, el badge advierte eso; si no, el estado de
   // la suscripción (activa/cancelada).
   const subMeta = current
@@ -328,10 +337,14 @@ export function GymMemberDetail() {
         actions={isMobile ? [] : [
           { label: 'Editar datos', icon: 'fas fa-pen', onClick: openEdit },
           { label: 'Ver progreso', icon: 'fas fa-chart-line', onClick: () => navigate(`/gym/members/${memberId}/progress`) },
+          // Solo con deuda: cobrarle a quien está al día es gastar un SMS en confundirlo.
+          ...(canRemind ? [{ label: 'Cobrar saldo pendiente', icon: 'fas fa-comment-dollar', onClick: () => setReminderOpen(true) }] : []),
         ]}
         footerActions={!isMobile ? [] : [
           { label: 'Editar', icon: 'fas fa-pen', onClick: openEdit },
-          { label: 'Progreso', icon: 'fas fa-chart-line', onClick: () => navigate(`/gym/members/${memberId}/progress`) },
+          ...(canRemind
+            ? [{ label: 'Cobrar', icon: 'fas fa-comment-dollar', onClick: () => setReminderOpen(true) }]
+            : [{ label: 'Progreso', icon: 'fas fa-chart-line', onClick: () => navigate(`/gym/members/${memberId}/progress`) }]),
           { label: 'Medidas', icon: 'fas fa-plus', variant: 'primary', onClick: () => navigate(`/gym/members/${memberId}/checkin`) },
         ]}
       >
@@ -586,6 +599,74 @@ export function GymMemberDetail() {
           {subscribeError && <Alert tone="danger" onClose={() => setSubscribeError('')}>{subscribeError}</Alert>}
         </div>
       </Modal>
+
+      {reminderOpen && (
+        <PaymentReminderModal memberId={memberId} memberName={data.member_name}
+          onClose={() => setReminderOpen(false)} />
+      )}
     </div>
+  );
+}
+
+// El cobro del saldo pendiente por SMS. El texto NO se edita: lo arma el backend con lo que el
+// afiliado debe de verdad, así que nadie puede mandar una cifra distinta de la que dice la base.
+// Lo único que se decide aquí es si se manda, y por eso el mensaje se muestra completo antes.
+function PaymentReminderModal({ memberId, memberName, onClose }) {
+  const { toast } = useToast();
+  const fetcher = React.useCallback(() => api.gymMemberPaymentReminder(memberId), [memberId]);
+  const { data: preview, loading, error } = useResource(fetcher, null, [memberId]);
+  const [sending, setSending] = React.useState(false);
+  const [sendError, setSendError] = React.useState('');
+
+  const submit = async () => {
+    setSending(true);
+    setSendError('');
+    try {
+      await api.sendGymMemberPaymentReminder(memberId);
+      toast({ tone: 'success', title: `Aviso enviado a ${memberName}` });
+      onClose();
+    } catch (e) {
+      setSendError(e?.message || 'No se pudo enviar el aviso.');
+    } finally { setSending(false); }
+  };
+
+  return (
+    <Modal open title="Cobrar saldo pendiente" subtitle="SMS" size="md" onClose={sending ? undefined : onClose}
+      footer={<>
+        <Button variant="secondary" onClick={onClose} disabled={sending}>Cancelar</Button>
+        <Button variant="primary" icon="fas fa-paper-plane" loading={sending}
+          disabled={loading || !!error || !preview?.addressee} onClick={submit}>
+          Enviar aviso
+        </Button>
+      </>}>
+      <div className={s.formCol}>
+        {loading && <Spinner />}
+        {error && <Alert tone="danger" title="No se pudo preparar el aviso">{error}</Alert>}
+        {preview && (
+          <>
+            <div className={g.reminderField}>
+              <span className={g.reminderLabel}>Para</span>
+              <span className={g.reminderValue}>
+                {memberName}{preview.addressee ? ` · ${preview.addressee}` : ''}
+              </span>
+            </div>
+            <div className={g.reminderField}>
+              <span className={g.reminderLabel}>Mensaje que recibirá</span>
+              <p className={g.reminderMessage}>{preview.message}</p>
+            </div>
+            {!preview.addressee && (
+              <Alert tone="warning" title="Sin celular">
+                Este afiliado no tiene celular registrado, así que no hay a dónde enviar el aviso.
+              </Alert>
+            )}
+            <Alert tone="warning">
+              Es un envío real: sale con el nombre de la compañía al inicio, queda en el historial
+              de notificaciones y se cobra como cualquier otro SMS.
+            </Alert>
+          </>
+        )}
+        {sendError && <Alert tone="danger" title="No salió" onClose={() => setSendError('')}>{sendError}</Alert>}
+      </div>
+    </Modal>
   );
 }
