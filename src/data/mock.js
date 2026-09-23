@@ -4624,17 +4624,44 @@ const gymMemberListPresent = (m) => {
     .sort((a, b) => (a.subscribed_at < b.subscribed_at ? 1 : -1));
   const sub = subsForMember.find((s) => s.status === GYM_SUB_ACTIVE) || subsForMember[0] || null;
   const period = sub ? currentPeriodOf(sub.id) : null;
+  const active = !!sub && sub.status === GYM_SUB_ACTIVE;
+  const pending = active
+    ? livePeriodsOf(sub.id).reduce((sum, p) => sum + Math.max(0, Number(p.price) - periodPaidTotal(p)), 0)
+    : 0;
   return {
     ...m,
+    membership: gymMembershipOf(m),
     subscription: sub ? {
       id: sub.id,
       plan_name: sub.plan_name,
       subscription_status: sub.status,
       end_date: period ? period.end_date : null,
       computed_status: period ? computePeriodStatus(period) : null,
+      pending_total: pending.toFixed(2),
     } : null,
   };
 };
+
+// Estado de la membresía del afiliado, espejo de GymMember::MEMBERSHIP_* del backend:
+// `grace` = suscripción activa con un período vencido (vivo) y con saldo; `active` = activa sin
+// eso; `cancelled` = sin activa y con alguna cancelada; `none` = nunca se suscribió. `pending`
+// (activa con saldo en cualquier período no cancelado) se cruza con los dos primeros.
+const livePeriodsOf = (subscriptionId) => mockGymSubscriptionPeriods
+  .filter((p) => p.subscription_id === subscriptionId && p.status !== GYM_PER_CANCELLED);
+const periodOwes = (p) => Number(p.price) > periodPaidTotal(p);
+const gymMembershipOf = (m) => {
+  const subs = mockGymSubscriptions.filter((sub) => sub.gym_member_id === m.id);
+  const active = subs.find((sub) => sub.status === GYM_SUB_ACTIVE);
+  if (!active) return subs.length ? 'cancelled' : 'none';
+  const overdue = livePeriodsOf(active.id).some((p) => [GYM_PER_CURRENT, GYM_PER_GRACE].includes(p.status)
+    && p.end_date < todayIso() && periodOwes(p));
+  return overdue ? 'grace' : 'active';
+};
+const gymMemberIsPending = (m) => mockGymSubscriptions
+  .some((sub) => sub.gym_member_id === m.id && sub.status === GYM_SUB_ACTIVE && livePeriodsOf(sub.id).some(periodOwes));
+const gymMembershipMatches = (m, membership) => (membership === 'pending'
+  ? gymMemberIsPending(m)
+  : gymMembershipOf(m) === membership);
 
 // Estados de la suscripción continua (una por afiliado) y de cada período de cobro que el
 // sistema genera solo. La verdad son las fechas; `status` es el materializado por el cron;
@@ -5015,6 +5042,20 @@ function resolveGymMock(path, query, { method = 'GET', body } = {}) {
     };
   }
 
+  // Afiliados por estado de membresía, con las mismas reglas del filtro `membership`.
+  if (sub === 'dashboard/members-summary') {
+    const counts = { active: 0, grace: 0, pending: 0, cancelled: 0, none: 0, total: mockGymMembers.length };
+    mockGymMembers.forEach((m) => {
+      counts[gymMembershipOf(m)] += 1;
+      if (gymMemberIsPending(m)) counts.pending += 1;
+    });
+    const pendingAmount = mockGymSubscriptions
+      .filter((sub) => sub.status === GYM_SUB_ACTIVE)
+      .flatMap((sub) => livePeriodsOf(sub.id))
+      .reduce((sum, p) => sum + Math.max(0, Number(p.price) - periodPaidTotal(p)), 0);
+    return { today: todayIso(), counts, pending_amount: pendingAmount.toFixed(2) };
+  }
+
   if (sub === 'members/lookup') {
     const phone = (query.get('phone_number') || '').trim();
     const email = (query.get('email') || '').trim().toLowerCase();
@@ -5081,9 +5122,11 @@ function resolveGymMock(path, query, { method = 'GET', body } = {}) {
     const status = query.get('status');
     const search = (query.get('_search') || '').toLowerCase();
     const birthdayMonth = Number(query.get('birthday_month')) || null;
+    const membership = query.get('membership') || '';
     const birthDay = (m) => Number((m.birthdate || '').slice(8, 10));
     const rows = mockGymMembers
       .filter((m) => (status === '' || status == null ? true : String(m.status) === status))
+      .filter((m) => !membership || gymMembershipMatches(m, membership))
       .filter((m) => !search
         || m.member_name.toLowerCase().includes(search)
         || m.member_code.toLowerCase().includes(search)

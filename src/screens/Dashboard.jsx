@@ -227,6 +227,83 @@ function GymBirthdaysCard({ rows, loading, error, onOpen, onSeeAll }) {
 // «Ver todas» lleva el total.
 const EXPIRING_LIMIT = 3;
 
+// Contadores del widget «Afiliados», en el orden en que se leen: quién está bien, quién está por
+// perder la membresía, a quién hay que cobrar y quién se fue. Cada uno abre Afiliados con el
+// filtro de membresía puesto (`?membership=`), que aplica las mismas reglas del backend.
+const MEMBERSHIP_TILES = [
+  { key: 'active', label: 'Activos', icon: 'fas fa-circle-check', tone: 'success', meta: () => 'Con el período vigente' },
+  { key: 'grace', label: 'En gracia', icon: 'fas fa-triangle-exclamation', tone: 'warning', meta: () => 'Antes del corte automático' },
+  {
+    key: 'pending', label: 'Pendientes de pago', icon: 'fas fa-sack-dollar', tone: 'danger',
+    meta: (data) => <>Por cobrar <strong>{gymMoney(data?.pending_amount)}</strong></>,
+  },
+  { key: 'cancelled', label: 'Cancelados', icon: 'fas fa-ban', tone: 'neutral', meta: () => 'Sin suscripción activa' },
+];
+
+/** Widget «Afiliados»: cuántos hay en cada estado de membresía. Son accesos, no un reporte: cada
+ *  baldosa abre el listado ya filtrado. «Pendientes de pago» se cruza con activos y en gracia
+ *  (agrupa a quien debe), así que no entra en la barra de proporción ni los cuatro números
+ *  suman el total. Tarjeta propia (no Card): conserva su marco también en el teléfono. */
+function GymMembersSummaryCard({ data, loading, error, onOpen, onSeeAll }) {
+  const counts = data?.counts;
+  const withActive = counts ? counts.active + counts.grace : 0;
+  // La barra reparte a los afiliados con historial de suscripción; sin nadie, no se dibuja.
+  const barSegments = counts ? [
+    { key: 'active', value: counts.active, className: s.memberBarActive },
+    { key: 'grace', value: counts.grace, className: s.memberBarGrace },
+    { key: 'cancelled', value: counts.cancelled, className: s.memberBarCancelled },
+  ].filter((seg) => seg.value > 0) : [];
+
+  return (
+    <section className={s.memberCard} aria-label="Afiliados">
+      <div className={s.memberHead}>
+        <div className={s.memberHeadText}>
+          <h3 className={s.memberTitle}>Afiliados</h3>
+          <span className={s.memberSubtitle}>Estado de la membresía hoy</span>
+        </div>
+        <Button variant="link" size="sm" iconRight="fas fa-chevron-right" className={s.memberSeeAll} onClick={onSeeAll}>
+          {counts ? `Ver todos (${counts.total})` : 'Ver todos'}
+        </Button>
+      </div>
+      <div className={s.memberBody}>
+        {error ? (
+          <Alert tone="danger" title="No se pudo cargar el resumen de afiliados">{error}</Alert>
+        ) : loading && !counts ? (
+          <Spinner center label="Contando afiliados…" />
+        ) : (
+          <>
+            <div className={s.memberTiles}>
+              {MEMBERSHIP_TILES.map((t) => (
+                <button type="button" key={t.key} className={[s.memberTile, s[`memberTile_${t.tone}`]].join(' ')}
+                  onClick={() => onOpen(t.key)}>
+                  <span className={s.memberTileIcon}><i className={t.icon} /></span>
+                  <span className={s.memberTileCount}>{Number(counts?.[t.key] ?? 0).toLocaleString('es-CO')}</span>
+                  <span className={s.memberTileLabel}>{t.label}</span>
+                  <i className={`fas fa-chevron-right ${s.memberTileChevron}`} aria-hidden="true" />
+                  {/* El detalle solo en escritorio: en el teléfono la baldosa se queda con el número. */}
+                  <span className={s.memberTileMeta}>{t.meta(data)}</span>
+                </button>
+              ))}
+            </div>
+            {barSegments.length > 0 && (
+              <div className={s.memberBarWrap}>
+                <div className={s.memberBar} aria-hidden="true">
+                  {/* El ancho de cada tramo es el dato mismo (como las barras de los gráficos). */}
+                  {barSegments.map((seg) => <i key={seg.key} className={seg.className} style={{ flexGrow: seg.value }} />)}
+                </div>
+                <div className={s.memberLegend}>
+                  <span>{withActive.toLocaleString('es-CO')} con suscripción activa</span>
+                  <span>{counts.cancelled.toLocaleString('es-CO')} cancelado{counts.cancelled === 1 ? '' : 's'}</span>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </section>
+  );
+}
+
 // Etiqueta de urgencia de cada suscripción: la gracia manda (el corte automático está cerca), y
 // entre las que aún no vencen, cuenta cuánto falta.
 const expiringBadge = (item) => {
@@ -402,9 +479,15 @@ export function Dashboard() {
     [canGym, endDate, refreshToken],
   );
   const expiringRes = useResource(expiringFetcher, null, [canGym, endDate, refreshToken]);
+  const membersSummaryFetcher = React.useCallback(
+    () => (canGym ? api.gymDashboardMembersSummary() : Promise.resolve(null)),
+    [canGym, endDate, refreshToken],
+  );
+  const membersSummaryRes = useResource(membersSummaryFetcher, null, [canGym, endDate, refreshToken]);
 
   const anyLoading = salesKpisRes.loading || salesCmpRes.loading || expKpisRes.loading || expCmpRes.loading
-    || resKpisRes.loading || arrivalsRes.loading || birthdaysRes.loading || expiringRes.loading;
+    || resKpisRes.loading || arrivalsRes.loading || birthdaysRes.loading || expiringRes.loading
+    || membersSummaryRes.loading;
 
   // Botón refresh: click corto → con cache; mantener ~2s → fuerza recálculo (force).
   // Re-sincroniza la fecha a "hoy" para no arrastrar un endDate congelado desde el montaje.
@@ -528,6 +611,18 @@ export function Dashboard() {
           error={arrivalsRes.error}
           onOpen={(id) => navigate(`/reservations/${id}`)}
           onSeeAll={() => navigate('/reservations')}
+        />
+      )}
+
+      {/* Gimnasio: primero el estado de los afiliados (cada contador abre la lista filtrada) y
+          debajo la operación del día, vencimientos y cumpleaños. */}
+      {canGym && (
+        <GymMembersSummaryCard
+          data={membersSummaryRes.data}
+          loading={membersSummaryRes.loading}
+          error={membersSummaryRes.error}
+          onOpen={(membership) => navigate(`/gym/members?membership=${membership}`)}
+          onSeeAll={() => navigate('/gym/members')}
         />
       )}
 

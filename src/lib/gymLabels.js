@@ -112,3 +112,29 @@ export const gymPendingBalance = (period) => {
 // Saldo pendiente total de la suscripción (suma de los períodos no cancelados), tal como lo
 // agrega el backend en `pending_total`.
 export const gymSubscriptionPending = (sub) => Math.max(0, Number(sub?.pending_total ?? 0));
+
+// Estado de la MEMBRESÍA del afiliado (no de su ficha), derivado por el backend de sus
+// suscripciones y períodos (GymMember::MEMBERSHIP_*). Es el filtro `membership` del listado de
+// afiliados y los contadores del widget del inicio. «Pendiente de pago» se cruza con «Activa» y
+// «En gracia»: agrupa a quien debe algo, sin ser un estado aparte.
+export const GYM_MEMBERSHIP = {
+  ACTIVE: 'active', GRACE: 'grace', PENDING: 'pending', CANCELLED: 'cancelled', NONE: 'none',
+};
+
+export const GYM_MEMBERSHIP_OPTIONS = [
+  { value: GYM_MEMBERSHIP.ACTIVE, label: 'Activa' },
+  { value: GYM_MEMBERSHIP.GRACE, label: 'En gracia' },
+  { value: GYM_MEMBERSHIP.PENDING, label: 'Pendiente de pago' },
+  { value: GYM_MEMBERSHIP.CANCELLED, label: 'Cancelada' },
+  { value: GYM_MEMBERSHIP.NONE, label: 'Sin suscripción' },
+];
+
+// Badge de la membresía de una fila del listado (`membership` nunca vale `pending`).
+export const gymMembershipMeta = (membership) => {
+  switch (membership) {
+    case GYM_MEMBERSHIP.ACTIVE: return { label: 'Activa', variant: 'success' };
+    case GYM_MEMBERSHIP.GRACE: return { label: 'En gracia', variant: 'warning' };
+    case GYM_MEMBERSHIP.CANCELLED: return { label: 'Cancelada', variant: 'neutral' };
+    default: return { label: 'Sin suscripción', variant: 'neutral' };
+  }
+};
