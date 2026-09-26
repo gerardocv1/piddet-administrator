@@ -511,6 +511,10 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
   **Se instala como app** en Android e iOS, con el nombre y el icono del gimnasio: aviso arriba,
   botón *Instalar como app* y una hoja que guía según el teléfono (detalle en
   [`tech.md`](tech.md) → *PWA*).
+  Se navega con una **barra inferior fija, como la de Instagram** (*Suscripción*, *Medidas*,
+  *Perfil*): siempre visible al desplazarse, translúcida con desenfoque, el activo en naranja y,
+  en *Perfil*, la foto del socio si tiene. Se esconde mientras escribe en un campo para no tapar
+  el teclado, y el contenido deja libre su alto (`--portal-nav-h` + zona segura).
   Tercera pestaña, **Perfil**: el socio sube su **foto** (la elige de la galería o la cámara, la
   **recorta en un círculo** con zoom, arrastre y giro —`PhotoCropper`, sobre `react-easy-crop` y
   `cropImage.js`— y se sube ya reducida a 720 × 720 JPEG) y corrige **correo, documento, fecha de
