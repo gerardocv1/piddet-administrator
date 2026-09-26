@@ -1,9 +1,10 @@
 import React from 'react';
 import { gymMoney } from '../../../lib/gymLabels.js';
-import { formatDayMonth, formatShortDate } from '../../../lib/dates.js';
+import { formatShortDate } from '../../../lib/dates.js';
 import { whatsappHref } from '../whatsapp.js';
 import { AlertIcon, CashIcon, ChatIcon, CheckIcon, ClockIcon, TrendIcon } from './icons.jsx';
 import { longDayMonth, periodRange, subscriptionView, SUBSCRIPTION_STATE } from './gymPortalData.js';
+import { GymPortalGym } from './GymPortalGym.jsx';
 import s from './GymPortalSubscription.module.css';
 
 // Suscripción del socio: la tarjeta del plan (tipo pase), el período en curso o el saldo
@@ -114,37 +115,6 @@ function PlanCard({ view, memberCode }) {
   );
 }
 
-function PeriodProgress({ view }) {
-  const paid = Number(view.period.paid_total) || 0;
-  return (
-    <section aria-label="Tu período" className={s.panel}>
-      <div className={s.panelHead}>
-        <h2 className={s.h2}>Este período</h2>
-        <span className={s.panelMeta}>Día {view.dayNumber} de {view.totalDays}</span>
-      </div>
-      <div className={s.progressWrap}>
-        <progress className={s.progress} value={view.dayNumber} max={view.totalDays}>
-          Día {view.dayNumber} de {view.totalDays}
-        </progress>
-        <div className={s.progressLabels}>
-          <span>Inició {formatDayMonth(view.period.start_date)}</span>
-          <span>{view.expired ? 'Venció' : 'Vence'} {formatDayMonth(view.period.end_date)}</span>
-        </div>
-      </div>
-      <div className={s.figures}>
-        <div className={s.figure}>
-          <span className={s.figureLabel}>Valor</span>
-          <span className={s.figureValue}>{gymMoney(view.period.price)}</span>
-        </div>
-        <div className={s.figure}>
-          <span className={s.figureLabel}>Pagado</span>
-          <span className={[s.figureValue, paid > 0 ? s.figurePaid : ''].filter(Boolean).join(' ')}>{gymMoney(paid)}</span>
-        </div>
-      </div>
-    </section>
-  );
-}
-
 function Balance({ view, whatsapp }) {
   return (
     <section aria-label="Saldo pendiente" className={s.balance}>
@@ -226,6 +196,7 @@ export function GymPortalSubscription({ data, onShowMeasures }) {
           text="Aún no tienes una suscripción activa. Pásate por recepción para elegir tu plan."
           whatsapp={whatsappHref(data.whatsapp_number, `Hola, soy ${memberName}. Quiero activar mi plan.`)}
         />
+        <GymPortalGym data={data} />
         <Payments payments={payments} />
       </>
     );
@@ -239,6 +210,7 @@ export function GymPortalSubscription({ data, onShowMeasures }) {
           text={`Tu suscripción se canceló${view.cancelledAt ? ` el ${longDayMonth(view.cancelledAt)}` : ''}. Pásate por recepción para renovarla.`}
           whatsapp={whatsappHref(data.whatsapp_number, `Hola, soy ${memberName}. Quiero renovar mi plan.`)}
         />
+        <GymPortalGym data={data} />
         <Payments payments={payments} />
       </>
     );
@@ -249,7 +221,8 @@ export function GymPortalSubscription({ data, onShowMeasures }) {
   return (
     <>
       <PlanCard view={view} memberCode={data.member?.member_code} />
-      {pending ? <Balance view={view} whatsapp={whatsapp} /> : <PeriodProgress view={view} />}
+      {pending && <Balance view={view} whatsapp={whatsapp} />}
+      <GymPortalGym data={data} />
       <Payments payments={payments} />
       {!pending && (
         <button type="button" className={s.ghost} onClick={onShowMeasures}>

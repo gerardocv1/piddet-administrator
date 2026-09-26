@@ -144,22 +144,6 @@
   text-overflow: ellipsis;
 }
 
-.logout {
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  border: 0;
-  border-radius: 50%;
-  background-color: var(--portal-chip);
-  color: var(--portal-text);
-  cursor: pointer;
-}
-
-.logout:hover { background-color: var(--portal-surface-hover); }
-.logout:focus-visible { outline: 2px solid var(--portal-accent); outline-offset: 2px; }
 
 /* La foto tapa las iniciales; si no carga (URL vencida sin señal) se esconde y quedan ellas. */
 .avatar img {
@@ -208,42 +192,79 @@
 .tabOn,
 .tabOn:hover { color: var(--portal-accent); }
 
-/* ── Cerrar sesión (al final de cada pestaña) ── */
+/* ── Cerrar sesión: solo al final del perfil, pequeño y con confirmación ── */
 
-.sessionBox {
+.signOutBox {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-3);
   margin-top: var(--space-2);
 }
 
-.signOut {
+.signOutLink {
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: var(--portal-space-1-5);
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  background: transparent;
+  color: var(--portal-text-subtle);
+  font-family: var(--font-sans);
+  font-size: var(--portal-fs-caption);
+  font-weight: var(--fw-semibold);
+  cursor: pointer;
+}
+
+.signOutLink:hover { color: var(--portal-text-soft); }
+
+.signOutAsk {
+  padding: var(--space-4);
+  border-radius: var(--portal-radius-lg);
+  background-color: var(--portal-surface-soft);
+  border: 1px solid var(--portal-line);
+}
+
+.signOutText {
+  margin: 0;
+  text-align: center;
+  font-size: var(--portal-fs-small);
+  line-height: var(--lh-snug);
+  color: var(--portal-text-soft);
+}
+
+.signOutActions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-2);
   width: 100%;
-  height: 48px;
-  border: 1.5px solid var(--portal-line-strong);
+}
+
+.signOutCancel,
+.signOutConfirm {
+  height: 44px;
   border-radius: var(--portal-radius);
-  background: transparent;
-  color: var(--portal-text-soft);
   font-family: var(--font-sans);
-  font-size: var(--portal-fs-body);
+  font-size: var(--portal-fs-small);
   font-weight: var(--fw-bold);
   cursor: pointer;
 }
 
-.signOut:hover { background-color: var(--portal-surface-soft); color: var(--portal-text); }
-.signOut:focus-visible { outline: 2px solid var(--portal-accent); outline-offset: 2px; }
-
-.sessionNote {
-  margin: 0;
-  font-size: var(--portal-fs-caption);
-  color: var(--portal-text-subtle);
-  text-align: center;
+.signOutCancel {
+  border: 0;
+  background-color: var(--portal-teal);
+  color: var(--portal-on-accent);
 }
+
+.signOutConfirm {
+  border: 1.5px solid var(--portal-line-strong);
+  background: transparent;
+  color: var(--portal-warning);
+}
+
+.signOutLink:focus-visible,
+.signOutCancel:focus-visible,
+.signOutConfirm:focus-visible { outline: 2px solid var(--portal-accent); outline-offset: 2px; }
 
 /* ── Arranque con la sesión que trae la app de iOS ── */
 
@@ -283,8 +304,7 @@
 }
 
 .tabs,
-.tab,
-.logout {
+.tab {
   -webkit-user-select: none;
   user-select: none;
 }
