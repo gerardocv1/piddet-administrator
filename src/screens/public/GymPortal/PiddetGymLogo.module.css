@@ -1,4 +1,4 @@
-/* Marca "piddet gym": placa con la pesita + wordmark en dos colores. */
+/* Marca "piddet gym": placa con la pesita + "piddet" en naranja + "gym" en su placa blanca. */
 
 .logo {
   display: inline-flex;
@@ -33,8 +33,17 @@
 
 .word {
   display: inline-flex;
-  align-items: baseline;
+  align-items: center;
+  gap: 0.22em;
 }
 
 .piddet { color: var(--portal-accent); }
-.gym { color: var(--portal-text); }
+
+/* "gym" en una placa blanca con la letra oscura: separa las dos palabras y se lee como etiqueta. */
+.gym {
+  padding: 0.14em 0.32em 0.04em;
+  border-radius: 0.28em;
+  background-color: var(--portal-text);
+  color: var(--portal-bg);
+  font-size: 0.86em;
+}

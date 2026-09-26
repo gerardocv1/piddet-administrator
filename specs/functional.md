@@ -474,7 +474,7 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
   corte, porque el vigente agotó su gracia sin ningún abono—.
 - **Entrada general de los gimnasios** (`/gym`, `GymHub.jsx`): la **única puerta** del socio,
   sin gimnasio en la URL. Arriba la marca **piddet gym** (`PiddetGymLogo`: pesita en placa
-  naranja, "piddet" naranja y "gym" blanco); el socio escribe su celular y el código del SMS
+  naranja, "piddet" naranja y "gym" en una placa blanca con la letra oscura); el socio escribe su celular y el código del SMS
   (`api.gymPlatformRequestCode` / `api.gymPlatformVerifyCode`, que lo buscan en todos los
   gimnasios; cajas de 6 dígitos con `autocomplete="one-time-code"`: iOS lo sugiere y Chrome en
   Android lo pega solo) y la plataforma lo lleva a su portal —si es socio de varios, elige—; abajo,

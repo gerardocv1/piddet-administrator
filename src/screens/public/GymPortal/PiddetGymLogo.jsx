@@ -2,7 +2,7 @@ import React from 'react';
 import s from './PiddetGymLogo.module.css';
 
 // Marca de la entrada de gimnasios: la pesita en una placa naranja, "piddet" en el naranja de la
-// plataforma y "gym" en blanco. Es texto (Baloo 2, --font-logo), no imagen: se ve nítido en
+// plataforma y "gym" en una placa blanca con la letra oscura, separado. Es texto (Baloo 2, --font-logo), no imagen: se ve nítido en
 // cualquier pantalla y hereda el tamaño que le dé quien lo use (`size`: sm | md | lg).
 export function PiddetGymLogo({ size = 'md', className = '' }) {
   return (
