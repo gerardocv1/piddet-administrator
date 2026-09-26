@@ -472,6 +472,16 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
   detalle lo avisa y, con `gym-subscriptions-create`, ofrece **Generar período**: fuerza el mismo
   ciclo para esa suscripción, con confirmación —y advertencia en rojo si el resultado va a ser el
   corte, porque el vigente agotó su gracia sin ningún abono—.
+- **Portal público del afiliado** (`/{compañía}/afiliados`, `src/screens/public/GymPortal/`):
+  el socio entra desde el teléfono con su **celular y su fecha de nacimiento** (día, mes y año en
+  tres selectores) y ve, sin sesión del panel, su suscripción (tarjeta del plan con los días que
+  quedan, el período en curso o el **saldo pendiente** con WhatsApp al gimnasio, y los últimos
+  pagos) y sus **medidas** (peso, IMC y grasa; la silueta del panel —`BODY_MAP_DOTS`/`IMAGES` de
+  `BodyMap`— con un punto por medida y su evolución; lista completa con la diferencia contra la
+  toma anterior). Superficie siempre oscura con tokens propios `--portal-*` en `tokens.css`. Una
+  sola llamada (`api.gymPortalAccess`) trae todo; la sesión vive en `sessionStorage` de la
+  pestaña y *Salir* la borra. En demo: Laura (`3001234567`, nacida hoy en 1994) está al día y con
+  medidas; Carlos (`3007654321`, 30/11/1988) tiene saldo y ninguna medida.
 
 ### Reportes
 

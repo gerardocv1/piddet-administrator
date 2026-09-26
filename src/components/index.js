@@ -30,7 +30,7 @@ export { StatStrip } from './data/StatStrip.jsx';
 export { SalesByTypeChart } from './data/SalesByTypeChart.jsx';
 export { SalesComparisonChart } from './data/SalesComparisonChart.jsx';
 export { BodyMeasuresChart } from './data/BodyMeasuresChart.jsx';
-export { BodyMap, BODY_MAP_KEYS } from './data/BodyMap.jsx';
+export { BodyMap, BODY_MAP_KEYS, BODY_MAP_IMAGES, BODY_MAP_DOTS } from './data/BodyMap.jsx';
 export { Pagination } from './data/Pagination.jsx';
 export { LineList } from './data/LineList.jsx';
 export { InfoCard } from './data/InfoCard.jsx';

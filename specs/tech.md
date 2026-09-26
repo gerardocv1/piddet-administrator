@@ -112,7 +112,8 @@ El token viaja como `Authorization: Bearer <token>`.
 
 Antes del router, `src/App.jsx` atiende el **mundo público** (sin sesión) mirando el `pathname`:
 el directorio de compañías (`/`, con filtro opcional `?type=<key>&page=<n>`), la carta compartible
-(`/{compañía}/m/{menú}`), el hospedaje público (`/{compañía}/hospedaje…`), la portada de la
+(`/{compañía}/m/{menú}`), el hospedaje público (`/{compañía}/hospedaje…`), el portal del
+afiliado del gimnasio (`/{compañía}/afiliados`), la portada de la
 compañía (`/{compañía}`), el pre-check-in digitado (`/checkin?code=…`) y el enlace corto del SMS
 (**`/r/{código único de consulta}`**, que abre la reserva sin pedir el nombre del titular contra
 `GET /public/checkin/link/{accessCode}`). El orden importa: la raíz se resuelve explícitamente,

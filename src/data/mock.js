@@ -4885,6 +4885,8 @@ let mockGymCheckins = [0, 1, 2, 3, 4, 5].map((i) => ({
     { measurement_type_id: 1, side: '', value: (68 - i * 0.9).toFixed(1) },
     { measurement_type_id: 2, side: '', value: (24 - i * 0.8).toFixed(1) },
     { measurement_type_id: 8, side: '', value: (78 - i * 1.1).toFixed(1) },
+    { measurement_type_id: 6, side: '', value: (91 - i * 0.5).toFixed(1) },
+    { measurement_type_id: 5, side: '', value: (101 + i * 0.3).toFixed(1) },
   ],
 }));
 
@@ -4906,6 +4908,91 @@ const gymCheckinPresent = (c) => ({
     };
   }),
 });
+
+// Portal público del afiliado (demo): /public/{company}/gym/portal. Entra con el celular y la
+// fecha de nacimiento de un afiliado activo del mock —Laura (al día, con medidas) o Carlos (con
+// saldo y sin medidas)—; cualquier otro dato responde el 404 genérico del backend.
+function resolvePublicGymPortalMock(path, { method = 'GET', body } = {}) {
+  if (!/^\/public\/[^/]+\/gym\/portal$/.test(path) || method !== 'POST') return undefined;
+
+  const phone = String(body?.phone_number || '').replace(/\D+/g, '').replace(/^57(?=\d{10}$)/, '');
+  const member = mockGymMembers.find((m) => m.status === 1 && m.phone_number === phone);
+  if (!member || !member.birthdate || member.birthdate !== body?.birthdate) {
+    throw Object.assign(
+      new Error('No encontramos un afiliado con esos datos. Revisa tu celular y tu fecha de nacimiento.'),
+      { status: 404 },
+    );
+  }
+
+  const subscriptions = mockGymSubscriptions
+    .filter((sub) => sub.gym_member_id === member.id)
+    .sort((a, b) => (a.subscribed_at < b.subscribed_at ? 1 : -1))
+    .map(gymSubDetailPresent);
+  const sub = subscriptions.find((x) => x.status === GYM_SUB_ACTIVE) || subscriptions[0] || null;
+  const livePeriods = sub ? sub.periods.filter((p) => p.status !== GYM_PER_CANCELLED) : [];
+  const current = livePeriods[0] || null;
+
+  const payments = subscriptions
+    .flatMap((x) => x.periods.flatMap((p) => p.payments
+      .filter((pay) => pay.status === 1)
+      .map((pay) => ({
+        period_number: p.number, value: pay.value,
+        payment_method_name: pay.payment_method_name, payment_date: pay.payment_date,
+      }))))
+    .sort((a, b) => (a.payment_date < b.payment_date ? 1 : -1))
+    .slice(0, 5);
+
+  const enabled = mockGymEnabledTypeIds;
+  const types = mockGymMeasurementTypes
+    .filter((t) => !enabled || enabled.includes(t.id))
+    .map(({ key, label, unit, sided }) => ({ key, label, unit, sided }));
+  const checkins = mockGymCheckins
+    .filter((c) => c.gym_member_id === member.id)
+    .sort((a, b) => (a.measured_at < b.measured_at ? -1 : 1));
+  const series = {};
+  checkins.forEach((c) => c.values.forEach((v) => {
+    const type = mockGymMeasurementTypes.find((t) => t.id === v.measurement_type_id);
+    if (!type) return;
+    if (!series[type.key]) series[type.key] = { unit: type.unit, points: [] };
+    series[type.key].points.push({ date: c.measured_at, value: v.value, side: v.side || null });
+  }));
+  const last = checkins[checkins.length - 1] || null;
+  const personal = gymMemberPersonal(member);
+
+  return {
+    company: (() => {
+      const username = decodeURIComponent(path.split('/')[2] || '');
+      const c = mockPublicCompanies.find((x) => x.username === username) || mockCompany;
+      return { name: c.name, username: c.username ?? null, icon: c.icon ?? null, thumbnail_icon: c.thumbnail_icon ?? null, brand_primary: c.brand_primary ?? null, brand_secondary: c.brand_secondary ?? null };
+    })(),
+    whatsapp_number: mockCompany.phone ?? null,
+    today: todayIso(),
+    member: {
+      first_name: personal.first_name, member_name: member.member_name, member_code: member.member_code,
+      sex: member.sex, height_cm: member.height_cm, goal: member.goal, joined_at: member.joined_at,
+    },
+    subscription: sub ? {
+      plan_name: sub.plan_name, status: sub.status, subscribed_at: sub.subscribed_at,
+      cancelled_at: sub.cancelled_at, pending_total: sub.pending_total,
+      current_period: current ? {
+        number: current.number, price: current.price, start_date: current.start_date,
+        end_date: current.end_date, grace_ends_at: current.grace_ends_at, status: current.status,
+        computed_status: current.computed_status, paid_total: current.paid_total, pending: current.pending,
+      } : null,
+      pending_periods: livePeriods
+        .filter((p) => Number(p.pending) > 0)
+        .sort((a, b) => a.number - b.number)
+        .map((p) => ({ number: p.number, start_date: p.start_date, end_date: p.end_date, pending: p.pending })),
+    } : null,
+    payments,
+    measurements: {
+      types,
+      series,
+      checkins_count: checkins.length,
+      last_checkin: last ? { measured_at: last.measured_at, measured_by_name: last.measured_by_name } : null,
+    },
+  };
+}
 
 function resolveGymMock(path, query, { method = 'GET', body } = {}) {
   const scoped = path.match(/^\/companies\/[^/]+\/gym\/(.+)$/);
@@ -6006,6 +6093,10 @@ export function resolveMock(rawPath, opts = {}) {
   // reservados `company-types` y `companies` no se interpreten como usernames.
   const publicDirectory = resolvePublicDirectoryMock(path, query);
   if (publicDirectory !== undefined) return publicDirectory;
+
+  // Portal público del afiliado del gimnasio (sin sesión): /public/{company}/gym/portal
+  const gymPortal = resolvePublicGymPortalMock(path, opts);
+  if (gymPortal !== undefined) return gymPortal;
 
   // Hospedaje público (sin sesión): /public/{company}/rentable-units[/{unitId}]
   const publicLodging = resolvePublicLodgingMock(path, query);

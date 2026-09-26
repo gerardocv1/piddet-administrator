@@ -197,4 +197,16 @@ export const gymService = {
     const q = sp.toString();
     return obj(http.get(`${base()}/members/${memberId}/progress${q ? `?${q}` : ''}`));
   },
+
+  // ── Portal público del afiliado (sin sesión) ──
+  // El socio entra con su celular y su fecha de nacimiento (YYYY-MM-DD) en
+  // /{username-compañía}/afiliados. Una sola llamada trae todo lo que el portal muestra:
+  // { today, company, whatsapp_number, member, subscription, payments, measurements }.
+  // Datos que no coinciden → 404 con un mensaje genérico (no revela quién es afiliado).
+  gymPortalAccess: (companyUsername, { phoneNumber, birthdate }) =>
+    http.post(
+      `/public/${encodeURIComponent(companyUsername)}/gym/portal`,
+      { phone_number: phoneNumber, birthdate },
+      { auth: false },
+    ),
 };

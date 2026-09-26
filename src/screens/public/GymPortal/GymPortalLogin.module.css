@@ -1,0 +1,309 @@
+/* Entrada al portal del afiliado: celular + fecha de nacimiento en tres cajas. */
+
+.screen {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-7);
+  width: 100%;
+  max-width: 480px;
+  min-height: 100vh;
+  min-height: 100dvh;
+  margin: 0 auto;
+  padding: var(--portal-space-15) var(--space-6) var(--space-7);
+  box-sizing: border-box;
+}
+
+/* ── Marca ── */
+
+.top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.mark {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: var(--portal-space-1-5) var(--space-3) var(--portal-space-1-5) var(--space-2);
+  border-radius: var(--radius-pill);
+  background-color: var(--portal-chip);
+  border: 1px solid var(--portal-line-soft);
+}
+
+.markIcon,
+.markLogo {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+}
+
+.markIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--portal-teal);
+  color: var(--portal-on-accent);
+}
+
+.markLogo {
+  object-fit: cover;
+  background-color: var(--portal-text);
+}
+
+.markName {
+  font-size: var(--portal-fs-caption);
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--portal-label-strong);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wordmark {
+  flex: 0 0 auto;
+  font-family: var(--font-logo);
+  font-weight: var(--fw-heavy);
+  font-size: var(--portal-fs-date);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--portal-accent);
+}
+
+/* ── Titular ── */
+
+.intro {
+  display: flex;
+  flex-direction: column;
+  gap: var(--portal-space-2-5);
+  margin-top: var(--space-3);
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-logo);
+  font-weight: var(--fw-heavy);
+  font-size: var(--portal-fs-hero);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: var(--portal-text);
+  text-wrap: pretty;
+}
+
+.lead {
+  margin: 0;
+  font-size: var(--portal-fs-lead);
+  line-height: var(--lh-base);
+  color: var(--portal-text-soft);
+  text-wrap: pretty;
+}
+
+/* ── Formulario ── */
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding: var(--portal-space-5-5) var(--portal-space-4-5);
+  border-radius: var(--portal-radius-xl);
+  background-color: var(--portal-surface);
+  border: 1px solid var(--portal-line);
+  box-shadow: var(--portal-shadow-soft);
+}
+
+.phoneField {
+  display: flex;
+  flex-direction: column;
+  gap: var(--portal-space-1-5);
+}
+
+.fieldLabel {
+  padding: 0;
+  font-size: var(--portal-fs-caption);
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--portal-label);
+}
+
+.phoneWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.prefix {
+  position: absolute;
+  left: var(--portal-space-3-5);
+  font-size: var(--portal-fs-title);
+  font-weight: var(--fw-semibold);
+  color: var(--portal-text-subtle);
+  pointer-events: none;
+}
+
+.phoneInput,
+.select {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  height: 56px;
+  box-sizing: border-box;
+  margin: 0;
+  border-radius: var(--portal-radius);
+  border: 1.5px solid var(--portal-line-input);
+  background-color: var(--portal-input);
+  color: var(--portal-text);
+  font-family: var(--font-sans);
+  font-size: var(--portal-fs-title);
+  font-weight: var(--fw-semibold);
+  outline: none;
+}
+
+.phoneInput {
+  padding: 0 var(--portal-space-3-5) 0 58px;
+  letter-spacing: 0.04em;
+}
+
+.phoneInput::placeholder { color: var(--portal-text-faint); }
+
+.phoneInput:focus,
+.select:focus {
+  border-color: var(--portal-accent);
+  box-shadow: 0 0 0 3px var(--portal-accent-ring);
+}
+
+.birth {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.birth > legend { margin-bottom: var(--space-2); }
+
+.dateGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--portal-space-2-5);
+}
+
+.dateField {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--portal-space-1-5);
+}
+
+.dateLabel {
+  font-size: var(--portal-fs-micro);
+  font-weight: var(--fw-semibold);
+  color: var(--portal-text-subtle);
+  text-align: center;
+}
+
+.select {
+  padding: 0 34px 0 var(--portal-space-3-5);
+  text-align: center;
+  text-align-last: center;
+  cursor: pointer;
+}
+
+.selectEmpty { color: var(--portal-text-faint); }
+
+.select option {
+  color: var(--portal-option-text);
+  background-color: var(--portal-option-bg);
+}
+
+.chevron {
+  position: absolute;
+  right: var(--portal-space-2-5);
+  bottom: var(--space-5);
+  color: var(--portal-label);
+  pointer-events: none;
+}
+
+.hint {
+  margin: 0;
+  font-size: var(--portal-fs-caption);
+  line-height: 1.45;
+  color: var(--portal-text-subtle);
+}
+
+.error {
+  margin: 0;
+  padding: var(--space-3) var(--portal-space-3-5);
+  border-radius: var(--portal-radius);
+  background-color: var(--portal-accent-soft);
+  color: var(--portal-warning);
+  font-size: var(--portal-fs-small);
+  font-weight: var(--fw-semibold);
+  line-height: var(--lh-snug);
+}
+
+.cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--portal-space-2-5);
+  height: 56px;
+  border: 0;
+  border-radius: var(--portal-radius-md);
+  background-color: var(--portal-accent);
+  color: var(--portal-on-accent);
+  font-family: var(--font-logo);
+  font-weight: var(--fw-heavy);
+  font-size: var(--portal-fs-cta);
+  box-shadow: var(--portal-shadow-cta);
+  cursor: pointer;
+}
+
+.cta:hover:not(:disabled) { background-color: var(--portal-accent-hover); }
+.cta:focus-visible { outline: 2px solid var(--portal-text); outline-offset: 3px; }
+
+.cta:disabled {
+  cursor: default;
+  opacity: 0.55;
+  box-shadow: none;
+}
+
+/* ── Pie ── */
+
+.footer {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--portal-space-1-5);
+  text-align: center;
+}
+
+.help {
+  margin: 0;
+  font-size: var(--portal-fs-small);
+  line-height: 1.45;
+  color: var(--portal-text-muted);
+  text-wrap: pretty;
+}
+
+.powered {
+  margin: 0;
+  font-size: var(--portal-fs-caption);
+  color: var(--portal-text-faint);
+}
+
+.poweredMark {
+  font-family: var(--font-logo);
+  font-weight: var(--fw-heavy);
+  color: var(--portal-accent);
+}

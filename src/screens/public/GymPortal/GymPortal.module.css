@@ -1,0 +1,193 @@
+/* Portal público del afiliado: marco de página (fondo, resplandores, encabezado y pestañas).
+   Siempre oscuro y con su propia escala (tokens --portal-* de tokens.css). */
+
+.page {
+  position: relative;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow: hidden;
+  background-color: var(--portal-bg);
+  color: var(--portal-text);
+  font-family: var(--font-sans);
+  color-scheme: dark;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Resplandores decorativos del fondo: van encima del color plano, nunca en su lugar. */
+.page::before,
+.page::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.glowLogin::before {
+  top: -150px;
+  right: -130px;
+  width: 380px;
+  height: 380px;
+  background: radial-gradient(circle, var(--portal-glow-teal-strong) 0%, transparent 70%);
+}
+
+.glowLogin::after {
+  bottom: -170px;
+  left: -150px;
+  width: 360px;
+  height: 360px;
+  background: radial-gradient(circle, var(--portal-glow-accent) 0%, transparent 70%);
+}
+
+.glowTeal::before,
+.glowAccent::before {
+  top: -160px;
+  left: -120px;
+  width: 380px;
+  height: 380px;
+  background: radial-gradient(circle, var(--portal-glow-teal) 0%, transparent 70%);
+}
+
+.glowAccent::before {
+  background: radial-gradient(circle, var(--portal-glow-accent-strong) 0%, transparent 70%);
+}
+
+.glowMeasures::before {
+  top: -160px;
+  right: -140px;
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, var(--portal-glow-teal) 0%, transparent 70%);
+}
+
+.shell {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 480px;
+  min-height: 100vh;
+  min-height: 100dvh;
+  margin: 0 auto;
+}
+
+.content {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--portal-space-5-5);
+  padding: var(--space-14) var(--space-5) var(--space-6);
+}
+
+/* ── Encabezado con la persona ── */
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.identity {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.avatar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background-color: var(--portal-teal);
+  color: var(--portal-on-accent);
+  font-family: var(--font-logo);
+  font-weight: var(--fw-heavy);
+  font-size: var(--portal-fs-title);
+}
+
+.identityText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.eyebrow {
+  font-size: var(--portal-fs-caption);
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--portal-label);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hello {
+  font-family: var(--font-logo);
+  font-weight: var(--fw-heavy);
+  font-size: var(--portal-fs-heading);
+  line-height: 1;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.logout {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  background-color: var(--portal-chip);
+  color: var(--portal-text);
+  cursor: pointer;
+}
+
+.logout:hover { background-color: var(--portal-surface-hover); }
+.logout:focus-visible { outline: 2px solid var(--portal-accent); outline-offset: 2px; }
+
+/* ── Pestañas inferiores ── */
+
+.tabs {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  display: flex;
+  align-items: stretch;
+  padding: 0 var(--space-3) max(var(--portal-space-2-5), env(safe-area-inset-bottom));
+  background-color: var(--portal-bg);
+  border-top: 1px solid var(--portal-line);
+}
+
+.tab {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  height: 64px;
+  border: 0;
+  background: transparent;
+  font-family: var(--font-sans);
+  font-size: var(--portal-fs-caption);
+  font-weight: var(--fw-bold);
+  color: var(--portal-text-subtle);
+  cursor: pointer;
+}
+
+.tab:hover { color: var(--portal-text); }
+.tab:focus-visible { outline: 2px solid var(--portal-accent); outline-offset: -4px; border-radius: var(--portal-radius); }
+
+.tabOn,
+.tabOn:hover { color: var(--portal-accent); }

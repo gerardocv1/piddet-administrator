@@ -1,0 +1,524 @@
+/* Suscripción del socio en el portal: tarjeta del plan, período o saldo y últimos pagos. */
+
+.h2 {
+  color: var(--portal-text);
+  margin: 0;
+  font-family: var(--font-logo);
+  font-weight: var(--fw-bold);
+  font-size: var(--portal-fs-title);
+  line-height: 1;
+}
+
+/* ── Tarjeta del plan (tipo pase) ── */
+
+.plan {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: var(--portal-space-4-5);
+  padding: var(--portal-space-5-5) var(--space-5) var(--space-5);
+  border-radius: var(--portal-radius-3xl);
+  box-shadow: var(--portal-shadow);
+}
+
+/* Anillo decorativo de la esquina. */
+.plan::before {
+  content: '';
+  position: absolute;
+  right: -60px;
+  top: -70px;
+  width: 220px;
+  height: 220px;
+  box-sizing: border-box;
+  border-radius: 50%;
+  border: 28px solid var(--portal-chip);
+  pointer-events: none;
+}
+
+/* Al día: color plano de la marca con el gradiente encima. */
+.planOk {
+  background-color: var(--portal-teal);
+  background-image: var(--portal-gradient);
+}
+
+.planAlert {
+  background-color: var(--portal-surface);
+  border: 2px solid var(--portal-accent);
+}
+
+.planAlert::before { border-color: var(--portal-accent-faint); }
+
+.planClosed {
+  background-color: var(--portal-surface);
+  border: 1px solid var(--portal-line-strong);
+}
+
+.planHead,
+.planBody,
+.planFoot,
+.closedText { position: relative; }
+
+.planHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.planTitle {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.planEyebrow {
+  font-size: var(--portal-fs-micro);
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--portal-text-soft);
+}
+
+.planAlert .planEyebrow,
+.planClosed .planEyebrow { color: var(--portal-text-muted); }
+
+.planName {
+  font-family: var(--font-logo);
+  font-weight: var(--fw-heavy);
+  font-size: var(--portal-fs-plan);
+  line-height: 1;
+  letter-spacing: -0.01em;
+}
+
+.badge {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: var(--portal-space-1-5);
+  padding: var(--portal-space-1-5) var(--space-3);
+  border-radius: var(--radius-pill);
+  font-size: var(--portal-fs-caption);
+  font-weight: var(--fw-bold);
+  white-space: nowrap;
+}
+
+.badgeDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.badge_success {
+  background-color: var(--portal-scrim);
+  color: var(--portal-text);
+}
+
+.badge_success .badgeDot { background-color: var(--portal-success); }
+
+.badge_accent {
+  background-color: var(--portal-accent-soft);
+  color: var(--portal-warning);
+}
+
+.badge_accent .badgeDot { background-color: var(--portal-accent); }
+
+.planBody {
+  display: flex;
+  align-items: center;
+  gap: var(--portal-space-4-5);
+}
+
+/* Anillo de días restantes. */
+.ring {
+  position: relative;
+  flex: 0 0 auto;
+  width: 116px;
+  height: 116px;
+}
+
+.ring svg { display: block; }
+
+.ringTrack,
+.ringTrackDim,
+.ringValue {
+  fill: none;
+  stroke-width: 10;
+}
+
+.ringTrack { stroke: var(--portal-ring-track); }
+.ringTrackDim { stroke: var(--portal-ring-track-dim); }
+
+.ringValue {
+  stroke: var(--portal-accent);
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.6s ease;
+}
+
+.ringCenter {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.ringDays {
+  font-family: var(--font-logo);
+  font-weight: var(--fw-heavy);
+  font-size: var(--portal-fs-hero);
+  line-height: 1;
+}
+
+.ringUnit {
+  font-size: var(--portal-fs-micro);
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--portal-on-brand-soft);
+}
+
+.planDates {
+  display: flex;
+  flex-direction: column;
+  gap: var(--portal-space-2-5);
+  min-width: 0;
+}
+
+.due {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dueLabel {
+  font-size: var(--portal-fs-caption);
+  color: var(--portal-on-brand-muted);
+}
+
+.planAlert .dueLabel { color: var(--portal-text-muted); }
+
+.dueDate {
+  font-family: var(--font-logo);
+  font-weight: var(--fw-bold);
+  font-size: var(--portal-fs-date);
+  line-height: 1.1;
+}
+
+.statusLine {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--portal-fs-small);
+  font-weight: var(--fw-bold);
+  color: var(--portal-text);
+}
+
+.statusLineAlert { color: var(--portal-warning); }
+
+.statusIcon {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  color: var(--portal-on-accent);
+}
+
+.statusIconOk { background-color: var(--portal-success); }
+.statusIconAlert { background-color: var(--portal-accent); }
+
+.planFoot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-top: var(--portal-space-3-5);
+  border-top: 1px solid var(--portal-line-on-brand);
+  font-size: var(--portal-fs-caption);
+  color: var(--portal-text);
+  opacity: 0.85;
+}
+
+.planAlert .planFoot {
+  border-top-color: var(--portal-line-input);
+  color: var(--portal-on-brand-muted);
+  opacity: 1;
+}
+
+.code {
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.08em;
+}
+
+.closedText {
+  margin: 0;
+  font-size: var(--portal-fs-body);
+  line-height: var(--lh-base);
+  color: var(--portal-text-soft);
+  text-wrap: pretty;
+}
+
+/* ── Este período ── */
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--portal-space-3-5);
+  padding: var(--portal-space-4-5);
+  border-radius: var(--portal-radius-xl);
+  background-color: var(--portal-surface);
+  border: 1px solid var(--portal-line);
+}
+
+.panelHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.panelMeta {
+  font-size: var(--portal-fs-caption);
+  font-weight: var(--fw-bold);
+  color: var(--portal-label);
+}
+
+.progressWrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.progress {
+  appearance: none;
+  -webkit-appearance: none;
+  display: block;
+  width: 100%;
+  height: 10px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+  background-color: var(--portal-surface-hover);
+  color: var(--portal-teal);
+}
+
+.progress::-webkit-progress-bar {
+  background-color: var(--portal-surface-hover);
+  border-radius: var(--radius-pill);
+}
+
+.progress::-webkit-progress-value {
+  background-color: var(--portal-teal);
+  background-image: var(--portal-gradient-bar);
+  border-radius: var(--radius-pill);
+}
+
+.progress::-moz-progress-bar {
+  background-color: var(--portal-teal);
+  background-image: var(--portal-gradient-bar);
+  border-radius: var(--radius-pill);
+}
+
+.progressLabels {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--portal-fs-caption);
+  color: var(--portal-text-muted);
+}
+
+.figures {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--portal-space-2-5);
+}
+
+.figure {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--portal-space-3-5);
+  border-radius: var(--portal-radius);
+  background-color: var(--portal-surface-soft);
+}
+
+.figureLabel {
+  font-size: var(--portal-fs-micro);
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--portal-text-subtle);
+}
+
+.figureValue {
+  font-family: var(--font-logo);
+  font-weight: var(--fw-bold);
+  font-size: var(--portal-fs-stat);
+  line-height: 1;
+}
+
+.figurePaid { color: var(--portal-success); }
+
+/* ── Saldo pendiente ── */
+
+.balance {
+  display: flex;
+  flex-direction: column;
+  gap: var(--portal-space-3-5);
+  padding: var(--portal-space-4-5);
+  border-radius: var(--portal-radius-xl);
+  background-color: var(--portal-accent);
+  color: var(--portal-on-accent);
+  box-shadow: var(--portal-shadow-balance);
+}
+
+.balanceHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.balanceTitle {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.balanceEyebrow {
+  font-size: var(--portal-fs-micro);
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--portal-on-accent-muted);
+}
+
+.balanceAmount {
+  font-family: var(--font-logo);
+  font-weight: var(--fw-heavy);
+  font-size: var(--portal-fs-display);
+  line-height: 1;
+  letter-spacing: -0.01em;
+}
+
+.balanceText {
+  margin: 0;
+  font-size: var(--portal-fs-body);
+  line-height: var(--lh-base);
+  color: var(--portal-on-accent-soft);
+  text-wrap: pretty;
+}
+
+.whatsapp {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--portal-space-2-5);
+  height: 52px;
+  border-radius: var(--portal-radius-md);
+  background-color: var(--portal-whatsapp);
+  color: var(--portal-on-accent);
+  font-family: var(--font-logo);
+  font-weight: var(--fw-heavy);
+  font-size: var(--portal-fs-amount);
+  text-decoration: none;
+}
+
+.whatsapp:hover { background-color: var(--portal-whatsapp-hover); color: var(--portal-on-accent); }
+.whatsapp:focus-visible { outline: 2px solid var(--portal-text); outline-offset: 3px; }
+
+/* ── Últimos pagos ── */
+
+.payments {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.paymentsTitle { margin-bottom: var(--space-2); }
+
+.paymentList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.payment {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--portal-space-3-5);
+  border-radius: var(--portal-radius-md);
+  background-color: var(--portal-surface);
+  border: 1px solid var(--portal-line);
+}
+
+.paymentIcon {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--portal-radius-sm);
+  background-color: var(--portal-success-soft);
+  color: var(--portal-success);
+}
+
+.paymentText {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.paymentTitle {
+  font-size: var(--portal-fs-body);
+  font-weight: var(--fw-bold);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.paymentDate {
+  font-size: var(--portal-fs-caption);
+  color: var(--portal-text-muted);
+}
+
+.paymentValue {
+  flex: 0 0 auto;
+  font-family: var(--font-logo);
+  font-weight: var(--fw-bold);
+  font-size: var(--portal-fs-amount);
+}
+
+/* ── Acceso a medidas ── */
+
+.ghost {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  height: 48px;
+  border-radius: var(--portal-radius);
+  border: 1.5px solid var(--portal-line-strong);
+  background-color: var(--portal-surface-soft);
+  color: var(--portal-text);
+  font-family: var(--font-sans);
+  font-size: var(--portal-fs-body);
+  font-weight: var(--fw-bold);
+  cursor: pointer;
+}
+
+.ghost:hover { background-color: var(--portal-surface-hover); }
+.ghost:focus-visible { outline: 2px solid var(--portal-accent); outline-offset: 2px; }
+.ghostIcon { color: var(--portal-accent); }
