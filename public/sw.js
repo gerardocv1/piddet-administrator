@@ -2,8 +2,8 @@
    (Chrome exige un worker con manejador de `fetch`); el cacheo es deliberadamente conservador
    para que un despliegue nuevo nunca quede servido desde una versión vieja. */
 
-const SHELL_CACHE = 'piddet-shell-v3';
-const ASSET_CACHE = 'piddet-assets-v3';
+const SHELL_CACHE = 'piddet-shell-v4';
+const ASSET_CACHE = 'piddet-assets-v4';
 const CURRENT_CACHES = [SHELL_CACHE, ASSET_CACHE];
 const ADMIN_START = '/admin/';
 const MAX_ASSET_ENTRIES = 24;
@@ -55,10 +55,11 @@ async function networkFirstNavigation(request, shellKey = ADMIN_START) {
   }
 }
 
-// Portal del afiliado (/{compañía}/afiliados): es una app instalable aparte. Su shell se guarda
-// por compañía para que abra aunque el socio no tenga señal en el gimnasio; los datos los trae
-// el propio portal (y muestra lo último que vio mientras tanto).
-const PORTAL_RE = /^\/[^/]+\/afiliados\/?$/;
+// Gimnasios (/gym y /gym/{compañía}): el portal es una app instalable aparte y la entrada general
+// queda dentro de su alcance (ahí vuelve al cerrar sesión). El shell se guarda por ruta para que
+// abra aunque el socio no tenga señal en el gimnasio; los datos los trae el propio portal (y
+// muestra lo último que vio mientras tanto).
+const PORTAL_RE = /^\/gym(\/[^/]+)?\/?$/;
 
 async function cacheFirst(request, cacheName) {
   const cached = await caches.match(request);

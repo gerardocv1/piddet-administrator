@@ -98,6 +98,12 @@ location /assets/ {
 # El shell y el service worker, nunca: son los que traen cada versión nueva.
 location = /index.html { add_header Cache-Control "no-cache"; }
 location = /sw.js      { add_header Cache-Control "no-cache"; }
+
+# Entrada de gimnasios: dist/gym/index.html es el mismo shell con la tarjeta para compartir de
+# piddet gym (WhatsApp no ejecuta JS; ver vite.config.js). Sin esta línea igual funciona, pero
+# /gym pasa por un 301 a /gym/.
+location = /gym { add_header Cache-Control "no-cache"; try_files /gym/index.html =404; }
+location = /gym/index.html { add_header Cache-Control "no-cache"; }
 ```
 
 Con **Quick Deploy** activado, cada merge a `master` dispara el script y publica solo.

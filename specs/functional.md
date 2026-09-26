@@ -472,22 +472,30 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
   detalle lo avisa y, con `gym-subscriptions-create`, ofrece **Generar período**: fuerza el mismo
   ciclo para esa suscripción, con confirmación —y advertencia en rojo si el resultado va a ser el
   corte, porque el vigente agotó su gracia sin ningún abono—.
-- **Entrada general de los gimnasios** (`/gym`, `GymHub.jsx`): la puerta de la plataforma, sin
-  gimnasio en la URL. Arriba la marca **piddet gym** (`PiddetGymLogo`: pesita en placa naranja,
-  "piddet" naranja y "gym" blanco); el socio escribe su celular y el código del SMS
+- **Entrada general de los gimnasios** (`/gym`, `GymHub.jsx`): la **única puerta** del socio,
+  sin gimnasio en la URL. Arriba la marca **piddet gym** (`PiddetGymLogo`: pesita en placa
+  naranja, "piddet" naranja y "gym" blanco); el socio escribe su celular y el código del SMS
   (`api.gymPlatformRequestCode` / `api.gymPlatformVerifyCode`, que lo buscan en todos los
-  gimnasios) y la plataforma lo lleva a su portal —si es socio de varios, elige—; abajo,
+  gimnasios; cajas de 6 dígitos con `autocomplete="one-time-code"`: iOS lo sugiere y Chrome en
+  Android lo pega solo) y la plataforma lo lleva a su portal —si es socio de varios, elige—; abajo,
   **Nuestros aliados**: un chip con logo y nombre por cada gimnasio con el portal encendido
-  (`api.gymPlatformPartners`). Si el teléfono ya tiene sesión en un gimnasio, `/gym` va directo a
-  él. La sesión viaja al portal de cada gimnasio por `localStorage`
+  (`api.gymPlatformPartners`), que lleva a su **perfil público** (`/{compañía}`). Si el teléfono ya
+  tiene sesión en un gimnasio, `/gym` va directo a él. La sesión viaja al portal por `localStorage`
   (`piddet_gym_portal_pending:{compañía}`, `portalStorage.js`), que la adopta al abrir y la borra.
-  `gym` queda reservado: no se lee como el username de una compañía.
-- **Portal público del afiliado** (`/{compañía}/afiliados`, `src/screens/public/GymPortal/`):
-  el socio entra desde el teléfono con su **celular y un código que le llega por SMS** (cajas de
-  6 dígitos con `autocomplete="one-time-code"`: iOS lo sugiere y Chrome en Android lo pega solo;
-  entra al completar el último dígito, con espera visible para pedir otro). La entrada con
-  **fecha de nacimiento** (tres selectores) es alterna y solo aparece si el backend la tiene
-  encendida (`api.gymPortalOptions`). Ya dentro ve, sin sesión del panel, su suscripción (tarjeta del plan con los días que
+  Es también a donde vuelve el portal: al cerrar sesión, sin sesión o con la sesión vencida
+  (`?aviso=sesion`, o `?aviso=conexion` si no pudo abrirla; el aviso se muestra y la URL queda
+  limpia). `gym` queda reservado: no se lee como el username de una compañía.
+  **Al compartir el enlace** (WhatsApp, redes) se ve la tarjeta de piddet gym —título, descripción
+  e imagen `public/og/piddet-gym.png` de 1200 × 630—: como esos rastreadores no ejecutan JS, el
+  build genera `dist/gym/index.html` con sus etiquetas (detalle en [`tech.md`](tech.md) →
+  *Rutas*).
+- **Perfil público de un gimnasio** (`/{compañía}` con `company_type_key = gym`): una tarjeta
+  oscura de piddet gym, *¿Ya eres socio de …?*, con el botón **Ver mi suscripción** hacia `/gym`.
+- **Portal público del afiliado** (`/gym/{compañía}`, `src/screens/public/GymPortal/`): **no
+  tiene entrada propia**; sin sesión redirige a `/gym`. La URL anterior, `/{compañía}/afiliados`,
+  redirige al portal nuevo. Las entradas por compañía del backend (código por SMS y fecha de
+  nacimiento en `/public/{compañía}/gym/portal…`) siguen existiendo, pero el panel ya no las
+  ofrece. Ya dentro ve, sin sesión del panel, su suscripción (tarjeta del plan con los días que
   quedan; el **saldo pendiente** con WhatsApp al gimnasio si debe; la tarjeta **Tu gimnasio** con la
   dirección de la sede, si está abierto ahora, el horario de la semana y los atajos *Cómo llegar*,
   *Llamar* y *WhatsApp* —`GymPortalGym.jsx`, sobre `storeHours.js`—; y los últimos pagos) y sus **medidas** (peso, IMC y grasa; la silueta del panel —`BODY_MAP_DOTS`/`IMAGES` de
@@ -496,9 +504,10 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
   sola llamada trae todo. La **sesión no vence**: queda guardada en el teléfono (`localStorage`) y
   en el servidor, y solo termina con *Cerrar sesión*, que está **a propósito escondido** —un
   enlace pequeño al final del Perfil, con confirmación: la idea es que el socio se quede dentro—
-  y avisa al backend (`api.gymPortalLogout`) para que el token deje de servir. Al volver se pinta lo último
-  que se vio y `api.gymPortalResume` lo refresca; si la sesión ya no vale (401) vuelve a la
-  entrada con el aviso. Una respuesta que llega después de cerrar sesión se descarta.
+  y avisa al backend (`api.gymPortalLogout`) para que el token deje de servir; después va a `/gym`.
+  Al volver se pinta lo último que se vio y `api.gymPortalResume` lo refresca; si la sesión ya no
+  vale (401) vuelve a `/gym` con el aviso. Una respuesta que llega después de cerrar sesión se
+  descarta.
   **Se instala como app** en Android e iOS, con el nombre y el icono del gimnasio: aviso arriba,
   botón *Instalar como app* y una hoja que guía según el teléfono (detalle en
   [`tech.md`](tech.md) → *PWA*).
@@ -507,7 +516,7 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
   `cropImage.js`— y se sube ya reducida a 720 × 720 JPEG) y corrige **correo, documento, fecha de
   nacimiento, sexo y objetivo**. Nombre y celular solo se muestran: se cambian en recepción. La
   foto aparece también en el avatar del encabezado. La fecha de nacimiento se puede corregir pero
-  no vaciar (es la llave de la entrada alterna). En demo el código se muestra en pantalla (no sale
+  no vaciar (es la llave de la entrada alterna del backend). En demo el código se muestra en pantalla (no sale
   SMS): Laura (`3001234567`, nacida hoy en 1994) está al día y con medidas; Carlos (`3007654321`,
   30/11/1988) tiene saldo y ninguna medida.
 

@@ -1,9 +1,20 @@
 // Lo que el teléfono guarda del portal de gimnasios, compartido entre la entrada general
-// (piddet.com/gym) y el portal de cada gimnasio (/{compañía}/afiliados).
+// (piddet.com/gym) y el portal de cada gimnasio (/gym/{compañía}).
 //
 //  - `piddet_gym_portal_session:{compañía}`: la sesión abierta, con lo último que se vio.
 //  - `piddet_gym_portal_pending:{compañía}`: una sesión que abrió la entrada general y que el
 //    portal de ese gimnasio adopta la primera vez que se abre (y borra).
+
+export const GYM_HUB_PATH = '/gym';
+
+/** Portal de un gimnasio: vive bajo la entrada general, que es por donde se entra. */
+export const portalUrl = (username) => `${GYM_HUB_PATH}/${encodeURIComponent(username)}`;
+
+/** Avisos con los que el portal devuelve al socio a la entrada (`?aviso=`). */
+export const HUB_NOTICES = {
+  sesion: 'Tu sesión terminó. Vuelve a ingresar con tu número.',
+  conexion: 'No pudimos abrir tu suscripción. Revisa tu señal e intenta de nuevo.',
+};
 
 const SESSION_PREFIX = 'piddet_gym_portal_session:';
 const PENDING_PREFIX = 'piddet_gym_portal_pending:';

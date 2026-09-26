@@ -1,6 +1,5 @@
 import React from 'react';
 import { api } from '../../../lib/api.js';
-import { GymPortalLogin } from './GymPortalLogin.jsx';
 import { GymPortalSubscription } from './GymPortalSubscription.jsx';
 import { GymPortalMeasures } from './GymPortalMeasures.jsx';
 import { GymPortalProfile } from './GymPortalProfile.jsx';
@@ -9,17 +8,18 @@ import { subscriptionView, SUBSCRIPTION_STATE } from './gymPortalData.js';
 import { usePortalInstall } from './usePortalInstall.js';
 import { InstallBanner, InstallButton, InstallSheet } from './GymPortalInstall.jsx';
 import { Spinner } from '../../../components';
-import { clearPending, peekPending } from './portalStorage.js';
+import { GYM_HUB_PATH, clearPending, peekPending } from './portalStorage.js';
 import s from './GymPortal.module.css';
 
-// Portal público del afiliado (/{username-compañía}/afiliados): el socio entra con su celular y su
-// fecha de nacimiento y ve su suscripción, su saldo y las medidas que le han tomado. Pensado para
-// el teléfono: una columna, fondo oscuro fijo y navegación abajo, al alcance del pulgar.
+// Portal público del afiliado (/gym/{username-compañía}): el socio ve su suscripción, su saldo y
+// las medidas que le han tomado. Pensado para el teléfono: una columna, fondo oscuro fijo y
+// navegación abajo, al alcance del pulgar.
 //
-// Se entra con un código por SMS. La sesión queda guardada en el teléfono (localStorage) y en el
-// servidor, y no vence: solo termina cuando el socio toca "Cerrar sesión". Al abrir se pinta
-// enseguida lo último que se vio y se refresca por detrás; si la sesión ya no vale (401) vuelve
-// a la entrada.
+// No tiene entrada propia: se entra por la general (piddet.com/gym) con un código por SMS, que
+// deja la sesión lista para este portal. La sesión queda guardada en el teléfono (localStorage) y
+// en el servidor, y no vence: solo termina cuando el socio toca "Cerrar sesión". Al abrir se pinta
+// enseguida lo último que se vio y se refresca por detrás. Sin sesión, al cerrarla o si ya no vale
+// (401), vuelve a la entrada general.
 
 const TABS = [
   { key: 'subscription', label: 'Suscripción', Icon: CardIcon },
@@ -98,6 +98,7 @@ function writeBrand(username, company) {
 const BANNER_KEY = 'piddet_gym_portal_install_dismissed';
 const BANNER_SNOOZE_MS = 7 * 24 * 60 * 60 * 1000;
 const REFRESH_AFTER_MS = 60 * 1000;
+const LOGOUT_WAIT_MS = 2500;
 
 function bannerSnoozed() {
   try {
@@ -155,7 +156,6 @@ export function GymPortal({ companyUsername }) {
   const [resuming, setResuming] = React.useState(() => !session && !!launch.handoff);
   const [tab, setTab] = React.useState(launch.tab);
   const [company, setCompany] = React.useState(session?.company || null);
-  const [notice, setNotice] = React.useState('');
   const installer = usePortalInstall();
   const [sheetOpen, setSheetOpen] = React.useState(false);
   const [bannerHidden, setBannerHidden] = React.useState(bannerSnoozed);
@@ -173,15 +173,15 @@ export function GymPortal({ companyUsername }) {
     }
   }, []);
 
-  // Nombre y logo del gimnasio para la entrada, antes de que el socio se identifique.
+  // Nombre y logo del gimnasio mientras se abre una sesión recién entregada (la pantalla de carga).
   React.useEffect(() => {
-    if (session) return undefined;
+    if (session || !resuming) return undefined;
     let alive = true;
     api.publicCompany(companyUsername)
       .then((data) => { if (alive && data?.company) setCompany(data.company); })
       .catch(() => {});
     return () => { alive = false; };
-  }, [companyUsername, session]);
+  }, [companyUsername, session, resuming]);
 
   const brand = session?.company || company;
   React.useEffect(() => { writeBrand(companyUsername, brand); }, [companyUsername, brand]);
@@ -189,9 +189,12 @@ export function GymPortal({ companyUsername }) {
   React.useEffect(() => {
     const name = brand?.name;
     const previous = document.title;
-    document.title = name ? `${name} · Afiliados` : 'Afiliados';
+    document.title = name ? `${name} · Mi suscripción` : 'Mi suscripción · piddet gym';
     return () => { document.title = previous; };
   }, [brand]);
+
+  // Por qué se vuelve a la entrada general, si hace falta decírselo (`?aviso=`, ver GymHub).
+  const [leaving, setLeaving] = React.useState(null);
 
   // Refresca con la sesión guardada y renueva el token. Sin red se queda lo último que se vio;
   // con la sesión vencida se vuelve a la entrada.
@@ -212,9 +215,9 @@ export function GymPortal({ companyUsername }) {
         tokenRef.current = null;
         writeSession(companyUsername, null);
         setSession(null);
-        setNotice(err.message || 'Tu sesión terminó. Vuelve a ingresar.');
+        setLeaving('sesion');
       } else if (!readSession(companyUsername)) {
-        setNotice('No pudimos conectarnos. Revisa tu señal e intenta de nuevo.');
+        setLeaving('conexion');
       }
     } finally {
       setResuming(false);
@@ -287,11 +290,11 @@ export function GymPortal({ companyUsername }) {
     setSession(data);
   };
 
-  const expire = (err) => {
+  const expire = () => {
     tokenRef.current = null;
     writeSession(companyUsername, null);
     setSession(null);
-    setNotice(err?.message || 'Tu sesión terminó. Vuelve a ingresar.');
+    setLeaving('sesion');
   };
 
   // Acciones del perfil: una sesión vencida vuelve a la entrada; cualquier otro error sube a la
@@ -300,7 +303,7 @@ export function GymPortal({ companyUsername }) {
     try {
       applyData(await call(tokenRef.current, ...args));
     } catch (err) {
-      if (err?.status === 401) expire(err);
+      if (err?.status === 401) expire();
       throw err;
     }
   };
@@ -308,38 +311,29 @@ export function GymPortal({ companyUsername }) {
   const uploadPhoto = withSession((token, file) => api.gymPortalUploadPhoto(companyUsername, token, file));
   const removePhoto = withSession((token) => api.gymPortalRemovePhoto(companyUsername, token));
 
-  // Cómo se entra: largo del código, espera para pedir otro y si hay entrada con fecha.
-  const [loginOptions, setLoginOptions] = React.useState(null);
+  // Sin sesión no hay nada que mostrar aquí: a la entrada general, diciendo por qué si hace falta.
+  // `replace`: el botón atrás no debe devolverlo a un portal vacío.
+  const noSession = !session && !resuming;
   React.useEffect(() => {
-    if (session || loginOptions) return undefined;
-    let alive = true;
-    api.gymPortalOptions(companyUsername)
-      .then((data) => { if (alive && data) setLoginOptions(data); })
-      .catch(() => {});
-    return () => { alive = false; };
-  }, [companyUsername, session, loginOptions]);
-
-  const enter = (data) => {
-    applyData(data);
-    setNotice('');
-    setTab('subscription');
-    window.scrollTo(0, 0);
-  };
-
-  const requestCode = (phoneNumber) => api.gymPortalRequestCode(companyUsername, phoneNumber);
-  const verifyCode = async (phoneNumber, code) => enter(await api.gymPortalVerifyCode(companyUsername, phoneNumber, code));
-  const birthdateLogin = async ({ phoneNumber, birthdate }) => enter(await api.gymPortalAccess(companyUsername, { phoneNumber, birthdate }));
+    if (!noSession) return;
+    window.location.replace(leaving ? `${GYM_HUB_PATH}?aviso=${leaving}` : GYM_HUB_PATH);
+  }, [noSession, leaving]);
 
   // La sesión no vence: solo termina aquí. Se avisa al servidor para que el token deje de servir
-  // (si no hay señal, el teléfono igual la olvida).
-  const logout = () => {
-    if (tokenRef.current) api.gymPortalLogout(companyUsername, tokenRef.current).catch(() => {});
+  // (con un tope: si no hay señal, el teléfono igual la olvida) y se vuelve a la entrada general.
+  const [signingOut, setSigningOut] = React.useState(false);
+  const logout = async () => {
+    const token = tokenRef.current;
     tokenRef.current = null;
     writeSession(companyUsername, null);
-    setSession(null);
-    setNotice('');
-    setTab('subscription');
-    window.scrollTo(0, 0);
+    setSigningOut(true);
+    if (token) {
+      await Promise.race([
+        api.gymPortalLogout(companyUsername, token).catch(() => {}),
+        new Promise((resolve) => { setTimeout(resolve, LOGOUT_WAIT_MS); }),
+      ]);
+    }
+    window.location.assign(GYM_HUB_PATH);
   };
 
   const goTo = (key) => {
@@ -358,29 +352,16 @@ export function GymPortal({ companyUsername }) {
     />
   );
 
-  if (resuming) {
+  if (resuming || !session || signingOut) {
+    let label = 'Abriendo tu suscripción…';
+    if (signingOut) label = 'Cerrando sesión…';
+    else if (!resuming) label = 'Volviendo a la entrada…';
     return (
       <div ref={rootRef} className={[s.page, s.glowLogin].join(' ')}>
         <div className={s.splash} aria-busy="true">
           <span className={s.splashName}>{brand?.name || 'Tu gimnasio'}</span>
-          <Spinner size="md" label="Abriendo tu suscripción…" />
+          <Spinner size="md" label={label} />
         </div>
-      </div>
-    );
-  }
-
-  if (!session) {
-    return (
-      <div ref={rootRef} className={[s.page, s.glowLogin].join(' ')}>
-        <GymPortalLogin
-          company={company}
-          options={loginOptions}
-          onRequestCode={requestCode}
-          onVerifyCode={verifyCode}
-          onBirthdateLogin={birthdateLogin}
-          notice={notice}
-        />
-        {sheet}
       </div>
     );
   }

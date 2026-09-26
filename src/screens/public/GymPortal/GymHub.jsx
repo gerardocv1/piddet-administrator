@@ -4,16 +4,22 @@ import { api } from '../../../lib/api.js';
 import { GymPortalLogin } from './GymPortalLogin.jsx';
 import { PiddetGymLogo } from './PiddetGymLogo.jsx';
 import { ArrowRightIcon } from './icons.jsx';
-import { savePending, savedGyms } from './portalStorage.js';
+import { HUB_NOTICES, portalUrl, savePending, savedGyms } from './portalStorage.js';
 import page from './GymPortal.module.css';
 import s from './GymHub.module.css';
 
 // Entrada general de los gimnasios de la plataforma (piddet.com/gym). No es de ningún gimnasio:
 // el socio escribe su celular, recibe el código y entra al suyo (si es de varios, elige). Abajo,
-// los gimnasios aliados. Si el teléfono ya tiene sesión en un gimnasio, va directo a él.
+// los gimnasios aliados (cada uno lleva a su perfil público). Si el teléfono ya tiene sesión en un
+// gimnasio, va directo a él. Es también a donde vuelve el portal al cerrar sesión o si la sesión
+// ya no vale (`?aviso=` dice por qué).
 
 const HUB_OPTIONS = { code_length: 6, birthdate_login: false };
-const portalUrl = (username) => `/${encodeURIComponent(username)}/afiliados`;
+const profileUrl = (username) => `/${encodeURIComponent(username)}`;
+
+function readNotice() {
+  return HUB_NOTICES[new URLSearchParams(window.location.search).get('aviso')] || '';
+}
 const initial = (name) => String(name || '?').trim().charAt(0).toUpperCase();
 
 function GymMark({ gym, size = 'md' }) {
@@ -43,7 +49,7 @@ function Partners() {
       <ul className={s.chips}>
         {partners.map((gym) => (
           <li key={gym.username}>
-            <a className={s.chip} href={portalUrl(gym.username)}>
+            <a className={s.chip} href={profileUrl(gym.username)}>
               <GymMark gym={gym} size="sm" />
               <span className={s.chipName}>{gym.name}</span>
             </a>
@@ -82,6 +88,12 @@ export function GymHub() {
   const [saved] = React.useState(savedGyms);
   const [chooser, setChooser] = React.useState(() => (saved.length > 1 ? saved : null));
   const redirecting = saved.length === 1 && !chooser;
+  const [notice] = React.useState(readNotice);
+
+  // El aviso se lee una vez: la URL queda limpia para compartirla o recargar.
+  React.useEffect(() => {
+    if (window.location.search) window.history.replaceState(null, '', window.location.pathname);
+  }, []);
 
   React.useEffect(() => {
     const previous = document.title;
@@ -124,6 +136,7 @@ export function GymHub() {
           options={HUB_OPTIONS}
           onRequestCode={(phone) => api.gymPlatformRequestCode(phone)}
           onVerifyCode={verifyCode}
+          notice={notice}
           header={(
             <div className={s.top}>
               <PiddetGymLogo size="md" />
