@@ -4638,9 +4638,10 @@ const gymMemberListPresent = (m) => {
 };
 
 // Estado de la membresía del afiliado, espejo de GymMember::MEMBERSHIP_* del backend:
-// `grace` = suscripción activa con un período vencido (vivo) y con saldo; `active` = activa sin
-// eso; `cancelled` = sin activa y con alguna cancelada; `none` = nunca se suscribió. `pending`
-// (activa con saldo en cualquier período no cancelado) se cruza con los dos primeros.
+// `grace` = suscripción activa con saldo en un período no cancelado que ya arrancó (el vigente o
+// uno anterior); `active` = activa y al día; `cancelled` = sin activa y con alguna cancelada;
+// `none` = nunca se suscribió. `pending` (activa con saldo en cualquier período no cancelado) se
+// cruza con los dos primeros.
 const livePeriodsOf = (subscriptionId) => mockGymSubscriptionPeriods
   .filter((p) => p.subscription_id === subscriptionId && p.status !== GYM_PER_CANCELLED);
 const periodOwes = (p) => Number(p.price) > periodPaidTotal(p);
@@ -4648,9 +4649,8 @@ const gymMembershipOf = (m) => {
   const subs = mockGymSubscriptions.filter((sub) => sub.gym_member_id === m.id);
   const active = subs.find((sub) => sub.status === GYM_SUB_ACTIVE);
   if (!active) return subs.length ? 'cancelled' : 'none';
-  const overdue = livePeriodsOf(active.id).some((p) => [GYM_PER_CURRENT, GYM_PER_GRACE].includes(p.status)
-    && p.end_date < todayIso() && periodOwes(p));
-  return overdue ? 'grace' : 'active';
+  const due = livePeriodsOf(active.id).some((p) => p.start_date <= todayIso() && periodOwes(p));
+  return due ? 'grace' : 'active';
 };
 const gymMemberIsPending = (m) => mockGymSubscriptions
   .some((sub) => sub.gym_member_id === m.id && sub.status === GYM_SUB_ACTIVE && livePeriodsOf(sub.id).some(periodOwes));
@@ -5007,6 +5007,8 @@ function resolveGymMock(path, query, { method = 'GET', body } = {}) {
       .filter((sub) => sub.status === GYM_SUB_ACTIVE)
       .map((sub) => ({ sub, period: currentPeriodOf(sub.id) }))
       .filter(({ period }) => period && [GYM_PER_CURRENT, GYM_PER_GRACE].includes(period.status) && period.end_date <= limit)
+      // Un período ya vencido y pagado no es gracia (el afiliado cuenta como activo): no se lista.
+      .filter(({ period }) => computePeriodStatus(period) !== GYM_PER_GRACE || periodOwes(period))
       .map(({ sub, period }) => {
         const inGrace = computePeriodStatus(period) === GYM_PER_GRACE;
         const pending = Math.max(0, Number(period.price) - periodPaidTotal(period));

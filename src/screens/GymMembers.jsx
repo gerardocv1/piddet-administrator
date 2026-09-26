@@ -208,28 +208,38 @@ export function GymMembers() {
   // no su activo/inactivo administrativo. Sin suscripción activa, la acción es Suscribir.
   const membership = (r) => {
     if (!r.subscription) {
-      return { badge: { label: 'Sin suscripción', variant: 'neutral' }, text: null, detail: null, alive: false };
+      return { badge: { label: 'Sin suscripción', variant: 'neutral' }, endDate: null, detail: null, alive: false, pending: 0 };
     }
     const active = Number(r.subscription.subscription_status) === GYM_SUBSCRIPTION_STATUS.ACTIVE;
     const inGrace = active && Number(r.subscription.computed_status) === GYM_PERIOD_STATUS.GRACE;
     // El badge sigue la membresía que calcula el backend (la misma del filtro y del widget del
-    // inicio): «En gracia» también cuando lo que se debe es un período anterior al vigente.
+    // inicio): «En gracia» en cuanto debe un período que ya arrancó, el vigente o uno anterior.
     const badge = r.membership
       ? gymMembershipMeta(r.membership)
       : (inGrace ? gymPeriodStatusMeta(GYM_PERIOD_STATUS.GRACE) : gymSubscriptionStatusMeta(r.subscription.subscription_status));
-    const vigencia = r.subscription.end_date
-      ? `${inGrace ? 'Venció' : 'Vence'} el ${formatShortDate(r.subscription.end_date)}`
-      : null;
-    // `text` es la columna Vigencia de la tabla (escritorio). `detail` es la línea de la tarjeta
-    // móvil, donde el estado ya lo dice el badge de al lado: ahí no se repite, se nombra el plan.
+    const endDate = active && r.subscription.end_date ? formatShortDate(r.subscription.end_date) : null;
+    // `endDate` es la columna Vence de la tabla (escritorio). `detail` es la línea de la tarjeta
+    // móvil: sin encabezado de columna, ahí la fecha se nombra; una cancelada muestra su plan.
     return {
       badge,
-      text: active ? vigencia : `Cancelada · ${r.subscription.plan_name}`,
-      detail: active ? vigencia : r.subscription.plan_name,
+      endDate,
+      detail: active ? (endDate && `Vence ${endDate}`) : r.subscription.plan_name,
       alive: active,
       pending: active ? Number(r.subscription.pending_total) || 0 : 0,
     };
   };
+
+  // Estado de la membresía más, si debe algo, la etiqueta corta de pago pendiente.
+  const membershipBadges = (ms) => (
+    <span className={gl.badges}>
+      <Badge variant={ms.badge.variant}>{ms.badge.label}</Badge>
+      {ms.pending > 0 && (
+        <Badge variant="danger" className={gl.badgeSmall} title={`Pendiente de pago: ${gymMoney(ms.pending)}`}>
+          Pdte. pago
+        </Badge>
+      )}
+    </span>
+  );
 
   // Con el filtro de cumpleaños cada fila trae `birthdate`: se dice el día y los años que cumple.
   const birthdayText = (r) => {
@@ -245,18 +255,12 @@ export function GymMembers() {
       render: (r) => birthdayText(r) || <span className={s.faint}>—</span>,
     }] : []),
     {
-      key: 'subscription', header: 'Membresía', width: 140,
-      render: (r) => {
-        const ms = membership(r);
-        return <Badge variant={ms.badge.variant}>{ms.badge.label}</Badge>;
-      },
+      key: 'subscription', header: 'Membresía', width: 200,
+      render: (r) => membershipBadges(membership(r)),
     },
     {
-      key: 'end_date', header: 'Vigencia', width: 170,
-      render: (r) => {
-        const ms = membership(r);
-        return ms.text || <span className={s.faint}>—</span>;
-      },
+      key: 'end_date', header: 'Vence', width: 130,
+      render: (r) => membership(r).endDate || <span className={s.faint}>—</span>,
     },
     {
       // Saldo por cobrar de la suscripción activa; una cancelada no es deuda.
@@ -335,7 +339,7 @@ export function GymMembers() {
               media={<Avatar name={r.member_name} size="sm" />}
               title={r.member_name}
               subtitle={birthdayText(r)}
-              badge={<Badge variant={ms.badge.variant}>{ms.badge.label}</Badge>}
+              badge={membershipBadges(ms)}
               meta={ms.pending > 0
                 ? <>{ms.detail && <>{ms.detail} · </>}<span className={gl.saldo}>saldo {gymMoney(ms.pending)}</span></>
                 : ms.detail}

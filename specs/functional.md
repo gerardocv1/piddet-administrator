@@ -366,12 +366,13 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
   y no se lista. **El listado de afiliados
   muestra el estado de la membresía, no el activo/inactivo administrativo**: cada fila trae la
   suscripción más reciente (badge Activa/En gracia/Cancelada/Sin suscripción según el campo
-  `membership` que calcula el backend, su vencimiento "Vence/Venció el …" y, en escritorio, la
-  columna **Saldo** por cobrar; en el teléfono el saldo va en la línea de la tarjeta). El filtro
-  **Membresía** (`?membership=active|grace|pending|cancelled|none`) aplica las reglas de
-  `GymMember::MEMBERSHIP_*` del backend: *activa* (suscripción activa sin períodos vencidos con
-  saldo), *en gracia* (activa con un período vencido y con saldo), *pendiente de pago* (activa
-  con saldo en cualquier período; se cruza con las dos anteriores), *cancelada* (sin activa y con
+  `membership` que calcula el backend, junto con una etiqueta corta **Pdte. pago** cuando
+  debe algo; la columna **Vence** con solo la fecha de vencimiento y, en escritorio, la columna
+  **Saldo** por cobrar; en el teléfono la fecha y el saldo van en la línea de la tarjeta). El
+  filtro **Membresía** (`?membership=active|grace|pending|cancelled|none`) aplica las reglas de
+  `GymMember::MEMBERSHIP_*` del backend: *activa* (suscripción activa y al día), *en gracia*
+  (activa con saldo en un período que ya arrancó, sea el vigente o uno anterior), *pendiente de
+  pago* (activa con saldo en cualquier período; se cruza con las dos anteriores), *cancelada* (sin activa y con
   alguna cancelada) y *sin suscripción*. Es el destino de los contadores del widget «Afiliados»
   del inicio. La acción por fila es **Renovar** (membresía vigente) o
   **Suscribir** (sin membresía al día); tocar la tarjeta abre la ficha. El **objetivo del afiliado
