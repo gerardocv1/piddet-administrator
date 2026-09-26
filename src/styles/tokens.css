@@ -232,6 +232,8 @@
   --portal-on-accent-soft: rgba(11, 38, 48, 0.85);
   --portal-on-accent-muted: rgba(11, 38, 48, 0.72);
   --portal-scrim: rgba(11, 38, 48, 0.35);
+  --portal-nav-bg: rgba(11, 38, 48, 0.82); /* barra inferior: --portal-bg translúcido bajo el desenfoque */
+  --portal-nav-h: 3.5rem;        /* 56px: alto de la barra inferior, sin la zona segura */
   --portal-ring-track: rgba(255, 255, 255, 0.18);
   --portal-ring-track-dim: rgba(255, 255, 255, 0.14);
   --portal-glow-teal: rgba(47, 151, 165, 0.45);

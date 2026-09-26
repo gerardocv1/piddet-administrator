@@ -76,7 +76,10 @@
   display: flex;
   flex-direction: column;
   gap: var(--portal-space-5-5);
-  padding: var(--space-14) var(--space-5) var(--space-6);
+  /* Abajo deja libre lo que ocupa la barra fija, para que el final de cada pestaña no quede
+     tapado. */
+  padding: var(--space-14) var(--space-5)
+    calc(var(--space-6) + var(--portal-nav-h) + env(safe-area-inset-bottom));
 }
 
 /* ── Encabezado con la persona ── */
@@ -156,17 +159,34 @@
 
 .avatar:focus-visible { outline: 2px solid var(--portal-accent); outline-offset: 2px; }
 
-/* ── Pestañas inferiores ── */
+/* ── Barra inferior, como la de Instagram ──
+   Fija al borde de la pantalla (no al final del contenido: .page recorta con overflow y un
+   sticky ahí nunca se despega), translúcida con desenfoque y una línea fina arriba. El activo va
+   en naranja y con el trazo más grueso; en Perfil, la foto del socio. Se esconde mientras escribe
+   para no quedar encima del teclado. */
 
 .tabs {
-  position: sticky;
+  position: fixed;
+  left: 0;
+  right: 0;
   bottom: 0;
-  z-index: 2;
+  z-index: 40; /* debajo de la hoja de instalación (50) y del recorte de foto (60) */
   display: flex;
-  align-items: stretch;
-  padding: 0 var(--space-3) max(var(--portal-space-2-5), env(safe-area-inset-bottom));
-  background-color: var(--portal-bg);
+  justify-content: center;
+  padding: 0 var(--space-3) env(safe-area-inset-bottom);
+  background-color: var(--portal-nav-bg);
+  -webkit-backdrop-filter: saturate(160%) blur(18px);
+  backdrop-filter: saturate(160%) blur(18px);
   border-top: 1px solid var(--portal-line);
+  transition: transform 0.2s ease;
+}
+
+.tabsHidden { transform: translateY(100%); }
+
+.tabsRow {
+  display: flex;
+  width: 100%;
+  max-width: 480px;
 }
 
 .tab {
@@ -176,21 +196,41 @@
   align-items: center;
   justify-content: center;
   gap: var(--space-1);
-  height: 64px;
+  height: var(--portal-nav-h);
   border: 0;
   background: transparent;
   font-family: var(--font-sans);
-  font-size: var(--portal-fs-caption);
+  font-size: var(--portal-fs-micro);
   font-weight: var(--fw-bold);
   color: var(--portal-text-subtle);
   cursor: pointer;
+  transition: color 0.15s ease, transform 0.15s ease;
 }
 
+.tab:active { transform: scale(0.92); }
 .tab:hover { color: var(--portal-text); }
 .tab:focus-visible { outline: 2px solid var(--portal-accent); outline-offset: -4px; border-radius: var(--portal-radius); }
 
 .tabOn,
 .tabOn:hover { color: var(--portal-accent); }
+
+/* Foto del socio en la pestaña Perfil; activa, con el aro naranja. */
+.tabAvatar {
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  overflow: hidden;
+  box-shadow: 0 0 0 1.5px var(--portal-text-subtle);
+}
+
+.tabAvatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.tabOn .tabAvatar { box-shadow: 0 0 0 2px var(--portal-accent); }
 
 /* ── Cerrar sesión: solo al final del perfil, pequeño y con confirmación ── */
 

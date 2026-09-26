@@ -336,6 +336,24 @@ export function GymPortal({ companyUsername }) {
     window.location.assign(GYM_HUB_PATH);
   };
 
+  // Mientras escribe en un campo la barra se esconde: en el teléfono quedaría encima del teclado.
+  const [typing, setTyping] = React.useState(false);
+  React.useEffect(() => {
+    const isField = (el) => el && el.matches?.('input, textarea, select');
+    const onIn = (e) => { if (isField(e.target)) setTyping(true); };
+    const onOut = (e) => { if (isField(e.target)) setTyping(false); };
+    document.addEventListener('focusin', onIn);
+    document.addEventListener('focusout', onOut);
+    return () => {
+      document.removeEventListener('focusin', onIn);
+      document.removeEventListener('focusout', onOut);
+    };
+  }, []);
+
+  const [tabPhotoFailed, setTabPhotoFailed] = React.useState(false);
+  const photoUrl = session?.member?.photo_url;
+  React.useEffect(() => { setTabPhotoFailed(false); }, [photoUrl]);
+
   const goTo = (key) => {
     setTab(key);
     window.scrollTo(0, 0);
@@ -427,19 +445,31 @@ export function GymPortal({ companyUsername }) {
           {tab === 'profile' && <SignOut onConfirm={logout} />}
         </main>
 
-        <nav className={s.tabs} aria-label="Secciones">
-          {TABS.map(({ key, label, Icon }) => (
-            <button
-              key={key}
-              type="button"
-              className={[s.tab, tab === key ? s.tabOn : ''].filter(Boolean).join(' ')}
-              aria-current={tab === key ? 'page' : undefined}
-              onClick={() => goTo(key)}
-            >
-              <Icon size={22} />
-              <span>{label}</span>
-            </button>
-          ))}
+        <nav className={[s.tabs, typing ? s.tabsHidden : ''].filter(Boolean).join(' ')} aria-label="Secciones">
+          <div className={s.tabsRow}>
+            {TABS.map(({ key, label, Icon }) => {
+              const on = tab === key;
+              const photo = key === 'profile' && member.photo_url && !tabPhotoFailed;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  className={[s.tab, on ? s.tabOn : ''].filter(Boolean).join(' ')}
+                  aria-current={on ? 'page' : undefined}
+                  onClick={() => goTo(key)}
+                >
+                  {photo ? (
+                    <span className={s.tabAvatar}>
+                      <img src={member.photo_url} alt="" onError={() => setTabPhotoFailed(true)} />
+                    </span>
+                  ) : (
+                    <Icon size={24} strokeWidth={on ? 2.6 : 2} />
+                  )}
+                  <span>{label}</span>
+                </button>
+              );
+            })}
+          </div>
         </nav>
       </div>
       {sheet}
