@@ -268,7 +268,7 @@ export function PublicCompany({ companyUsername }) {
                 <PiddetGymLogo size="sm" />
                 <div className={s.gymMemberCopy}>
                   <h2 id="gym-member-title" className={s.gymMemberTitle}>¿Ya eres socio de {company.name}?</h2>
-                  <p className={s.gymMemberText}>Mira tu suscripción, tu saldo y tus medidas desde el celular.</p>
+                  <p className={s.gymMemberText}>Mira tu progreso, tus medidas y tu plan desde el celular.</p>
                 </div>
                 <a className={s.gymMemberCta} href={GYM_HUB_PATH}>
                   Ver mi suscripción <i className="fas fa-arrow-right" aria-hidden="true" />

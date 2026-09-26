@@ -13,14 +13,14 @@ import react from '@vitejs/plugin-react';
 // y sin index.html adentro el servidor respondía 403 en vez de la app.
 const SITE = 'https://piddet.com';
 const GYM_SHARE = {
-  title: 'piddet gym · Tu gimnasio en tu bolsillo',
+  title: 'Sigue tu progreso · piddet gym',
   // ≤ 125 caracteres: más largo, WhatsApp y las redes lo cortan en el teléfono.
-  description: 'Sigue tu suscripción, tu saldo y tus medidas del gimnasio desde el celular. '
-    + 'Entra con tu número y un código por SMS.',
+  description: 'Mira cómo cambian tus medidas mes a mes y cuántos días te quedan de plan. '
+    + 'Entra con tu número.',
   url: `${SITE}/gym/`,
   // `?v=`: WhatsApp y Facebook guardan la imagen por URL; súbelo cada vez que cambie el archivo.
-  image: `${SITE}/og/piddet-gym.png?v=2`,
-  imageAlt: 'piddet gym: tu plan, los días que te quedan y tus medidas en el celular.',
+  image: `${SITE}/og/piddet-gym.png?v=3`,
+  imageAlt: 'Sigue tu progreso: tu peso y tus medidas bajando mes a mes en el celular.',
   themeColor: '#0b2630', // --portal-bg: la entrada ya abre oscura, como el portal
 };
 

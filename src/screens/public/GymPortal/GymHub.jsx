@@ -97,7 +97,7 @@ export function GymHub() {
 
   React.useEffect(() => {
     const previous = document.title;
-    document.title = 'piddet gym · Tu gimnasio en tu bolsillo';
+    document.title = 'Sigue tu progreso · piddet gym';
     return () => { document.title = previous; };
   }, []);
 
