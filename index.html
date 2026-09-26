@@ -272,6 +272,12 @@
         var isPrivatePublicFlow = path === '/checkin' || path.indexOf('/checkin/') === 0
           || path.indexOf('/r/') === 0 || !!portalUser;
         setMeta('robots', (inPanel || isPrivatePublicFlow) ? 'noindex, nofollow' : 'index, follow');
+        // Entrada general de los gimnasios (/gym): fondo y barra de estado oscuros desde el
+        // primer cuadro, como el portal al que lleva.
+        if (path === '/gym' || path === '/gym/') {
+          document.documentElement.setAttribute('data-surface', 'portal');
+          setMeta('theme-color', PORTAL_BG);
+        }
         try {
           if (portalUser) {
             applyGymPortal(portalUser, portalStored('brand', portalUser));

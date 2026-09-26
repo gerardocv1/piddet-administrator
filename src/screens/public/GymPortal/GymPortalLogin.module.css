@@ -284,18 +284,23 @@
 
 .sentText strong { color: var(--portal-text); white-space: nowrap; }
 
+/* Enlaces secundarios del paso del código (cambiar número, pedir otro): discretos, para que el
+   botón principal sea lo único que llama la atención. */
 .textLink {
   padding: 0;
   border: 0;
   background: transparent;
-  color: var(--portal-accent);
+  color: var(--portal-label-strong);
   font-family: var(--font-sans);
   font-size: var(--portal-fs-small);
-  font-weight: var(--fw-bold);
+  font-weight: var(--fw-semibold);
   text-decoration: underline;
+  text-decoration-color: var(--portal-line-strong);
   text-underline-offset: 3px;
   cursor: pointer;
 }
+
+.textLink:hover { color: var(--portal-text); }
 
 .textLink:disabled { opacity: 0.5; cursor: default; }
 .textLink:focus-visible { outline: 2px solid var(--portal-accent); outline-offset: 3px; border-radius: 4px; }

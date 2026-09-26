@@ -198,6 +198,15 @@ export const gymService = {
     return obj(http.get(`${base()}/members/${memberId}/progress${q ? `?${q}` : ''}`));
   },
 
+  // ── Entrada general de los gimnasios (piddet.com/gym, sin sesión) ──
+  // No es de ningún gimnasio: busca al socio por su celular en todos. `verify` devuelve
+  // { gyms: [{ company, member_name, session_token }] }, una sesión por gimnasio.
+  gymPlatformPartners: () => http.get('/public/gym/partners', { auth: false }),
+  gymPlatformRequestCode: (phoneNumber) =>
+    http.post('/public/gym/portal/code', { phone_number: phoneNumber }, { auth: false }),
+  gymPlatformVerifyCode: (phoneNumber, code) =>
+    http.post('/public/gym/portal/verify', { phone_number: phoneNumber, code }, { auth: false }),
+
   // ── Portal público del afiliado (sin sesión) ──
   // Entrada principal: código por SMS. `options` dice el largo del código, la espera para pedir
   // otro y si está encendida la entrada alterna con fecha de nacimiento.
