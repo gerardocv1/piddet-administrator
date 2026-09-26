@@ -227,23 +227,23 @@ function GymBirthdaysCard({ rows, loading, error, onOpen, onSeeAll }) {
 // «Ver todas» lleva el total.
 const EXPIRING_LIMIT = 3;
 
-// Contadores del widget «Afiliados», en el orden en que se leen: quién está bien, quién está por
-// perder la membresía, a quién hay que cobrar y quién se fue. Cada uno abre Afiliados con el
-// filtro de membresía puesto (`?membership=`), que aplica las mismas reglas del backend.
+// Contadores del widget «Afiliados», en el orden en que se leen: quién está al día, a quién hay
+// que cobrar (debe un período que ya arrancó: corre la gracia hasta el corte automático) y quién
+// se fue. Cada uno abre Afiliados con el filtro de membresía puesto (`?membership=`), que aplica
+// las mismas reglas del backend. «Pendientes de pago» no va aparte: contaba casi a los mismos que
+// «En gracia»; el saldo por cobrar va en la baldosa de la gracia.
 const MEMBERSHIP_TILES = [
-  { key: 'active', label: 'Activos', icon: 'fas fa-circle-check', tone: 'success', meta: () => 'Con el período vigente' },
-  { key: 'grace', label: 'En gracia', icon: 'fas fa-triangle-exclamation', tone: 'warning', meta: () => 'Antes del corte automático' },
+  { key: 'active', label: 'Activos', icon: 'fas fa-circle-check', tone: 'success', meta: () => 'Al día con su pago' },
   {
-    key: 'pending', label: 'Pendientes de pago', icon: 'fas fa-sack-dollar', tone: 'danger',
+    key: 'grace', label: 'En gracia', icon: 'fas fa-triangle-exclamation', tone: 'warning',
     meta: (data) => <>Por cobrar <strong>{gymMoney(data?.pending_amount)}</strong></>,
   },
   { key: 'cancelled', label: 'Cancelados', icon: 'fas fa-ban', tone: 'neutral', meta: () => 'Sin suscripción activa' },
 ];
 
 /** Widget «Afiliados»: cuántos hay en cada estado de membresía. Son accesos, no un reporte: cada
- *  baldosa abre el listado ya filtrado. «Pendientes de pago» se cruza con activos y en gracia
- *  (agrupa a quien debe), así que no entra en la barra de proporción ni los cuatro números
- *  suman el total. Tarjeta propia (no Card): conserva su marco también en el teléfono. */
+ *  baldosa abre el listado ya filtrado. Tarjeta propia (no Card): conserva su marco también en
+ *  el teléfono. */
 function GymMembersSummaryCard({ data, loading, error, onOpen, onSeeAll }) {
   const counts = data?.counts;
   const withActive = counts ? counts.active + counts.grace : 0;
