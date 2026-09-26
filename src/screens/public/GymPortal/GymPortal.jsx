@@ -5,6 +5,9 @@ import { GymPortalSubscription } from './GymPortalSubscription.jsx';
 import { GymPortalMeasures } from './GymPortalMeasures.jsx';
 import { CardIcon, LogoutIcon, TrendIcon } from './icons.jsx';
 import { subscriptionView, SUBSCRIPTION_STATE } from './gymPortalData.js';
+import { usePortalInstall } from './usePortalInstall.js';
+import { InstallBanner, InstallButton, InstallSheet } from './GymPortalInstall.jsx';
+import { Spinner } from '../../../components';
 import s from './GymPortal.module.css';
 
 // Portal público del afiliado (/{username-compañía}/afiliados): el socio entra con su celular y su
@@ -64,13 +67,75 @@ function usePortalThemeColor(rootRef) {
   }, [rootRef]);
 }
 
+// Marca del gimnasio que lee el script de index.html al cargar la página para armar el manifest
+// de la app instalable (nombre bajo el icono e icono de la compañía).
+function writeBrand(username, company) {
+  if (!company?.name) return;
+  const brand = {
+    name: company.name,
+    app_name: company.app_name ?? null,
+    username: company.username || username,
+    icon: company.icon ?? null,
+    thumbnail_icon: company.thumbnail_icon ?? null,
+    app_icon_bg: company.app_icon_bg ?? null,
+    brand_primary: company.brand_primary ?? null,
+  };
+  try {
+    localStorage.setItem(`piddet_gym_portal_brand:${username}`, JSON.stringify(brand));
+  } catch {
+    // Sin almacenamiento: la app se instala con el nombre genérico.
+  }
+  // Chrome fija el diálogo tarde: si la página cargó sin la marca, se le pasa ya.
+  const pwa = window.__piddetPwa;
+  if (pwa?.portal && !pwa.portal.named && pwa.applyGymPortal) pwa.applyGymPortal(username, brand, true);
+}
+
+const BANNER_KEY = 'piddet_gym_portal_install_dismissed';
+const BANNER_SNOOZE_MS = 7 * 24 * 60 * 60 * 1000;
+const REFRESH_AFTER_MS = 60 * 1000;
+
+function bannerSnoozed() {
+  try {
+    return Date.now() - Number(localStorage.getItem(BANNER_KEY) || 0) < BANNER_SNOOZE_MS;
+  } catch {
+    return false;
+  }
+}
+
+// Lo que trae la URL al abrir: la pestaña de un acceso directo (?tab=medidas), la vuelta tras
+// preparar la instalación (?instalar=1) y la sesión que la app de iOS recibe en el fragmento
+// (#s=…, ver index.html). Se lee una vez y la URL queda limpia.
+function readLaunch() {
+  const params = new URLSearchParams(window.location.search);
+  const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+  return {
+    tab: params.get('tab') === 'medidas' ? 'measures' : 'subscription',
+    install: params.get('instalar') === '1',
+    handoff: hash.get('s') || null,
+  };
+}
+
 export function GymPortal({ companyUsername }) {
   const rootRef = React.useRef(null);
+  const [launch] = React.useState(readLaunch);
   const [session, setSession] = React.useState(() => readSession(companyUsername));
-  const [tab, setTab] = React.useState('subscription');
+  const [resuming, setResuming] = React.useState(() => !readSession(companyUsername) && !!launch.handoff);
+  const [tab, setTab] = React.useState(launch.tab);
   const [company, setCompany] = React.useState(session?.company || null);
+  const [notice, setNotice] = React.useState('');
+  const installer = usePortalInstall();
+  const [sheetOpen, setSheetOpen] = React.useState(false);
+  const [bannerHidden, setBannerHidden] = React.useState(bannerSnoozed);
+  const lastRefresh = React.useRef(0);
+  const tokenRef = React.useRef(session?.session_token || launch.handoff);
 
   usePortalThemeColor(rootRef);
+
+  React.useEffect(() => {
+    if (window.location.search || window.location.hash) {
+      window.history.replaceState(null, '', window.location.pathname);
+    }
+  }, []);
 
   // Nombre y logo del gimnasio para la entrada, antes de que el socio se identifique.
   React.useEffect(() => {
@@ -82,38 +147,103 @@ export function GymPortal({ companyUsername }) {
     return () => { alive = false; };
   }, [companyUsername, session]);
 
+  const brand = session?.company || company;
+  React.useEffect(() => { writeBrand(companyUsername, brand); }, [companyUsername, brand]);
+
   React.useEffect(() => {
-    const name = session?.company?.name || company?.name;
+    const name = brand?.name;
     const previous = document.title;
     document.title = name ? `${name} · Afiliados` : 'Afiliados';
     return () => { document.title = previous; };
-  }, [session, company]);
+  }, [brand]);
 
-  const [notice, setNotice] = React.useState('');
-
-  // Al abrir con una sesión guardada: se refresca por detrás y se renueva el token. Sin red se
-  // queda lo último que se vio; con la sesión vencida se vuelve a la entrada.
-  React.useEffect(() => {
-    const saved = readSession(companyUsername);
-    if (!saved) return undefined;
-    let alive = true;
-    api.gymPortalResume(companyUsername, saved.session_token)
-      .then((data) => {
-        if (!alive || !data?.session_token) return;
-        writeSession(companyUsername, data);
-        setSession(data);
-      })
-      .catch((err) => {
-        if (!alive || err?.status !== 401) return;
+  // Refresca con la sesión guardada y renueva el token. Sin red se queda lo último que se vio;
+  // con la sesión vencida se vuelve a la entrada.
+  const refresh = React.useCallback(async () => {
+    const token = tokenRef.current;
+    if (!token) return;
+    lastRefresh.current = Date.now();
+    try {
+      const data = await api.gymPortalResume(companyUsername, token);
+      if (!data?.session_token) return;
+      tokenRef.current = data.session_token;
+      writeSession(companyUsername, data);
+      setSession(data);
+    } catch (err) {
+      if (err?.status === 401) {
+        tokenRef.current = null;
         writeSession(companyUsername, null);
         setSession(null);
         setNotice(err.message || 'Tu sesión terminó. Vuelve a ingresar.');
-      });
-    return () => { alive = false; };
+      } else if (!readSession(companyUsername)) {
+        setNotice('No pudimos conectarnos. Revisa tu señal e intenta de nuevo.');
+      }
+    } finally {
+      setResuming(false);
+    }
   }, [companyUsername]);
+
+  React.useEffect(() => { refresh(); }, [refresh]);
+
+  // Como una app: al volver a ella (desde otra app o la pantalla de inicio) se ponen al día los
+  // datos, sin que el socio tenga que recargar.
+  React.useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible' && Date.now() - lastRefresh.current > REFRESH_AFTER_MS) refresh();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [refresh]);
+
+  // ── Instalar como app ──
+  const reloadedForInstall = launch.install;
+  React.useEffect(() => {
+    if (launch.install && installer.mode !== 'none') setSheetOpen(true);
+    // Solo al abrir tras preparar la instalación.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // iPhone: mientras la hoja está abierta la URL lleva la sesión en el fragmento, por si Safari
+  // toma la dirección actual y no el start_url del manifest al «Agregar a inicio».
+  React.useEffect(() => {
+    if (!sheetOpen || installer.mode !== 'ios' || !session?.session_token) return undefined;
+    window.history.replaceState(null, '', `${window.location.pathname}#s=${encodeURIComponent(session.session_token)}`);
+    return () => window.history.replaceState(null, '', window.location.pathname);
+  }, [sheetOpen, installer.mode, session?.session_token]);
+
+  const openInstall = async () => {
+    // El manifest se arma al cargar la página. Si entonces aún no tenía el nombre del gimnasio
+    // (primera visita) o, en iPhone, la sesión para la app, se recarga una vez para que se
+    // instale lo correcto; la hoja se abre sola al volver.
+    const pwa = window.__piddetPwa?.portal;
+    const stale = pwa && ((!pwa.named && brand?.name) || (installer.mode === 'ios' && session && !pwa.handoff));
+    if (stale && !reloadedForInstall && installer.mode !== 'in-app') {
+      window.location.replace(`${window.location.pathname}?instalar=1`);
+      return;
+    }
+    if (installer.mode === 'prompt') {
+      await installer.promptInstall();
+      return;
+    }
+    setSheetOpen(true);
+  };
+
+  const installFromSheet = async () => {
+    const outcome = await installer.promptInstall();
+    if (outcome) setSheetOpen(false);
+  };
+
+  const dismissBanner = () => {
+    setBannerHidden(true);
+    try { localStorage.setItem(BANNER_KEY, String(Date.now())); } catch { /* sin almacenamiento */ }
+  };
+
+  const closeSheet = React.useCallback(() => setSheetOpen(false), []);
 
   const login = async ({ phoneNumber, birthdate }) => {
     const data = await api.gymPortalAccess(companyUsername, { phoneNumber, birthdate });
+    tokenRef.current = data.session_token;
+    lastRefresh.current = Date.now();
     writeSession(companyUsername, data);
     setSession(data);
     setNotice('');
@@ -122,6 +252,7 @@ export function GymPortal({ companyUsername }) {
   };
 
   const logout = () => {
+    tokenRef.current = null;
     writeSession(companyUsername, null);
     setSession(null);
     setNotice('');
@@ -134,14 +265,38 @@ export function GymPortal({ companyUsername }) {
     window.scrollTo(0, 0);
   };
 
-  if (!session) {
+  const sheet = (
+    <InstallSheet
+      open={sheetOpen}
+      mode={installer.mode}
+      device={installer.device}
+      company={brand}
+      onClose={closeSheet}
+      onInstall={installFromSheet}
+    />
+  );
+
+  if (resuming) {
     return (
       <div ref={rootRef} className={[s.page, s.glowLogin].join(' ')}>
-        <GymPortalLogin company={company} onSubmit={login} notice={notice} />
+        <div className={s.splash} aria-busy="true">
+          <span className={s.splashName}>{brand?.name || 'Tu gimnasio'}</span>
+          <Spinner size="md" label="Abriendo tu suscripción…" />
+        </div>
       </div>
     );
   }
 
+  if (!session) {
+    return (
+      <div ref={rootRef} className={[s.page, s.glowLogin].join(' ')}>
+        <GymPortalLogin company={company} onSubmit={login} notice={notice} />
+        {sheet}
+      </div>
+    );
+  }
+
+  const canInstall = installer.mode !== 'none';
   const member = session.member || {};
   const gymName = session.company?.name || company?.name || '';
   // El resplandor del fondo acompaña el estado: naranja cuando hay algo pendiente de pago.
@@ -170,6 +325,15 @@ export function GymPortal({ companyUsername }) {
             </header>
           )}
 
+          {tab === 'subscription' && canInstall && (installer.installed || !bannerHidden) && (
+            <InstallBanner
+              company={brand}
+              installed={installer.installed}
+              onOpen={openInstall}
+              onDismiss={dismissBanner}
+            />
+          )}
+
           {tab === 'subscription' ? (
             <GymPortalSubscription data={session} onShowMeasures={() => goTo('measures')} />
           ) : (
@@ -177,6 +341,7 @@ export function GymPortal({ companyUsername }) {
           )}
 
           <div className={s.sessionBox}>
+            {canInstall && !installer.installed && <InstallButton onOpen={openInstall} />}
             <button type="button" className={s.signOut} onClick={logout}>
               <LogoutIcon size={18} />
               <span>Cerrar sesión</span>
@@ -200,6 +365,7 @@ export function GymPortal({ companyUsername }) {
           ))}
         </nav>
       </div>
+      {sheet}
     </div>
   );
 }

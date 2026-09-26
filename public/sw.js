@@ -2,8 +2,8 @@
    (Chrome exige un worker con manejador de `fetch`); el cacheo es deliberadamente conservador
    para que un despliegue nuevo nunca quede servido desde una versión vieja. */
 
-const SHELL_CACHE = 'piddet-shell-v2';
-const ASSET_CACHE = 'piddet-assets-v2';
+const SHELL_CACHE = 'piddet-shell-v3';
+const ASSET_CACHE = 'piddet-assets-v3';
 const CURRENT_CACHES = [SHELL_CACHE, ASSET_CACHE];
 const ADMIN_START = '/admin/';
 const MAX_ASSET_ENTRIES = 24;
@@ -43,17 +43,22 @@ function cacheQuietly(cacheName, key, response) {
 // navegador y Safari puede devolver el shell viejo (más aún si el servidor no manda
 // `Cache-Control: no-cache` para index.html). Es lo que dejaba la app instalada anclada a una
 // versión antigua aunque el despliegue ya estuviera hecho.
-async function networkFirstNavigation(request) {
+async function networkFirstNavigation(request, shellKey = ADMIN_START) {
   try {
     const response = await fetch(request, { cache: 'no-store' });
-    cacheQuietly(SHELL_CACHE, ADMIN_START, response);
+    cacheQuietly(SHELL_CACHE, shellKey, response);
     return response;
   } catch (error) {
-    const cached = await caches.match(ADMIN_START);
+    const cached = await caches.match(shellKey);
     if (cached) return cached;
     throw error;
   }
 }
+
+// Portal del afiliado (/{compañía}/afiliados): es una app instalable aparte. Su shell se guarda
+// por compañía para que abra aunque el socio no tenga señal en el gimnasio; los datos los trae
+// el propio portal (y muestra lo último que vio mientras tanto).
+const PORTAL_RE = /^\/[^/]+\/afiliados\/?$/;
 
 async function cacheFirst(request, cacheName) {
   const cached = await caches.match(request);
@@ -83,6 +88,8 @@ self.addEventListener('fetch', (event) => {
   if (request.mode === 'navigate') {
     if (url.pathname === '/admin' || url.pathname.startsWith(ADMIN_START)) {
       event.respondWith(networkFirstNavigation(request));
+    } else if (PORTAL_RE.test(url.pathname)) {
+      event.respondWith(networkFirstNavigation(request, url.pathname.replace(/\/$/, '')));
     }
     return;
   }

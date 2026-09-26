@@ -34,11 +34,13 @@ export function useInstallPrompt() {
     };
   }, []);
 
+  // Devuelve 'accepted' | 'dismissed' (o null si no había prompt) para quien quiera reaccionar.
   const install = React.useCallback(async () => {
-    if (!prompt) return;
+    if (!prompt) return null;
     prompt.prompt();
-    await prompt.userChoice;
+    const choice = await prompt.userChoice.catch(() => null);
     setPrompt(null); // el evento es de un solo uso: Chrome emite otro si el usuario cancela
+    return choice?.outcome ?? null;
   }, [prompt]);
 
   return { canInstall: !!prompt, install };

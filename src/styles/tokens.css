@@ -407,6 +407,15 @@ body {
   background: var(--bg-body);
   -webkit-font-smoothing: antialiased;
 }
+/* Portal del afiliado: el documento entero toma el fondo oscuro desde el primer pintado (lo marca
+   el script de index.html), así la app instalada no destella en blanco al abrir ni al rebotar. */
+html[data-surface='portal'],
+html[data-surface='portal'] body {
+  background-color: var(--portal-bg);
+  color-scheme: dark;
+  overscroll-behavior-y: none;
+  -webkit-tap-highlight-color: transparent;
+}
 h1, h2, h3, h4, h5, h6 { margin: 0; color: var(--text-heading); font-weight: 700; line-height: 1.2; }
 a { color: var(--color-primary); text-decoration: none; }
 button { font-family: var(--font-sans); }
