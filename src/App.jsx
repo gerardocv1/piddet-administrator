@@ -23,6 +23,7 @@ import { CheckinWizard } from './screens/public/Checkin/CheckinWizard.jsx';
 import { PublicLodging } from './screens/public/Lodging/PublicLodging.jsx';
 import { PublicLodgingUnit } from './screens/public/Lodging/PublicLodgingUnit.jsx';
 import { GymPortal } from './screens/public/GymPortal/GymPortal.jsx';
+import { GymHub } from './screens/public/GymPortal/GymHub.jsx';
 import { Invoices } from './screens/Invoices.jsx';
 import { InvoiceDetail } from './screens/InvoiceDetail.jsx';
 import { SalesReport } from './screens/SalesReport.jsx';
@@ -103,6 +104,7 @@ const PUBLIC_LODGING_UNIT_RE = /^\/([^/]+)\/hospedaje\/(\d+)\/?$/;
 // su fecha de nacimiento y ve su suscripción, su saldo y sus medidas. Segmento en español: es la
 // URL que el gimnasio comparte con sus socios.
 const PUBLIC_GYM_PORTAL_RE = /^\/([^/]+)\/afiliados\/?$/;
+const GYM_HUB_PATH = '/gym';
 
 // Color de la barra de estado en la app instalada: debe seguir al tema activo, no a la
 // preferencia del sistema. Se lee del propio token --bg-body (el fondo con el que la cabecera
@@ -185,9 +187,14 @@ export default function App() {
     return <PublicLodging companyUsername={decodeURIComponent(lodgingMatch[1])} />;
   }
 
-  // 1a-quater) Portal del afiliado del gimnasio (sin sesión del panel).
+  // 1a-quater) Entrada general de los gimnasios (piddet.com/gym): no es de ningún gimnasio; el
+  //  socio entra con su celular y la plataforma lo lleva al suyo. `gym` queda reservado: no se
+  //  lee como el username de una compañía.
+  if (path === GYM_HUB_PATH || path === `${GYM_HUB_PATH}/`) return <GymHub />;
+
+  // 1a-quinquies) Portal del afiliado de un gimnasio (sin sesión del panel).
   const gymPortalMatch = path.match(PUBLIC_GYM_PORTAL_RE);
-  if (gymPortalMatch && gymPortalMatch[1] !== ADMIN_BASE.slice(1)) {
+  if (gymPortalMatch && gymPortalMatch[1] !== ADMIN_BASE.slice(1) && `/${gymPortalMatch[1]}` !== GYM_HUB_PATH) {
     return <GymPortal companyUsername={decodeURIComponent(gymPortalMatch[1])} />;
   }
 

@@ -4930,6 +4930,12 @@ const mockGymPortalCodes = {};
 const mockGymPortalClosedSessions = new Set();
 
 function resolvePublicGymPortalMock(path, { method = 'GET', body } = {}) {
+  // Gimnasios aliados de la entrada general: los gimnasios del directorio demo.
+  if (path === '/public/gym/partners' && method === 'GET') {
+    return mockPublicCompanies
+      .filter((c) => c.company_type_key === 'gym')
+      .map(({ username, name, icon, thumbnail_icon, brand_primary }) => ({ username, name, icon, thumbnail_icon, brand_primary }));
+  }
   if (/^\/public\/[^/]+\/gym\/portal\/options$/.test(path) && method === 'GET') {
     // En la demo la entrada con fecha queda visible para poder probarla.
     return { code_length: 6, resend_seconds: 30, birthdate_login: true };
@@ -4966,6 +4972,38 @@ function resolvePublicGymPortalMock(path, { method = 'GET', body } = {}) {
     }
     delete mockGymPortalCodes[member.id];
     return gymPortalPayload(member, path);
+  }
+
+  // Entrada general (piddet.com/gym): aliados y código sin compañía en la ruta.
+  if (path === '/public/gym/partners') return undefined;
+  const platformMatch = path.match(/^\/public\/gym\/portal\/(code|verify)$/);
+  if (platformMatch) {
+    const member = mockGymMembers.find((m) => m.status === 1 && m.phone_number === cleanPhone(body?.phone_number));
+    if (!member) throw notFound();
+    if (platformMatch[1] === 'code') {
+      const code = String(Math.floor(Math.random() * 1000000)).padStart(6, '0');
+      mockGymPortalCodes[member.id] = { code, attempts: 0 };
+      const p = member.phone_number;
+      return { masked_phone: `+57 ${p.slice(0, 3)} *** ${p.slice(-4)}`, code_length: 6, expires_in: 600, resend_in: 30, demo_code: code };
+    }
+    const issued = mockGymPortalCodes[member.id];
+    if (!issued || issued.attempts >= 5) throw Object.assign(new Error('Ese código ya no sirve. Pide uno nuevo.'), { status: 410 });
+    if (String(body?.code || '') !== issued.code) {
+      issued.attempts += 1;
+      const left = 5 - issued.attempts;
+      if (left <= 0) throw Object.assign(new Error('Ese código ya no sirve. Pide uno nuevo.'), { status: 410 });
+      throw Object.assign(new Error(`El código no es correcto. Te quedan ${left} intentos.`), { status: 400, data: { attempts_left: left } });
+    }
+    delete mockGymPortalCodes[member.id];
+    // En la demo el socio es de un solo gimnasio: el de ejemplo del directorio.
+    const gym = mockPublicCompanies.find((c) => c.username === 'norte_fitness');
+    return {
+      gyms: [{
+        company: { username: gym.username, name: gym.name, icon: gym.icon, thumbnail_icon: gym.thumbnail_icon, brand_primary: gym.brand_primary },
+        member_name: member.member_name,
+        session_token: `demo-session:${member.id}:${Date.now().toString(36)}`,
+      }],
+    };
   }
 
   if (/^\/public\/[^/]+\/gym\/portal\/logout$/.test(path)) {

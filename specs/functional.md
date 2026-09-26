@@ -472,6 +472,16 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
   detalle lo avisa y, con `gym-subscriptions-create`, ofrece **Generar período**: fuerza el mismo
   ciclo para esa suscripción, con confirmación —y advertencia en rojo si el resultado va a ser el
   corte, porque el vigente agotó su gracia sin ningún abono—.
+- **Entrada general de los gimnasios** (`/gym`, `GymHub.jsx`): la puerta de la plataforma, sin
+  gimnasio en la URL. Arriba la marca **piddet gym** (`PiddetGymLogo`: pesita en placa naranja,
+  "piddet" naranja y "gym" blanco); el socio escribe su celular y el código del SMS
+  (`api.gymPlatformRequestCode` / `api.gymPlatformVerifyCode`, que lo buscan en todos los
+  gimnasios) y la plataforma lo lleva a su portal —si es socio de varios, elige—; abajo,
+  **Nuestros aliados**: un chip con logo y nombre por cada gimnasio con el portal encendido
+  (`api.gymPlatformPartners`). Si el teléfono ya tiene sesión en un gimnasio, `/gym` va directo a
+  él. La sesión viaja al portal de cada gimnasio por `localStorage`
+  (`piddet_gym_portal_pending:{compañía}`, `portalStorage.js`), que la adopta al abrir y la borra.
+  `gym` queda reservado: no se lee como el username de una compañía.
 - **Portal público del afiliado** (`/{compañía}/afiliados`, `src/screens/public/GymPortal/`):
   el socio entra desde el teléfono con su **celular y un código que le llega por SMS** (cajas de
   6 dígitos con `autocomplete="one-time-code"`: iOS lo sugiere y Chrome en Android lo pega solo;

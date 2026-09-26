@@ -1,0 +1,40 @@
+/* Marca "piddet gym": placa con la pesita + wordmark en dos colores. */
+
+.logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  font-family: var(--font-logo);
+  font-weight: var(--fw-heavy);
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.sm { font-size: var(--portal-fs-date); }
+.md { font-size: var(--portal-fs-plan); }
+.lg { font-size: var(--portal-fs-display); }
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.35em;
+  height: 1.35em;
+  border-radius: 0.42em;
+  background-color: var(--portal-accent);
+  box-shadow: var(--portal-shadow-cta);
+}
+
+.dumbbell {
+  width: 0.95em;
+  height: 0.95em;
+  fill: var(--portal-on-accent);
+}
+
+.word {
+  display: inline-flex;
+  align-items: baseline;
+}
+
+.piddet { color: var(--portal-accent); }
+.gym { color: var(--portal-text); }

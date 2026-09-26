@@ -1,6 +1,6 @@
 import React from 'react';
 import { Spinner } from '../../../components';
-import { ArrowRightIcon, ChatIcon, DumbbellIcon } from './icons.jsx';
+import { ArrowRightIcon, DumbbellIcon } from './icons.jsx';
 import { BirthdateSelects, birthdateIso, birthdateProblem } from './BirthdateSelects.jsx';
 import s from './GymPortalLogin.module.css';
 
@@ -93,7 +93,9 @@ function useCountdown(seconds) {
   return [left, setLeft];
 }
 
-export function GymPortalLogin({ company, options, onRequestCode, onVerifyCode, onBirthdateLogin, notice = '' }) {
+// `header` reemplaza la fila de marca (la entrada general de piddet.com/gym pone su logo) y
+// `footer` va antes del pie (los gimnasios aliados).
+export function GymPortalLogin({ company, options, onRequestCode, onVerifyCode, onBirthdateLogin, notice = '', header = null, footer = null }) {
   const codeLength = options?.code_length || 6;
   const [step, setStep] = React.useState('phone'); // phone | code | birthdate
   const [phone, setPhone] = React.useState('');
@@ -181,13 +183,15 @@ export function GymPortalLogin({ company, options, onRequestCode, onVerifyCode, 
 
   return (
     <div className={s.screen}>
-      <div className={s.top}>
-        <div className={s.mark}>
-          <CompanyMark company={company} />
-          <span className={s.markName}>{company?.name || 'Tu gimnasio'}</span>
+      {header || (
+        <div className={s.top}>
+          <div className={s.mark}>
+            <CompanyMark company={company} />
+            <span className={s.markName}>{company?.name || 'Tu gimnasio'}</span>
+          </div>
+          <span className={s.wordmark}>piddet</span>
         </div>
-        <span className={s.wordmark}>piddet</span>
-      </div>
+      )}
 
       <div className={s.intro}>
         <h1 className={s.title}>Tu progreso,<br />en tu bolsillo.</h1>
@@ -201,7 +205,7 @@ export function GymPortalLogin({ company, options, onRequestCode, onVerifyCode, 
           {!error && notice && <p className={s.error} role="status">{notice}</p>}
           {error && <p className={s.error} role="alert">{error}</p>}
           <button type="submit" className={s.cta} disabled={!phoneReady || busy}>
-            {busy ? <><Spinner size="sm" /><span>Enviando…</span></> : <><ChatIcon size={20} /><span>Recibir código</span></>}
+            {busy ? <><Spinner size="sm" /><span>Enviando…</span></> : <><span>Enviarme el código</span><ArrowRightIcon size={20} /></>}
           </button>
         </form>
       )}
@@ -257,6 +261,8 @@ export function GymPortalLogin({ company, options, onRequestCode, onVerifyCode, 
           {step === 'birthdate' ? 'Entrar con un código por SMS' : 'Entrar con mi fecha de nacimiento'}
         </button>
       )}
+
+      {footer}
 
       <div className={s.footer}>
         <p className={s.help}>¿No logras entrar? Pasa por recepción para actualizar tu celular.</p>

@@ -9,6 +9,7 @@ import { subscriptionView, SUBSCRIPTION_STATE } from './gymPortalData.js';
 import { usePortalInstall } from './usePortalInstall.js';
 import { InstallBanner, InstallButton, InstallSheet } from './GymPortalInstall.jsx';
 import { Spinner } from '../../../components';
+import { clearPending, peekPending } from './portalStorage.js';
 import s from './GymPortal.module.css';
 
 // Portal público del afiliado (/{username-compañía}/afiliados): el socio entra con su celular y su
@@ -109,13 +110,14 @@ function bannerSnoozed() {
 // Lo que trae la URL al abrir: la pestaña de un acceso directo (?tab=medidas), la vuelta tras
 // preparar la instalación (?instalar=1) y la sesión que la app de iOS recibe en el fragmento
 // (#s=…, ver index.html). Se lee una vez y la URL queda limpia.
-function readLaunch() {
+function readLaunch(username) {
   const params = new URLSearchParams(window.location.search);
   const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
   return {
     tab: TAB_PARAM[params.get('tab')] || 'subscription',
     install: params.get('instalar') === '1',
-    handoff: hash.get('s') || null,
+    // La sesión puede llegar en el fragmento (app de iOS) o dejarla lista la entrada general.
+    handoff: hash.get('s') || peekPending(username) || null,
   };
 }
 
@@ -144,9 +146,13 @@ function SignOut({ onConfirm }) {
 
 export function GymPortal({ companyUsername }) {
   const rootRef = React.useRef(null);
-  const [launch] = React.useState(readLaunch);
-  const [session, setSession] = React.useState(() => readSession(companyUsername));
-  const [resuming, setResuming] = React.useState(() => !readSession(companyUsername) && !!launch.handoff);
+  const [launch] = React.useState(() => readLaunch(companyUsername));
+  // Una sesión recién entregada (fragmento o entrada general) manda sobre la guardada.
+  const [session, setSession] = React.useState(() => {
+    const saved = readSession(companyUsername);
+    return launch.handoff && saved?.session_token !== launch.handoff ? null : saved;
+  });
+  const [resuming, setResuming] = React.useState(() => !session && !!launch.handoff);
   const [tab, setTab] = React.useState(launch.tab);
   const [company, setCompany] = React.useState(session?.company || null);
   const [notice, setNotice] = React.useState('');
@@ -154,9 +160,12 @@ export function GymPortal({ companyUsername }) {
   const [sheetOpen, setSheetOpen] = React.useState(false);
   const [bannerHidden, setBannerHidden] = React.useState(bannerSnoozed);
   const lastRefresh = React.useRef(0);
-  const tokenRef = React.useRef(session?.session_token || launch.handoff);
+  const tokenRef = React.useRef(launch.handoff || session?.session_token);
 
   usePortalThemeColor(rootRef);
+
+  // La sesión que dejó la entrada general ya está en el estado: se borra para no volver a usarla.
+  React.useEffect(() => { clearPending(companyUsername); }, [companyUsername]);
 
   React.useEffect(() => {
     if (window.location.search || window.location.hash) {
