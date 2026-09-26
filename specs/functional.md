@@ -482,7 +482,10 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
   sola llamada (`api.gymPortalAccess`) trae todo. La **sesión queda guardada en el teléfono**
   (`localStorage`, con el `session_token` cifrado que entrega el backend): al volver se pinta lo
   último que se vio y `api.gymPortalResume` lo refresca y renueva el token; si la sesión ya no vale
-  (401) vuelve a la entrada con el aviso. *Cerrar sesión*, al final de cada pestaña, la borra. En demo: Laura (`3001234567`, nacida hoy en 1994) está al día y con
+  (401) vuelve a la entrada con el aviso. *Cerrar sesión*, al final de cada pestaña, la borra.
+  **Se instala como app** en Android e iOS, con el nombre y el icono del gimnasio: aviso arriba,
+  botón *Instalar como app* y una hoja que guía según el teléfono (detalle en
+  [`tech.md`](tech.md) → *PWA*). En demo: Laura (`3001234567`, nacida hoy en 1994) está al día y con
   medidas; Carlos (`3007654321`, 30/11/1988) tiene saldo y ninguna medida.
 
 ### Reportes

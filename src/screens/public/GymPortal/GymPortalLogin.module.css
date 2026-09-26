@@ -307,3 +307,8 @@
   font-weight: var(--fw-heavy);
   color: var(--portal-accent);
 }
+
+/* Abierta como app: la barra de estado queda fuera de la página (ver GymPortal.module.css). */
+@media (display-mode: standalone), (display-mode: fullscreen) {
+  .screen { padding-top: max(var(--space-8), env(safe-area-inset-top)); }
+}

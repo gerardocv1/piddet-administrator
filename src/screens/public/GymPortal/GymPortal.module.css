@@ -228,3 +228,47 @@
   color: var(--portal-text-subtle);
   text-align: center;
 }
+
+/* ── Arranque con la sesión que trae la app de iOS ── */
+
+.splash {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-5);
+  min-height: 100vh;
+  min-height: 100dvh;
+  color: var(--portal-label);
+}
+
+.splashName {
+  font-family: var(--font-logo);
+  font-weight: var(--fw-heavy);
+  font-size: var(--portal-fs-plan);
+  color: var(--portal-text);
+}
+
+/* ── Abierta como app ──
+   Sin barra del navegador la barra de estado la dibuja el sistema fuera de la página, así que el
+   aire de arriba que el diseño deja para ella sobra; solo se respeta el recorte (notch). Los
+   toques se sienten de app: sin resaltado gris, sin selección de texto al mantener presionado en
+   los controles y sin la espera del doble toque. */
+@media (display-mode: standalone), (display-mode: fullscreen) {
+  .content { padding-top: max(var(--space-6), env(safe-area-inset-top)); }
+}
+
+.page button,
+.page a {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.tabs,
+.tab,
+.logout {
+  -webkit-user-select: none;
+  user-select: none;
+}

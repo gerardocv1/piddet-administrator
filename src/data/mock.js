@@ -4983,7 +4983,7 @@ function gymPortalPayload(member, path) {
     company: (() => {
       const username = decodeURIComponent(path.split('/')[2] || '');
       const c = mockPublicCompanies.find((x) => x.username === username) || mockCompany;
-      return { name: c.name, username: c.username ?? null, icon: c.icon ?? null, thumbnail_icon: c.thumbnail_icon ?? null, brand_primary: c.brand_primary ?? null, brand_secondary: c.brand_secondary ?? null };
+      return { name: c.name, username: c.username ?? null, icon: c.icon ?? null, thumbnail_icon: c.thumbnail_icon ?? null, brand_primary: c.brand_primary ?? null, brand_secondary: c.brand_secondary ?? null, app_name: c.app_name ?? null, app_icon_bg: c.app_icon_bg ?? null };
     })(),
     whatsapp_number: mockCompany.phone ?? null,
     today: todayIso(),

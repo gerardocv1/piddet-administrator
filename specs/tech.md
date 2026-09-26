@@ -257,6 +257,21 @@ El **manifest**, en cambio, sigue siendo un blob local: su `scope` y su `start_u
 mismo origen que él, y la API puede estar en otro. En modo demo (sin `VITE_API_URL`) se aplica el
 nombre de la compañía pero rigen los iconos de Piddet.
 
+### El portal del afiliado es otra app instalable
+
+`/{compañía}/afiliados` se instala **aparte del panel**, con la identidad del gimnasio. El socio la
+tiene en su pantalla de inicio y abre directo en su suscripción.
+
+| Pieza | Qué hace |
+|---|---|
+| Script de `index.html` (`applyGymPortal`) | Si la ruta es del portal, inserta **su** manifest: `id`, `scope` y `start_url` propios de `/{compañía}/afiliados`, `display: standalone`, `orientation: portrait`, fondo y `theme_color` `#0b2630` (splash y barra de estado oscuros), categorías de salud/fitness, `launch_handler` que reusa la ventana abierta y **accesos directos** *Mi suscripción* y *Mis medidas* (`?tab=medidas`). Marca `<html data-surface="portal">` para pintar el fondo oscuro desde el primer cuadro. |
+| Marca guardada (`piddet_gym_portal_brand:{compañía}`) | El script corre antes que React y no puede pedir nada a la API: el nombre y el icono salen de la marca que el portal guardó en la visita anterior. Nombre bajo el icono = `app_name` del perfil o el nombre comercial, recortado como en el panel; icono = el mismo `app-icon-{tamaño}.png` del backend. |
+| `usePortalInstall` + `GymPortalInstall.jsx` | Decide cómo se instala: diálogo nativo (`beforeinstallprompt`), pasos de iPhone (Compartir → *Agregar a inicio* → *Abrir como app web*), pasos de Android sin diálogo (menú ⋮), o navegador interno de WhatsApp/Instagram (abrir en Chrome o copiar el enlace). Aviso arriba —se pospone 7 días al cerrarlo— y botón fijo *Instalar como app* al final de cada pestaña. Abierta como app no se muestra nada de esto. |
+| Recarga antes de instalar | iOS fija el manifest al cargar y Chrome en `beforeinstallprompt`. Si la página cargó sin la marca (primera visita) o, en iPhone, sin la sesión, *Instalar* recarga una vez con `?instalar=1` y la hoja se abre sola al volver. |
+| Sesión para la app de iOS | En iPhone la app instalada **no comparte almacenamiento con Safari**. El `start_url` lleva la sesión en el fragmento (`#s=…`, nunca llega al servidor) y, mientras la hoja de iPhone está abierta, la URL también. El portal la adopta al abrir y limpia la URL: el socio no vuelve a ingresar. |
+| `public/sw.js` | Guarda el shell del portal por compañía (red primero): la app abre sin señal y muestra lo último que vio. |
+| Ya instalada | Sin barra del navegador el aire superior del diseño se reduce al recorte del notch; los toques no dejan resaltado ni selección; al volver a la app (`visibilitychange`) se refrescan los datos si pasó más de un minuto. |
+
 ### El momento importa, y por partida doble
 
 | Plataforma | De dónde saca el nombre | Cuándo lo fija |
