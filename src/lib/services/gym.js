@@ -209,4 +209,14 @@ export const gymService = {
       { phone_number: phoneNumber, birthdate },
       { auth: false },
     ),
+
+  // Reabre el portal con la sesión guardada en el teléfono (`session_token` de la respuesta
+  // anterior). Devuelve lo mismo que gymPortalAccess, con el token renovado. Sesión vencida,
+  // alterada o de un afiliado que ya no está activo → 401.
+  gymPortalResume: (companyUsername, sessionToken) =>
+    http.post(
+      `/public/${encodeURIComponent(companyUsername)}/gym/portal/session`,
+      { session_token: sessionToken },
+      { auth: false },
+    ),
 };

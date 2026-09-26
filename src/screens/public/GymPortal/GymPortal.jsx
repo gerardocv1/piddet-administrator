@@ -11,20 +11,23 @@ import s from './GymPortal.module.css';
 // fecha de nacimiento y ve su suscripción, su saldo y las medidas que le han tomado. Pensado para
 // el teléfono: una columna, fondo oscuro fijo y navegación abajo, al alcance del pulgar.
 //
-// La sesión es solo de la pestaña (sessionStorage): recargar no saca al socio, cerrar la pestaña
-// o tocar "Salir" sí. No guarda credenciales, solo lo que el backend ya devolvió.
+// La sesión queda guardada en el teléfono (localStorage): el backend entrega un token cifrado que
+// se renueva cada vez que el socio abre el portal, así que quien lo usa no vuelve a ingresar. Al
+// abrir se pinta enseguida lo último que se vio y se refresca por detrás; si la sesión ya no vale
+// (401) vuelve a la entrada. "Cerrar sesión" borra todo del teléfono.
 
 const TABS = [
   { key: 'subscription', label: 'Suscripción', Icon: CardIcon },
   { key: 'measures', label: 'Medidas', Icon: TrendIcon },
 ];
 
-const storageKey = (username) => `piddet_gym_portal:${username}`;
+const storageKey = (username) => `piddet_gym_portal_session:${username}`;
 
 function readSession(username) {
   try {
-    const raw = sessionStorage.getItem(storageKey(username));
-    return raw ? JSON.parse(raw) : null;
+    const raw = localStorage.getItem(storageKey(username));
+    const saved = raw ? JSON.parse(raw) : null;
+    return saved?.session_token ? saved : null;
   } catch {
     return null;
   }
@@ -32,8 +35,10 @@ function readSession(username) {
 
 function writeSession(username, data) {
   try {
-    if (data) sessionStorage.setItem(storageKey(username), JSON.stringify(data));
-    else sessionStorage.removeItem(storageKey(username));
+    if (data) localStorage.setItem(storageKey(username), JSON.stringify(data));
+    else localStorage.removeItem(storageKey(username));
+    // Versión anterior del portal: la sesión vivía solo en la pestaña.
+    sessionStorage.removeItem(`piddet_gym_portal:${username}`);
   } catch {
     // Sin almacenamiento (modo privado): la sesión dura lo que dure la página.
   }
@@ -84,10 +89,34 @@ export function GymPortal({ companyUsername }) {
     return () => { document.title = previous; };
   }, [session, company]);
 
+  const [notice, setNotice] = React.useState('');
+
+  // Al abrir con una sesión guardada: se refresca por detrás y se renueva el token. Sin red se
+  // queda lo último que se vio; con la sesión vencida se vuelve a la entrada.
+  React.useEffect(() => {
+    const saved = readSession(companyUsername);
+    if (!saved) return undefined;
+    let alive = true;
+    api.gymPortalResume(companyUsername, saved.session_token)
+      .then((data) => {
+        if (!alive || !data?.session_token) return;
+        writeSession(companyUsername, data);
+        setSession(data);
+      })
+      .catch((err) => {
+        if (!alive || err?.status !== 401) return;
+        writeSession(companyUsername, null);
+        setSession(null);
+        setNotice(err.message || 'Tu sesión terminó. Vuelve a ingresar.');
+      });
+    return () => { alive = false; };
+  }, [companyUsername]);
+
   const login = async ({ phoneNumber, birthdate }) => {
     const data = await api.gymPortalAccess(companyUsername, { phoneNumber, birthdate });
     writeSession(companyUsername, data);
     setSession(data);
+    setNotice('');
     setTab('subscription');
     window.scrollTo(0, 0);
   };
@@ -95,6 +124,8 @@ export function GymPortal({ companyUsername }) {
   const logout = () => {
     writeSession(companyUsername, null);
     setSession(null);
+    setNotice('');
+    setTab('subscription');
     window.scrollTo(0, 0);
   };
 
@@ -106,7 +137,7 @@ export function GymPortal({ companyUsername }) {
   if (!session) {
     return (
       <div ref={rootRef} className={[s.page, s.glowLogin].join(' ')}>
-        <GymPortalLogin company={company} onSubmit={login} />
+        <GymPortalLogin company={company} onSubmit={login} notice={notice} />
       </div>
     );
   }
@@ -133,7 +164,7 @@ export function GymPortal({ companyUsername }) {
                   <span className={s.hello}>Hola, {member.first_name}</span>
                 </div>
               </div>
-              <button type="button" className={s.logout} onClick={logout} aria-label="Salir">
+              <button type="button" className={s.logout} onClick={logout} aria-label="Cerrar sesión" title="Cerrar sesión">
                 <LogoutIcon />
               </button>
             </header>
@@ -144,6 +175,14 @@ export function GymPortal({ companyUsername }) {
           ) : (
             <GymPortalMeasures data={session} gymName={gymName} />
           )}
+
+          <div className={s.sessionBox}>
+            <button type="button" className={s.signOut} onClick={logout}>
+              <LogoutIcon size={18} />
+              <span>Cerrar sesión</span>
+            </button>
+            <p className={s.sessionNote}>Tu sesión queda guardada en este teléfono.</p>
+          </div>
         </main>
 
         <nav className={s.tabs} aria-label="Secciones">

@@ -479,8 +479,10 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
   pagos) y sus **medidas** (peso, IMC y grasa; la silueta del panel —`BODY_MAP_DOTS`/`IMAGES` de
   `BodyMap`— con un punto por medida y su evolución; lista completa con la diferencia contra la
   toma anterior). Superficie siempre oscura con tokens propios `--portal-*` en `tokens.css`. Una
-  sola llamada (`api.gymPortalAccess`) trae todo; la sesión vive en `sessionStorage` de la
-  pestaña y *Salir* la borra. En demo: Laura (`3001234567`, nacida hoy en 1994) está al día y con
+  sola llamada (`api.gymPortalAccess`) trae todo. La **sesión queda guardada en el teléfono**
+  (`localStorage`, con el `session_token` cifrado que entrega el backend): al volver se pinta lo
+  último que se vio y `api.gymPortalResume` lo refresca y renueva el token; si la sesión ya no vale
+  (401) vuelve a la entrada con el aviso. *Cerrar sesión*, al final de cada pestaña, la borra. En demo: Laura (`3001234567`, nacida hoy en 1994) está al día y con
   medidas; Carlos (`3007654321`, 30/11/1988) tiene saldo y ninguna medida.
 
 ### Reportes

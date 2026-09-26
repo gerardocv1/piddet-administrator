@@ -4913,7 +4913,23 @@ const gymCheckinPresent = (c) => ({
 // fecha de nacimiento de un afiliado activo del mock —Laura (al día, con medidas) o Carlos (con
 // saldo y sin medidas)—; cualquier otro dato responde el 404 genérico del backend.
 function resolvePublicGymPortalMock(path, { method = 'GET', body } = {}) {
-  if (!/^\/public\/[^/]+\/gym\/portal$/.test(path) || method !== 'POST') return undefined;
+  if (method !== 'POST') return undefined;
+
+  // Reabrir con la sesión guardada. En demo el token es legible (`demo-session:{id}`); el real es
+  // cifrado por el backend y el portal no lo interpreta.
+  if (/^\/public\/[^/]+\/gym\/portal\/session$/.test(path)) {
+    const id = Number(String(body?.session_token || '').replace(/^demo-session:/, ''));
+    const member = mockGymMembers.find((m) => m.status === 1 && m.id === id);
+    if (!member) {
+      throw Object.assign(
+        new Error('Tu sesión terminó. Vuelve a ingresar con tu celular y tu fecha de nacimiento.'),
+        { status: 401 },
+      );
+    }
+    return gymPortalPayload(member, path);
+  }
+
+  if (!/^\/public\/[^/]+\/gym\/portal$/.test(path)) return undefined;
 
   const phone = String(body?.phone_number || '').replace(/\D+/g, '').replace(/^57(?=\d{10}$)/, '');
   const member = mockGymMembers.find((m) => m.status === 1 && m.phone_number === phone);
@@ -4923,7 +4939,10 @@ function resolvePublicGymPortalMock(path, { method = 'GET', body } = {}) {
       { status: 404 },
     );
   }
+  return gymPortalPayload(member, path);
+}
 
+function gymPortalPayload(member, path) {
   const subscriptions = mockGymSubscriptions
     .filter((sub) => sub.gym_member_id === member.id)
     .sort((a, b) => (a.subscribed_at < b.subscribed_at ? 1 : -1))
@@ -4960,6 +4979,7 @@ function resolvePublicGymPortalMock(path, { method = 'GET', body } = {}) {
   const personal = gymMemberPersonal(member);
 
   return {
+    session_token: `demo-session:${member.id}`,
     company: (() => {
       const username = decodeURIComponent(path.split('/')[2] || '');
       const c = mockPublicCompanies.find((x) => x.username === username) || mockCompany;
