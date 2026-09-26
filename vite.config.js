@@ -14,8 +14,9 @@ import react from '@vitejs/plugin-react';
 const SITE = 'https://piddet.com';
 const GYM_SHARE = {
   title: 'piddet gym · Tu gimnasio en tu bolsillo',
+  // ≤ 125 caracteres: más largo, WhatsApp y las redes lo cortan en el teléfono.
   description: 'Sigue tu suscripción, tu saldo y tus medidas del gimnasio desde el celular. '
-    + 'Entra con tu número y un código por SMS, sin contraseñas.',
+    + 'Entra con tu número y un código por SMS.',
   url: `${SITE}/gym/`,
   image: `${SITE}/og/piddet-gym.png`,
   imageAlt: 'piddet gym: tu plan, los días que te quedan y tus medidas en el celular.',
