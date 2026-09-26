@@ -50,7 +50,3 @@
 
 /* Saldo pendiente de un período: acusa la deuda en el tono de alerta, en tabla y tarjeta. */
 .saldo { color: var(--color-warning-fg); font-weight: 600; white-space: nowrap; }
-
-/* Estado de la membresía y, al lado, la etiqueta corta de pago pendiente. */
-.badges { display: inline-flex; align-items: center; gap: var(--space-1); flex-wrap: nowrap; }
-.badgeSmall { padding: var(--space-1) var(--space-2); }

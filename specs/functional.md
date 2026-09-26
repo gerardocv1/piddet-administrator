@@ -366,8 +366,8 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
   y no se lista. **El listado de afiliados
   muestra el estado de la membresía, no el activo/inactivo administrativo**: cada fila trae la
   suscripción más reciente (badge Activa/En gracia/Cancelada/Sin suscripción según el campo
-  `membership` que calcula el backend, junto con una etiqueta corta **Pdte. pago** cuando
-  debe algo; la columna **Vence** con solo la fecha de vencimiento y, en escritorio, la columna
+  `membership` que calcula el backend —quien debe un período ya arrancado sale **En gracia**—;
+  la columna **Vence** con solo la fecha de vencimiento y, en escritorio, la columna
   **Saldo** por cobrar; en el teléfono la fecha y el saldo van en la línea de la tarjeta). El
   filtro **Membresía** (`?membership=active|grace|pending|cancelled|none`) aplica las reglas de
   `GymMember::MEMBERSHIP_*` del backend: *activa* (suscripción activa y al día), *en gracia*

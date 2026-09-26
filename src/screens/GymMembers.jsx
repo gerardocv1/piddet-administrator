@@ -229,18 +229,6 @@ export function GymMembers() {
     };
   };
 
-  // Estado de la membresía más, si debe algo, la etiqueta corta de pago pendiente.
-  const membershipBadges = (ms) => (
-    <span className={gl.badges}>
-      <Badge variant={ms.badge.variant}>{ms.badge.label}</Badge>
-      {ms.pending > 0 && (
-        <Badge variant="danger" className={gl.badgeSmall} title={`Pendiente de pago: ${gymMoney(ms.pending)}`}>
-          Pdte. pago
-        </Badge>
-      )}
-    </span>
-  );
-
   // Con el filtro de cumpleaños cada fila trae `birthdate`: se dice el día y los años que cumple.
   const birthdayText = (r) => {
     if (!r.birthdate) return null;
@@ -255,8 +243,11 @@ export function GymMembers() {
       render: (r) => birthdayText(r) || <span className={s.faint}>—</span>,
     }] : []),
     {
-      key: 'subscription', header: 'Membresía', width: 200,
-      render: (r) => membershipBadges(membership(r)),
+      key: 'subscription', header: 'Membresía', width: 140,
+      render: (r) => {
+        const ms = membership(r);
+        return <Badge variant={ms.badge.variant}>{ms.badge.label}</Badge>;
+      },
     },
     {
       key: 'end_date', header: 'Vence', width: 130,
@@ -339,7 +330,7 @@ export function GymMembers() {
               media={<Avatar name={r.member_name} size="sm" />}
               title={r.member_name}
               subtitle={birthdayText(r)}
-              badge={membershipBadges(ms)}
+              badge={<Badge variant={ms.badge.variant}>{ms.badge.label}</Badge>}
               meta={ms.pending > 0
                 ? <>{ms.detail && <>{ms.detail} · </>}<span className={gl.saldo}>saldo {gymMoney(ms.pending)}</span></>
                 : ms.detail}
