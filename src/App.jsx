@@ -100,11 +100,13 @@ const PUBLIC_COMPANY_RE = /^\/([^/]+)\/?$/;
 const PUBLIC_LODGING_RE = /^\/([^/]+)\/hospedaje\/?$/;
 const PUBLIC_LODGING_UNIT_RE = /^\/([^/]+)\/hospedaje\/(\d+)\/?$/;
 
-// Portal del afiliado del gimnasio: /{username-compañía}/afiliados. El socio entra con su celular y
-// su fecha de nacimiento y ve su suscripción, su saldo y sus medidas. Segmento en español: es la
-// URL que el gimnasio comparte con sus socios.
-const PUBLIC_GYM_PORTAL_RE = /^\/([^/]+)\/afiliados\/?$/;
+// Gimnasios: la puerta es una sola, piddet.com/gym. El socio entra con su celular y un código por
+// SMS, y la plataforma lo lleva al portal de su gimnasio, /gym/{username-compañía}, donde ve su
+// suscripción, su saldo y sus medidas. `gym` queda reservado: no se lee como username.
+// La URL vieja /{username}/afiliados redirige al portal nuevo para no romper accesos instalados.
 const GYM_HUB_PATH = '/gym';
+const PUBLIC_GYM_PORTAL_RE = /^\/gym\/([^/]+)\/?$/;
+const LEGACY_GYM_PORTAL_RE = /^\/([^/]+)\/afiliados\/?$/;
 
 // Color de la barra de estado en la app instalada: debe seguir al tema activo, no a la
 // preferencia del sistema. Se lee del propio token --bg-body (el fondo con el que la cabecera
@@ -148,6 +150,22 @@ export default function App() {
   const path = window.location.pathname;
   if (path === '/') return <PublicHome />;
 
+  // 1a) Gimnasios, antes que el resto: /gym/{username} tiene dos segmentos y no debe leerse como
+  //  otra vista pública de la compañía `gym`. La entrada general no es de ningún gimnasio; el
+  //  portal de cada uno requiere la sesión que se abrió en ella.
+  if (path === GYM_HUB_PATH || path === `${GYM_HUB_PATH}/`) return <GymHub />;
+  const gymPortalMatch = path.match(PUBLIC_GYM_PORTAL_RE);
+  if (gymPortalMatch) {
+    return <GymPortal companyUsername={decodeURIComponent(gymPortalMatch[1])} />;
+  }
+  const legacyGymMatch = path.match(LEGACY_GYM_PORTAL_RE);
+  if (legacyGymMatch && legacyGymMatch[1] !== ADMIN_BASE.slice(1)) {
+    window.location.replace(
+      `${GYM_HUB_PATH}/${legacyGymMatch[1]}${window.location.search}${window.location.hash}`,
+    );
+    return null;
+  }
+
   const publicMatch = path.match(PUBLIC_MENU_RE);
   if (publicMatch && publicMatch[1] !== ADMIN_BASE.slice(1)) {
     return (
@@ -185,17 +203,6 @@ export default function App() {
   const lodgingMatch = path.match(PUBLIC_LODGING_RE);
   if (lodgingMatch && lodgingMatch[1] !== ADMIN_BASE.slice(1)) {
     return <PublicLodging companyUsername={decodeURIComponent(lodgingMatch[1])} />;
-  }
-
-  // 1a-quater) Entrada general de los gimnasios (piddet.com/gym): no es de ningún gimnasio; el
-  //  socio entra con su celular y la plataforma lo lleva al suyo. `gym` queda reservado: no se
-  //  lee como el username de una compañía.
-  if (path === GYM_HUB_PATH || path === `${GYM_HUB_PATH}/`) return <GymHub />;
-
-  // 1a-quinquies) Portal del afiliado de un gimnasio (sin sesión del panel).
-  const gymPortalMatch = path.match(PUBLIC_GYM_PORTAL_RE);
-  if (gymPortalMatch && gymPortalMatch[1] !== ADMIN_BASE.slice(1) && `/${gymPortalMatch[1]}` !== GYM_HUB_PATH) {
-    return <GymPortal companyUsername={decodeURIComponent(gymPortalMatch[1])} />;
   }
 
   // 1b) Portada pública de la compañía: raíz limpia de un solo segmento (salvo `admin`).

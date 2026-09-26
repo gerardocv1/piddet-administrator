@@ -195,12 +195,12 @@
           }
         }
 
-        // ── Portal del afiliado del gimnasio (/{compañía}/afiliados) ──
+        // ── Portal del afiliado del gimnasio (/gym/{compañía}) ──
         // Es OTRA app instalable, distinta del panel: su propio id, scope y start_url, el nombre y
         // el icono del gimnasio, arranque oscuro y accesos directos. El nombre sale de la marca
         // que el portal guardó en la visita anterior (`piddet_gym_portal_brand:{compañía}`); en la
         // primera visita aún no existe, y el portal recarga antes de instalar (ver GymPortal).
-        var PORTAL_RE = /^\/([^/]+)\/afiliados\/?$/;
+        var PORTAL_RE = /^\/gym\/([^/]+)\/?$/;
         var PORTAL_BG = '#0b2630';   // igual que --portal-bg: splash y barra de estado oscuros
 
         function portalStored(kind, username) {
@@ -215,7 +215,7 @@
         // respaldo, pero no cuenta como «cargó con el nombre»: el portal recarga antes de instalar.
         function applyGymPortal(username, company, hot) {
           var origin = window.location.origin;
-          var appPath = '/' + encodeURIComponent(username) + '/afiliados';
+          var appPath = '/gym/' + encodeURIComponent(username);
           var name = company ? appNameOf(company) : '';
           var shortLabel = shortName(name || 'Mi gym');
           var session = portalStored('session', username);
@@ -231,7 +231,9 @@
             lang: 'es',
             dir: 'ltr',
             start_url: origin + appPath + '?source=app' + handoff,
-            scope: origin + appPath,
+            // El alcance es toda la sección /gym, no solo este portal: al cerrar sesión la app
+            // vuelve a la entrada general y debe seguir dentro de sí misma, sin barra del navegador.
+            scope: origin + '/gym',
             display: 'standalone',
             display_override: ['standalone'],
             orientation: 'portrait',
@@ -266,7 +268,7 @@
         var inPanel = path === ADMIN || path.indexOf(ADMIN + '/') === 0;
         var portalMatch = path.match(PORTAL_RE);
         var portalUser = null;
-        if (portalMatch && portalMatch[1] !== ADMIN.slice(1)) {
+        if (portalMatch) {
           try { portalUser = decodeURIComponent(portalMatch[1]); } catch (e) { portalUser = portalMatch[1]; }
         }
         var isPrivatePublicFlow = path === '/checkin' || path.indexOf('/checkin/') === 0

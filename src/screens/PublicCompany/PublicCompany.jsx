@@ -7,6 +7,7 @@ import {
 } from '../public/shareMeta.js';
 import { PublicBottomBar } from '../public/PublicBottomBar.jsx';
 import { UnitCard } from '../public/Lodging/UnitCard.jsx';
+import { PiddetGymLogo } from '../public/GymPortal/PiddetGymLogo.jsx';
 import { companyBrandTheme } from '../../lib/brand/palettes.js';
 import { whatsappHref } from '../public/whatsapp.js';
 import { getStoreStatus, getWeekSchedule, googleMapsUrl, googleMapsEmbedUrl } from '../../lib/storeHours.js';
@@ -14,6 +15,7 @@ import s from './PublicCompany.module.css';
 
 const initial = (name = '') => (name.trim()[0] || '?').toUpperCase();
 const httpHref = (url = '') => (/^https?:\/\//i.test(url) ? url : `https://${url}`);
+const GYM_HUB_PATH = '/gym';
 const SCHEMA_TYPES = {
   restaurant: 'Restaurant',
   gym: 'ExerciseGym',
@@ -258,6 +260,22 @@ export function PublicCompany({ companyUsername }) {
 
         <div className={s.contentGrid}>
           <div className={s.primaryColumn}>
+            {/* Gimnasios: el socio consulta su suscripción en la entrada general (piddet.com/gym),
+                que es de todos los gimnasios; con su celular lo lleva al portal de este. */}
+            {company.company_type_key === 'gym' && (
+              <section className={s.gymMember} aria-labelledby="gym-member-title">
+                <span className={s.gymMemberGlow} aria-hidden="true" />
+                <PiddetGymLogo size="sm" />
+                <div className={s.gymMemberCopy}>
+                  <h2 id="gym-member-title" className={s.gymMemberTitle}>¿Ya eres socio de {company.name}?</h2>
+                  <p className={s.gymMemberText}>Mira tu suscripción, tu saldo y tus medidas desde el celular.</p>
+                </div>
+                <a className={s.gymMemberCta} href={GYM_HUB_PATH}>
+                  Ver mi suscripción <i className="fas fa-arrow-right" aria-hidden="true" />
+                </a>
+              </section>
+            )}
+
             {units.length > 0 && (
               <section className={s.panel} aria-labelledby="lodging-title">
                 <div className={s.sectionHead}>

@@ -192,7 +192,7 @@
   --container-max: 1180px;
   --bp-mobile: 860px; /* referencia; los @media usan el valor literal */
 
-  /* ---- Portal público del afiliado (/{compañía}/afiliados) ----
+  /* ---- Portal público del afiliado (/gym y /gym/{compañía}) ----
      Superficie inmersiva y siempre oscura sobre el petróleo de la marca, con el naranja piddet
      como acento. Es fija a propósito: no cambia con el tema del panel (el socio no lo elige) y
      su escala tipográfica no se compacta en el teléfono, que es justo donde se usa. */
