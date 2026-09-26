@@ -18,7 +18,8 @@ const GYM_SHARE = {
   description: 'Sigue tu suscripción, tu saldo y tus medidas del gimnasio desde el celular. '
     + 'Entra con tu número y un código por SMS.',
   url: `${SITE}/gym/`,
-  image: `${SITE}/og/piddet-gym.png`,
+  // `?v=`: WhatsApp y Facebook guardan la imagen por URL; súbelo cada vez que cambie el archivo.
+  image: `${SITE}/og/piddet-gym.png?v=2`,
   imageAlt: 'piddet gym: tu plan, los días que te quedan y tus medidas en el celular.',
   themeColor: '#0b2630', // --portal-bg: la entrada ya abre oscura, como el portal
 };
