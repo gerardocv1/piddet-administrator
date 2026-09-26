@@ -52,7 +52,7 @@ function DateSelect({ id, label, value, onChange, placeholder, options }) {
   );
 }
 
-export function GymPortalLogin({ company, onSubmit }) {
+export function GymPortalLogin({ company, onSubmit, notice = '' }) {
   const [phone, setPhone] = React.useState('');
   const [day, setDay] = React.useState('');
   const [month, setMonth] = React.useState('');
@@ -136,6 +136,7 @@ export function GymPortalLogin({ company, onSubmit }) {
           <p className={s.hint}>La misma que registraste en recepción. Así confirmamos que eres tú.</p>
         </fieldset>
 
+        {!error && notice && <p className={s.error} role="status">{notice}</p>}
         {error && <p className={s.error} role="alert">{error}</p>}
 
         <button type="submit" className={s.cta} disabled={!complete || sending}>
