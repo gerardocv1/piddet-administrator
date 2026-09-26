@@ -219,4 +219,28 @@ export const gymService = {
       { session_token: sessionToken },
       { auth: false },
     ),
+
+  // El socio corrige sus datos: email, id_type_id, id_number, birthdate, sex, goal_id (nombre y
+  // celular no). Devuelve el portal completo, con el token renovado.
+  gymPortalUpdateProfile: (companyUsername, sessionToken, data) =>
+    http.post(
+      `/public/${encodeURIComponent(companyUsername)}/gym/portal/profile`,
+      { ...data, session_token: sessionToken },
+      { auth: false },
+    ),
+
+  // Foto de perfil ya recortada (Blob/File de imagen). Devuelve el portal con `member.photo_url`.
+  gymPortalUploadPhoto: (companyUsername, sessionToken, file) => {
+    const fd = new FormData();
+    fd.append('session_token', sessionToken);
+    fd.append('file', file);
+    return http.post(`/public/${encodeURIComponent(companyUsername)}/gym/portal/photo`, fd, { auth: false });
+  },
+
+  gymPortalRemovePhoto: (companyUsername, sessionToken) =>
+    http.post(
+      `/public/${encodeURIComponent(companyUsername)}/gym/portal/photo/remove`,
+      { session_token: sessionToken },
+      { auth: false },
+    ),
 };

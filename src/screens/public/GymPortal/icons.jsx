@@ -43,3 +43,9 @@ export const LinkIcon = (p) => <Svg {...p}><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4
 export const BoltIcon = (p) => <Svg {...p}><path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z" /></Svg>;
 export const LockIcon = (p) => <Svg {...p}><rect x="4.5" y="10.5" width="15" height="10" rx="2.5" /><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3" /></Svg>;
 export const WifiOffIcon = (p) => <Svg {...p}><path d="M3 3l18 18M8.5 16.5a5 5 0 0 1 7 0M5 12.9a10 10 0 0 1 4.2-2.4M19 12.9a10 10 0 0 0-3-2M2 8.8a15 15 0 0 1 4.3-2.6M22 8.8A15 15 0 0 0 10.6 5M12 20h.01" /></Svg>;
+export const UserIcon = (p) => <Svg {...p}><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /></Svg>;
+export const CameraIcon = (p) => <Svg {...p}><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z" /><circle cx="12" cy="13.5" r="3.5" /></Svg>;
+export const TrashIcon = (p) => <Svg {...p}><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" /></Svg>;
+export const RotateIcon = (p) => <Svg {...p}><path d="M20 11a8 8 0 1 1-2.3-5.7L20 8" /><path d="M20 3v5h-5" /></Svg>;
+export const MinusIcon = (p) => <Svg strokeWidth={2.6} {...p}><path d="M6 12h12" /></Svg>;
+export const PlusIcon = (p) => <Svg strokeWidth={2.6} {...p}><path d="M12 6v12M6 12h12" /></Svg>;

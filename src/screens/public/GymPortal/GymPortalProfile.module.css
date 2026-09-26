@@ -1,0 +1,342 @@
+/* Perfil del socio en el portal: foto, datos fijos y datos editables. */
+
+.head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.title {
+  margin: 0;
+  color: var(--portal-text);
+  font-family: var(--font-logo);
+  font-weight: var(--fw-heavy);
+  font-size: var(--portal-fs-display-sm);
+  line-height: 1;
+}
+
+.code {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-pill);
+  background-color: var(--portal-chip);
+  font-size: var(--portal-fs-caption);
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.08em;
+  color: var(--portal-label-strong);
+}
+
+.h2 {
+  margin: 0;
+  color: var(--portal-text);
+  font-family: var(--font-logo);
+  font-weight: var(--fw-bold);
+  font-size: var(--portal-fs-title);
+  line-height: 1;
+}
+
+/* ── Foto ── */
+
+.photoCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-6) var(--space-4) var(--portal-space-4-5);
+  border-radius: var(--portal-radius-2xl);
+  background-color: var(--portal-surface);
+  border: 1px solid var(--portal-line);
+}
+
+.photoBtn {
+  position: relative;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+}
+
+.photoBtn:focus-visible { outline: 3px solid var(--portal-accent); outline-offset: 4px; }
+
+.photo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 124px;
+  height: 124px;
+  overflow: hidden;
+  border-radius: 50%;
+  background-color: var(--portal-teal);
+  background-image: var(--portal-gradient);
+  box-shadow: 0 0 0 4px var(--portal-bg), 0 0 0 6px var(--portal-accent);
+}
+
+.photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.photoInitials {
+  font-family: var(--font-logo);
+  font-weight: var(--fw-heavy);
+  font-size: var(--portal-fs-display);
+  color: var(--portal-on-accent);
+}
+
+.cameraBadge {
+  position: absolute;
+  right: 0;
+  bottom: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background-color: var(--portal-accent);
+  color: var(--portal-on-accent);
+  box-shadow: 0 0 0 3px var(--portal-surface);
+}
+
+.hiddenInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.photoActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.photoLink {
+  display: flex;
+  align-items: center;
+  gap: var(--portal-space-1-5);
+  height: 40px;
+  padding: 0 var(--space-4);
+  border: 0;
+  border-radius: var(--radius-pill);
+  background-color: var(--portal-chip);
+  color: var(--portal-text);
+  font-family: var(--font-sans);
+  font-size: var(--portal-fs-small);
+  font-weight: var(--fw-bold);
+  cursor: pointer;
+}
+
+.photoLink:hover { background-color: var(--portal-surface-hover); }
+.photoLink:disabled { opacity: 0.6; cursor: default; }
+.photoRemove { color: var(--portal-warning); }
+
+/* ── Datos que se cambian en recepción ── */
+
+.locked {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--portal-space-4-5);
+  border-radius: var(--portal-radius-xl);
+  background-color: var(--portal-surface-soft);
+  border: 1px dashed var(--portal-line-strong);
+}
+
+.lockedRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.lockedLabel {
+  font-size: var(--portal-fs-micro);
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--portal-text-subtle);
+}
+
+.lockedValue {
+  min-width: 0;
+  text-align: right;
+  font-size: var(--portal-fs-body);
+  font-weight: var(--fw-bold);
+  overflow-wrap: anywhere;
+}
+
+.lockedHint {
+  display: flex;
+  align-items: center;
+  gap: var(--portal-space-1-5);
+  margin: 0;
+  font-size: var(--portal-fs-caption);
+  color: var(--portal-label);
+}
+
+/* ── Formulario ── */
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--portal-space-4-5);
+  padding: var(--portal-space-5-5) var(--portal-space-4-5);
+  border-radius: var(--portal-radius-xl);
+  background-color: var(--portal-surface);
+  border: 1px solid var(--portal-line);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: var(--portal-space-2-5);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--portal-space-1-5);
+  min-width: 0;
+}
+
+.label {
+  font-size: var(--portal-fs-caption);
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--portal-label);
+}
+
+.fieldHint {
+  margin: 0;
+  font-size: var(--portal-fs-caption);
+  color: var(--portal-text-subtle);
+}
+
+.input {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  height: 52px;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0 var(--portal-space-3-5);
+  border-radius: var(--portal-radius);
+  border: 1.5px solid var(--portal-line-input);
+  background-color: var(--portal-input);
+  color: var(--portal-text);
+  font-family: var(--font-sans);
+  font-size: var(--portal-fs-lead);
+  font-weight: var(--fw-semibold);
+  outline: none;
+}
+
+.input::placeholder { color: var(--portal-text-faint); }
+
+.input:focus {
+  border-color: var(--portal-accent);
+  box-shadow: 0 0 0 3px var(--portal-accent-ring);
+}
+
+.selectWrap { position: relative; }
+
+.select {
+  padding-right: 38px;
+  cursor: pointer;
+}
+
+.select option {
+  color: var(--portal-option-text);
+  background-color: var(--portal-option-bg);
+}
+
+.empty { color: var(--portal-text-faint); }
+
+.chevron {
+  position: absolute;
+  top: 50%;
+  right: var(--space-3);
+  transform: translateY(-50%);
+  color: var(--portal-label);
+  pointer-events: none;
+}
+
+.segment {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-1);
+  padding: var(--space-1);
+  border-radius: var(--portal-radius-md);
+  background-color: var(--portal-chip);
+}
+
+.segmentBtn {
+  height: 44px;
+  border: 0;
+  border-radius: var(--portal-radius);
+  background: transparent;
+  color: var(--portal-text-muted);
+  font-family: var(--font-sans);
+  font-size: var(--portal-fs-body);
+  font-weight: var(--fw-bold);
+  cursor: pointer;
+}
+
+.segmentBtn:hover { color: var(--portal-text); }
+
+.segmentOn,
+.segmentOn:hover {
+  background-color: var(--portal-teal);
+  color: var(--portal-on-accent);
+}
+
+.message {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-3) var(--portal-space-3-5);
+  border-radius: var(--portal-radius);
+  font-size: var(--portal-fs-small);
+  font-weight: var(--fw-semibold);
+  line-height: var(--lh-snug);
+}
+
+.messageOk {
+  background-color: var(--portal-success-soft);
+  color: var(--portal-success);
+}
+
+.messageError {
+  background-color: var(--portal-accent-soft);
+  color: var(--portal-warning);
+}
+
+.save {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  height: 54px;
+  border: 0;
+  border-radius: var(--portal-radius-md);
+  background-color: var(--portal-accent);
+  color: var(--portal-on-accent);
+  font-family: var(--font-logo);
+  font-weight: var(--fw-heavy);
+  font-size: var(--portal-fs-amount);
+  cursor: pointer;
+  box-shadow: var(--portal-shadow-cta);
+}
+
+.save:hover:not(:disabled) { background-color: var(--portal-accent-hover); }
+.save:disabled { opacity: 0.5; cursor: default; box-shadow: none; }
+
+.input:focus-visible,
+.segmentBtn:focus-visible,
+.photoLink:focus-visible,
+.save:focus-visible { outline: 2px solid var(--portal-accent); outline-offset: 2px; }

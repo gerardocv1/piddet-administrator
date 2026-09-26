@@ -3,7 +3,8 @@ import { api } from '../../../lib/api.js';
 import { GymPortalLogin } from './GymPortalLogin.jsx';
 import { GymPortalSubscription } from './GymPortalSubscription.jsx';
 import { GymPortalMeasures } from './GymPortalMeasures.jsx';
-import { CardIcon, LogoutIcon, TrendIcon } from './icons.jsx';
+import { GymPortalProfile } from './GymPortalProfile.jsx';
+import { CardIcon, LogoutIcon, TrendIcon, UserIcon } from './icons.jsx';
 import { subscriptionView, SUBSCRIPTION_STATE } from './gymPortalData.js';
 import { usePortalInstall } from './usePortalInstall.js';
 import { InstallBanner, InstallButton, InstallSheet } from './GymPortalInstall.jsx';
@@ -22,7 +23,10 @@ import s from './GymPortal.module.css';
 const TABS = [
   { key: 'subscription', label: 'Suscripción', Icon: CardIcon },
   { key: 'measures', label: 'Medidas', Icon: TrendIcon },
+  { key: 'profile', label: 'Perfil', Icon: UserIcon },
 ];
+
+const TAB_PARAM = { medidas: 'measures', perfil: 'profile' };
 
 const storageKey = (username) => `piddet_gym_portal_session:${username}`;
 
@@ -109,7 +113,7 @@ function readLaunch() {
   const params = new URLSearchParams(window.location.search);
   const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
   return {
-    tab: params.get('tab') === 'medidas' ? 'measures' : 'subscription',
+    tab: TAB_PARAM[params.get('tab')] || 'subscription',
     install: params.get('instalar') === '1',
     handoff: hash.get('s') || null,
   };
@@ -240,6 +244,36 @@ export function GymPortal({ companyUsername }) {
 
   const closeSheet = React.useCallback(() => setSheetOpen(false), []);
 
+  // Lo que devuelve cualquier acción del portal trae el portal completo y el token renovado.
+  const applyData = (data) => {
+    if (!data?.session_token) return;
+    tokenRef.current = data.session_token;
+    lastRefresh.current = Date.now();
+    writeSession(companyUsername, data);
+    setSession(data);
+  };
+
+  const expire = (err) => {
+    tokenRef.current = null;
+    writeSession(companyUsername, null);
+    setSession(null);
+    setNotice(err?.message || 'Tu sesión terminó. Vuelve a ingresar.');
+  };
+
+  // Acciones del perfil: una sesión vencida vuelve a la entrada; cualquier otro error sube a la
+  // pantalla para que lo muestre donde ocurrió.
+  const withSession = (call) => async (...args) => {
+    try {
+      applyData(await call(tokenRef.current, ...args));
+    } catch (err) {
+      if (err?.status === 401) expire(err);
+      throw err;
+    }
+  };
+  const saveProfile = withSession((token, changes) => api.gymPortalUpdateProfile(companyUsername, token, changes));
+  const uploadPhoto = withSession((token, file) => api.gymPortalUploadPhoto(companyUsername, token, file));
+  const removePhoto = withSession((token) => api.gymPortalRemovePhoto(companyUsername, token));
+
   const login = async ({ phoneNumber, birthdate }) => {
     const data = await api.gymPortalAccess(companyUsername, { phoneNumber, birthdate });
     tokenRef.current = data.session_token;
@@ -303,7 +337,7 @@ export function GymPortal({ companyUsername }) {
   const subState = subscriptionView(session.subscription, session.today).state;
   const warm = subState === SUBSCRIPTION_STATE.PENDING || subState === SUBSCRIPTION_STATE.GRACE;
   let glow = s.glowTeal;
-  if (tab === 'measures') glow = s.glowMeasures;
+  if (tab !== 'subscription') glow = s.glowMeasures;
   else if (warm) glow = s.glowAccent;
 
   return (
@@ -313,7 +347,12 @@ export function GymPortal({ companyUsername }) {
           {tab === 'subscription' && (
             <header className={s.header}>
               <div className={s.identity}>
-                <span className={s.avatar} aria-hidden="true">{initials(member.member_name || member.first_name)}</span>
+                <button type="button" className={s.avatar} onClick={() => goTo('profile')} aria-label="Ver mi perfil">
+                  {member.photo_url
+                    ? <img src={member.photo_url} alt="" onError={(e) => { e.currentTarget.hidden = true; }} />
+                    : null}
+                  <span>{initials(member.member_name || member.first_name)}</span>
+                </button>
                 <div className={s.identityText}>
                   <span className={s.eyebrow}>{gymName}</span>
                   <span className={s.hello}>Hola, {member.first_name}</span>
@@ -334,10 +373,17 @@ export function GymPortal({ companyUsername }) {
             />
           )}
 
-          {tab === 'subscription' ? (
+          {tab === 'subscription' && (
             <GymPortalSubscription data={session} onShowMeasures={() => goTo('measures')} />
-          ) : (
-            <GymPortalMeasures data={session} gymName={gymName} />
+          )}
+          {tab === 'measures' && <GymPortalMeasures data={session} gymName={gymName} />}
+          {tab === 'profile' && (
+            <GymPortalProfile
+              data={session}
+              onSaveProfile={saveProfile}
+              onUploadPhoto={uploadPhoto}
+              onRemovePhoto={removePhoto}
+            />
           )}
 
           <div className={s.sessionBox}>

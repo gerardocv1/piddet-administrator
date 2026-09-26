@@ -485,7 +485,13 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
   (401) vuelve a la entrada con el aviso. *Cerrar sesión*, al final de cada pestaña, la borra.
   **Se instala como app** en Android e iOS, con el nombre y el icono del gimnasio: aviso arriba,
   botón *Instalar como app* y una hoja que guía según el teléfono (detalle en
-  [`tech.md`](tech.md) → *PWA*). En demo: Laura (`3001234567`, nacida hoy en 1994) está al día y con
+  [`tech.md`](tech.md) → *PWA*).
+  Tercera pestaña, **Perfil**: el socio sube su **foto** (la elige de la galería o la cámara, la
+  **recorta en un círculo** con zoom, arrastre y giro —`PhotoCropper`, sobre `react-easy-crop` y
+  `cropImage.js`— y se sube ya reducida a 720 × 720 JPEG) y corrige **correo, documento, fecha de
+  nacimiento, sexo y objetivo**. Nombre y celular solo se muestran: se cambian en recepción. La
+  foto aparece también en el avatar del encabezado. La fecha de nacimiento se puede corregir pero
+  no vaciar, porque es la llave de entrada. En demo: Laura (`3001234567`, nacida hoy en 1994) está al día y con
   medidas; Carlos (`3007654321`, 30/11/1988) tiene saldo y ninguna medida.
 
 ### Reportes
