@@ -43,6 +43,10 @@ const DOTS = {
   },
 };
 
+/** Siluetas y posición de cada punto, para otras vistas del mapa (el portal del afiliado). */
+export const BODY_MAP_IMAGES = IMG;
+export const BODY_MAP_DOTS = DOTS;
+
 /** Claves de medidas que el mapa corporal sabe ubicar. */
 export const BODY_MAP_KEYS = Array.from(new Set(
   Object.values(DOTS).flatMap((views) => Object.values(views).flatMap((dots) => Object.keys(dots))),

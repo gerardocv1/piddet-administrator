@@ -22,6 +22,7 @@ import { PublicHome } from './screens/PublicHome/PublicHome.jsx';
 import { CheckinWizard } from './screens/public/Checkin/CheckinWizard.jsx';
 import { PublicLodging } from './screens/public/Lodging/PublicLodging.jsx';
 import { PublicLodgingUnit } from './screens/public/Lodging/PublicLodgingUnit.jsx';
+import { GymPortal } from './screens/public/GymPortal/GymPortal.jsx';
 import { Invoices } from './screens/Invoices.jsx';
 import { InvoiceDetail } from './screens/InvoiceDetail.jsx';
 import { SalesReport } from './screens/SalesReport.jsx';
@@ -97,6 +98,11 @@ const PUBLIC_COMPANY_RE = /^\/([^/]+)\/?$/;
 // español a propósito: es la URL que ve y comparte el visitante.
 const PUBLIC_LODGING_RE = /^\/([^/]+)\/hospedaje\/?$/;
 const PUBLIC_LODGING_UNIT_RE = /^\/([^/]+)\/hospedaje\/(\d+)\/?$/;
+
+// Portal del afiliado del gimnasio: /{username-compañía}/afiliados. El socio entra con su celular y
+// su fecha de nacimiento y ve su suscripción, su saldo y sus medidas. Segmento en español: es la
+// URL que el gimnasio comparte con sus socios.
+const PUBLIC_GYM_PORTAL_RE = /^\/([^/]+)\/afiliados\/?$/;
 
 // Color de la barra de estado en la app instalada: debe seguir al tema activo, no a la
 // preferencia del sistema. Se lee del propio token --bg-body (el fondo con el que la cabecera
@@ -177,6 +183,12 @@ export default function App() {
   const lodgingMatch = path.match(PUBLIC_LODGING_RE);
   if (lodgingMatch && lodgingMatch[1] !== ADMIN_BASE.slice(1)) {
     return <PublicLodging companyUsername={decodeURIComponent(lodgingMatch[1])} />;
+  }
+
+  // 1a-quater) Portal del afiliado del gimnasio (sin sesión del panel).
+  const gymPortalMatch = path.match(PUBLIC_GYM_PORTAL_RE);
+  if (gymPortalMatch && gymPortalMatch[1] !== ADMIN_BASE.slice(1)) {
+    return <GymPortal companyUsername={decodeURIComponent(gymPortalMatch[1])} />;
   }
 
   // 1b) Portada pública de la compañía: raíz limpia de un solo segmento (salvo `admin`).

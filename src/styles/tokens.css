@@ -191,6 +191,91 @@
   --topbar-h: 66px;
   --container-max: 1180px;
   --bp-mobile: 860px; /* referencia; los @media usan el valor literal */
+
+  /* ---- Portal público del afiliado (/{compañía}/afiliados) ----
+     Superficie inmersiva y siempre oscura sobre el petróleo de la marca, con el naranja piddet
+     como acento. Es fija a propósito: no cambia con el tema del panel (el socio no lo elige) y
+     su escala tipográfica no se compacta en el teléfono, que es justo donde se usa. */
+  --portal-bg: #0b2630;
+  --portal-surface: #123845;
+  --portal-surface-soft: rgba(255, 255, 255, 0.05);
+  --portal-surface-hover: rgba(255, 255, 255, 0.10);
+  --portal-chip: rgba(255, 255, 255, 0.08);
+  --portal-input: rgba(255, 255, 255, 0.06);
+  --portal-line: rgba(255, 255, 255, 0.08);
+  --portal-line-soft: rgba(255, 255, 255, 0.10);
+  --portal-line-input: rgba(255, 255, 255, 0.14);
+  --portal-line-strong: rgba(255, 255, 255, 0.16);
+  --portal-line-on-brand: rgba(255, 255, 255, 0.22);
+  --portal-text: #ffffff;
+  --portal-text-soft: rgba(255, 255, 255, 0.72);
+  --portal-text-muted: rgba(255, 255, 255, 0.62);
+  --portal-text-subtle: rgba(255, 255, 255, 0.55);
+  --portal-text-faint: rgba(255, 255, 255, 0.40);
+  --portal-on-brand-soft: rgba(255, 255, 255, 0.80);
+  --portal-on-brand-muted: rgba(255, 255, 255, 0.75);
+  --portal-label: #9fc6cf;
+  --portal-label-strong: #cfe3e8;
+  --portal-teal: #2f97a5;
+  --portal-teal-soft: #62a8b5;
+  --portal-gradient: linear-gradient(87deg, #156e7f 0%, #2f97a5 100%);
+  --portal-gradient-bar: linear-gradient(90deg, #2f97a5 0%, #62a8b5 100%);
+  --portal-success: #5ee3a4;
+  --portal-success-soft: rgba(94, 227, 164, 0.14);
+  --portal-warning: #ffb066;
+  --portal-accent: #ff7c00;
+  --portal-accent-hover: #ff8f26;
+  --portal-accent-soft: rgba(255, 124, 0, 0.18);
+  --portal-accent-faint: rgba(255, 124, 0, 0.10);
+  --portal-accent-ring: rgba(255, 124, 0, 0.28);
+  --portal-on-accent: #0b2630;
+  --portal-on-accent-soft: rgba(11, 38, 48, 0.85);
+  --portal-on-accent-muted: rgba(11, 38, 48, 0.72);
+  --portal-scrim: rgba(11, 38, 48, 0.35);
+  --portal-ring-track: rgba(255, 255, 255, 0.18);
+  --portal-ring-track-dim: rgba(255, 255, 255, 0.14);
+  --portal-glow-teal: rgba(47, 151, 165, 0.45);
+  --portal-glow-teal-strong: rgba(47, 151, 165, 0.55);
+  --portal-glow-accent: rgba(255, 124, 0, 0.30);
+  --portal-glow-accent-strong: rgba(255, 124, 0, 0.32);
+  --portal-whatsapp: #25d366;
+  --portal-whatsapp-hover: #3fe07c;
+  --portal-option-bg: #ffffff;
+  --portal-option-text: #172b4d;
+  --portal-shadow: 0 24px 48px rgba(0, 0, 0, 0.40);
+  --portal-shadow-soft: 0 24px 48px rgba(0, 0, 0, 0.35);
+  --portal-shadow-pill: 0 6px 16px rgba(0, 0, 0, 0.35);
+  --portal-shadow-cta: 0 12px 28px rgba(255, 124, 0, 0.35);
+  --portal-shadow-balance: 0 18px 40px rgba(255, 124, 0, 0.30);
+  --portal-radius-sm: 0.75rem;   /* 12px */
+  --portal-radius: 0.875rem;     /* 14px */
+  --portal-radius-md: 1rem;      /* 16px */
+  --portal-radius-lg: 1.125rem;  /* 18px */
+  --portal-radius-xl: 1.375rem;  /* 22px */
+  --portal-radius-2xl: 1.5rem;   /* 24px */
+  --portal-radius-3xl: 1.625rem; /* 26px */
+  --portal-fs-micro: 0.6875rem;  /* 11px */
+  --portal-fs-caption: 0.75rem;  /* 12px */
+  --portal-fs-small: 0.8125rem;  /* 13px */
+  --portal-fs-body: 0.875rem;    /* 14px */
+  --portal-fs-lead: 0.9375rem;   /* 15px */
+  --portal-fs-amount: 1.0625rem; /* 17px */
+  --portal-fs-title: 1.125rem;   /* 18px */
+  --portal-fs-cta: 1.1875rem;    /* 19px */
+  --portal-fs-stat: 1.25rem;     /* 20px */
+  --portal-fs-date: 1.375rem;    /* 22px */
+  --portal-fs-heading: 1.5rem;   /* 24px */
+  --portal-fs-plan: 1.625rem;    /* 26px */
+  --portal-fs-display-sm: 1.875rem; /* 30px */
+  --portal-fs-display: 2.25rem;  /* 36px */
+  --portal-fs-hero: 2.375rem;    /* 38px */
+  /* Medios pasos del portal (2 px) entre los de la escala --space-N. */
+  --portal-space-1-5: 0.375rem;  /* 6px */
+  --portal-space-2-5: 0.625rem;  /* 10px */
+  --portal-space-3-5: 0.875rem;  /* 14px */
+  --portal-space-4-5: 1.125rem;  /* 18px */
+  --portal-space-5-5: 1.375rem;  /* 22px */
+  --portal-space-15: 3.75rem;    /* 60px */
 }
 
 /* Escala tipográfica responsive en dos escalones. Como los componentes consumen
