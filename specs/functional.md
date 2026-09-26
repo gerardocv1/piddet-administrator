@@ -478,13 +478,15 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
   entra al completar el último dígito, con espera visible para pedir otro). La entrada con
   **fecha de nacimiento** (tres selectores) es alterna y solo aparece si el backend la tiene
   encendida (`api.gymPortalOptions`). Ya dentro ve, sin sesión del panel, su suscripción (tarjeta del plan con los días que
-  quedan, el período en curso o el **saldo pendiente** con WhatsApp al gimnasio, y los últimos
-  pagos) y sus **medidas** (peso, IMC y grasa; la silueta del panel —`BODY_MAP_DOTS`/`IMAGES` de
+  quedan; el **saldo pendiente** con WhatsApp al gimnasio si debe; la tarjeta **Tu gimnasio** con la
+  dirección de la sede, si está abierto ahora, el horario de la semana y los atajos *Cómo llegar*,
+  *Llamar* y *WhatsApp* —`GymPortalGym.jsx`, sobre `storeHours.js`—; y los últimos pagos) y sus **medidas** (peso, IMC y grasa; la silueta del panel —`BODY_MAP_DOTS`/`IMAGES` de
   `BodyMap`— con un punto por medida y su evolución; lista completa con la diferencia contra la
   toma anterior). Superficie siempre oscura con tokens propios `--portal-*` en `tokens.css`. Una
   sola llamada trae todo. La **sesión no vence**: queda guardada en el teléfono (`localStorage`) y
-  en el servidor, y solo termina con *Cerrar sesión* (al final de cada pestaña), que avisa al
-  backend (`api.gymPortalLogout`) para que el token deje de servir. Al volver se pinta lo último
+  en el servidor, y solo termina con *Cerrar sesión*, que está **a propósito escondido** —un
+  enlace pequeño al final del Perfil, con confirmación: la idea es que el socio se quede dentro—
+  y avisa al backend (`api.gymPortalLogout`) para que el token deje de servir. Al volver se pinta lo último
   que se vio y `api.gymPortalResume` lo refresca; si la sesión ya no vale (401) vuelve a la
   entrada con el aviso. Una respuesta que llega después de cerrar sesión se descarta.
   **Se instala como app** en Android e iOS, con el nombre y el icono del gimnasio: aviso arriba,

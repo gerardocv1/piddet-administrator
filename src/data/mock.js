@@ -4912,6 +4912,19 @@ const gymCheckinPresent = (c) => ({
 // Portal público del afiliado (demo): /public/{company}/gym/portal. Entra con el celular y la
 // fecha de nacimiento de un afiliado activo del mock —Laura (al día, con medidas) o Carlos (con
 // saldo y sin medidas)—; cualquier otro dato responde el 404 genérico del backend.
+// Sede del gimnasio para el portal demo: madruga entre semana, horario corto el fin de semana y
+// apertura reducida en festivos.
+const mockGymPortalStores = [{
+  id: 91, name: 'Sede Laureles', address: 'Cra. 70 #44-12, Laureles, Medellín',
+  phone_code: '57', phone_number: '3004567890', latitude: 6.2446, longitude: -75.5903, store_status_id: 1,
+  schedules: [
+    ...dayRange('05:00', '22:00', [1, 2, 3, 4, 5]),
+    ...dayRange('07:00', '18:00', [6]),
+    ...dayRange('08:00', '13:00', [0]),
+    ...dayRange('08:00', '12:00', [7]),
+  ].map((r) => ({ day_id: r.day_id, start_time: r.start_time, end_time: r.end_time })),
+}];
+
 // Códigos de entrada emitidos en la demo (por afiliado) y sesiones cerradas.
 const mockGymPortalCodes = {};
 const mockGymPortalClosedSessions = new Set();
@@ -5095,6 +5108,8 @@ function gymPortalPayload(member, path, token = null) {
         .map((p) => ({ number: p.number, start_date: p.start_date, end_date: p.end_date, pending: p.pending })),
     } : null,
     payments,
+    // Sede del gimnasio: dirección, contacto y horario (en el real, las tiendas activas).
+    stores: mockGymPortalStores,
     measurements: {
       types,
       series,

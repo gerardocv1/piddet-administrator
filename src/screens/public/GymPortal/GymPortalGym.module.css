@@ -1,0 +1,215 @@
+/* Tu gimnasio: sede, estado de apertura, horario y atajos para llegar, llamar o escribir. */
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--portal-space-3-5);
+  padding: var(--portal-space-4-5);
+  border-radius: var(--portal-radius-xl);
+  background-color: var(--portal-surface);
+  border: 1px solid var(--portal-line);
+}
+
+.head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.titles {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.eyebrow {
+  font-size: var(--portal-fs-micro);
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--portal-label);
+}
+
+.name {
+  margin: 0;
+  color: var(--portal-text);
+  font-family: var(--font-logo);
+  font-weight: var(--fw-bold);
+  font-size: var(--portal-fs-title);
+  line-height: 1.1;
+}
+
+.status {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: var(--portal-space-1-5);
+  padding: var(--portal-space-1-5) var(--space-3);
+  border-radius: var(--radius-pill);
+  font-size: var(--portal-fs-caption);
+  font-weight: var(--fw-bold);
+  white-space: nowrap;
+}
+
+.statusDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.statusOpen {
+  background-color: var(--portal-success-soft);
+  color: var(--portal-success);
+}
+
+.statusOpen .statusDot { background-color: var(--portal-success); }
+
+.statusClosed {
+  background-color: var(--portal-accent-soft);
+  color: var(--portal-warning);
+}
+
+.statusClosed .statusDot { background-color: var(--portal-accent); }
+
+/* Filas de dato (dirección, horario): tocables, con su icono en una pastilla. */
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-3);
+  border: 0;
+  border-radius: var(--portal-radius-md);
+  background-color: var(--portal-surface-soft);
+  color: var(--portal-text);
+  font-family: var(--font-sans);
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.row:hover { background-color: var(--portal-surface-hover); color: var(--portal-text); }
+.row:focus-visible { outline: 2px solid var(--portal-accent); outline-offset: 2px; }
+
+.rowIcon {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--portal-radius-sm);
+  background-color: var(--portal-chip);
+  color: var(--portal-teal-soft);
+}
+
+.rowText {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rowLabel {
+  font-size: var(--portal-fs-caption);
+  font-weight: var(--fw-bold);
+  color: var(--portal-label);
+}
+
+.rowValue {
+  font-size: var(--portal-fs-body);
+  font-weight: var(--fw-semibold);
+  line-height: var(--lh-snug);
+  color: var(--portal-text);
+}
+
+.hours {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.chevron {
+  flex: 0 0 auto;
+  color: var(--portal-label);
+  transition: transform 0.2s ease;
+}
+
+.chevronUp { transform: rotate(180deg); }
+
+.week {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: var(--space-1) var(--space-3);
+  list-style: none;
+}
+
+.day {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--portal-line);
+  font-size: var(--portal-fs-small);
+  color: var(--portal-text-soft);
+}
+
+.day:last-child { border-bottom: 0; }
+
+.dayHours {
+  text-align: right;
+  font-weight: var(--fw-semibold);
+}
+
+.dayToday {
+  color: var(--portal-text);
+  font-weight: var(--fw-bold);
+}
+
+.dayToday .dayHours { color: var(--portal-accent); }
+.dayClosed .dayHours { color: var(--portal-text-subtle); }
+
+/* "Cómo llegar" va a lo ancho (es la acción del día); llamar y escribir, debajo, lado a lado. */
+.actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+.actions > :only-child,
+.actionPrimary + .action:last-child { grid-column: 1 / -1; }
+
+.action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--portal-space-1-5);
+  height: 46px;
+  border-radius: var(--portal-radius);
+  border: 1.5px solid var(--portal-line-strong);
+  background-color: transparent;
+  color: var(--portal-text);
+  font-family: var(--font-sans);
+  font-size: var(--portal-fs-small);
+  font-weight: var(--fw-bold);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.action:hover { background-color: var(--portal-surface-soft); color: var(--portal-text); }
+.action:focus-visible { outline: 2px solid var(--portal-accent); outline-offset: 2px; }
+
+.actionPrimary {
+  grid-column: 1 / -1;
+  height: 50px;
+  font-size: var(--portal-fs-body);
+  border-color: transparent;
+  background-color: var(--portal-teal);
+  color: var(--portal-on-accent);
+}
+
+.actionPrimary:hover { background-color: var(--portal-teal-soft); color: var(--portal-on-accent); }

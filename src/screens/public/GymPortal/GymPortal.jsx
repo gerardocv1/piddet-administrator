@@ -119,6 +119,29 @@ function readLaunch() {
   };
 }
 
+function SignOut({ onConfirm }) {
+  const [asking, setAsking] = React.useState(false);
+  if (!asking) {
+    return (
+      <div className={s.signOutBox}>
+        <button type="button" className={s.signOutLink} onClick={() => setAsking(true)}>
+          <LogoutIcon size={14} />
+          <span>Cerrar sesión</span>
+        </button>
+      </div>
+    );
+  }
+  return (
+    <div className={[s.signOutBox, s.signOutAsk].join(' ')} role="group" aria-label="Cerrar sesión">
+      <p className={s.signOutText}>¿Cerrar sesión en este teléfono? Para volver a entrar tendrás que pedir un código.</p>
+      <div className={s.signOutActions}>
+        <button type="button" className={s.signOutCancel} onClick={() => setAsking(false)}>Seguir dentro</button>
+        <button type="button" className={s.signOutConfirm} onClick={onConfirm}>Cerrar sesión</button>
+      </div>
+    </div>
+  );
+}
+
 export function GymPortal({ companyUsername }) {
   const rootRef = React.useRef(null);
   const [launch] = React.useState(readLaunch);
@@ -381,9 +404,6 @@ export function GymPortal({ companyUsername }) {
                   <span className={s.hello}>Hola, {member.first_name}</span>
                 </div>
               </div>
-              <button type="button" className={s.logout} onClick={logout} aria-label="Cerrar sesión" title="Cerrar sesión">
-                <LogoutIcon />
-              </button>
             </header>
           )}
 
@@ -409,14 +429,12 @@ export function GymPortal({ companyUsername }) {
             />
           )}
 
-          <div className={s.sessionBox}>
-            {canInstall && !installer.installed && <InstallButton onOpen={openInstall} />}
-            <button type="button" className={s.signOut} onClick={logout}>
-              <LogoutIcon size={18} />
-              <span>Cerrar sesión</span>
-            </button>
-            <p className={s.sessionNote}>Tu sesión queda abierta en este teléfono hasta que la cierres.</p>
-          </div>
+          {canInstall && !installer.installed && <InstallButton onOpen={openInstall} />}
+
+          {/* Cerrar sesión, a propósito escondido: la idea es que el socio se quede dentro y no
+              tenga que volver a pedir un código. Solo al final del perfil, pequeño y con
+              confirmación. */}
+          {tab === 'profile' && <SignOut onConfirm={logout} />}
         </main>
 
         <nav className={s.tabs} aria-label="Secciones">

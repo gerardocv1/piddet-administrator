@@ -49,3 +49,6 @@ export const TrashIcon = (p) => <Svg {...p}><path d="M4 7h16M9 7V4h6v3M6 7l1 13h
 export const RotateIcon = (p) => <Svg {...p}><path d="M20 11a8 8 0 1 1-2.3-5.7L20 8" /><path d="M20 3v5h-5" /></Svg>;
 export const MinusIcon = (p) => <Svg strokeWidth={2.6} {...p}><path d="M6 12h12" /></Svg>;
 export const PlusIcon = (p) => <Svg strokeWidth={2.6} {...p}><path d="M12 6v12M6 12h12" /></Svg>;
+export const PinIcon = (p) => <Svg {...p}><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z" /><circle cx="12" cy="9.5" r="2.5" /></Svg>;
+export const PhoneCallIcon = (p) => <Svg {...p}><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z" /></Svg>;
+export const NavigationIcon = (p) => <Svg {...p}><path d="M3 11l18-8-8 18-2-8-8-2z" /></Svg>;
