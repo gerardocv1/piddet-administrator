@@ -1,0 +1,149 @@
+/* Recorte de la foto de perfil a pantalla completa, sobre el fondo del portal. */
+
+.screen {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--portal-bg);
+  color: var(--portal-text);
+  animation: pdOverlayIn 0.2s ease-out;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: max(var(--space-4), env(safe-area-inset-top)) var(--space-4) var(--space-3);
+}
+
+.title {
+  margin: 0;
+  color: var(--portal-text);
+  font-family: var(--font-logo);
+  font-weight: var(--fw-heavy);
+  font-size: var(--portal-fs-title);
+}
+
+.iconBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  background-color: var(--portal-chip);
+  color: var(--portal-text);
+  cursor: pointer;
+}
+
+.iconBtn:disabled { opacity: 0.4; cursor: default; }
+
+/* react-easy-crop necesita un contenedor con posición y alto. */
+.stage {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.cropper { background-color: var(--portal-bg); }
+
+.cropArea {
+  border: 2px solid var(--portal-text) !important;
+  color: var(--portal-scrim) !important;
+}
+
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5) max(var(--space-5), env(safe-area-inset-bottom));
+  background-color: var(--portal-bg);
+}
+
+.hint {
+  margin: 0;
+  text-align: center;
+  font-size: var(--portal-fs-caption);
+  color: var(--portal-text-subtle);
+}
+
+.zoom {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.zoomBtn {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  background-color: var(--portal-chip);
+  color: var(--portal-text);
+  cursor: pointer;
+}
+
+.range {
+  flex: 1 1 auto;
+  accent-color: var(--portal-accent);
+  height: 44px;
+}
+
+.error {
+  margin: 0;
+  padding: var(--space-3) var(--portal-space-3-5);
+  border-radius: var(--portal-radius);
+  background-color: var(--portal-accent-soft);
+  color: var(--portal-warning);
+  font-size: var(--portal-fs-small);
+  font-weight: var(--fw-semibold);
+}
+
+.actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.primary,
+.secondary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  height: 54px;
+  border-radius: var(--portal-radius-md);
+  font-family: var(--font-logo);
+  font-weight: var(--fw-heavy);
+  font-size: var(--portal-fs-amount);
+  cursor: pointer;
+}
+
+.primary {
+  border: 0;
+  background-color: var(--portal-accent);
+  color: var(--portal-on-accent);
+}
+
+.primary:disabled { opacity: 0.6; cursor: default; }
+
+.secondary {
+  border: 1.5px solid var(--portal-line-strong);
+  background-color: transparent;
+  color: var(--portal-text);
+}
+
+.secondary:disabled { opacity: 0.5; cursor: default; }
+
+.iconBtn:focus-visible,
+.zoomBtn:focus-visible,
+.primary:focus-visible,
+.secondary:focus-visible { outline: 2px solid var(--portal-accent); outline-offset: 2px; }

@@ -1,25 +1,14 @@
 import React from 'react';
 import { Spinner } from '../../../components';
-import { monthName, shortMonthName } from '../../../lib/dates.js';
-import { ArrowRightIcon, ChevronDownIcon, DumbbellIcon } from './icons.jsx';
+import { ArrowRightIcon, DumbbellIcon } from './icons.jsx';
+import { BirthdateSelects, birthdateIso, birthdateProblem } from './BirthdateSelects.jsx';
 import s from './GymPortalLogin.module.css';
 
 // Entrada al portal: celular + fecha de nacimiento en tres cajas (día, mes, año) que se eligen
 // tocando, sin teclear formatos. Es la misma fecha que el socio dio en recepción.
 
-const DAYS = Array.from({ length: 31 }, (_, i) => i + 1);
-const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
-const THIS_YEAR = new Date().getFullYear();
-// De los 10 a los 90 años: cubre a cualquier socio sin una lista interminable.
-const YEARS = Array.from({ length: 81 }, (_, i) => THIS_YEAR - 10 - i);
-
-const pad = (n) => String(n).padStart(2, '0');
-const capitalize = (t) => t.charAt(0).toUpperCase() + t.slice(1);
-
 // "3001234567" → "300 123 4567" mientras se escribe.
 const formatPhone = (digits) => [digits.slice(0, 3), digits.slice(3, 6), digits.slice(6, 10)].filter(Boolean).join(' ');
-
-const daysInMonth = (year, month) => new Date(Date.UTC(year, month, 0)).getUTCDate();
 
 function CompanyMark({ company }) {
   const [failed, setFailed] = React.useState(false);
@@ -34,45 +23,26 @@ function CompanyMark({ company }) {
   );
 }
 
-function DateSelect({ id, label, value, onChange, placeholder, options }) {
-  return (
-    <div className={s.dateField}>
-      <label htmlFor={id} className={s.dateLabel}>{label}</label>
-      <select
-        id={id}
-        className={[s.select, value ? '' : s.selectEmpty].filter(Boolean).join(' ')}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-      >
-        <option value="" disabled>{placeholder}</option>
-        {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-      </select>
-      <ChevronDownIcon size={14} className={s.chevron} />
-    </div>
-  );
-}
-
 export function GymPortalLogin({ company, onSubmit, notice = '' }) {
   const [phone, setPhone] = React.useState('');
-  const [day, setDay] = React.useState('');
-  const [month, setMonth] = React.useState('');
-  const [year, setYear] = React.useState('');
+  const [birth, setBirth] = React.useState({ day: '', month: '', year: '' });
   const [sending, setSending] = React.useState(false);
   const [error, setError] = React.useState('');
 
-  const complete = phone.length === 10 && day && month && year;
+  const complete = phone.length === 10 && !!birthdateIso(birth);
 
   const submit = async (e) => {
     e.preventDefault();
     if (!complete || sending) return;
-    if (Number(day) > daysInMonth(Number(year), Number(month))) {
-      setError(`${capitalize(monthName(Number(month)))} de ${year} no tiene día ${day}. Revisa tu fecha de nacimiento.`);
+    const problem = birthdateProblem(birth);
+    if (problem) {
+      setError(problem);
       return;
     }
     setSending(true);
     setError('');
     try {
-      await onSubmit({ phoneNumber: phone, birthdate: `${year}-${pad(month)}-${pad(day)}` });
+      await onSubmit({ phoneNumber: phone, birthdate: birthdateIso(birth) });
     } catch (err) {
       setError(err?.status === 429
         ? 'Hiciste demasiados intentos. Espera unos minutos y vuelve a intentarlo.'
@@ -116,23 +86,11 @@ export function GymPortalLogin({ company, onSubmit, notice = '' }) {
 
         <fieldset className={s.birth}>
           <legend className={s.fieldLabel}>Tu fecha de nacimiento</legend>
-          <div className={s.dateGrid}>
-            <DateSelect
-              id="portal-day" label="Día" placeholder="DD" value={day}
-              onChange={(v) => { setDay(v); setError(''); }}
-              options={DAYS.map((d) => ({ value: String(d), label: pad(d) }))}
-            />
-            <DateSelect
-              id="portal-month" label="Mes" placeholder="MM" value={month}
-              onChange={(v) => { setMonth(v); setError(''); }}
-              options={MONTHS.map((m) => ({ value: String(m), label: capitalize(shortMonthName(m)) }))}
-            />
-            <DateSelect
-              id="portal-year" label="Año" placeholder="AAAA" value={year}
-              onChange={(v) => { setYear(v); setError(''); }}
-              options={YEARS.map((y) => ({ value: String(y), label: String(y) }))}
-            />
-          </div>
+          <BirthdateSelects
+            idPrefix="portal"
+            value={birth}
+            onChange={(v) => { setBirth(v); setError(''); }}
+          />
           <p className={s.hint}>La misma que registraste en recepción. Así confirmamos que eres tú.</p>
         </fieldset>
 

@@ -4929,6 +4929,41 @@ function resolvePublicGymPortalMock(path, { method = 'GET', body } = {}) {
     return gymPortalPayload(member, path);
   }
 
+  // Perfil y foto (demo): se aplican sobre el afiliado del mock. La foto queda en memoria como
+  // URL local del Blob recortado; el real la guarda privada en el almacenamiento de la compañía.
+  const editMatch = path.match(/^\/public\/[^/]+\/gym\/portal\/(profile|photo|photo\/remove)$/);
+  if (editMatch) {
+    const token = body instanceof FormData ? body.get('session_token') : body?.session_token;
+    const id = Number(String(token || '').replace(/^demo-session:/, ''));
+    const member = mockGymMembers.find((m) => m.status === 1 && m.id === id);
+    if (!member) {
+      throw Object.assign(new Error('Tu sesión terminó. Vuelve a ingresar con tu celular y tu fecha de nacimiento.'), { status: 401 });
+    }
+    if (editMatch[1] === 'profile') {
+      const idNumber = body.id_number != null ? String(body.id_number).trim() : null;
+      if (idNumber && mockGymMembers.some((m) => m.id !== member.id && m.document_snapshot === idNumber)) {
+        throw Object.assign(new Error('El documento ya pertenece a otra persona'), { status: 400 });
+      }
+      if ('email' in body) member.email = body.email || null;
+      if ('id_type_id' in body) member.id_type_id = body.id_type_id ? Number(body.id_type_id) : null;
+      if (idNumber) member.document_snapshot = idNumber;
+      if (body.birthdate) member.birthdate = body.birthdate;
+      if ('sex' in body) member.sex = body.sex || null;
+      if ('goal_id' in body) {
+        const goal = mockGymGoals.find((g) => g.id === Number(body.goal_id));
+        member.goal_id = goal ? goal.id : null;
+        member.goal = goal ? goal.label : null;
+      }
+    } else if (editMatch[1] === 'photo') {
+      if (member.photo_url) URL.revokeObjectURL(member.photo_url);
+      member.photo_url = URL.createObjectURL(body.get('file'));
+    } else {
+      if (member.photo_url) URL.revokeObjectURL(member.photo_url);
+      member.photo_url = null;
+    }
+    return gymPortalPayload(member, path);
+  }
+
   if (!/^\/public\/[^/]+\/gym\/portal$/.test(path)) return undefined;
 
   const phone = String(body?.phone_number || '').replace(/\D+/g, '').replace(/^57(?=\d{10}$)/, '');
@@ -4990,7 +5025,15 @@ function gymPortalPayload(member, path) {
     member: {
       first_name: personal.first_name, member_name: member.member_name, member_code: member.member_code,
       sex: member.sex, height_cm: member.height_cm, goal: member.goal, joined_at: member.joined_at,
+      photo_url: member.photo_url || null,
     },
+    profile: {
+      first_name: personal.first_name, last_name: personal.last_name,
+      phone_code: '57', phone_number: member.phone_number, email: member.email || null,
+      id_type_id: member.id_type_id || null, id_number: member.document_snapshot || null,
+      birthdate: member.birthdate || null, sex: member.sex || null, goal_id: member.goal_id || null,
+    },
+    goals: mockGymGoals.map(({ id, key, label }) => ({ id, key, label })),
     subscription: sub ? {
       plan_name: sub.plan_name, status: sub.status, subscribed_at: sub.subscribed_at,
       cancelled_at: sub.cancelled_at, pending_total: sub.pending_total,
