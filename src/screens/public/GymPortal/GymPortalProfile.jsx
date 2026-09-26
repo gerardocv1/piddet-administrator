@@ -219,7 +219,7 @@ export function GymPortalProfile({ data, onSaveProfile, onUploadPhoto, onRemoveP
         <div className={s.field}>
           <span className={s.label}>Fecha de nacimiento</span>
           <BirthdateSelects idPrefix="profile" value={form.birth} onChange={set('birth')} />
-          <p className={s.fieldHint}>Es la que usas para entrar al portal.</p>
+          <p className={s.fieldHint}>La usa el gimnasio para saludarte en tu cumpleaños.</p>
         </div>
 
         <div className={s.field}>

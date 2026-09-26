@@ -4912,32 +4912,78 @@ const gymCheckinPresent = (c) => ({
 // Portal público del afiliado (demo): /public/{company}/gym/portal. Entra con el celular y la
 // fecha de nacimiento de un afiliado activo del mock —Laura (al día, con medidas) o Carlos (con
 // saldo y sin medidas)—; cualquier otro dato responde el 404 genérico del backend.
+// Códigos de entrada emitidos en la demo (por afiliado) y sesiones cerradas.
+const mockGymPortalCodes = {};
+const mockGymPortalClosedSessions = new Set();
+
 function resolvePublicGymPortalMock(path, { method = 'GET', body } = {}) {
+  if (/^\/public\/[^/]+\/gym\/portal\/options$/.test(path) && method === 'GET') {
+    // En la demo la entrada con fecha queda visible para poder probarla.
+    return { code_length: 6, resend_seconds: 30, birthdate_login: true };
+  }
   if (method !== 'POST') return undefined;
+
+  const cleanPhone = (v) => String(v || '').replace(/\D+/g, '').replace(/^57(?=\d{10}$)/, '');
+  const notFound = () => Object.assign(
+    new Error('No encontramos un afiliado activo con ese celular. Si eres socio, pasa por recepción para actualizarlo.'),
+    { status: 404 },
+  );
+
+  // Pedir código: en la demo no sale SMS; el código viaja en `demo_code` para poder probar.
+  if (/^\/public\/[^/]+\/gym\/portal\/code$/.test(path)) {
+    const member = mockGymMembers.find((m) => m.status === 1 && m.phone_number === cleanPhone(body?.phone_number));
+    if (!member) throw notFound();
+    const code = String(Math.floor(Math.random() * 1000000)).padStart(6, '0');
+    mockGymPortalCodes[member.id] = { code, attempts: 0 };
+    const p = member.phone_number;
+    return { masked_phone: `+57 ${p.slice(0, 3)} *** ${p.slice(-4)}`, code_length: 6, expires_in: 600, resend_in: 30, demo_code: code };
+  }
+
+  if (/^\/public\/[^/]+\/gym\/portal\/verify$/.test(path)) {
+    const member = mockGymMembers.find((m) => m.status === 1 && m.phone_number === cleanPhone(body?.phone_number));
+    const issued = member && mockGymPortalCodes[member.id];
+    if (!issued || issued.attempts >= 5) {
+      throw Object.assign(new Error('Ese código ya no sirve. Pide uno nuevo.'), { status: 410 });
+    }
+    if (String(body?.code || '') !== issued.code) {
+      issued.attempts += 1;
+      const left = 5 - issued.attempts;
+      if (left <= 0) throw Object.assign(new Error('Ese código ya no sirve. Pide uno nuevo.'), { status: 410 });
+      throw Object.assign(new Error(`El código no es correcto. Te quedan ${left} intentos.`), { status: 400, data: { attempts_left: left } });
+    }
+    delete mockGymPortalCodes[member.id];
+    return gymPortalPayload(member, path);
+  }
+
+  if (/^\/public\/[^/]+\/gym\/portal\/logout$/.test(path)) {
+    mockGymPortalClosedSessions.add(String(body?.session_token || ''));
+    return { closed: true };
+  }
 
   // Reabrir con la sesión guardada. En demo el token es legible (`demo-session:{id}`); el real es
   // cifrado por el backend y el portal no lo interpreta.
   if (/^\/public\/[^/]+\/gym\/portal\/session$/.test(path)) {
-    const id = Number(String(body?.session_token || '').replace(/^demo-session:/, ''));
-    const member = mockGymMembers.find((m) => m.status === 1 && m.id === id);
+    const token = String(body?.session_token || '');
+    const id = parseInt(token.replace(/^demo-session:/, ''), 10);
+    const member = !mockGymPortalClosedSessions.has(token) && mockGymMembers.find((m) => m.id === id);
     if (!member) {
       throw Object.assign(
-        new Error('Tu sesión terminó. Vuelve a ingresar con tu celular y tu fecha de nacimiento.'),
+        new Error('Tu sesión terminó. Vuelve a ingresar con tu celular.'),
         { status: 401 },
       );
     }
-    return gymPortalPayload(member, path);
+    return gymPortalPayload(member, path, token);
   }
 
   // Perfil y foto (demo): se aplican sobre el afiliado del mock. La foto queda en memoria como
   // URL local del Blob recortado; el real la guarda privada en el almacenamiento de la compañía.
   const editMatch = path.match(/^\/public\/[^/]+\/gym\/portal\/(profile|photo|photo\/remove)$/);
   if (editMatch) {
-    const token = body instanceof FormData ? body.get('session_token') : body?.session_token;
-    const id = Number(String(token || '').replace(/^demo-session:/, ''));
-    const member = mockGymMembers.find((m) => m.status === 1 && m.id === id);
+    const token = String((body instanceof FormData ? body.get('session_token') : body?.session_token) || '');
+    const id = parseInt(token.replace(/^demo-session:/, ''), 10);
+    const member = !mockGymPortalClosedSessions.has(token) && mockGymMembers.find((m) => m.id === id);
     if (!member) {
-      throw Object.assign(new Error('Tu sesión terminó. Vuelve a ingresar con tu celular y tu fecha de nacimiento.'), { status: 401 });
+      throw Object.assign(new Error('Tu sesión terminó. Vuelve a ingresar con tu celular.'), { status: 401 });
     }
     if (editMatch[1] === 'profile') {
       const idNumber = body.id_number != null ? String(body.id_number).trim() : null;
@@ -4961,7 +5007,7 @@ function resolvePublicGymPortalMock(path, { method = 'GET', body } = {}) {
       if (member.photo_url) URL.revokeObjectURL(member.photo_url);
       member.photo_url = null;
     }
-    return gymPortalPayload(member, path);
+    return gymPortalPayload(member, path, token);
   }
 
   if (!/^\/public\/[^/]+\/gym\/portal$/.test(path)) return undefined;
@@ -4977,7 +5023,7 @@ function resolvePublicGymPortalMock(path, { method = 'GET', body } = {}) {
   return gymPortalPayload(member, path);
 }
 
-function gymPortalPayload(member, path) {
+function gymPortalPayload(member, path, token = null) {
   const subscriptions = mockGymSubscriptions
     .filter((sub) => sub.gym_member_id === member.id)
     .sort((a, b) => (a.subscribed_at < b.subscribed_at ? 1 : -1))
@@ -5014,7 +5060,8 @@ function gymPortalPayload(member, path) {
   const personal = gymMemberPersonal(member);
 
   return {
-    session_token: `demo-session:${member.id}`,
+    // Como el real: una sesión nueva al entrar, y la misma mientras el socio no la cierre.
+    session_token: token || `demo-session:${member.id}:${Date.now().toString(36)}`,
     company: (() => {
       const username = decodeURIComponent(path.split('/')[2] || '');
       const c = mockPublicCompanies.find((x) => x.username === username) || mockCompany;

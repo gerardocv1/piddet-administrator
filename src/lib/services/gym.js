@@ -199,6 +199,25 @@ export const gymService = {
   },
 
   // ── Portal público del afiliado (sin sesión) ──
+  // Entrada principal: código por SMS. `options` dice el largo del código, la espera para pedir
+  // otro y si está encendida la entrada alterna con fecha de nacimiento.
+  gymPortalOptions: (companyUsername) =>
+    http.get(`/public/${encodeURIComponent(companyUsername)}/gym/portal/options`, { auth: false }),
+
+  // Manda el código al celular: { masked_phone, code_length, expires_in, resend_in }.
+  // 404 si no es de un afiliado activo; 429 con `retry_in` si pidió otro muy pronto.
+  gymPortalRequestCode: (companyUsername, phoneNumber) =>
+    http.post(`/public/${encodeURIComponent(companyUsername)}/gym/portal/code`, { phone_number: phoneNumber }, { auth: false }),
+
+  // Valida el código y abre la sesión: devuelve el portal completo con `session_token`.
+  // 400 con `attempts_left` si no es; 410 si venció o se agotaron los intentos.
+  gymPortalVerifyCode: (companyUsername, phoneNumber, code) =>
+    http.post(`/public/${encodeURIComponent(companyUsername)}/gym/portal/verify`, { phone_number: phoneNumber, code }, { auth: false }),
+
+  // Cierra la sesión en el servidor: el token deja de servir. Es la única forma de que termine.
+  gymPortalLogout: (companyUsername, sessionToken) =>
+    http.post(`/public/${encodeURIComponent(companyUsername)}/gym/portal/logout`, { session_token: sessionToken }, { auth: false }),
+
   // El socio entra con su celular y su fecha de nacimiento (YYYY-MM-DD) en
   // /{username-compañía}/afiliados. Una sola llamada trae todo lo que el portal muestra:
   // { today, company, whatsapp_number, member, subscription, payments, measurements }.

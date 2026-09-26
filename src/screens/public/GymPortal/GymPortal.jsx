@@ -15,10 +15,10 @@ import s from './GymPortal.module.css';
 // fecha de nacimiento y ve su suscripción, su saldo y las medidas que le han tomado. Pensado para
 // el teléfono: una columna, fondo oscuro fijo y navegación abajo, al alcance del pulgar.
 //
-// La sesión queda guardada en el teléfono (localStorage): el backend entrega un token cifrado que
-// se renueva cada vez que el socio abre el portal, así que quien lo usa no vuelve a ingresar. Al
-// abrir se pinta enseguida lo último que se vio y se refresca por detrás; si la sesión ya no vale
-// (401) vuelve a la entrada. "Cerrar sesión" borra todo del teléfono.
+// Se entra con un código por SMS. La sesión queda guardada en el teléfono (localStorage) y en el
+// servidor, y no vence: solo termina cuando el socio toca "Cerrar sesión". Al abrir se pinta
+// enseguida lo último que se vio y se refresca por detrás; si la sesión ya no vale (401) vuelve
+// a la entrada.
 
 const TABS = [
   { key: 'subscription', label: 'Suscripción', Icon: CardIcon },
@@ -169,11 +169,13 @@ export function GymPortal({ companyUsername }) {
     lastRefresh.current = Date.now();
     try {
       const data = await api.gymPortalResume(companyUsername, token);
-      if (!data?.session_token) return;
+      // Si mientras tanto cerró sesión (o entró con otra), la respuesta ya no es suya.
+      if (tokenRef.current !== token || !data?.session_token) return;
       tokenRef.current = data.session_token;
       writeSession(companyUsername, data);
       setSession(data);
     } catch (err) {
+      if (tokenRef.current !== token) return;
       if (err?.status === 401) {
         tokenRef.current = null;
         writeSession(companyUsername, null);
@@ -274,18 +276,32 @@ export function GymPortal({ companyUsername }) {
   const uploadPhoto = withSession((token, file) => api.gymPortalUploadPhoto(companyUsername, token, file));
   const removePhoto = withSession((token) => api.gymPortalRemovePhoto(companyUsername, token));
 
-  const login = async ({ phoneNumber, birthdate }) => {
-    const data = await api.gymPortalAccess(companyUsername, { phoneNumber, birthdate });
-    tokenRef.current = data.session_token;
-    lastRefresh.current = Date.now();
-    writeSession(companyUsername, data);
-    setSession(data);
+  // Cómo se entra: largo del código, espera para pedir otro y si hay entrada con fecha.
+  const [loginOptions, setLoginOptions] = React.useState(null);
+  React.useEffect(() => {
+    if (session || loginOptions) return undefined;
+    let alive = true;
+    api.gymPortalOptions(companyUsername)
+      .then((data) => { if (alive && data) setLoginOptions(data); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [companyUsername, session, loginOptions]);
+
+  const enter = (data) => {
+    applyData(data);
     setNotice('');
     setTab('subscription');
     window.scrollTo(0, 0);
   };
 
+  const requestCode = (phoneNumber) => api.gymPortalRequestCode(companyUsername, phoneNumber);
+  const verifyCode = async (phoneNumber, code) => enter(await api.gymPortalVerifyCode(companyUsername, phoneNumber, code));
+  const birthdateLogin = async ({ phoneNumber, birthdate }) => enter(await api.gymPortalAccess(companyUsername, { phoneNumber, birthdate }));
+
+  // La sesión no vence: solo termina aquí. Se avisa al servidor para que el token deje de servir
+  // (si no hay señal, el teléfono igual la olvida).
   const logout = () => {
+    if (tokenRef.current) api.gymPortalLogout(companyUsername, tokenRef.current).catch(() => {});
     tokenRef.current = null;
     writeSession(companyUsername, null);
     setSession(null);
@@ -324,7 +340,14 @@ export function GymPortal({ companyUsername }) {
   if (!session) {
     return (
       <div ref={rootRef} className={[s.page, s.glowLogin].join(' ')}>
-        <GymPortalLogin company={company} onSubmit={login} notice={notice} />
+        <GymPortalLogin
+          company={company}
+          options={loginOptions}
+          onRequestCode={requestCode}
+          onVerifyCode={verifyCode}
+          onBirthdateLogin={birthdateLogin}
+          notice={notice}
+        />
         {sheet}
       </div>
     );
@@ -392,7 +415,7 @@ export function GymPortal({ companyUsername }) {
               <LogoutIcon size={18} />
               <span>Cerrar sesión</span>
             </button>
-            <p className={s.sessionNote}>Tu sesión queda guardada en este teléfono.</p>
+            <p className={s.sessionNote}>Tu sesión queda abierta en este teléfono hasta que la cierres.</p>
           </div>
         </main>
 
