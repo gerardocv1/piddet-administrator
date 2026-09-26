@@ -473,16 +473,20 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
   ciclo para esa suscripción, con confirmación —y advertencia en rojo si el resultado va a ser el
   corte, porque el vigente agotó su gracia sin ningún abono—.
 - **Portal público del afiliado** (`/{compañía}/afiliados`, `src/screens/public/GymPortal/`):
-  el socio entra desde el teléfono con su **celular y su fecha de nacimiento** (día, mes y año en
-  tres selectores) y ve, sin sesión del panel, su suscripción (tarjeta del plan con los días que
+  el socio entra desde el teléfono con su **celular y un código que le llega por SMS** (cajas de
+  6 dígitos con `autocomplete="one-time-code"`: iOS lo sugiere y Chrome en Android lo pega solo;
+  entra al completar el último dígito, con espera visible para pedir otro). La entrada con
+  **fecha de nacimiento** (tres selectores) es alterna y solo aparece si el backend la tiene
+  encendida (`api.gymPortalOptions`). Ya dentro ve, sin sesión del panel, su suscripción (tarjeta del plan con los días que
   quedan, el período en curso o el **saldo pendiente** con WhatsApp al gimnasio, y los últimos
   pagos) y sus **medidas** (peso, IMC y grasa; la silueta del panel —`BODY_MAP_DOTS`/`IMAGES` de
   `BodyMap`— con un punto por medida y su evolución; lista completa con la diferencia contra la
   toma anterior). Superficie siempre oscura con tokens propios `--portal-*` en `tokens.css`. Una
-  sola llamada (`api.gymPortalAccess`) trae todo. La **sesión queda guardada en el teléfono**
-  (`localStorage`, con el `session_token` cifrado que entrega el backend): al volver se pinta lo
-  último que se vio y `api.gymPortalResume` lo refresca y renueva el token; si la sesión ya no vale
-  (401) vuelve a la entrada con el aviso. *Cerrar sesión*, al final de cada pestaña, la borra.
+  sola llamada trae todo. La **sesión no vence**: queda guardada en el teléfono (`localStorage`) y
+  en el servidor, y solo termina con *Cerrar sesión* (al final de cada pestaña), que avisa al
+  backend (`api.gymPortalLogout`) para que el token deje de servir. Al volver se pinta lo último
+  que se vio y `api.gymPortalResume` lo refresca; si la sesión ya no vale (401) vuelve a la
+  entrada con el aviso. Una respuesta que llega después de cerrar sesión se descarta.
   **Se instala como app** en Android e iOS, con el nombre y el icono del gimnasio: aviso arriba,
   botón *Instalar como app* y una hoja que guía según el teléfono (detalle en
   [`tech.md`](tech.md) → *PWA*).
@@ -491,8 +495,9 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
   `cropImage.js`— y se sube ya reducida a 720 × 720 JPEG) y corrige **correo, documento, fecha de
   nacimiento, sexo y objetivo**. Nombre y celular solo se muestran: se cambian en recepción. La
   foto aparece también en el avatar del encabezado. La fecha de nacimiento se puede corregir pero
-  no vaciar, porque es la llave de entrada. En demo: Laura (`3001234567`, nacida hoy en 1994) está al día y con
-  medidas; Carlos (`3007654321`, 30/11/1988) tiene saldo y ninguna medida.
+  no vaciar (es la llave de la entrada alterna). En demo el código se muestra en pantalla (no sale
+  SMS): Laura (`3001234567`, nacida hoy en 1994) está al día y con medidas; Carlos (`3007654321`,
+  30/11/1988) tiene saldo y ninguna medida.
 
 ### Reportes
 
