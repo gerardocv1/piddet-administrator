@@ -100,10 +100,11 @@ location = /index.html { add_header Cache-Control "no-cache"; }
 location = /sw.js      { add_header Cache-Control "no-cache"; }
 
 # Entrada de gimnasios: dist/gym/index.html es el mismo shell con la tarjeta para compartir de
-# piddet gym (WhatsApp no ejecuta JS; ver vite.config.js). Sin esta línea igual funciona, pero
-# /gym pasa por un 301 a /gym/.
-location = /gym { add_header Cache-Control "no-cache"; try_files /gym/index.html =404; }
-location = /gym/index.html { add_header Cache-Control "no-cache"; }
+# piddet gym (WhatsApp no ejecuta JS; ver vite.config.js). OBLIGATORIAS: sin ellas /gym cae en el
+# index.html general y al compartirlo se ve "Descubre negocios en Piddet" (o, según el try_files,
+# pasa por un 301). Si el build aún no generó el archivo, siguen sirviendo el index.html de siempre.
+location = /gym  { add_header Cache-Control "no-cache"; try_files /gym/index.html /index.html; }
+location = /gym/ { add_header Cache-Control "no-cache"; try_files /gym/index.html /index.html; }
 ```
 
 Con **Quick Deploy** activado, cada merge a `master` dispara el script y publica solo.

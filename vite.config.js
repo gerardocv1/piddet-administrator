@@ -6,17 +6,17 @@ import react from '@vitejs/plugin-react';
 // Tarjeta para compartir de piddet.com/gym. WhatsApp, Facebook y compañía no ejecutan JS: leen las
 // etiquetas del HTML que devuelve el servidor, así que esta entrada necesita su propio HTML
 // estático. Al terminar el build se copia dist/index.html a dist/gym/index.html con las etiquetas
-// cambiadas; el servidor lo entrega solo para /gym/ (try_files `$uri/`) y el resto de rutas sigue
-// cayendo en el index.html de siempre. nginx lleva /gym a /gym/ con un 301 (los rastreadores lo
-// siguen); por eso la URL canónica es /gym/. El README trae la línea que evita ese salto.
+// cambiadas. El servidor necesita dos reglas para entregarlo en /gym y /gym/ (README → Nginx):
+// con el `try_files` genérico, /gym cae en el index.html de siempre y la tarjeta no se ve.
 //
 // Además resuelve un choque: public/gym/ (las siluetas de las medidas) hace de /gym un directorio,
 // y sin index.html adentro el servidor respondía 403 en vez de la app.
 const SITE = 'https://piddet.com';
 const GYM_SHARE = {
   title: 'piddet gym · Tu gimnasio en tu bolsillo',
+  // ≤ 125 caracteres: más largo, WhatsApp y las redes lo cortan en el teléfono.
   description: 'Sigue tu suscripción, tu saldo y tus medidas del gimnasio desde el celular. '
-    + 'Entra con tu número y un código por SMS, sin contraseñas.',
+    + 'Entra con tu número y un código por SMS.',
   url: `${SITE}/gym/`,
   image: `${SITE}/og/piddet-gym.png`,
   imageAlt: 'piddet gym: tu plan, los días que te quedan y tus medidas en el celular.',
