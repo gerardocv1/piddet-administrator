@@ -496,7 +496,8 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
   redirige al portal nuevo. Las entradas por compañía del backend (código por SMS y fecha de
   nacimiento en `/public/{compañía}/gym/portal…`) siguen existiendo, pero el panel ya no las
   ofrece. Ya dentro ve, sin sesión del panel, su suscripción (tarjeta del plan con los días que
-  quedan; el **saldo pendiente** con WhatsApp al gimnasio si debe; la tarjeta **Tu gimnasio** con la
+  quedan; el **saldo pendiente** con WhatsApp al gimnasio si debe; la tarjeta **Tu gimnasio** —colapsada por defecto en una fila (nombre,
+  abierto/cerrado y hasta qué hora; el teléfono recuerda si la dejó abierta)— con la
   dirección de la sede, si está abierto ahora, el horario de la semana y los atajos *Cómo llegar*,
   *Llamar* y *WhatsApp* —`GymPortalGym.jsx`, sobre `storeHours.js`—; y los últimos pagos) y sus **medidas** (peso, IMC y grasa; la silueta del panel —`BODY_MAP_DOTS`/`IMAGES` de
   `BodyMap`— con un punto por medida y su evolución; lista completa con la diferencia contra la
