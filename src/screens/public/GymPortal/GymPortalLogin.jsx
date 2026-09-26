@@ -194,8 +194,8 @@ export function GymPortalLogin({ company, options, onRequestCode, onVerifyCode, 
       )}
 
       <div className={s.intro}>
-        <h1 className={s.title}>Tu progreso,<br />en tu bolsillo.</h1>
-        <p className={s.lead}>Consulta tu suscripción, tu saldo y las medidas que te han tomado en el gimnasio.</p>
+        <h1 className={s.title}>Sigue tu<br />progreso.</h1>
+        <p className={s.lead}>Mira cómo cambian tus medidas y cuántos días te quedan de plan.</p>
       </div>
 
       {step === 'phone' && (
