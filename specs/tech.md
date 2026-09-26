@@ -127,8 +127,9 @@ HTML que responde el servidor, y el `index.html` único trae las genéricas de P
 `gym-share-page` de `vite.config.js` copia, al terminar el build, `dist/index.html` a
 `dist/gym/index.html` con título, descripción, `og:*`, `twitter:*` (tarjeta grande), canónica
 `https://piddet.com/gym/`, `theme-color` oscuro e imagen `public/og/piddet-gym.png`
-(1200 × 630). nginx lo entrega por `try_files $uri/` (con un 301 de `/gym` a `/gym/`, o sin él
-con la línea del README) y todo lo demás sigue en el `index.html` de siempre. De paso evita un
+(1200 × 630). nginx lo entrega con dos reglas exactas para `/gym` y `/gym/` (README → *Nginx*;
+**sin ellas la tarjeta no se ve**: el `try_files` genérico manda `/gym` al `index.html` de siempre)
+y todo lo demás sigue en ese `index.html`. De paso evita un
 403: `public/gym/` (las siluetas) hace de `/gym` un directorio. Si cambia una etiqueta del
 `index.html`, el plugin falla el build en vez de dejar una tarjeta a medias.
 
