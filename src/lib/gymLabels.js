@@ -115,8 +115,9 @@ export const gymSubscriptionPending = (sub) => Math.max(0, Number(sub?.pending_t
 
 // Estado de la MEMBRESÍA del afiliado (no de su ficha), derivado por el backend de sus
 // suscripciones y períodos (GymMember::MEMBERSHIP_*). Es el filtro `membership` del listado de
-// afiliados y los contadores del widget del inicio. «Pendiente de pago» se cruza con «Activa» y
-// «En gracia»: agrupa a quien debe algo, sin ser un estado aparte.
+// afiliados y los contadores del widget del inicio. El backend acepta además `pending` (quien debe
+// algo, cruzado con activa y en gracia), pero el panel no lo ofrece: contaba casi a los mismos que
+// «En gracia», que es a quien se le cobra.
 export const GYM_MEMBERSHIP = {
   ACTIVE: 'active', GRACE: 'grace', PENDING: 'pending', CANCELLED: 'cancelled', NONE: 'none',
 };
@@ -124,7 +125,6 @@ export const GYM_MEMBERSHIP = {
 export const GYM_MEMBERSHIP_OPTIONS = [
   { value: GYM_MEMBERSHIP.ACTIVE, label: 'Activa' },
   { value: GYM_MEMBERSHIP.GRACE, label: 'En gracia' },
-  { value: GYM_MEMBERSHIP.PENDING, label: 'Pendiente de pago' },
   { value: GYM_MEMBERSHIP.CANCELLED, label: 'Cancelada' },
   { value: GYM_MEMBERSHIP.NONE, label: 'Sin suscripción' },
 ];
