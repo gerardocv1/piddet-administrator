@@ -4,15 +4,12 @@ import { api } from '../../lib/api.js';
 import { useResource } from '../../lib/useResource.js';
 import { applyMetaTags, applySeoTags, buildShareMeta } from '../public/shareMeta.js';
 import { whatsappHref } from '../public/whatsapp.js';
+import { PiddetGymLogo } from '../public/GymPortal/PiddetGymLogo.jsx';
 import s from './PublicHome.module.css';
 
 const PAGE_SIZE = 8;
-const TYPE_ICONS = {
-  restaurant: 'fas fa-utensils',
-  gym: 'fas fa-dumbbell',
-  store: 'fas fa-store',
-  lodging: 'fas fa-bed',
-};
+// En la portada cada categoría es un avance corto; el resto está en su página ("Ver los N").
+const PREVIEW_SIZE = 4;
 
 const initial = (name = '') => (name.trim()[0] || '?').toUpperCase();
 const validPage = (value) => {
@@ -39,24 +36,19 @@ function CompanyLogo({ company }) {
   );
 }
 
-function CompanyCard({ company }) {
+// Un negocio en el directorio: fila compacta y neutra (logo, nombre, tipo y ciudad). El color
+// de cada compañía vive dentro de su perfil, no aquí.
+function CompanyRow({ company }) {
+  const meta = [company.company_type_name, company.city].filter(Boolean).join(' · ');
   return (
-    <a className={s.companyCard} href={`/${encodeURIComponent(company.username)}`}>
-      <div className={s.cardTop}>
-        <span className={s.companyLogo}><CompanyLogo company={company} /></span>
-        <span className={s.cardIdentity}>
-          <span className={s.companyName}>{company.name}</span>
-          <span className={s.companyType}>{company.company_type_name}</span>
-        </span>
-        <i className={`fas fa-arrow-right ${s.cardArrow}`} aria-hidden="true" />
-      </div>
-      {company.description && <span className={s.companyDescription}>{company.description}</span>}
-      {company.city && (
-        <span className={s.companyCity}>
-          <i className="fas fa-location-dot" aria-hidden="true" />
-          {company.city}
-        </span>
-      )}
+    <a className={s.row} href={`/${encodeURIComponent(company.username)}`}>
+      <span className={s.logo}><CompanyLogo company={company} /></span>
+      <span className={s.rowText}>
+        <span className={s.rowTitle}>{company.name}</span>
+        {meta && <span className={s.rowSub}>{meta}</span>}
+        {company.description && <span className={s.rowDesc}>{company.description}</span>}
+      </span>
+      <i className={`fas fa-chevron-right ${s.chevron}`} aria-hidden="true" />
     </a>
   );
 }
@@ -85,34 +77,58 @@ function CompaniesState({ loading, error, empty, onRetry }) {
   return null;
 }
 
-function CompanyGrid({ companies }) {
+function CompanyList({ companies }) {
   return (
-    <div className={s.companyGrid}>
-      {companies.map((company) => <CompanyCard key={company.username} company={company} />)}
-    </div>
+    <ul className={s.list}>
+      {companies.map((company) => <li key={company.username}><CompanyRow company={company} /></li>)}
+    </ul>
+  );
+}
+
+// Acceso a piddet gym dentro de la sección de gimnasios: la única pieza oscura de la portada,
+// porque es de piddet gym y no de un negocio.
+function GymStrip() {
+  return (
+    <a className={s.gymStrip} href="/gym">
+      <span className={s.gymStripText}>
+        <PiddetGymLogo size="sm" />
+        <span>¿Eres socio? Sigue tu progreso y tu plan.</span>
+      </span>
+      <span className={s.gymStripGo}><i className="fas fa-arrow-right" aria-hidden="true" /></span>
+    </a>
+  );
+}
+
+// Categorías como pastillas: "Todos" y cada tipo con negocios. La activa va en oscuro.
+function CategoryChips({ types, selectedKey }) {
+  return (
+    <nav className={s.chips} aria-label="Categorías">
+      <a className={[s.chip, !selectedKey ? s.chipOn : ''].filter(Boolean).join(' ')} href="/"
+        aria-current={!selectedKey ? 'page' : undefined}>Todos</a>
+      {types.map((type) => (
+        <a key={type.key} className={[s.chip, selectedKey === type.key ? s.chipOn : ''].filter(Boolean).join(' ')}
+          href={`/?type=${encodeURIComponent(type.key)}`} aria-current={selectedKey === type.key ? 'page' : undefined}>
+          {type.name}
+        </a>
+      ))}
+    </nav>
   );
 }
 
 function TypeSection({ type }) {
   const fetcher = React.useCallback(
-    () => api.publicCompanies({ companyTypeKey: type.key, page: 1, perPage: PAGE_SIZE }),
+    () => api.publicCompanies({ companyTypeKey: type.key, page: 1, perPage: PREVIEW_SIZE }),
     [type.key],
   );
   const resource = useResource(fetcher, { items: [], pagination: null }, [fetcher]);
   const companies = resource.data?.items || [];
 
   return (
-    <section className={s.typeSection} aria-labelledby={`type-${type.key}`}>
-      <div className={s.sectionHeading}>
-        <div className={s.sectionTitleGroup}>
-          <span className={s.typeIcon}><i className={TYPE_ICONS[type.key] || 'fas fa-building'} /></span>
-          <div>
-            <h2 id={`type-${type.key}`}>{type.name}</h2>
-            <p>{type.active_companies_count} {type.active_companies_count === 1 ? 'negocio' : 'negocios'}</p>
-          </div>
-        </div>
+    <section className={s.section} aria-labelledby={`type-${type.key}`}>
+      <div className={s.sectionHead}>
+        <h2 id={`type-${type.key}`} className={s.sectionTitle}>{type.name}</h2>
         <a className={s.seeAll} href={`/?type=${encodeURIComponent(type.key)}`}>
-          Ver todos <i className="fas fa-chevron-right" aria-hidden="true" />
+          {type.active_companies_count > companies.length ? `Ver los ${type.active_companies_count}` : 'Ver todos'}
         </a>
       </div>
 
@@ -122,12 +138,13 @@ function TypeSection({ type }) {
         empty={!companies.length}
         onRetry={resource.reload}
       />
-      {!resource.loading && !resource.error && companies.length > 0 && <CompanyGrid companies={companies} />}
+      {!resource.loading && !resource.error && companies.length > 0 && <CompanyList companies={companies} />}
+      {type.key === 'gym' && <GymStrip />}
     </section>
   );
 }
 
-function TypeDirectory({ type, page, onPageChange }) {
+function TypeDirectory({ type, page, onPageChange, chips }) {
   const fetcher = React.useCallback(
     () => api.publicCompanies({ companyTypeKey: type.key, page, perPage: PAGE_SIZE }),
     [type.key, page],
@@ -146,20 +163,16 @@ function TypeDirectory({ type, page, onPageChange }) {
 
   return (
     <main className={s.main}>
-      <a className={s.backLink} href="/">
-        <i className="fas fa-arrow-left" aria-hidden="true" /> Todos los negocios
-      </a>
-      <section className={s.directorySection} aria-labelledby="directory-title">
-        <div className={s.directoryHeading}>
-          <span className={s.typeIconLarge}>
-            <i className={TYPE_ICONS[type.key] || 'fas fa-building'} aria-hidden="true" />
-          </span>
-          <div>
-            <p className={s.eyebrow}>Directorio</p>
-            <h1 id="directory-title">{type.name}</h1>
-            <p>Descubre los negocios activos de esta categoría.</p>
-          </div>
+      <section className={s.section} aria-labelledby="directory-title">
+        <div className={s.directoryHead}>
+          <h1 id="directory-title" className={s.title}>{type.name}</h1>
+          {hasResults && (
+            <p className={s.lead}>
+              {pagination.total} {Number(pagination.total) === 1 ? 'negocio' : 'negocios'} en Piddet
+            </p>
+          )}
         </div>
+        {chips}
 
         <CompaniesState
           loading={resource.loading}
@@ -169,7 +182,8 @@ function TypeDirectory({ type, page, onPageChange }) {
         />
         {!resource.loading && !resource.error && companies.length > 0 && (
           <>
-            <CompanyGrid companies={companies} />
+            <CompanyList companies={companies} />
+            {type.key === 'gym' && <GymStrip />}
             <Pagination
               page={pagination.current_page || page}
               lastPage={pagination.last_page || 1}
@@ -265,35 +279,16 @@ export function PublicHome() {
     return () => window.removeEventListener('popstate', syncPageFromHistory);
   }, []);
 
+  const chips = types.length > 0 ? <CategoryChips types={types} selectedKey={selectedTypeKey} /> : null;
+
   return (
     <div className={s.screen}>
       <header className={s.header}>
         <a className={s.wordmark} href="/" aria-label="Piddet, inicio">piddet</a>
         <a className={s.adminLink} href="/admin/login">
-          <i className="fas fa-user" aria-hidden="true" /> Administrar
+          <i className="fas fa-user" aria-hidden="true" /> <span>Administrar</span>
         </a>
       </header>
-
-      {!selectedTypeKey && (
-        <section className={s.hero}>
-          <div className={s.heroContent}>
-            <p className={s.eyebrow}>Negocios para descubrir</p>
-            <h1>Encuentra tu próximo lugar favorito</h1>
-            <p className={s.heroText}>
-              Restaurantes, gimnasios, tiendas y hospedajes que están listos para recibirte.
-            </p>
-            <a className={s.heroAction} href="#directory">
-              Explorar negocios <i className="fas fa-arrow-down" aria-hidden="true" />
-            </a>
-          </div>
-          <div className={s.heroVisual} aria-hidden="true">
-            <span><i className="fas fa-utensils" /></span>
-            <span><i className="fas fa-dumbbell" /></span>
-            <span><i className="fas fa-store" /></span>
-            <span><i className="fas fa-bed" /></span>
-          </div>
-        </section>
-      )}
 
       {typesResource.loading && (
         <main className={s.main}><div className={s.pageState}><Spinner center label="Cargando directorio…" /></div></main>
@@ -328,33 +323,37 @@ export function PublicHome() {
         </main>
       )}
       {!typesResource.loading && !typesResource.error && selectedType && (
-        <TypeDirectory type={selectedType} page={page} onPageChange={changePage} />
+        <TypeDirectory type={selectedType} page={page} onPageChange={changePage} chips={chips} />
       )}
       {!typesResource.loading && !typesResource.error && !selectedTypeKey && types.length > 0 && (
         <main id="directory" className={s.main}>
-          <div className={s.directoryIntro}>
-            <p className={s.eyebrow}>Directorio Piddet</p>
-            <h2>Explora por categoría</h2>
-            <p>Conoce negocios locales y entra a su espacio para ver todo lo que ofrecen.</p>
-          </div>
-          <div className={s.sections}>
-            {types.map((type) => <TypeSection key={type.key} type={type} />)}
-          </div>
+          <section className={s.intro}>
+            <h1 className={s.title}>Encuentra negocios cerca de ti</h1>
+            <p className={s.lead}>Horarios, cómo llegar y contacto directo por WhatsApp.</p>
+          </section>
+          {chips}
+          {types.map((type) => <TypeSection key={type.key} type={type} />)}
         </main>
       )}
 
-      <section className={s.join}>
-        <div>
-          <p className={s.eyebrow}>Crece con Piddet</p>
-          <h2>¿Quieres hacer parte?</h2>
-          <p>Organiza tu operación y crea una vitrina digital para que más personas te encuentren.</p>
-        </div>
-        {contactHref && (
-          <a className={s.whatsappButton} href={contactHref} target="_blank" rel="noopener noreferrer">
-            <i className="fab fa-whatsapp" aria-hidden="true" /> Hablemos por WhatsApp
+      <div className={s.main}>
+        {contactHref ? (
+          <a className={s.join} href={contactHref} target="_blank" rel="noopener noreferrer">
+            <span className={s.joinText}>
+              <span className={s.joinTitle}>¿Tienes un negocio?</span>
+              <span>Muéstralo en Piddet con tu carta, tus horarios y tu WhatsApp.</span>
+            </span>
+            <i className={`fas fa-chevron-right ${s.chevron}`} aria-hidden="true" />
           </a>
+        ) : (
+          <div className={s.join}>
+            <span className={s.joinText}>
+              <span className={s.joinTitle}>¿Tienes un negocio?</span>
+              <span>Muéstralo en Piddet con tu carta, tus horarios y tu WhatsApp.</span>
+            </span>
+          </div>
         )}
-      </section>
+      </div>
 
       <footer className={s.footer}>
         <span>Negocios que se mueven con</span> <strong>piddet</strong>

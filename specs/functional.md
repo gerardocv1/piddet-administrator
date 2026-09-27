@@ -101,19 +101,32 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
 
 - **Descripción:** la raíz `/`, sin sesión, presenta las compañías activas de Piddet agrupadas
   por tipo (`restaurant`, `gym`, `store`, `lodging` y los que agregue el backend).
-- **Flujo principal:** la portada carga `GET /public/directory/company-types` y la primera página
-  de `GET /public/directory/companies?company_type_key=...&page=1&per_page=8` para cada tipo. «Ver todos»
-  abre `/?type=<key>`, donde el listado se pagina; cada tarjeta navega a `/{username}`.
+- **Flujo principal:** la portada carga `GET /public/directory/company-types` y un avance de cada
+  tipo (`GET /public/directory/companies?company_type_key=...&page=1&per_page=4`). Las categorías
+  van como pastillas (*Todos* y cada tipo); «Ver los N» abre `/?type=<key>`, donde el listado se
+  pagina de a 8. Cada negocio es una fila compacta (logo, nombre, tipo · ciudad y una línea de
+  descripción) que navega a `/{username}`. En la sección de gimnasios va la franja de
+  **piddet gym** hacia `/gym`.
+- **Diseño:** neutro a propósito —grises del sistema, sin el color de cada negocio (ese vive en
+  su perfil)— y el naranja de piddet solo en el logo; la única pieza oscura es la de piddet gym.
+  Sin buscador: el directorio no tiene búsqueda en el backend.
 - **Estados:** cada catálogo contempla carga, error y ausencia de resultados. Un tipo inválido
   ofrece volver al directorio completo.
-- **Contacto:** «¿Quieres hacer parte?» muestra un enlace de WhatsApp solo cuando
+- **Contacto:** «¿Tienes un negocio?» es enlace a WhatsApp solo cuando
   `VITE_CONTACT_WHATSAPP` contiene un número utilizable. `/admin/login` sigue disponible como
   acceso discreto para administradores.
 - **Reglas:** el backend decide qué compañías están activas y expone únicamente datos públicos
   de presentación; la pantalla no usa sesión, permisos ni compañía activa.
-- **Perfil público:** `/{username}` conserva la marca de la compañía y organiza en una experiencia
-  mobile-first su hospedaje, menús, ubicaciones, horarios y contacto; en escritorio distribuye
-  oferta e información práctica en dos columnas.
+- **Perfil público:** `/{username}`, mobile-first en una columna (máx. 640 px también en
+  escritorio). El color de la compañía (`companyBrandTheme`) va solo en la franja del encabezado,
+  el logo, la acción principal y los iconos; lo demás es neutro. Arriba, el logo sobre la franja,
+  nombre, tipo · ciudad, descripción y si está abierto (la primera sede con horario); debajo,
+  accesos rápidos (*WhatsApp*, *Cómo llegar*, *Llamar*, los que existan). Luego, según lo que
+  tenga: la tarjeta oscura de piddet gym (gimnasios), hospedaje, menús en filas (en restaurantes
+  se muestra aunque no haya ninguno), sedes **colapsables** (cerradas: nombre, dirección y estado;
+  abiertas: mapa, horario de la semana y acciones) y contacto. Abajo, una barra fija propia
+  (compartir + *Escríbenos por WhatsApp*); la barra compartida `PublicBottomBar` queda para la
+  carta.
 - **SEO:** la portada y los perfiles publican descripción, Open Graph/Twitter, canonical, robots
   y JSON-LD. La raíz tiene metadata estática de respaldo; la compañía se completa en runtime con
   su tipo de `LocalBusiness`. Crawlers que no ejecuten JavaScript necesitan prerender/CDN para
