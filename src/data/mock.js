@@ -687,6 +687,21 @@ function resolvePublicCompanyMock(path) {
   };
 }
 
+// Horario de demo para el directorio (la primera sede con horario de cada compañía): variado para
+// que se vean abiertos y cerrados; los hospedajes no lo traen (se reservan por noches).
+const MOCK_DIRECTORY_HOURS = [
+  ['07:00:00', '22:00:00'], ['11:00:00', '23:00:00'], ['05:00:00', '21:00:00'], ['09:00:00', '19:00:00'],
+  ['17:00:00', '23:59:00'], ['06:00:00', '12:00:00'],
+];
+function mockOpeningHours(company, index) {
+  if (company.company_type_key === 'lodging') return null;
+  const [start, end] = MOCK_DIRECTORY_HOURS[index % MOCK_DIRECTORY_HOURS.length];
+  return {
+    store_status_id: 1,
+    schedules: [0, 1, 2, 3, 4, 5, 6].map((day) => ({ day_id: day, start_time: start, end_time: end })),
+  };
+}
+
 function resolvePublicDirectoryMock(path, query) {
   if (path === '/public/directory/company-types') {
     return mockCompanyTypes.map(({ key, name }) => ({
@@ -697,11 +712,16 @@ function resolvePublicDirectoryMock(path, query) {
   }
   if (path === '/public/directory/companies') {
     const typeKey = query.get('company_type_key');
-    const companies = typeKey
-      ? mockPublicCompanies.filter((company) => company.company_type_key === typeKey)
-      : mockPublicCompanies;
+    // Espejo del backend: busca en nombre, descripción o ciudad, sin distinguir tildes ni mayúsculas.
+    const fold = (v) => String(v || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    const search = fold(query.get('search')).trim();
+    const companies = mockPublicCompanies
+      .filter((company) => !typeKey || company.company_type_key === typeKey)
+      .filter((company) => !search || [company.name, company.description, company.city].some((v) => fold(v).includes(search)));
     return mockPaginate(
-      [...companies].sort((a, b) => a.name.localeCompare(b.name, 'es')),
+      [...companies]
+        .sort((a, b) => a.name.localeCompare(b.name, 'es'))
+        .map((company, i) => ({ ...company, opening_hours: mockOpeningHours(company, i) })),
       query,
     );
   }

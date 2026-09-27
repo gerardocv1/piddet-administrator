@@ -5,11 +5,14 @@ import { useResource } from '../../lib/useResource.js';
 import { applyMetaTags, applySeoTags, buildShareMeta } from '../public/shareMeta.js';
 import { whatsappHref } from '../public/whatsapp.js';
 import { PiddetGymLogo } from '../public/GymPortal/PiddetGymLogo.jsx';
+import { getStoreStatus } from '../../lib/storeHours.js';
 import s from './PublicHome.module.css';
 
 const PAGE_SIZE = 8;
 // En la portada cada categoría es un avance corto; el resto está en su página ("Ver los N").
 const PREVIEW_SIZE = 4;
+
+const SEARCH_DEBOUNCE_MS = 300;
 
 const initial = (name = '') => (name.trim()[0] || '?').toUpperCase();
 const validPage = (value) => {
@@ -40,20 +43,30 @@ function CompanyLogo({ company }) {
 // de cada compañía vive dentro de su perfil, no aquí.
 function CompanyRow({ company }) {
   const meta = [company.company_type_name, company.city].filter(Boolean).join(' · ');
+  // Abierto ahora: con el horario de su primera sede (lo trae el directorio) y la hora local.
+  const hours = company.opening_hours;
+  const status = hours?.schedules?.length ? getStoreStatus(hours.schedules, hours.store_status_id) : null;
   return (
     <a className={s.row} href={`/${encodeURIComponent(company.username)}`}>
       <span className={s.logo}><CompanyLogo company={company} /></span>
       <span className={s.rowText}>
         <span className={s.rowTitle}>{company.name}</span>
         {meta && <span className={s.rowSub}>{meta}</span>}
-        {company.description && <span className={s.rowDesc}>{company.description}</span>}
+        {status ? (
+          <span className={[s.status, status.open ? s.statusOpen : ''].filter(Boolean).join(' ')}>
+            <span className={s.statusDot} aria-hidden="true" />
+            {[status.label, status.detail].filter(Boolean).join(' · ')}
+          </span>
+        ) : (
+          company.description && <span className={s.rowDesc}>{company.description}</span>
+        )}
       </span>
       <i className={`fas fa-chevron-right ${s.chevron}`} aria-hidden="true" />
     </a>
   );
 }
 
-function CompaniesState({ loading, error, empty, onRetry }) {
+function CompaniesState({ loading, error, empty, emptyText, onRetry }) {
   if (loading) {
     return <div className={s.sectionState}><Spinner center label="Cargando negocios…" /></div>;
   }
@@ -70,7 +83,7 @@ function CompaniesState({ loading, error, empty, onRetry }) {
     return (
       <div className={s.sectionState}>
         <i className="fas fa-store-slash" aria-hidden="true" />
-        <span>Aún no hay negocios publicados en esta categoría.</span>
+        <span>{emptyText || 'Aún no hay negocios publicados en esta categoría.'}</span>
       </div>
     );
   }
@@ -100,18 +113,45 @@ function GymStrip() {
 }
 
 // Categorías como pastillas: "Todos" y cada tipo con negocios. La activa va en oscuro.
-function CategoryChips({ types, selectedKey }) {
+// Con una búsqueda activa, cambiar de categoría la conserva.
+function CategoryChips({ types, selectedKey, search }) {
+  const href = (typeKey) => {
+    const query = new URLSearchParams();
+    if (typeKey) query.set('type', typeKey);
+    if (search) query.set('q', search);
+    const qs = query.toString();
+    return qs ? `/?${qs}` : '/';
+  };
   return (
     <nav className={s.chips} aria-label="Categorías">
-      <a className={[s.chip, !selectedKey ? s.chipOn : ''].filter(Boolean).join(' ')} href="/"
+      <a className={[s.chip, !selectedKey ? s.chipOn : ''].filter(Boolean).join(' ')} href={href('')}
         aria-current={!selectedKey ? 'page' : undefined}>Todos</a>
       {types.map((type) => (
         <a key={type.key} className={[s.chip, selectedKey === type.key ? s.chipOn : ''].filter(Boolean).join(' ')}
-          href={`/?type=${encodeURIComponent(type.key)}`} aria-current={selectedKey === type.key ? 'page' : undefined}>
+          href={href(type.key)} aria-current={selectedKey === type.key ? 'page' : undefined}>
           {type.name}
         </a>
       ))}
     </nav>
+  );
+}
+
+// Buscador del directorio: nombre, descripción o ciudad. Escribe en la URL (?q=) para que la
+// búsqueda se pueda compartir y sobreviva a recargar.
+function SearchBox({ value, onChange }) {
+  return (
+    <label className={s.search}>
+      <i className="fas fa-magnifying-glass" aria-hidden="true" />
+      <input
+        type="search"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="Buscar por nombre o ciudad"
+        aria-label="Buscar negocios por nombre o ciudad"
+        enterKeyHint="search"
+        maxLength={80}
+      />
+    </label>
   );
 }
 
@@ -144,10 +184,12 @@ function TypeSection({ type }) {
   );
 }
 
-function TypeDirectory({ type, page, onPageChange, chips }) {
+// Listado paginado: una categoría (`type`), una búsqueda (`search`) o ambas.
+function Directory({ type, search, page, onPageChange, chips, searchBox }) {
+  const typeKey = type?.key || '';
   const fetcher = React.useCallback(
-    () => api.publicCompanies({ companyTypeKey: type.key, page, perPage: PAGE_SIZE }),
-    [type.key, page],
+    () => api.publicCompanies({ companyTypeKey: typeKey, search, page, perPage: PAGE_SIZE }),
+    [typeKey, search, page],
   );
   const resource = useResource(fetcher, { items: [], pagination: null }, [fetcher]);
   const companies = resource.data?.items || [];
@@ -165,25 +207,30 @@ function TypeDirectory({ type, page, onPageChange, chips }) {
     <main className={s.main}>
       <section className={s.section} aria-labelledby="directory-title">
         <div className={s.directoryHead}>
-          <h1 id="directory-title" className={s.title}>{type.name}</h1>
+          <h1 id="directory-title" className={s.title}>
+            {search ? `Resultados para “${search}”` : type.name}
+          </h1>
           {hasResults && (
             <p className={s.lead}>
-              {pagination.total} {Number(pagination.total) === 1 ? 'negocio' : 'negocios'} en Piddet
+              {pagination.total} {Number(pagination.total) === 1 ? 'negocio' : 'negocios'}
+              {search && type ? ` en ${type.name.toLowerCase()}` : ' en Piddet'}
             </p>
           )}
         </div>
+        {searchBox}
         {chips}
 
         <CompaniesState
           loading={resource.loading}
           error={resource.error}
           empty={!companies.length && !hasResults}
+          emptyText={search ? 'No encontramos negocios con esa búsqueda.' : undefined}
           onRetry={resource.reload}
         />
         {!resource.loading && !resource.error && companies.length > 0 && (
           <>
             <CompanyList companies={companies} />
-            {type.key === 'gym' && <GymStrip />}
+            {typeKey === 'gym' && <GymStrip />}
             <Pagination
               page={pagination.current_page || page}
               lastPage={pagination.last_page || 1}
@@ -202,6 +249,9 @@ export function PublicHome() {
   const selectedTypeKey = params.get('type') || '';
   const initialPage = validPage(params.get('page'));
   const [page, setPage] = React.useState(initialPage);
+  // Búsqueda: lo que se escribe va al instante; la consulta (y la URL) espera una pausa.
+  const [searchInput, setSearchInput] = React.useState(() => params.get('q') || '');
+  const [search, setSearch] = React.useState(() => (params.get('q') || '').trim());
   const typesResource = useResource(api.publicCompanyTypes, []);
   const types = typesResource.data || [];
   const selectedType = types.find((type) => type.key === selectedTypeKey);
@@ -272,14 +322,36 @@ export function PublicHome() {
   }, []);
 
   React.useEffect(() => {
+    const timer = setTimeout(() => {
+      const next = searchInput.trim();
+      if (next === search) return;
+      const url = new URL(window.location.href);
+      if (next) url.searchParams.set('q', next);
+      else url.searchParams.delete('q');
+      url.searchParams.delete('page');
+      window.history.replaceState({}, '', url);
+      setSearch(next);
+      setPage(1);
+    }, SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [searchInput, search]);
+
+  React.useEffect(() => {
     const syncPageFromHistory = () => {
-      setPage(validPage(new URLSearchParams(window.location.search).get('page')));
+      const current = new URLSearchParams(window.location.search);
+      setPage(validPage(current.get('page')));
+      const q = current.get('q') || '';
+      setSearchInput(q);
+      setSearch(q.trim());
     };
     window.addEventListener('popstate', syncPageFromHistory);
     return () => window.removeEventListener('popstate', syncPageFromHistory);
   }, []);
 
-  const chips = types.length > 0 ? <CategoryChips types={types} selectedKey={selectedTypeKey} /> : null;
+  const chips = types.length > 0
+    ? <CategoryChips types={types} selectedKey={selectedTypeKey} search={search} />
+    : null;
+  const searchBox = <SearchBox value={searchInput} onChange={setSearchInput} />;
 
   return (
     <div className={s.screen}>
@@ -323,14 +395,19 @@ export function PublicHome() {
         </main>
       )}
       {!typesResource.loading && !typesResource.error && selectedType && (
-        <TypeDirectory type={selectedType} page={page} onPageChange={changePage} chips={chips} />
+        <Directory type={selectedType} search={search} page={page} onPageChange={changePage}
+          chips={chips} searchBox={searchBox} />
       )}
-      {!typesResource.loading && !typesResource.error && !selectedTypeKey && types.length > 0 && (
+      {!typesResource.loading && !typesResource.error && !selectedTypeKey && search && (
+        <Directory search={search} page={page} onPageChange={changePage} chips={chips} searchBox={searchBox} />
+      )}
+      {!typesResource.loading && !typesResource.error && !selectedTypeKey && !search && types.length > 0 && (
         <main id="directory" className={s.main}>
           <section className={s.intro}>
             <h1 className={s.title}>Encuentra negocios cerca de ti</h1>
             <p className={s.lead}>Horarios, cómo llegar y contacto directo por WhatsApp.</p>
           </section>
+          {searchBox}
           {chips}
           {types.map((type) => <TypeSection key={type.key} type={type} />)}
         </main>

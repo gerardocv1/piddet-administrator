@@ -104,12 +104,16 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
 - **Flujo principal:** la portada carga `GET /public/directory/company-types` y un avance de cada
   tipo (`GET /public/directory/companies?company_type_key=...&page=1&per_page=4`). Las categorías
   van como pastillas (*Todos* y cada tipo); «Ver los N» abre `/?type=<key>`, donde el listado se
-  pagina de a 8. Cada negocio es una fila compacta (logo, nombre, tipo · ciudad y una línea de
+  pagina de a 8. Cada negocio es una fila compacta (logo, nombre, tipo · ciudad y **si está
+  abierto ahora** —«Abierto · Cierra a las 10:00 p. m.»—, calculado con `getStoreStatus` sobre
+  `opening_hours`, el horario de su primera sede que trae el backend; sin horario, una línea de
   descripción) que navega a `/{username}`. En la sección de gimnasios va la franja de
   **piddet gym** hacia `/gym`.
 - **Diseño:** neutro a propósito —grises del sistema, sin el color de cada negocio (ese vive en
   su perfil)— y el naranja de piddet solo en el logo; la única pieza oscura es la de piddet gym.
-  Sin buscador: el directorio no tiene búsqueda en el backend.
+  **Buscador** (`search` del backend: nombre, descripción o ciudad): escribe en la URL (`?q=`,
+  con una pausa de 300 ms) y muestra los resultados paginados; con una categoría elegida busca
+  dentro de ella, y cambiar de categoría conserva la búsqueda. Borrarlo vuelve a la portada.
 - **Estados:** cada catálogo contempla carga, error y ausencia de resultados. Un tipo inválido
   ofrece volver al directorio completo.
 - **Contacto:** «¿Tienes un negocio?» es enlace a WhatsApp solo cuando
@@ -129,8 +133,10 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
   carta.
 - **SEO:** la portada y los perfiles publican descripción, Open Graph/Twitter, canonical, robots
   y JSON-LD. La raíz tiene metadata estática de respaldo; la compañía se completa en runtime con
-  su tipo de `LocalBusiness`. Crawlers que no ejecuten JavaScript necesitan prerender/CDN para
-  obtener la metadata específica de cada compañía.
+  su tipo de `LocalBusiness`. **Al compartir un perfil** (WhatsApp, Facebook, X…), que no ejecutan
+  JavaScript, nginx les entrega la tarjeta del negocio que arma el backend
+  (`GET /public/share/{username}`: «Nombre · Tipo en Ciudad», su descripción y el icono de la
+  app); ver README → *Nginx*.
 
 ### Dashboard
 

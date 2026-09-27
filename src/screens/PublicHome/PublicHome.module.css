@@ -77,6 +77,35 @@
   line-height: var(--lh-base);
 }
 
+/* Buscador: campo neutro con la lupa adentro. */
+.search {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  height: 48px;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  background: var(--surface-card);
+  color: var(--text-muted);
+}
+
+.search:focus-within { border-color: var(--text-heading); }
+
+.search input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--text-heading);
+  font-family: inherit;
+  font-size: var(--text-md);
+}
+
+.search input::placeholder { color: var(--text-muted); }
+
 .chips {
   display: flex;
   gap: var(--space-2);
@@ -212,6 +241,26 @@
   white-space: nowrap;
   text-overflow: ellipsis;
 }
+
+/* Abierto / cerrado: punto y texto, como en el perfil. */
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-body);
+  font-size: var(--text-sm);
+  font-weight: var(--fw-semibold);
+}
+
+.statusDot {
+  flex: 0 0 auto;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--gray-300);
+}
+
+.statusOpen .statusDot { background: var(--color-success); }
 
 .chevron {
   flex: 0 0 auto;
