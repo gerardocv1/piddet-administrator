@@ -3314,6 +3314,8 @@ export const mockShiftMovements = [
   // Turno EMPLOYEE abierto (2): las ventas del cajero también cuentan en el global.
   { id: 7, shift_id: 2, resource_type: 'order', resource_id: 'ord-9001', resource_label: 'F-0091', payment_method: 'cash', amount: '85000.00', status: 1, annulled_at: null, occurred_at: shiftDateIso(0, '10:05:00') },
   { id: 8, shift_id: 2, resource_type: 'order', resource_id: 'ord-9003', resource_label: 'F-0093', payment_method: 'nequi', amount: '56000.00', status: 1, annulled_at: null, occurred_at: shiftDateIso(0, '12:40:00') },
+  // Entrega de dinero adelantada del cajero (sale del esperado: al cerrar se cuenta lo que quedó).
+  { id: 9, shift_id: 2, resource_type: 'handover', resource_id: null, resource_label: 'Entrega del mediodía a Gerencia', payment_method: 'cash', amount: '50000.00', status: 1, registered_by: 3, registered_by_name: 'María López', annulled_at: null, occurred_at: shiftDateIso(0, '13:30:00') },
   // Turno EMPLOYEE cerrado (3): con ajuste de faltante.
   { id: 9, shift_id: 3, resource_type: 'order', resource_id: 'ord-8001', resource_label: 'F-0081', payment_method: 'cash', amount: '300000.00', status: 1, annulled_at: null, occurred_at: shiftDateIso(1, '11:00:00') },
   { id: 10, shift_id: 3, resource_type: 'order', resource_id: 'ord-8002', resource_label: 'F-0082', payment_method: 'datafono', amount: '180000.00', status: 1, annulled_at: null, occurred_at: shiftDateIso(1, '13:30:00') },
@@ -3397,7 +3399,8 @@ const shiftCountTotal = (rows, kind) => rows
 const shiftMovementRow = (mv) => ({ ...mv, payment_method_name: paymentMethodName(mv.payment_method) });
 
 // Balance del turno replicando el backend: SUM por tipo y método sobre movimientos activos;
-// expected = base + ventas (todos los métodos) − gastos. Los ajustes nunca entran en expected.
+// expected = base + ventas (todos los métodos) + adiciones − gastos − entregas. Los ajustes nunca
+// entran en expected.
 function buildShiftBalance(shift) {
   const active = mockShiftMovements.filter((mv) => mv.shift_id === shift.id && mv.status === 1);
   const money = (n) => n.toFixed(2);
@@ -3423,10 +3426,11 @@ function buildShiftBalance(shift) {
   const sales = section('order');
   const additions = section('addition');
   const expenses = section('expense');
+  const handovers = section('handover');
 
   // El mismo esperado partido como se cuenta al cerrar: el efectivo en billetes y monedas, y cada
-  // otro método por su cuenta. Las ventas y las adiciones entran, los gastos salen y los ajustes
-  // nunca cuentan (nacen al cerrar).
+  // otro método por su cuenta. Las ventas y las adiciones entran, los gastos y las entregas salen
+  // y los ajustes nunca cuentan (nacen al cerrar).
   const base = Number(shift.base_amount);
   const totalOf = (type, cash) => active
     .filter((mv) => mv.resource_type === type && isShiftCashMethod(mv.payment_method) === cash)
@@ -3434,12 +3438,14 @@ function buildShiftBalance(shift) {
   const cashSales = totalOf('order', true);
   const cashAdditions = totalOf('addition', true);
   const cashExpenses = totalOf('expense', true);
+  const cashHandovers = totalOf('handover', true);
 
   const nonCash = new Map();
   active.forEach((mv) => {
     if (isShiftCashMethod(mv.payment_method) || mv.resource_type === 'adjustment') return;
     const current = nonCash.get(mv.payment_method) || 0;
-    nonCash.set(mv.payment_method, current + (mv.resource_type === 'expense' ? -Number(mv.amount) : Number(mv.amount)));
+    const outgoing = mv.resource_type === 'expense' || mv.resource_type === 'handover';
+    nonCash.set(mv.payment_method, current + (outgoing ? -Number(mv.amount) : Number(mv.amount)));
   });
 
   return {
@@ -3447,13 +3453,15 @@ function buildShiftBalance(shift) {
     sales,
     additions,
     expenses,
+    handovers,
     adjustments: section('adjustment'),
-    expected_amount: money(base + Number(sales.total) + Number(additions.total) - Number(expenses.total)),
+    expected_amount: money(base + Number(sales.total) + Number(additions.total) - Number(expenses.total) - Number(handovers.total)),
     cash: {
       sales_total: money(cashSales),
       additions_total: money(cashAdditions),
       expenses_total: money(cashExpenses),
-      expected: money(base + cashSales + cashAdditions - cashExpenses),
+      handovers_total: money(cashHandovers),
+      expected: money(base + cashSales + cashAdditions - cashExpenses - cashHandovers),
     },
     non_cash: {
       expected: money([...nonCash.values()].reduce((sum, n) => sum + n, 0)),
@@ -3628,6 +3636,22 @@ function resolveShiftsMock(path, query, { method = 'GET', body } = {}) {
     mockShiftMovements.push({
       id: nextId(mockShiftMovements), shift_id: sh.id, resource_type: 'addition', resource_id: null,
       resource_label: (body?.notes || '').trim() || 'Adición a la base',
+      payment_method: body?.payment_method, amount: Number(body?.amount || 0).toFixed(2),
+      status: 1, registered_by: 1, registered_by_name: 'Gerardo Cruz', annulled_at: null,
+      occurred_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
+    });
+    return decorateShiftDetail(sh);
+  }
+
+  m = sub.match(/^shifts\/(\d+)\/handovers$/);
+  if (m && method === 'POST') {
+    const sh = mockShifts.find((x) => x.id === Number(m[1]) && visible(x));
+    if (!sh) return null;
+    if (sh.type === 'PURCHASE') shiftConflict('Solo un turno de ventas (global o de cajero) admite entregas de dinero');
+    if (sh.status !== 'OPEN') shiftConflict('El turno no está abierto');
+    mockShiftMovements.push({
+      id: nextId(mockShiftMovements), shift_id: sh.id, resource_type: 'handover', resource_id: null,
+      resource_label: (body?.notes || '').trim() || 'Entrega de dinero',
       payment_method: body?.payment_method, amount: Number(body?.amount || 0).toFixed(2),
       status: 1, registered_by: 1, registered_by_name: 'Gerardo Cruz', annulled_at: null,
       occurred_at: new Date().toISOString().slice(0, 19).replace('T', ' '),

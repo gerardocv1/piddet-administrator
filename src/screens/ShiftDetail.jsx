@@ -10,9 +10,11 @@ import { phrase } from '../lib/terms.js';
 import s from './screens.module.css';
 import t from './ShiftDetail.module.css';
 
-const MOVEMENT_BADGE = { order: 'success', addition: 'info', expense: 'danger', adjustment: 'warning' };
+const MOVEMENT_BADGE = { order: 'success', addition: 'info', expense: 'danger', handover: 'primary', adjustment: 'warning' };
 const DOCUMENT_PATHS = { order: '/invoices', expense: '/expenses' };
 const EMPTY_ADDITION = { amount: '', payment_method: '', notes: '' };
+// La entrega casi siempre es en efectivo: arranca con ese método elegido si el catálogo lo trae.
+const DEFAULT_HANDOVER_METHOD = 'cash';
 
 // Detalle de un turno de caja: datos de apertura, balance en vivo (base + ventas − gastos, con
 // desglose por método de pago), el arqueo con el que se cerró —cuántos billetes de cada
@@ -22,6 +24,11 @@ const EMPTY_ADDITION = { amount: '', payment_method: '', notes: '' };
 // Cada movimiento enlaza a su documento: la venta a su factura, el gasto a su detalle y el
 // ajuste del cierre al documento contable que lo respalda (el sobrante se factura y el
 // faltante se registra como gasto, para que la contabilidad cuadre con la plata contada).
+//
+// En un turno de ventas (global o de cajero), mientras está abierto, desde el balance se
+// registran las entregas de dinero: plata que el cajero entrega adelantada, antes del cierre
+// (monto, método de pago y nota; el backend guarda quién la registró). Salen del esperado: al
+// cerrar se cuenta solo lo que quedó en la caja.
 //
 // En un turno de compras no hay ventas: el balance es base + adiciones − gastos. Mientras está
 // abierto, desde el balance se registran las adiciones a la base (monto, método de pago y nota;
@@ -43,17 +50,20 @@ export function ShiftDetail() {
   const [cancelOpen, setCancelOpen] = React.useState(false);
   const [additionOpen, setAdditionOpen] = React.useState(false);
   const [addition, setAddition] = React.useState(EMPTY_ADDITION);
+  const [handoverOpen, setHandoverOpen] = React.useState(false);
+  const [handover, setHandover] = React.useState(EMPTY_ADDITION);
   const [busy, setBusy] = React.useState(false);
   const [actionError, setActionError] = React.useState(null);
 
   const open = data?.status === 'OPEN';
   const purchase = isPurchaseShift(data);
-  // El catálogo de métodos de pago solo hace falta para registrar adiciones.
+  // El catálogo de métodos de pago solo hace falta con el turno abierto: para registrar
+  // adiciones (compras) o entregas (ventas).
   const methodsFetcher = React.useCallback(
-    () => (open && purchase ? api.paymentMethods() : Promise.resolve([])),
-    [open, purchase],
+    () => (open ? api.paymentMethods() : Promise.resolve([])),
+    [open],
   );
-  const { data: paymentMethods } = useResource(methodsFetcher, [], [open, purchase]);
+  const { data: paymentMethods } = useResource(methodsFetcher, [], [open]);
   const methodOptions = React.useMemo(
     () => [{ value: '', label: 'Selecciona el método' }, ...(paymentMethods || []).map((m) => ({ value: m.id, label: m.name }))],
     [paymentMethods],
@@ -146,6 +156,35 @@ export function ShiftDetail() {
       toast({ tone: 'success', title: 'Adición registrada' });
     } catch (e) {
       setActionError(e?.message || 'No se pudo registrar la adición.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const openHandover = () => {
+    const hasCash = (paymentMethods || []).some((m) => m.id === DEFAULT_HANDOVER_METHOD);
+    setHandover({ ...EMPTY_ADDITION, payment_method: hasCash ? DEFAULT_HANDOVER_METHOD : '' });
+    setActionError(null);
+    setHandoverOpen(true);
+  };
+
+  const validHandover = handover.amount !== '' && Number(handover.amount) > 0 && handover.payment_method !== '';
+
+  const submitHandover = async () => {
+    if (busy || !validHandover) return;
+    setBusy(true);
+    setActionError(null);
+    try {
+      await api.addShiftHandover(data.id, {
+        amount: Number(handover.amount),
+        payment_method: handover.payment_method,
+        notes: handover.notes.trim() || undefined,
+      });
+      setHandoverOpen(false);
+      reload();
+      toast({ tone: 'success', title: 'Entrega registrada' });
+    } catch (e) {
+      setActionError(e?.message || 'No se pudo registrar la entrega.');
     } finally {
       setBusy(false);
     }
@@ -253,9 +292,11 @@ export function ShiftDetail() {
           <Card>
             <Card.Header
               title={open ? 'Balance en vivo' : cancelled ? 'Balance al cancelar' : 'Balance del cierre'}
-              action={open && purchase ? (
+              action={open ? (purchase ? (
                 <Button variant="secondary" size="sm" icon="fas fa-plus" onClick={openAddition}>Adición</Button>
-              ) : null}
+              ) : (
+                <Button variant="secondary" size="sm" icon="fas fa-hand-holding-dollar" onClick={openHandover}>Entrega</Button>
+              )) : null}
             />
             <Card.Body>
               <div className={t.balance}>
@@ -285,6 +326,16 @@ export function ShiftDetail() {
                   <strong className={t.outcome}>− {shiftMoney(balance.expenses?.total)}</strong>
                 </div>
                 <MethodBreakdown rows={balance.expenses?.by_method} />
+                {/* Entregas de dinero adelantadas (solo turnos de ventas): ya salieron de la caja. */}
+                {!purchase && (balance.handovers?.count ?? 0) > 0 && (
+                  <>
+                    <div className={t.balanceRow}>
+                      <span>Entregas ({balance.handovers.count})</span>
+                      <strong className={t.outcome}>− {shiftMoney(balance.handovers.total)}</strong>
+                    </div>
+                    <MethodBreakdown rows={balance.handovers.by_method} />
+                  </>
+                )}
                 <div className={`${t.balanceRow} ${t.balanceTotal}`}>
                   <span>Esperado en caja</span>
                   <strong>{shiftMoney(balance.expected_amount)}</strong>
@@ -376,6 +427,30 @@ export function ShiftDetail() {
             value={addition.payment_method} onChange={(e) => setAddition((a) => ({ ...a, payment_method: e.target.value }))} />
           <Input label="Nota" placeholder="Ej.: entrega para el mercado de la tarde (opcional)" maxLength={255}
             value={addition.notes} onChange={(e) => setAddition((a) => ({ ...a, notes: e.target.value }))} />
+          {actionError && <Alert tone="danger" onClose={() => setActionError(null)}>{actionError}</Alert>}
+        </div>
+      </Modal>
+
+      <Modal open={handoverOpen} size="sm" title="Registrar entrega de dinero"
+        onClose={() => !busy && setHandoverOpen(false)}
+        footer={<>
+          <Button variant="secondary" onClick={() => !busy && setHandoverOpen(false)}>Volver</Button>
+          <Button variant="primary" icon="fas fa-hand-holding-dollar" loading={busy} disabled={!validHandover} onClick={submitHandover}>
+            Registrar entrega
+          </Button>
+        </>}>
+        <div className={s.formCol}>
+          <p className={s.muted}>
+            Plata que se entrega antes del cierre (a la administración o a la bóveda). Se descuenta
+            del esperado: al cerrar se cuenta solo lo que quedó en la caja.
+          </p>
+          <MoneyInput label="Monto entregado" icon="fas fa-dollar-sign" placeholder="0" autoFocus
+            value={handover.amount} onChange={(v) => setHandover((a) => ({ ...a, amount: v }))}
+            hint={`Esperado en caja ahora: ${shiftMoney(balance.expected_amount)}.`} />
+          <Select label="Método de pago" icon="fas fa-credit-card" options={methodOptions}
+            value={handover.payment_method} onChange={(e) => setHandover((a) => ({ ...a, payment_method: e.target.value }))} />
+          <Input label="Nota" placeholder="Ej.: entrega del mediodía a Gerencia (opcional)" maxLength={255}
+            value={handover.notes} onChange={(e) => setHandover((a) => ({ ...a, notes: e.target.value }))} />
           {actionError && <Alert tone="danger" onClose={() => setActionError(null)}>{actionError}</Alert>}
         </div>
       </Modal>

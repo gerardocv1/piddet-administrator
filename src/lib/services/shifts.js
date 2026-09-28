@@ -4,8 +4,10 @@
 // dinero y puede ser GLOBAL (toda la compañía), EMPLOYEE (uno o varios cajeros: caja
 // compartida, `assigned_users`) o PURCHASE (compras: uno o varios compradores que no venden).
 // Mientras está abierto, el backend le asocia automáticamente las ventas y gastos que registran
-// sus asignados (movimientos con monto y método de pago denormalizados); al de compras solo le
-// entran gastos y las adiciones a la base que se registran a mano. El cierre es un arqueo: el
+// sus asignados (movimientos con monto y método de pago denormalizados) y a mano se registran
+// las entregas de dinero (plata que el cajero entrega adelantada, antes del cierre: sale del
+// esperado); al de compras solo le entran gastos y las adiciones a la base que se registran a
+// mano. El cierre es un arqueo: el
 // efectivo se entrega por denominación o como un solo monto total (excluyentes) y se reporta lo
 // recibido por cada otro método de pago; el backend suma ese desglose, lo compara contra base + ventas + adiciones − gastos y registra la
 // diferencia como ajuste (sobrante/faltante); en el de compras la diferencia solo queda
@@ -55,6 +57,12 @@ export const shiftsService = {
   // Queda como movimiento `addition` con quién lo registró. 409 si el turno no es de compras o
   // ya está cerrado. Devuelve el detalle.
   addShiftAddition: (shiftId, data) => http.post(`${base()}/shifts/${shiftId}/additions`, data),
+
+  // Registra una entrega de dinero en un turno de ventas (global o de cajero) ABIERTO: plata que
+  // el cajero entrega antes del cierre. { amount, payment_method, notes? } Queda como movimiento
+  // `handover` con quién lo registró y descuenta del esperado. 409 si el turno es de compras o
+  // ya está cerrado. Devuelve el detalle.
+  addShiftHandover: (shiftId, data) => http.post(`${base()}/shifts/${shiftId}/handovers`, data),
 
   // Cierra el turno con su arqueo. El efectivo va de UNA de dos formas, excluyentes (mandar las
   // dos es 422): cash_count: [{ code, quantity }] (las monedas van con `amount`) o cash_amount

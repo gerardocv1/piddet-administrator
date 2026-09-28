@@ -39,6 +39,7 @@ export const MOVEMENT_TYPE_LABELS = {
   order: 'Venta',
   addition: 'Adición',
   expense: 'Gasto',
+  handover: 'Entrega',
   adjustment: 'Ajuste',
 };
 
