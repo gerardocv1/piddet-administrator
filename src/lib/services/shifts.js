@@ -5,9 +5,9 @@
 // compartida, `assigned_users`) o PURCHASE (compras: uno o varios compradores que no venden).
 // Mientras está abierto, el backend le asocia automáticamente las ventas y gastos que registran
 // sus asignados (movimientos con monto y método de pago denormalizados); al de compras solo le
-// entran gastos y las adiciones a la base que se registran a mano. El cierre es un arqueo: se
-// cuenta el efectivo por denominación y se reporta lo recibido por cada otro método de pago; el
-// backend suma ese desglose, lo compara contra base + ventas + adiciones − gastos y registra la
+// entran gastos y las adiciones a la base que se registran a mano. El cierre es un arqueo: el
+// efectivo se entrega por denominación o como un solo monto total (excluyentes) y se reporta lo
+// recibido por cada otro método de pago; el backend suma ese desglose, lo compara contra base + ventas + adiciones − gastos y registra la
 // diferencia como ajuste (sobrante/faltante); en el de compras la diferencia solo queda
 // registrada, sin factura ni gasto de respaldo. Reglas del backend: máximo 1 GLOBAL abierto por
 // compañía, ningún usuario en dos turnos abiertos a la vez (cajero o compras), y el GLOBAL no se
@@ -56,9 +56,11 @@ export const shiftsService = {
   // ya está cerrado. Devuelve el detalle.
   addShiftAddition: (shiftId, data) => http.post(`${base()}/shifts/${shiftId}/additions`, data),
 
-  // Cierra el turno con su arqueo. { cash_count: [{ code, quantity }] (las monedas van con
-  // `amount`), method_count: [{ payment_method, amount }], notes? } El total contado lo suma el
-  // backend a partir del desglose: aquí no se manda `counted_amount`. Devuelve el detalle.
+  // Cierra el turno con su arqueo. El efectivo va de UNA de dos formas, excluyentes (mandar las
+  // dos es 422): cash_count: [{ code, quantity }] (las monedas van con `amount`) o cash_amount
+  // (un solo monto total, sin desglosar; queda como renglón `cash_total`). Además
+  // method_count: [{ payment_method, amount }] y notes?. El total contado lo suma el backend a
+  // partir del desglose: aquí no se manda `counted_amount`. Devuelve el detalle.
   closeShift: (shiftId, data) => http.post(`${base()}/shifts/${shiftId}/close`, data),
 
   // Corrige la base de un turno ABIERTO (solo admin del módulo). Devuelve el detalle.
