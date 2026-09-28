@@ -271,6 +271,13 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
   rechaza (409, con el nombre) a quien ya esté en otro abierto. `/shifts/:shiftId` muestra el
   balance en vivo; `/shifts/:shiftId/close` guía el cierre: contar dinero → balance (base +
   ventas − gastos) → confirmar.
+- **Entregas de dinero (turnos de ventas):** mientras un turno global o de cajero está abierto,
+  desde el balance del detalle (botón *Entrega*) se registra la plata que el cajero **entrega
+  adelantada**, antes del cierre (monto, método de pago —efectivo por defecto— y nota; el backend
+  guarda quién la registró). Aparecen como movimientos `handover` y como renglón *Entregas* del
+  balance, y **salen del esperado**: al cerrar se cuenta solo lo que quedó en la caja, y el
+  asistente lo recuerda con un aviso en el paso de conteo. Un turno de compras no admite
+  entregas (409): lo suyo son las adiciones.
 - **Turno de compras (`PURCHASE`):** para quien solo compra. No recibe ventas: su balance es
   **base + adiciones − gastos**. Mientras está abierto, desde el balance del detalle se
   registran **adiciones a la base** (monto, método de pago y nota; el backend guarda quién la

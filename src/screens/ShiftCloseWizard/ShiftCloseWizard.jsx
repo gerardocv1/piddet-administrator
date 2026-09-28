@@ -26,7 +26,8 @@ const CASH_MODES = [
 //    van por monto) o como un solo monto total —el cajero elige; el turno de compras arranca en
 //    monto total porque no maneja caja de ventas—, y cuánto se recibió por cada método de pago
 //    distinto al efectivo, con el total de lo contado creciendo debajo.
-// 2) Balance — base + ventas (todos los métodos, con desglose) − gastos = esperado, comparado
+// 2) Balance — base + ventas (todos los métodos, con desglose) − gastos − entregas de dinero
+//    hechas durante el turno = esperado, comparado
 //    contra lo contado, partido en efectivo y otros métodos para ver dónde está la diferencia:
 //    el sobrante/faltante se resalta antes de confirmar.
 // 3) Confirmar — nota opcional y cierre. El backend registra la diferencia como ajuste con su
@@ -114,6 +115,9 @@ export function ShiftCloseWizard() {
   // Esperado partido igual que lo contado, para señalar dónde está la diferencia.
   const expectedCash = balance ? Number(balance.cash?.expected) : null;
   const expectedNonCash = balance ? Number(balance.non_cash?.expected) : null;
+  // Entregas de dinero adelantadas (solo turnos de ventas): ya salieron de la caja y el esperado
+  // las descuenta; se recuerdan para que nadie las vuelva a contar.
+  const handoversTotal = Number(balance?.handovers?.total) || 0;
 
   const goBack = () => {
     if (step > 1) { setStep(step - 1); return; }
@@ -238,6 +242,13 @@ export function ShiftCloseWizard() {
               <Spinner center label="Preparando el arqueo…" />
             ) : (
               <>
+                {handoversTotal > 0 && (
+                  <Alert tone="info" variant="tint">
+                    Durante el turno se entregaron <strong>{shiftMoney(handoversTotal)}</strong>
+                    {' '}({balance.handovers.count} {balance.handovers.count === 1 ? 'entrega' : 'entregas'}).
+                    Ya están descontados del esperado: cuenta solo lo que quedó en la caja.
+                  </Alert>
+                )}
                 <section className={t.count}>
                   <header className={t.countHead}>
                     <span>Efectivo</span>
@@ -351,6 +362,12 @@ export function ShiftCloseWizard() {
                   )}
                   <div><span>Gastos ({balance.expenses?.count ?? 0})</span><strong className={t.outcome}>− {shiftMoney(balance.expenses?.total)}</strong></div>
                   <MethodRows rows={balance.expenses?.by_method} />
+                  {!purchase && (balance.handovers?.count ?? 0) > 0 && (
+                    <>
+                      <div><span>Entregas ({balance.handovers.count})</span><strong className={t.outcome}>− {shiftMoney(balance.handovers.total)}</strong></div>
+                      <MethodRows rows={balance.handovers.by_method} />
+                    </>
+                  )}
                   <div className={t.summaryTotal}><span>Esperado en caja</span><strong>{shiftMoney(balance.expected_amount)}</strong></div>
                   <div><span>Contado</span><strong>{shiftMoney(countedNumber)}</strong></div>
                   {countedRows}
