@@ -5,7 +5,6 @@ import { useResource } from '../../lib/useResource.js';
 import {
   shareImage, applyMetaTags, applySeoTags, buildShareMeta, shareOrCopy,
 } from '../public/shareMeta.js';
-import { PublicBottomBar } from '../public/PublicBottomBar.jsx';
 import { UnitCard } from '../public/Lodging/UnitCard.jsx';
 import { PiddetGymLogo } from '../public/GymPortal/PiddetGymLogo.jsx';
 import { companyBrandTheme } from '../../lib/brand/palettes.js';
@@ -23,6 +22,18 @@ const SCHEMA_TYPES = {
   lodging: 'LodgingBusiness',
 };
 
+// Miniatura del menú: su imagen si la tiene; si no (o si falla), un icono neutro.
+function MenuThumb({ file }) {
+  const [failed, setFailed] = React.useState(false);
+  return (
+    <span className={s.thumb}>
+      {file && !failed
+        ? <img src={file} alt="" loading="lazy" onError={() => setFailed(true)} />
+        : <i className="fas fa-utensils" aria-hidden="true" />}
+    </span>
+  );
+}
+
 function CompanyLogo({ company }) {
   const [failed, setFailed] = React.useState(false);
   if (!company.icon || failed) return initial(company.name);
@@ -37,14 +48,31 @@ const CONTACT_FIELDS = [
 ];
 
 const storePhone = (store) => `${store.phone_code || ''}${store.phone_number || ''}`;
+const telHref = (phone) => {
+  const digits = String(phone || '').replace(/[^\d+]/g, '');
+  return digits ? `tel:${digits}` : null;
+};
 
-// Tarjeta de una tienda: mini-mapa → Google Maps, estado con el horario como dato principal
-// (el visitante quiere saber a qué hora abre, no solo que está cerrado), horario semanal
-// desplegable y acciones (cómo llegar / escribir por WhatsApp).
+// Abierto / cerrado como un punto y una línea de texto (sin pastilla de color): lo que importa
+// es a qué hora cierra o abre.
+function OpenStatus({ status }) {
+  return (
+    <span className={[s.status, status.open ? s.statusOpen : ''].filter(Boolean).join(' ')}>
+      <span className={s.statusDot} aria-hidden="true" />
+      {[status.label, status.detail].filter(Boolean).join(' · ')}
+    </span>
+  );
+}
+
+// Tarjeta de una sede, colapsable como la del portal del gimnasio. Cerrada es una fila: nombre,
+// dirección y si está abierta ahora. Abierta suma el mapa, el horario de la semana y las acciones
+// (cómo llegar, llamar, escribir por WhatsApp).
 function StoreCard({ store, companyName, companyPhone }) {
   const [open, setOpen] = React.useState(false);
+  const bodyId = React.useId();
   const status = React.useMemo(() => getStoreStatus(store.schedules || [], store.store_status_id), [store]);
   const week = React.useMemo(() => getWeekSchedule(store.schedules || []), [store]);
+  const hasSchedule = (store.schedules || []).length > 0;
   const mapsUrl = googleMapsUrl(store);
   const embedUrl = googleMapsEmbedUrl(store);
   // Si la tienda no tiene su propio número, se escribe al de la compañía.
@@ -53,65 +81,59 @@ function StoreCard({ store, companyName, companyPhone }) {
     storePhone(store) || companyPhone,
     about ? `Hola, quiero información sobre ${about}.` : 'Hola, quiero información.',
   );
-  const hasLocation = store.latitude != null && store.longitude != null;
-  const showMap = hasLocation || !!store.address;
+  const phone = telHref(storePhone(store));
+  const showMap = (store.latitude != null && store.longitude != null) || !!store.address;
 
   return (
-    <article className={s.storeCard}>
-      <div className={s.storeBody}>
-        <div className={s.storeTop}>
+    <article className={[s.card, s.store].join(' ')}>
+      <button type="button" className={s.storeHead} onClick={() => setOpen((v) => !v)}
+        aria-expanded={open} aria-controls={bodyId}>
+        <span className={s.storeIcon}><i className="fas fa-location-dot" aria-hidden="true" /></span>
+        <span className={s.storeText}>
+          <span className={s.storeName}>{store.name}</span>
+          {store.address && <span className={s.storeAddr}>{store.address}</span>}
+          {hasSchedule && <OpenStatus status={status} />}
+        </span>
+        <i className={`fas fa-chevron-down ${s.chevron} ${open ? s.chevronUp : ''}`} aria-hidden="true" />
+      </button>
+
+      {open && (
+        <div id={bodyId} className={s.storeBody}>
           {showMap && (
             <a className={s.storeMap} href={mapsUrl} target="_blank" rel="noopener noreferrer"
               title="Abrir en Google Maps">
-              <iframe
-                title={`Mapa de ${store.name}`}
-                src={embedUrl}
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-              />
+              <iframe title={`Mapa de ${store.name}`} src={embedUrl} loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade" />
               <span className={s.storeMapVeil} />
             </a>
           )}
-          <div className={s.storeHead}>
-            <h3 className={s.storeName}>{store.name}</h3>
-            {store.address && <p className={s.storeAddr}>{store.address}</p>}
+          {hasSchedule && (
+            <ul className={s.week}>
+              {week.map((d) => (
+                <li key={d.dayId} className={[s.weekRow, d.isToday ? s.weekToday : ''].filter(Boolean).join(' ')}>
+                  <span>{d.name}{d.isToday ? ' · hoy' : ''}</span>
+                  <span className={d.closed ? s.weekClosed : ''}>{d.text}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+          <div className={s.storeActions}>
+            <a className={[s.action, s.actionPrimary].join(' ')} href={mapsUrl} target="_blank" rel="noopener noreferrer">
+              <i className="fas fa-diamond-turn-right" aria-hidden="true" /> Cómo llegar
+            </a>
+            {phone && (
+              <a className={s.action} href={phone}>
+                <i className="fas fa-phone" aria-hidden="true" /> Llamar
+              </a>
+            )}
+            {whatsapp && (
+              <a className={s.action} href={whatsapp} target="_blank" rel="noopener noreferrer">
+                <i className="fab fa-whatsapp" aria-hidden="true" /> WhatsApp
+              </a>
+            )}
           </div>
         </div>
-
-        {/* El horario manda: el estado va como pastilla pequeña y el próximo cambio en grande. */}
-        <button type="button" className={s.storeHours} onClick={() => setOpen((v) => !v)} aria-expanded={open}>
-          <span className={[s.badge, status.open ? s.badgeOpen : s.badgeClosed].join(' ')}>
-            <span className={s.badgeDot} />{status.label}
-          </span>
-          <span className={s.storeHoursText}>{status.detail || 'Ver horario'}</span>
-          <i className={`fas fa-chevron-${open ? 'up' : 'down'} ${s.storeHoursChevron}`} />
-        </button>
-
-        {open && (
-          <ul className={s.week}>
-            {week.map((d) => (
-              <li key={d.dayId} className={[s.weekRow, d.isToday ? s.weekToday : ''].filter(Boolean).join(' ')}>
-                <span className={s.weekDay}>
-                  {d.name}
-                  {d.isToday && <span className={s.todayTag}>Hoy</span>}
-                </span>
-                <span className={[s.weekHours, d.closed ? s.weekClosed : ''].filter(Boolean).join(' ')}>{d.text}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-
-        <div className={s.storeActions}>
-          <a className={`${s.btn} ${s.btnPrimary}`} href={mapsUrl} target="_blank" rel="noopener noreferrer">
-            <i className="fas fa-diamond-turn-right" /> Cómo llegar
-          </a>
-          {whatsapp && (
-            <a className={`${s.btn} ${s.btnWhatsapp}`} href={whatsapp} target="_blank" rel="noopener noreferrer">
-              <i className="fab fa-whatsapp" /> Escribir
-            </a>
-          )}
-        </div>
-      </div>
+      )}
     </article>
   );
 }
@@ -212,181 +234,178 @@ export function PublicCompany({ companyUsername }) {
   }
 
   const contacts = CONTACT_FIELDS.filter((f) => company[f.key]);
-  const storesCountText = stores.length === 1 ? '1 ubicación' : `${stores.length} ubicaciones`;
+  const firstStore = stores[0] || null;
   // Contacto de la compañía: si no tiene teléfono propio, se usa el de su primera tienda.
   const companyWhatsapp = whatsappHref(
-    company.phone || storePhone(stores[0] || {}),
+    company.phone || storePhone(firstStore || {}),
     `Hola, quiero información sobre ${company.name}.`,
   );
+  const companyPhone = telHref(company.phone || storePhone(firstStore || {}));
+  // El estado del encabezado es el de la primera sede con horario.
+  const scheduled = stores.find((st) => (st.schedules || []).length > 0);
+  const headStatus = scheduled ? getStoreStatus(scheduled.schedules, scheduled.store_status_id) : null;
+  const meta = [company.company_type_name, company.city].filter(Boolean).join(' · ');
+  const isGym = company.company_type_key === 'gym';
+  // Los menús son la sección de los restaurantes: allí se muestra aunque esté vacía (dice que
+  // aún no hay); en los demás tipos, solo si tienen alguno publicado.
+  const showMenus = menus.length > 0 || company.company_type_key === 'restaurant';
+  const quick = [
+    companyWhatsapp && { key: 'wa', icon: 'fab fa-whatsapp', label: 'WhatsApp', href: companyWhatsapp, external: true },
+    firstStore && { key: 'go', icon: 'fas fa-diamond-turn-right', label: 'Cómo llegar', href: googleMapsUrl(firstStore), external: true },
+    companyPhone && { key: 'call', icon: 'fas fa-phone', label: 'Llamar', href: companyPhone },
+  ].filter(Boolean);
 
   return (
     // Las variables de marca son la única excepción de estilo inline: companyBrandTheme devuelve
-    // custom properties, no reglas visuales sueltas.
+    // custom properties, no reglas visuales sueltas. Fuera del perfil todo es neutro; dentro, el
+    // color de la compañía va solo en la franja, el logo, la acción principal y los iconos.
     <div className={s.screen} style={companyBrandTheme(company)}>
       <header className={s.topbar}>
-        <a className={s.wordmark} href="/" aria-label="Piddet, inicio">piddet</a>
-        <a className={s.exploreLink} href="/">
-          <i className="fas fa-compass" aria-hidden="true" /> <span>Explorar negocios</span>
-        </a>
+        <a className={s.back} href="/"><i className="fas fa-chevron-left" aria-hidden="true" /> Explorar</a>
+        <button type="button" className={s.iconBtn} onClick={share} aria-label="Compartir">
+          <i className="fas fa-arrow-up-from-bracket" aria-hidden="true" />
+        </button>
       </header>
 
       <main className={s.container}>
-        <section className={s.hero}>
-          <span className={s.heroOrb} aria-hidden="true" />
-          <div className={s.heroIdentity}>
-            <span className={[s.logo, company.icon ? s.logoImg : ''].filter(Boolean).join(' ')}>
-              <CompanyLogo company={company} />
-            </span>
-            <div className={s.heroCopy}>
-              <p className={s.eyebrow}>{company.company_type_name || 'Negocio en Piddet'}</p>
+        <section className={[s.card, s.head].join(' ')}>
+          <div className={s.band} aria-hidden="true" />
+          <div className={s.headBody}>
+            <span className={s.logo}><CompanyLogo company={company} /></span>
+            <div>
               <h1 className={s.name}>{company.name}</h1>
-              {(company.description || company.legal_name) && (
-                <p className={s.tagline}>{company.description || company.legal_name}</p>
-              )}
+              {meta && <p className={s.meta}>{meta}</p>}
             </div>
-          </div>
-          <div className={s.heroFacts} aria-label="Información disponible">
-            {menus.length > 0 && (
-              <span><i className="fas fa-utensils" aria-hidden="true" />{menus.length} {menus.length === 1 ? 'menú' : 'menús'}</span>
+            {(company.description || company.legal_name) && (
+              <p className={s.tagline}>{company.description || company.legal_name}</p>
             )}
-            {stores.length > 0 && (
-              <span><i className="fas fa-location-dot" aria-hidden="true" />{storesCountText}</span>
-            )}
-            {unitsCount > 0 && (
-              <span><i className="fas fa-bed" aria-hidden="true" />{unitsCount} {unitsCount === 1 ? 'hospedaje' : 'hospedajes'}</span>
-            )}
+            {headStatus && <OpenStatus status={headStatus} />}
           </div>
         </section>
 
-        <div className={s.contentGrid}>
-          <div className={s.primaryColumn}>
-            {/* Gimnasios: el socio consulta su suscripción en la entrada general (piddet.com/gym),
-                que es de todos los gimnasios; con su celular lo lleva al portal de este. */}
-            {company.company_type_key === 'gym' && (
-              <section className={s.gymMember} aria-labelledby="gym-member-title">
-                <span className={s.gymMemberGlow} aria-hidden="true" />
-                <PiddetGymLogo size="sm" />
-                <div className={s.gymMemberCopy}>
-                  <h2 id="gym-member-title" className={s.gymMemberTitle}>¿Ya eres socio de {company.name}?</h2>
-                  <p className={s.gymMemberText}>Mira tu progreso, tus medidas y tu plan desde el celular.</p>
-                </div>
-                <a className={s.gymMemberCta} href={GYM_HUB_PATH}>
-                  Ver mi suscripción <i className="fas fa-arrow-right" aria-hidden="true" />
-                </a>
-              </section>
-            )}
+        {quick.length > 0 && (
+          <nav className={s.quick} aria-label="Contacto rápido">
+            {quick.map((q, i) => (
+              <a key={q.key} className={[s.quickBtn, i === 0 ? s.quickPrimary : ''].filter(Boolean).join(' ')}
+                href={q.href} target={q.external ? '_blank' : undefined} rel={q.external ? 'noopener noreferrer' : undefined}>
+                <i className={q.icon} aria-hidden="true" /> {q.label}
+              </a>
+            ))}
+          </nav>
+        )}
 
-            {units.length > 0 && (
-              <section className={s.panel} aria-labelledby="lodging-title">
-                <div className={s.sectionHead}>
-                  <div className={s.sectionTitleGroup}>
-                    <span className={s.sectionIcon}><i className="fas fa-bed" aria-hidden="true" /></span>
-                    <div>
-                      <p className={s.sectionKicker}>Reserva tu estadía</p>
-                      <h2 id="lodging-title" className={s.sectionTitle}>Hospedaje</h2>
-                    </div>
-                  </div>
-                  <a className={s.sectionLink} href={`/${encodeURIComponent(companyUsername)}/hospedaje`}>
-                    {unitsCount > units.length ? `Ver las ${unitsCount}` : 'Ver todo'}
-                    <i className="fas fa-chevron-right" aria-hidden="true" />
+        {/* Gimnasios: el socio consulta su suscripción en la entrada general (piddet.com/gym),
+            que es de todos los gimnasios; con su celular lo lleva al portal de este. Es la única
+            pieza oscura: pertenece a piddet gym, no a la compañía. */}
+        {isGym && (
+          <section className={s.gymMember} aria-labelledby="gym-member-title">
+            <span className={s.gymMemberGlow} aria-hidden="true" />
+            <PiddetGymLogo size="sm" />
+            <div className={s.gymMemberCopy}>
+              <h2 id="gym-member-title" className={s.gymMemberTitle}>¿Ya eres socio de {company.name}?</h2>
+              <p className={s.gymMemberText}>Mira tu progreso, tus medidas y tu plan desde el celular.</p>
+            </div>
+            <a className={s.gymMemberCta} href={GYM_HUB_PATH}>
+              Ver mi suscripción <i className="fas fa-arrow-right" aria-hidden="true" />
+            </a>
+          </section>
+        )}
+
+        {units.length > 0 && (
+          <section className={s.section} aria-labelledby="lodging-title">
+            <div className={s.sectionHead}>
+              <h2 id="lodging-title" className={s.sectionTitle}>Hospedaje</h2>
+              <a className={s.sectionLink} href={`/${encodeURIComponent(companyUsername)}/hospedaje`}>
+                {unitsCount > units.length ? `Ver los ${unitsCount}` : 'Ver todo'}
+              </a>
+            </div>
+            <div className={s.unitList}>
+              {units.map((u) => (
+                <UnitCard key={u.id} unit={u} companyUsername={companyUsername} compact />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {showMenus && (
+          <section className={s.section} aria-labelledby="menus-title">
+            <div className={s.sectionHead}>
+              <h2 id="menus-title" className={s.sectionTitle}>{menus.length === 1 ? 'Menú' : 'Menús'}</h2>
+            </div>
+            {menus.length === 0 ? (
+              <div className={[s.card, s.empty].join(' ')}>Aún no hay menús publicados.</div>
+            ) : (
+              <ul className={[s.card, s.rows].join(' ')}>
+                {menus.map((m) => (
+                  <li key={m.id}>
+                    <a className={s.row} href={`/${encodeURIComponent(companyUsername)}/m/${encodeURIComponent(m.username)}`}>
+                      <MenuThumb file={m.file} />
+                      <span className={s.rowText}>
+                        <span className={s.rowTitle}>{m.name}</span>
+                        {m.description && <span className={s.rowSub}>{m.description}</span>}
+                      </span>
+                      <i className={`fas fa-chevron-right ${s.chevron}`} aria-hidden="true" />
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        )}
+
+        {stores.length > 0 && (
+          <section className={s.section} aria-labelledby="stores-title">
+            <div className={s.sectionHead}>
+              <h2 id="stores-title" className={s.sectionTitle}>{stores.length === 1 ? 'Sede' : `Sedes (${stores.length})`}</h2>
+            </div>
+            <div className={s.storeList}>
+              {stores.map((st) => (
+                <StoreCard key={st.id} store={st} companyName={company.name} companyPhone={company.phone} />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {contacts.length > 0 && (
+          <section className={s.section} aria-labelledby="contact-title">
+            <div className={s.sectionHead}>
+              <h2 id="contact-title" className={s.sectionTitle}>Contacto</h2>
+            </div>
+            <ul className={[s.card, s.rows].join(' ')}>
+              {contacts.map((f) => (
+                <li key={f.key}>
+                  <a className={s.row} href={f.href(company[f.key])}
+                    target={f.key === 'website' ? '_blank' : undefined} rel="noopener noreferrer">
+                    <i className={`${f.icon} ${s.contactIcon}`} aria-hidden="true" />
+                    <span className={s.rowText}><span className={s.rowTitle}>{company[f.key]}</span></span>
                   </a>
-                </div>
-                <div className={s.unitList}>
-                  {units.map((u) => (
-                    <UnitCard key={u.id} unit={u} companyUsername={companyUsername} compact />
-                  ))}
-                </div>
-              </section>
-            )}
-
-            <section className={s.panel} aria-labelledby="menus-title">
-              <div className={s.sectionHead}>
-                <div className={s.sectionTitleGroup}>
-                  <span className={s.sectionIcon}><i className="fas fa-utensils" aria-hidden="true" /></span>
-                  <div>
-                    <p className={s.sectionKicker}>Conoce lo que ofrecemos</p>
-                    <h2 id="menus-title" className={s.sectionTitle}>Nuestros menús</h2>
-                  </div>
-                </div>
-              </div>
-              {menus.length === 0 ? (
-                <div className={s.state}><i className="fas fa-utensils" /> Aún no hay menús publicados.</div>
-              ) : (
-                <ul className={s.menuList}>
-                  {menus.map((m) => (
-                    <li key={m.id}>
-                      <a className={s.menuCard} href={`/${encodeURIComponent(companyUsername)}/m/${encodeURIComponent(m.username)}`}>
-                        {m.file && <img className={s.menuThumb} src={m.file} alt="" loading="lazy" onError={(e) => { e.currentTarget.style.display = 'none'; }} />}
-                        <span className={s.menuInfo}>
-                          <span className={s.menuName}>{m.name}</span>
-                          {m.description && <span className={s.menuDesc}>{m.description}</span>}
-                        </span>
-                        <i className={`fas fa-arrow-right ${s.menuArrow}`} aria-hidden="true" />
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
-          </div>
-
-          {(stores.length > 0 || contacts.length > 0) && (
-            <aside className={s.sideColumn}>
-              {stores.length > 0 && (
-                <section className={s.panel} aria-labelledby="stores-title">
-                  <div className={s.sectionHead}>
-                    <div className={s.sectionTitleGroup}>
-                      <span className={s.sectionIcon}><i className="fas fa-location-dot" aria-hidden="true" /></span>
-                      <div>
-                        <p className={s.sectionKicker}>{storesCountText}</p>
-                        <h2 id="stores-title" className={s.sectionTitle}>Dónde estamos</h2>
-                      </div>
-                    </div>
-                  </div>
-                  <div className={s.storeList}>
-                    {stores.map((st) => (
-                      <StoreCard key={st.id} store={st} companyName={company.name} companyPhone={company.phone} />
-                    ))}
-                  </div>
-                </section>
-              )}
-
-              {contacts.length > 0 && (
-                <section className={s.panel} aria-labelledby="contact-title">
-                  <div className={s.sectionHead}>
-                    <div className={s.sectionTitleGroup}>
-                      <span className={s.sectionIcon}><i className="fas fa-address-card" aria-hidden="true" /></span>
-                      <h2 id="contact-title" className={s.sectionTitle}>Contacto</h2>
-                    </div>
-                  </div>
-                  <ul className={s.contact}>
-                    {contacts.map((f) => (
-                      <li key={f.key} className={s.contactItem}>
-                        <span className={s.contactIco}><i className={f.icon} aria-hidden="true" /></span>
-                        <a href={f.href(company[f.key])} target={f.key === 'website' ? '_blank' : undefined} rel="noopener noreferrer">{company[f.key]}</a>
-                      </li>
-                    ))}
-                  </ul>
-                </section>
-              )}
-            </aside>
-          )}
-        </div>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
         <footer className={s.footer}>
           <span>Negocios que se mueven con</span> <strong>piddet</strong>
         </footer>
       </main>
 
-      {/* Escribir por WhatsApp es la acción principal de la portada: es el canal por el que la
-          gente pregunta y reserva. Compartir queda como acción secundaria. */}
-      <PublicBottomBar items={[
-        { key: 'share', icon: 'fas fa-share-nodes', label: shareMsg || 'Compartir', onClick: share },
-        ...(companyWhatsapp ? [{
-          key: 'whatsapp', icon: 'fab fa-whatsapp', label: 'Escríbenos', primary: true,
-          href: companyWhatsapp, target: '_blank',
-        }] : []),
-      ]} />
+      {/* Barra de abajo del perfil: compartir y, como acción principal, escribir por WhatsApp
+          (es por donde la gente pregunta y reserva). Sin WhatsApp, compartir ocupa todo. */}
+      <nav className={s.actionBar} aria-label="Acciones">
+        <div className={s.actionBarInner}>
+          <button type="button" className={[s.barBtn, companyWhatsapp && !shareMsg ? s.barBtnIcon : ''].filter(Boolean).join(' ')}
+            onClick={share} aria-label="Compartir">
+            <i className="fas fa-arrow-up-from-bracket" aria-hidden="true" />
+            {(!companyWhatsapp || shareMsg) && <span>{shareMsg || 'Compartir'}</span>}
+          </button>
+          {companyWhatsapp && (
+            <a className={[s.barBtn, s.barBtnPrimary].join(' ')} href={companyWhatsapp} target="_blank" rel="noopener noreferrer">
+              <i className="fab fa-whatsapp" aria-hidden="true" /> Escríbenos por WhatsApp
+            </a>
+          )}
+        </div>
+      </nav>
     </div>
   );
 }

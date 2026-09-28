@@ -107,6 +107,38 @@ location = /gym  { add_header Cache-Control "no-cache"; try_files /gym/index.htm
 location = /gym/ { add_header Cache-Control "no-cache"; try_files /gym/index.html /index.html; }
 ```
 
+**Tarjeta de cada negocio al compartir** (`piddet.com/{negocio}` por WhatsApp o redes). Esos
+rastreadores no ejecutan JavaScript y el `index.html` solo trae la tarjeta genérica de Piddet;
+así que, cuando quien visita es uno de ellos, nginx le entrega el HTML con los datos del negocio
+que arma el backend (`GET /api/v1/public/share/{negocio}`). Las personas siguen recibiendo la app.
+El `map` va **fuera** del bloque `server` (en Forge, arriba del todo en el mismo archivo); las dos
+`location`, dentro:
+```nginx
+map $http_user_agent $piddet_crawler {
+    default 0;
+    ~*(whatsapp|facebookexternalhit|facebot|twitterbot|telegrambot|slackbot|linkedinbot|discordbot|skypeuripreview|pinterest) 1;
+}
+
+server {
+    # … lo de arriba …
+
+    # Un solo segmento (sin punto: los archivos no entran) → rastreador al backend.
+    location ~ "^/(?<share_company>[A-Za-z0-9_-]+)/?$" {
+        if ($piddet_crawler) { rewrite ^ /__share/$share_company last; }
+        try_files $uri $uri/ /index.html;
+    }
+    location ^~ /__share/ {
+        internal;
+        proxy_pass https://api.piddet.com/api/v1/public/share/;
+        proxy_set_header Host api.piddet.com;
+        proxy_ssl_server_name on;
+    }
+}
+```
+Se prueba con `curl -A "WhatsApp/2" https://piddet.com/{negocio}` (debe traer
+`og:title` con el nombre del negocio) y en opengraph.xyz. No incluye a Google ni a Bing a propósito:
+ellos sí ejecutan JavaScript y leen el perfil completo.
+
 Con **Quick Deploy** activado, cada merge a `master` dispara el script y publica solo.
 
 > Mergear a `master` **no publica nada** por sí mismo: sin Quick Deploy hay que darle a *Deploy

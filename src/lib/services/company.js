@@ -28,12 +28,15 @@ export const companyService = {
   publicCompany: (companyUsername) => http.get(`/public/${companyUsername}`, { auth: false }),
   // Directorio público: tipos con compañías activas y listado paginado por tipo.
   publicCompanyTypes: () => http.get('/public/directory/company-types', { auth: false }),
-  publicCompanies: ({ companyTypeKey, page = 1, perPage = 8 } = {}) => {
+  // Directorio público: filas con `opening_hours` (horario de su primera sede) para decir si
+  // está abierto ahora. `search` busca en nombre, descripción o ciudad.
+  publicCompanies: ({ companyTypeKey, search, page = 1, perPage = 8 } = {}) => {
     const query = new URLSearchParams({
       company_type_key: companyTypeKey || '',
       page: String(page),
       per_page: String(perPage),
     });
+    if (search) query.set('search', search);
     return http.get(`/public/directory/companies?${query}`, { auth: false, paginated: true });
   },
   // Tokens de agentes de IA de la empresa activa (listado sin hash, solo prefijo).
