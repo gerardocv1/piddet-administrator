@@ -13,12 +13,22 @@ const STEPS = [
   { n: 3, label: 'Confirmar' },
 ];
 
+// Modos de entrega del efectivo en el arqueo. Por billetes: cuántos hay de cada denominación
+// (viaja `cash_count`). Monto total: un solo monto, sin desglosar (viaja `cash_amount`). Son
+// excluyentes: al backend solo llega el del modo activo.
+const CASH_MODES = [
+  { id: 'denominations', label: 'Por billetes', icon: 'fas fa-money-bill-wave', hint: 'Cuenta cuántos billetes hay de cada denominación; el sistema suma.' },
+  { id: 'total', label: 'Monto total', icon: 'fas fa-sack-dollar', hint: 'Escribe el efectivo que entregas, sin desglosarlo por billetes.' },
+];
+
 // Asistente de cierre de turno (/shifts/:shiftId/close), optimizado para móvil. Paso a paso:
-// 1) Conteo — el arqueo: cuántos billetes hay de cada denominación (las monedas van por monto) y
-//    cuánto se recibió por cada método de pago distinto al efectivo, con el total de lo contado
-//    creciendo debajo.
+// 1) Conteo — el arqueo: el efectivo, por billetes (cuántos hay de cada denominación; las monedas
+//    van por monto) o como un solo monto total —el cajero elige; el turno de compras arranca en
+//    monto total porque no maneja caja de ventas—, y cuánto se recibió por cada método de pago
+//    distinto al efectivo, con el total de lo contado creciendo debajo.
 // 2) Balance — base + ventas (todos los métodos, con desglose) − gastos = esperado, comparado
-//    contra lo contado: el sobrante/faltante se resalta antes de confirmar.
+//    contra lo contado, partido en efectivo y otros métodos para ver dónde está la diferencia:
+//    el sobrante/faltante se resalta antes de confirmar.
 // 3) Confirmar — nota opcional y cierre. El backend registra la diferencia como ajuste con su
 //    documento contable (el sobrante se factura, el faltante entra como gasto), irreversible;
 //    el GLOBAL falla con 409 si hay turnos de cajero o de compras abiertos.
@@ -37,6 +47,10 @@ export function ShiftCloseWizard() {
   // Lo que se teclea en el arqueo: por código de denominación (cantidad de billetes, o monto en
   // las monedas) y por método de pago (monto recibido).
   const [cash, setCash] = React.useState({});
+  // El efectivo como un solo monto (modo "Monto total"), canónico.
+  const [cashAmount, setCashAmount] = React.useState('');
+  // Modo elegido a mano; null = el que le toca al tipo de turno (se resuelve al cargarlo).
+  const [chosenMode, setChosenMode] = React.useState(null);
   const [received, setReceived] = React.useState({});
   const [notes, setNotes] = React.useState('');
   const [closed, setClosed] = React.useState(null); // detalle devuelto por el cierre → éxito
@@ -81,17 +95,25 @@ export function ShiftCloseWizard() {
     return { ...m, raw, amount: Number(raw) || 0 };
   });
 
+  const purchase = isPurchaseShift(shift);
+  // El turno de compras arranca en monto total: quien compra entrega lo que le quedó, no arquea
+  // una caja de ventas billete por billete. Los demás, por billetes.
+  const cashMode = chosenMode ?? (purchase ? 'total' : 'denominations');
+  const byTotal = cashMode === 'total';
+
   const sum = (rows) => rows.reduce((acc, r) => acc + r.amount, 0);
-  const cashTotal = sum(cashRows);
+  const cashTotal = byTotal ? Number(cashAmount) || 0 : sum(cashRows);
   const methodsTotal = sum(methodRows);
   const countedNumber = cashTotal + methodsTotal;
 
   // El arqueo empieza cuando se cuenta el efectivo: contar es un acto, no un campo en blanco.
-  const counting = cashRows.some((r) => r.raw !== '');
+  const counting = byTotal ? cashAmount !== '' : cashRows.some((r) => r.raw !== '');
 
   const expected = balance ? Number(balance.expected_amount) : null;
   const difference = expected != null ? countedNumber - expected : null;
-  const purchase = isPurchaseShift(shift);
+  // Esperado partido igual que lo contado, para señalar dónde está la diferencia.
+  const expectedCash = balance ? Number(balance.cash?.expected) : null;
+  const expectedNonCash = balance ? Number(balance.non_cash?.expected) : null;
 
   const goBack = () => {
     if (step > 1) { setStep(step - 1); return; }
@@ -103,12 +125,19 @@ export function ShiftCloseWizard() {
     setSaving(true);
     setErr(null);
     try {
+      // Del efectivo viaja solo lo del modo activo: por billetes, la CANTIDAD de cada
+      // denominación (el monto lo multiplica el backend) y el monto de las monedas; por monto
+      // total, ese único monto. Mandar los dos es un error de validación.
+      const cashPayload = byTotal
+        ? { cash_amount: cashTotal }
+        : {
+          cash_count: cashRows
+            .filter((r) => r.amount > 0)
+            .map((r) => (r.unit == null ? { code: r.code, amount: r.amount } : { code: r.code, quantity: r.quantity })),
+        };
       const detail = await api.closeShift(shiftId, {
-        // Del efectivo viaja la CANTIDAD de billetes (el monto lo multiplica el backend); de las
-        // monedas y de cada otro método, el monto.
-        cash_count: cashRows
-          .filter((r) => r.amount > 0)
-          .map((r) => (r.unit == null ? { code: r.code, amount: r.amount } : { code: r.code, quantity: r.quantity })),
+        ...cashPayload,
+        // De cada otro método, el monto recibido.
         method_count: methodRows
           .filter((r) => r.amount > 0)
           .map((r) => ({ payment_method: r.payment_method, amount: r.amount })),
@@ -177,7 +206,7 @@ export function ShiftCloseWizard() {
   // Lo contado, partido como se contó: se repite en los tres pasos.
   const countedRows = (
     <ul className={t.methods}>
-      <li><span>Efectivo</span><span>{shiftMoney(cashTotal)}</span></li>
+      <li><span>Efectivo{byTotal ? ' (monto total)' : ''}</span><span>{shiftMoney(cashTotal)}</span></li>
       {methodRows.length > 0 && <li><span>Otros métodos</span><span>{shiftMoney(methodsTotal)}</span></li>}
     </ul>
   );
@@ -214,24 +243,40 @@ export function ShiftCloseWizard() {
                     <span>Efectivo</span>
                     <strong>{shiftMoney(cashTotal)}</strong>
                   </header>
-                  <ul className={t.countRows}>
-                    {cashRows.map((r) => (
-                      <li key={r.code} className={t.countRow}>
-                        <span className={t.countLabel}>{r.label}</span>
-                        {r.unit == null ? (
-                          <MoneyInput className={t.countField} wrapClassName={t.countWrap} placeholder="0" aria-label={`Monto en ${r.label}`}
-                            value={r.raw} onChange={(v) => setCash((c) => ({ ...c, [r.code]: v }))} />
-                        ) : (
-                          <Input className={t.countField} wrapClassName={t.countWrap} inputMode="numeric" placeholder="0"
-                            aria-label={`Cantidad de ${r.label}`} value={r.raw}
-                            onChange={(e) => setCash((c) => ({ ...c, [r.code]: e.target.value.replace(/\D/g, '') }))} />
-                        )}
-                        <span className={[t.countAmount, r.amount > 0 ? '' : t.countEmpty].filter(Boolean).join(' ')}>
-                          {r.amount > 0 ? shiftMoney(r.amount) : '—'}
-                        </span>
-                      </li>
+                  <div className={t.modes} role="radiogroup" aria-label="Cómo entregas el efectivo">
+                    {CASH_MODES.map((m) => (
+                      <button key={m.id} type="button" role="radio" aria-checked={cashMode === m.id}
+                        className={[t.mode, cashMode === m.id ? t.modeActive : ''].filter(Boolean).join(' ')}
+                        onClick={() => setChosenMode(m.id)}>
+                        <i className={m.icon} /> {m.label}
+                      </button>
                     ))}
-                  </ul>
+                  </div>
+                  <p className={t.helper}>{CASH_MODES.find((m) => m.id === cashMode)?.hint}</p>
+                  {byTotal ? (
+                    <MoneyInput label="Efectivo entregado" icon="fas fa-dollar-sign" placeholder="0"
+                      className={t.totalField} wrapClassName={t.totalWrap} autoFocus
+                      value={cashAmount} onChange={setCashAmount} />
+                  ) : (
+                    <ul className={t.countRows}>
+                      {cashRows.map((r) => (
+                        <li key={r.code} className={t.countRow}>
+                          <span className={t.countLabel}>{r.label}</span>
+                          {r.unit == null ? (
+                            <MoneyInput className={t.countField} wrapClassName={t.countWrap} placeholder="0" aria-label={`Monto en ${r.label}`}
+                              value={r.raw} onChange={(v) => setCash((c) => ({ ...c, [r.code]: v }))} />
+                          ) : (
+                            <Input className={t.countField} wrapClassName={t.countWrap} inputMode="numeric" placeholder="0"
+                              aria-label={`Cantidad de ${r.label}`} value={r.raw}
+                              onChange={(e) => setCash((c) => ({ ...c, [r.code]: e.target.value.replace(/\D/g, '') }))} />
+                          )}
+                          <span className={[t.countAmount, r.amount > 0 ? '' : t.countEmpty].filter(Boolean).join(' ')}>
+                            {r.amount > 0 ? shiftMoney(r.amount) : '—'}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </section>
 
                 {methodRows.length > 0 && (
@@ -261,7 +306,7 @@ export function ShiftCloseWizard() {
                 )}
 
                 <div className={t.summary}>
-                  <div><span>Efectivo contado</span><strong>{shiftMoney(cashTotal)}</strong></div>
+                  <div><span>{byTotal ? 'Efectivo entregado' : 'Efectivo contado'}</span><strong>{shiftMoney(cashTotal)}</strong></div>
                   {methodRows.length > 0 && (
                     <div><span>Otros métodos</span><strong>{shiftMoney(methodsTotal)}</strong></div>
                   )}
@@ -273,8 +318,9 @@ export function ShiftCloseWizard() {
 
                 {!counting && (
                   <p className={t.helper}>
-                    <i className="fas fa-circle-info" /> Cuenta el efectivo de la caja para continuar
-                    (si no quedó nada, escribe 0 en Monedas).
+                    <i className="fas fa-circle-info" /> {byTotal
+                      ? 'Escribe el efectivo que entregas para continuar (si no quedó nada, escribe 0).'
+                      : 'Cuenta el efectivo de la caja para continuar (si no quedó nada, escribe 0 en Monedas).'}
                   </p>
                 )}
               </>
@@ -310,6 +356,14 @@ export function ShiftCloseWizard() {
                   {countedRows}
                 </div>
                 <DifferenceBanner difference={difference} />
+                {/* Esperado contra contado, renglón por renglón: la diferencia casi siempre está en
+                    el efectivo; si está en un método, es el reporte del datáfono o de la app. */}
+                <CompareTable rows={[
+                  { label: 'Efectivo', expected: expectedCash, counted: cashTotal },
+                  ...(methodRows.length > 0 || expectedNonCash > 0
+                    ? [{ label: 'Otros métodos', expected: expectedNonCash, counted: methodsTotal }]
+                    : []),
+                ]} />
               </>
             )}
           </div>
@@ -384,6 +438,33 @@ function MethodRows({ rows }) {
         </li>
       ))}
     </ul>
+  );
+}
+
+// Esperado · contado · diferencia por naturaleza del dinero (efectivo y otros métodos).
+function CompareTable({ rows }) {
+  return (
+    <div className={t.compare} role="table" aria-label="Esperado contra contado">
+      <div className={[t.compareRow, t.compareHead].join(' ')} role="row">
+        <span role="columnheader" />
+        <span role="columnheader">Esperado</span>
+        <span role="columnheader">Contado</span>
+        <span role="columnheader">Diferencia</span>
+      </div>
+      {rows.map((r) => {
+        const diff = Number.isFinite(r.expected) ? r.counted - r.expected : null;
+        return (
+          <div key={r.label} className={t.compareRow} role="row">
+            <span role="cell">{r.label}</span>
+            <span role="cell">{Number.isFinite(r.expected) ? shiftMoney(r.expected) : '—'}</span>
+            <span role="cell">{shiftMoney(r.counted)}</span>
+            <strong role="cell" className={diff > 0 ? t.income : diff < 0 ? t.outcome : ''}>
+              {diff == null ? '—' : diff === 0 ? 'Exacta' : shiftMoney(diff)}
+            </strong>
+          </div>
+        );
+      })}
+    </div>
   );
 }
 

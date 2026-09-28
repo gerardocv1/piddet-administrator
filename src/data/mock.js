@@ -3364,17 +3364,24 @@ export const mockShiftClosingCounts = [
 // Renglones del arqueo tal como los arma el backend con lo que manda el cierre: el billete se
 // multiplica por el valor del catálogo (el cliente solo dice cuántos hay), las monedas y los
 // métodos van por monto, y los renglones en cero no se guardan.
+// El efectivo también puede llegar como un solo monto (`cash_amount`, excluyente con
+// `cash_count`): queda como un único renglón `cash_total`, sin valor unitario ni cantidad.
 function shiftClosingCountRows(body) {
-  const sentCash = new Map((body?.cash_count || []).map((c) => [c.code, c]));
   const rows = [];
-  SHIFT_CASH_DENOMINATIONS.forEach((d) => {
-    const sent = sentCash.get(d.code);
-    if (!sent) return;
-    const quantity = d.value == null ? null : Math.floor(Number(sent.quantity) || 0);
-    const amount = d.value == null ? Number(sent.amount) || 0 : quantity * Number(d.value);
-    if (amount <= 0) return;
-    rows.push({ kind: 'CASH', code: d.code, label: d.label, unit_value: d.value, quantity, amount: amount.toFixed(2) });
-  });
+  if (body?.cash_amount !== undefined) {
+    const amount = Number(body.cash_amount) || 0;
+    if (amount > 0) rows.push({ kind: 'CASH', code: 'cash_total', label: 'Efectivo (monto total)', unit_value: null, quantity: null, amount: amount.toFixed(2) });
+  } else {
+    const sentCash = new Map((body?.cash_count || []).map((c) => [c.code, c]));
+    SHIFT_CASH_DENOMINATIONS.forEach((d) => {
+      const sent = sentCash.get(d.code);
+      if (!sent) return;
+      const quantity = d.value == null ? null : Math.floor(Number(sent.quantity) || 0);
+      const amount = d.value == null ? Number(sent.amount) || 0 : quantity * Number(d.value);
+      if (amount <= 0) return;
+      rows.push({ kind: 'CASH', code: d.code, label: d.label, unit_value: d.value, quantity, amount: amount.toFixed(2) });
+    });
+  }
   new Map((body?.method_count || []).map((m) => [m.payment_method, Number(m.amount) || 0]))
     .forEach((amount, id) => {
       if (amount <= 0) return;
@@ -3569,7 +3576,13 @@ function resolveShiftsMock(path, query, { method = 'GET', body } = {}) {
     // Como el backend: con arqueo el total contado es la SUMA de sus renglones y lo que mande el
     // cliente como total se ignora; sin arqueo manda `counted_amount`.
     const counts = shiftClosingCountRows(body);
-    const hasCount = counts.length > 0 || body?.cash_count !== undefined || body?.method_count !== undefined;
+    if (body?.cash_amount !== undefined && body?.cash_count !== undefined) {
+      const e = new Error('No se puede mandar el efectivo por billetes y como monto total a la vez');
+      e.status = 422;
+      throw e;
+    }
+    const hasCount = counts.length > 0 || body?.cash_count !== undefined || body?.cash_amount !== undefined
+      || body?.method_count !== undefined;
     const counted = hasCount ? shiftCountTotal(counts) : Number(body?.counted_amount || 0);
     const difference = counted - Number(balance.expected_amount);
     if (difference !== 0) {

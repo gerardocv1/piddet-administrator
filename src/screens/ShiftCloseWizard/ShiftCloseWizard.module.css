@@ -262,7 +262,78 @@
 /* Una denominación sin contar no dice "$ 0": dice que todavía no se contó. */
 .countEmpty { color: var(--gray-400); font-weight: 500; }
 
+/* Selector del modo de entrega del efectivo: dos opciones excluyentes, tipo segmentado, con el
+   tamaño de un botón para tocarlas con el pulgar. */
+.modes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  border-radius: var(--radius);
+  background: var(--gray-100);
+}
+.mode {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 10px;
+  border: none;
+  border-radius: calc(var(--radius) - 2px);
+  background: transparent;
+  color: var(--gray-600);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+.mode i { color: var(--gray-400); }
+.mode:hover { color: var(--gray-800); }
+.modeActive {
+  background: var(--surface-card);
+  color: var(--gray-900);
+  box-shadow: var(--shadow-xs);
+}
+.modeActive i { color: var(--color-primary); }
+
+/* El monto total es UN solo campo: grande y legible, que es el dato del cierre. */
+.count .totalWrap { height: 52px; }
+.count .totalField { font-size: var(--text-lg); font-weight: 700; text-align: right; }
+
+/* ---- Esperado contra contado (paso 2) ---- */
+.compare {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  background: var(--surface-card);
+}
+.compareRow {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr 1fr;
+  gap: 8px;
+  align-items: baseline;
+  font-size: var(--text-sm);
+  color: var(--gray-700);
+  font-variant-numeric: tabular-nums;
+}
+.compareRow > :not(:first-child) { text-align: right; }
+.compareRow strong { color: var(--gray-800); }
+.compareHead {
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border-color);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--gray-500);
+}
+
 @media (max-width: 420px) {
+  .compareRow { font-size: var(--text-xs); gap: 6px; }
   .countRow { grid-template-columns: 1fr 72px 76px; }
   .countRowWide { grid-template-columns: 1fr 112px; }
   .countLabel { font-size: var(--text-xs); }

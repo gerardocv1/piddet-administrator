@@ -278,14 +278,20 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
   de las transferencias. Los gastos que registran sus asignados entran como en cualquier turno.
   Al cerrar, el arqueo es el mismo, pero la diferencia **solo queda registrada** en el turno
   (ajuste sin documento): no se factura el sobrante ni se registra el faltante como gasto.
-- **El conteo es un arqueo, no un total tecleado:** el primer paso pide **cuántos billetes** hay
-  de cada denominación (el catálogo lo manda el backend en el balance, `cash_denominations`; las
-  **monedas** van por monto suelto) y **cuánto se recibió por cada método distinto al efectivo**
-  —prellenado con lo que registró el sistema (`non_cash.by_method`), para confirmar contra el
-  reporte del datáfono o de la app y corregir si no coincide—. Debajo va creciendo el total
-  recibido. Al cerrar viajan las **cantidades** (`cash_count`, `method_count`), no el total: el
-  dinero lo suma la API. El arqueo queda guardado y el detalle del turno lo muestra tal cual se
-  contó; los turnos cerrados antes de esto solo tienen su total.
+- **El conteo es un arqueo:** el primer paso pide el efectivo de **una de dos formas**, que el
+  cajero elige con un selector: **por billetes** (cuántos hay de cada denominación; el catálogo
+  lo manda el backend en el balance, `cash_denominations`; las **monedas** van por monto suelto)
+  o como **monto total** (un solo campo, sin desglosar). Los turnos global y de cajero arrancan
+  por billetes; el **de compras arranca en monto total**, porque quien compra entrega lo que le
+  quedó y no arquea una caja de ventas. Aparte pide **cuánto se recibió por cada método distinto
+  al efectivo** —prellenado con lo que registró el sistema (`non_cash.by_method`), para confirmar
+  contra el reporte del datáfono o de la app y corregir si no coincide—. Debajo va creciendo el
+  total recibido. Al cerrar viaja solo lo del modo activo (`cash_count` **o** `cash_amount`,
+  excluyentes) más `method_count`, nunca el total: el dinero lo suma la API. El paso de balance
+  compara **esperado contra contado por renglón** (efectivo y otros métodos) para ubicar la
+  diferencia. El arqueo queda guardado y el detalle del turno lo muestra tal cual se contó (el
+  monto total aparece como un renglón «Efectivo (monto total)»); los turnos cerrados antes de
+  esto solo tienen su total.
 - **Reglas:** en los turnos global y de cajero la diferencia se respalda con un documento
   contable real (sobrante → factura de origen `SHIFT`; faltante → gasto en «Ajustes de caja»),
   que no se asocia a un turno abierto; en el de compras no. El turno global solo lo abre y
