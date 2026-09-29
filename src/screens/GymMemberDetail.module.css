@@ -141,3 +141,19 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+
+/* ── Visitas: una fila por día, con la hora y el estado con el que entró ── */
+
+.visitRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  padding: 10px 0;
+}
+
+.visitTime {
+  font-weight: var(--fw-regular);
+  color: var(--text-muted);
+}

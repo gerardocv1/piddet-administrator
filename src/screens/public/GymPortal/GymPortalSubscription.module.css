@@ -9,7 +9,116 @@
   line-height: 1;
 }
 
-/* ── Tarjeta del plan (tipo pase) ── */
+/* ── Tarjeta del plan (tipo pase) ──
+   Va dentro de un contenedor con perspectiva y dos caras en la misma celda de la cuadrícula:
+   el plan al frente y el QR de ingreso por detrás. El tiquete la gira (rotateY) y cada cara
+   esconde su reverso, así que la altura es la de la más alta de las dos. */
+
+.flip { perspective: 1400px; }
+
+.flipInner {
+  position: relative;
+  display: grid;
+  transform-style: preserve-3d;
+  transition: transform 0.7s cubic-bezier(0.4, 0.2, 0.2, 1);
+}
+
+.flipped .flipInner { transform: rotateY(180deg); }
+
+.flipFace {
+  grid-area: 1 / 1;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+
+.flipBack { transform: rotateY(180deg); }
+
+@media (prefers-reduced-motion: reduce) {
+  .flipInner { transition: none; }
+}
+
+.planHeadRight {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* El tiquete de la esquina: gira la tarjeta. */
+.ticket {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background-color: var(--portal-scrim);
+  color: var(--portal-text);
+  cursor: pointer;
+  transition: transform 0.15s ease, background-color 0.15s ease;
+}
+
+.ticket:hover { background-color: var(--portal-surface-hover); }
+.ticket:active { transform: scale(0.92); }
+.ticket:focus-visible { outline: 2px solid var(--portal-text); outline-offset: 2px; }
+
+.planAlert .ticket { background-color: var(--portal-accent-soft); color: var(--portal-warning); }
+
+/* Cara del QR: fondo claro, para que el lector lo tome de lejos. */
+.planQr {
+  background-color: var(--portal-option-bg);
+  color: var(--portal-option-text);
+}
+
+.planQr::before { border-color: var(--portal-accent-faint); }
+.planQr .planEyebrow { color: var(--portal-accent); }
+
+.ticketOnLight {
+  background-color: var(--portal-accent-faint);
+  color: var(--portal-option-text);
+}
+
+.ticketOnLight:hover { background-color: var(--portal-accent-soft); }
+.ticketOnLight:focus-visible { outline-color: var(--portal-accent); }
+
+.qrName {
+  font-family: var(--font-logo);
+  font-weight: var(--fw-heavy);
+  font-size: var(--portal-fs-date);
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+}
+
+.qrBox {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 116px;
+}
+
+.qrImage {
+  display: block;
+  width: 196px;
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--portal-radius-sm);
+}
+
+.qrPending {
+  font-size: var(--portal-fs-small);
+  color: var(--portal-text-faint);
+}
+
+.qrFoot {
+  border-top-color: var(--portal-accent-faint);
+  color: var(--portal-option-text);
+  opacity: 0.8;
+}
+
 
 .plan {
   position: relative;
@@ -130,55 +239,8 @@
   gap: var(--portal-space-4-5);
 }
 
-/* Anillo de días restantes. */
-.ring {
-  position: relative;
-  flex: 0 0 auto;
-  width: 116px;
-  height: 116px;
-}
-
-.ring svg { display: block; }
-
-.ringTrack,
-.ringTrackDim,
-.ringValue {
-  fill: none;
-  stroke-width: 10;
-}
-
-.ringTrack { stroke: var(--portal-ring-track); }
-.ringTrackDim { stroke: var(--portal-ring-track-dim); }
-
-.ringValue {
-  stroke: var(--portal-accent);
-  stroke-linecap: round;
-  transition: stroke-dashoffset 0.6s ease;
-}
-
-.ringCenter {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-
-.ringDays {
-  font-family: var(--font-logo);
-  font-weight: var(--fw-heavy);
-  font-size: var(--portal-fs-hero);
-  line-height: 1;
-}
-
-.ringUnit {
-  font-size: var(--portal-fs-micro);
-  font-weight: var(--fw-bold);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--portal-on-brand-soft);
-}
+/* Anillo de días restantes (DaysRing): en la variante de alerta la pista va más tenue. */
+.ringAlert { --ring-track: var(--portal-ring-track-dim); }
 
 .planDates {
   display: flex;

@@ -3,7 +3,8 @@ import { api } from '../../../lib/api.js';
 import { GymPortalSubscription } from './GymPortalSubscription.jsx';
 import { GymPortalMeasures } from './GymPortalMeasures.jsx';
 import { GymPortalProfile } from './GymPortalProfile.jsx';
-import { CardIcon, LogoutIcon, TrendIcon, UserIcon } from './icons.jsx';
+import { GymPortalValidator } from './GymPortalValidator.jsx';
+import { CardIcon, LogoutIcon, ScanIcon, TrendIcon, UserIcon } from './icons.jsx';
 import { subscriptionView, SUBSCRIPTION_STATE } from './gymPortalData.js';
 import { usePortalInstall } from './usePortalInstall.js';
 import { InstallBanner, InstallButton, InstallSheet } from './GymPortalInstall.jsx';
@@ -20,6 +21,11 @@ import s from './GymPortal.module.css';
 // en el servidor, y no vence: solo termina cuando el socio toca "Cerrar sesión". Al abrir se pinta
 // enseguida lo último que se vio y se refresca por detrás. Sin sesión, al cerrarla o si ya no vale
 // (401), vuelve a la entrada general.
+//
+// Por la misma puerta entra quien valida ingresos (permiso `gym-access-validate` en el panel):
+// su sesión llega con `role = validator` y en vez de la suscripción ve la entrada —un botón
+// grande para leer el QR del socio—. Si además es socio, un enlace lo lleva a su portal y otro
+// lo devuelve a la entrada.
 
 const TABS = [
   { key: 'subscription', label: 'Suscripción', Icon: CardIcon },
@@ -155,6 +161,8 @@ export function GymPortal({ companyUsername }) {
   });
   const [resuming, setResuming] = React.useState(() => !session && !!launch.handoff);
   const [tab, setTab] = React.useState(launch.tab);
+  // Quien valida ingresos arranca en la entrada; con ficha de socio puede pasar a su portal.
+  const [validatorView, setValidatorView] = React.useState(true);
   const [company, setCompany] = React.useState(session?.company || null);
   const installer = usePortalInstall();
   const [sheetOpen, setSheetOpen] = React.useState(false);
@@ -189,9 +197,11 @@ export function GymPortal({ companyUsername }) {
   React.useEffect(() => {
     const name = brand?.name;
     const previous = document.title;
-    document.title = name ? `${name} · Mi suscripción` : 'Mi suscripción · piddet gym';
+    const entrance = session?.role === 'validator' && (validatorView || !session?.member);
+    if (entrance) document.title = name ? `${name} · Entrada` : 'Entrada · piddet gym';
+    else document.title = name ? `${name} · Mi suscripción` : 'Mi suscripción · piddet gym';
     return () => { document.title = previous; };
-  }, [brand]);
+  }, [brand, session?.role, session?.member, validatorView]);
 
   // Por qué se vuelve a la entrada general, si hace falta decírselo (`?aviso=`, ver GymHub).
   const [leaving, setLeaving] = React.useState(null);
@@ -307,6 +317,15 @@ export function GymPortal({ companyUsername }) {
       throw err;
     }
   };
+  // La entrada leyó un QR: la respuesta no trae el portal (no se aplica), solo el veredicto.
+  const validateQr = async (qr) => {
+    try {
+      return await api.gymPortalValidateAccess(companyUsername, tokenRef.current, qr);
+    } catch (err) {
+      if (err?.status === 401) expire();
+      throw err;
+    }
+  };
   const saveProfile = withSession((token, changes) => api.gymPortalUpdateProfile(companyUsername, token, changes));
   const uploadPhoto = withSession((token, file) => api.gymPortalUploadPhoto(companyUsername, token, file));
   const removePhoto = withSession((token) => api.gymPortalRemovePhoto(companyUsername, token));
@@ -387,6 +406,34 @@ export function GymPortal({ companyUsername }) {
   const canInstall = installer.mode !== 'none';
   const member = session.member || {};
   const gymName = session.company?.name || company?.name || '';
+
+  // Quien valida ingresos ve la entrada; si además es socio, puede pasar a su portal y volver.
+  const isValidator = session.role === 'validator';
+  const hasMember = !!session.member;
+  if (isValidator && (validatorView || !hasMember)) {
+    return (
+      <div ref={rootRef} className={[s.page, s.glowTeal].join(' ')}>
+        <div className={s.shell}>
+          <main className={[s.content, s.contentEntrance].join(' ')}>
+            <GymPortalValidator
+              gymName={gymName}
+              validatorName={session.validator?.first_name || session.validator?.name || ''}
+              onValidate={validateQr}
+            />
+            {hasMember && (
+              <button type="button" className={s.switchLink} onClick={() => setValidatorView(false)}>
+                <CardIcon size={16} />
+                <span>Ver mi suscripción</span>
+              </button>
+            )}
+            {/* En la puerta el teléfono suele ser compartido: cerrar sesión va a la vista, no escondido. */}
+            <SignOut onConfirm={logout} />
+          </main>
+        </div>
+        {sheet}
+      </div>
+    );
+  }
   // El resplandor del fondo acompaña el estado: naranja cuando hay algo pendiente de pago.
   const subState = subscriptionView(session.subscription, session.today).state;
   const warm = subState === SUBSCRIPTION_STATE.PENDING || subState === SUBSCRIPTION_STATE.GRACE;
@@ -424,6 +471,12 @@ export function GymPortal({ companyUsername }) {
             />
           )}
 
+          {tab === 'subscription' && isValidator && (
+            <button type="button" className={[s.switchLink, s.switchLinkTop].join(' ')} onClick={() => setValidatorView(true)}>
+              <ScanIcon size={16} />
+              <span>Volver a la entrada</span>
+            </button>
+          )}
           {tab === 'subscription' && (
             <GymPortalSubscription data={session} onShowMeasures={() => goTo('measures')} />
           )}

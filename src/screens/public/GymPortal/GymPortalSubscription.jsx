@@ -1,40 +1,19 @@
 import React from 'react';
+import QRCode from 'qrcode';
 import { gymMoney } from '../../../lib/gymLabels.js';
 import { formatShortDate } from '../../../lib/dates.js';
 import { whatsappHref } from '../whatsapp.js';
-import { AlertIcon, CashIcon, ChatIcon, CheckIcon, ClockIcon, TrendIcon } from './icons.jsx';
+import { AlertIcon, CashIcon, ChatIcon, CheckIcon, ClockIcon, FlipIcon, TicketIcon, TrendIcon } from './icons.jsx';
 import { longDayMonth, periodRange, subscriptionView, SUBSCRIPTION_STATE } from './gymPortalData.js';
 import { GymPortalGym } from './GymPortalGym.jsx';
+import { DaysRing } from './DaysRing.jsx';
 import s from './GymPortalSubscription.module.css';
 
 // Suscripción del socio: la tarjeta del plan (tipo pase), el período en curso o el saldo
 // pendiente, y los últimos pagos. Al día, la tarjeta va con el gradiente de la marca; con algo
-// por pagar, cambia a la variante de alerta en naranja.
-
-const RING_R = 48;
-const RING_C = 2 * Math.PI * RING_R;
-
-function DaysRing({ days, fraction, tone }) {
-  const offset = RING_C * (1 - Math.min(1, Math.max(0, fraction)));
-  return (
-    <div className={s.ring}>
-      <svg width="116" height="116" viewBox="0 0 116 116" aria-hidden="true">
-        <circle cx="58" cy="58" r={RING_R} className={tone === 'alert' ? s.ringTrackDim : s.ringTrack} />
-        <circle
-          cx="58" cy="58" r={RING_R}
-          className={s.ringValue}
-          strokeDasharray={RING_C.toFixed(1)}
-          strokeDashoffset={offset.toFixed(1)}
-          transform="rotate(-90 58 58)"
-        />
-      </svg>
-      <div className={s.ringCenter}>
-        <span className={s.ringDays}>{days}</span>
-        <span className={s.ringUnit}>{days === 1 ? 'día' : 'días'}</span>
-      </div>
-    </div>
-  );
-}
+// por pagar, cambia a la variante de alerta en naranja. El tiquete de la esquina la gira (efecto
+// de voltear) y por detrás está el QR de ingreso, que la entrada del gimnasio lee para dejarlo
+// pasar y anotar su visita.
 
 function StatusBadge({ tone, children }) {
   return (
@@ -63,7 +42,67 @@ function balanceText(view) {
   return <>Tienes saldo del período que arrancó el <strong>{longDayMonth(first.start_date)}</strong>. Pásate por recepción para ponerte al día.</>;
 }
 
-function PlanCard({ view, memberCode }) {
+// El QR se pinta en el teléfono con la librería `qrcode` (la misma de los QR de mesa): el texto
+// viene firmado del backend y aquí solo se dibuja. Los colores salen de los tokens del portal.
+function useQrImage(text) {
+  const [src, setSrc] = React.useState(null);
+  React.useEffect(() => {
+    if (!text) { setSrc(null); return undefined; }
+    let alive = true;
+    const styles = getComputedStyle(document.documentElement);
+    const dark = styles.getPropertyValue('--portal-on-accent').trim() || '#0b2630';
+    const light = styles.getPropertyValue('--portal-option-bg').trim() || '#ffffff';
+    QRCode.toDataURL(text, { errorCorrectionLevel: 'M', margin: 1, width: 480, color: { dark, light } })
+      .then((url) => { if (alive) setSrc(url); })
+      .catch(() => { if (alive) setSrc(null); });
+    return () => { alive = false; };
+  }, [text]);
+  return src;
+}
+
+// Cara trasera de la tarjeta: el QR de ingreso, grande y sobre fondo claro para que el lector lo
+// tome de lejos, con el nombre y el código del socio para que la recepción confirme quién es.
+function AccessQrFace({ qr, memberName, memberCode, onFlip, hidden }) {
+  const src = useQrImage(qr);
+  return (
+    <section
+      aria-label="Mi código de ingreso"
+      aria-hidden={hidden}
+      className={[s.plan, s.flipFace, s.flipBack, s.planQr].join(' ')}
+    >
+      <div className={s.planHead}>
+        <div className={s.planTitle}>
+          <span className={s.planEyebrow}>Mi ingreso</span>
+          <span className={s.qrName}>{memberName}</span>
+        </div>
+        <button
+          type="button"
+          className={[s.ticket, s.ticketOnLight].join(' ')}
+          onClick={onFlip}
+          aria-label="Volver a mi plan"
+          tabIndex={hidden ? -1 : 0}
+        >
+          <FlipIcon size={20} />
+        </button>
+      </div>
+      <div className={s.qrBox}>
+        {src ? (
+          <img className={s.qrImage} src={src} alt="Código QR de ingreso" />
+        ) : (
+          <span className={s.qrPending}>{qr ? 'Preparando tu código…' : 'Tu código no está disponible.'}</span>
+        )}
+      </div>
+      <div className={[s.planFoot, s.qrFoot].join(' ')}>
+        <span>Muéstralo en la entrada</span>
+        {memberCode && <span className={s.code}>{memberCode}</span>}
+      </div>
+    </section>
+  );
+}
+
+function PlanCard({ view, memberCode, memberName, accessQr }) {
+  const [flipped, setFlipped] = React.useState(false);
+  const flip = () => setFlipped((f) => !f);
   const alert = view.state !== SUBSCRIPTION_STATE.ACTIVE;
   let badge = <StatusBadge tone="success">Activa</StatusBadge>;
   if (view.state === SUBSCRIPTION_STATE.PENDING) badge = <StatusBadge tone="accent">Pago pendiente</StatusBadge>;
@@ -87,17 +126,35 @@ function PlanCard({ view, memberCode }) {
   }
 
   return (
-    <section aria-label="Plan actual" className={[s.plan, alert ? s.planAlert : s.planOk].join(' ')}>
+    <div className={[s.flip, flipped ? s.flipped : ''].filter(Boolean).join(' ')}>
+      <div className={s.flipInner}>
+    <section
+      aria-label="Plan actual"
+      aria-hidden={flipped}
+      className={[s.plan, s.flipFace, alert ? s.planAlert : s.planOk].join(' ')}
+    >
       <div className={s.planHead}>
         <div className={s.planTitle}>
           <span className={s.planEyebrow}>Tu plan</span>
           <span className={s.planName}>{view.planName}</span>
         </div>
-        {badge}
+        <div className={s.planHeadRight}>
+          {badge}
+          {/* El tiquete: gira la tarjeta y muestra el QR de ingreso. */}
+          <button
+            type="button"
+            className={s.ticket}
+            onClick={flip}
+            aria-label="Ver mi código de ingreso"
+            tabIndex={flipped ? -1 : 0}
+          >
+            <TicketIcon size={22} />
+          </button>
+        </div>
       </div>
 
       <div className={s.planBody}>
-        <DaysRing days={view.daysLeft} fraction={view.ringFraction} tone={alert ? 'alert' : 'ok'} />
+        <DaysRing days={view.daysLeft} fraction={view.ringFraction} className={alert ? s.ringAlert : ''} />
         <div className={s.planDates}>
           <div className={s.due}>
             <span className={s.dueLabel}>{view.expired ? 'Venció el' : 'Vence el'}</span>
@@ -112,6 +169,9 @@ function PlanCard({ view, memberCode }) {
         {memberCode && <span className={s.code}>{memberCode}</span>}
       </div>
     </section>
+    <AccessQrFace qr={accessQr} memberName={memberName} memberCode={memberCode} onFlip={flip} hidden={!flipped} />
+      </div>
+    </div>
   );
 }
 
@@ -220,7 +280,7 @@ export function GymPortalSubscription({ data, onShowMeasures }) {
 
   return (
     <>
-      <PlanCard view={view} memberCode={data.member?.member_code} />
+      <PlanCard view={view} memberCode={data.member?.member_code} memberName={memberName} accessQr={data.access_qr} />
       {pending && <Balance view={view} whatsapp={whatsapp} />}
       <GymPortalGym data={data} />
       <Payments payments={payments} />

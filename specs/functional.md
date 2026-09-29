@@ -538,6 +538,23 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
   en el servidor, y solo termina con *Cerrar sesión*, que está **a propósito escondido** —un
   enlace pequeño al final del Perfil, con confirmación: la idea es que el socio se quede dentro—
   y avisa al backend (`api.gymPortalLogout`) para que el token deje de servir; después va a `/gym`.
+  **QR de ingreso:** el tiquete de la esquina superior derecha de la tarjeta del plan la **gira**
+  (efecto de voltear, `rotateY` con dos caras en la misma celda) y por detrás está el QR de
+  ingreso (`access_qr` del backend, firmado; se pinta con la librería `qrcode`) sobre fondo claro,
+  con el nombre y el código del socio: es lo que muestra en la puerta.
+- **Entrada del gimnasio** (`GymPortalValidator.jsx`, misma app): quien tiene el permiso
+  `gym-access-validate` entra por `/gym` con su celular como cualquier socio y su sesión llega con
+  `role = validator`; entonces el portal muestra la **Entrada** en vez de la suscripción: un botón
+  grande *Validar* que abre la cámara trasera (`qrScanner.js`: `BarcodeDetector` donde existe,
+  jsQR sobre canvas en iPhone), lee el QR y pregunta al backend
+  (`api.gymPortalValidateAccess`). El resultado ocupa la pantalla: **verde** con sonido de ok
+  (`accessSounds.js`, Web Audio) y vibración, la foto y el nombre del socio, los **días que le
+  quedan** en grande y si la visita del día quedó registrada o ya había entrado; o **rojo** con
+  sonido de error y el motivo (sin suscripción, cancelada, plan vencido con la gracia agotada, QR
+  vencido o ajeno). Vuelve sola al lector a los segundos, o con *Siguiente*. En gracia entra. Si
+  además es socio, *Ver mi suscripción* lo lleva a su portal y *Volver a la entrada* lo devuelve;
+  *Cerrar sesión* va a la vista porque el teléfono de la puerta suele ser compartido. En modo
+  demo el celular de recepción es `300 000 0000` y Laura (socia) tiene también el permiso.
   Al volver se pinta lo último que se vio y `api.gymPortalResume` lo refresca; si la sesión ya no
   vale (401) vuelve a `/gym` con el aviso. Una respuesta que llega después de cerrar sesión se
   descarta.

@@ -185,6 +185,12 @@ export const gymService = {
 
   gymCheckin: (checkinId) => http.get(`${base()}/checkins/${checkinId}`),
 
+  // Visitas del afiliado: las entradas que la puerta le validó con su QR (una por día), de la más
+  // reciente a la más vieja. Filas: { id, visit_date, visited_at, access_state (active|grace),
+  // validated_by_name }.
+  gymMemberVisits: (memberId, { page = 1, perPage = 15 } = {}) =>
+    http.get(`${base()}/members/${memberId}/visits${qs({ page, per_page: perPage })}`, { paginated: true }),
+
   // Corrige fecha, notas y/o valores de un chequeo (sin efecto contable).
   updateGymCheckin: (checkinId, data) => http.put(`${base()}/checkins/${checkinId}`, data),
 
@@ -243,6 +249,18 @@ export const gymService = {
     fd.append('file', file);
     return http.post(`/public/${encodeURIComponent(companyUsername)}/gym/portal/photo`, fd, { auth: false });
   },
+
+  // La entrada del gimnasio leyó el QR de un socio (solo con sesión `validator`: quien tiene el
+  // permiso `gym-access-validate`). Responde siempre 200 con { result: 'granted'|'denied', reason,
+  // message, member: { member_name, first_name, member_code, photo_url } | null, subscription:
+  // { plan_name, end_date, days_left, days_overdue, pending_total, … } | null, visit: { first_today,
+  // visited_at, month_count } | null }. Sesión vencida → 401; sesión de socio → 403.
+  gymPortalValidateAccess: (companyUsername, sessionToken, qr) =>
+    http.post(
+      `/public/${encodeURIComponent(companyUsername)}/gym/portal/access/validate`,
+      { session_token: sessionToken, qr },
+      { auth: false },
+    ),
 
   gymPortalRemovePhoto: (companyUsername, sessionToken) =>
     http.post(

@@ -52,3 +52,9 @@ export const PlusIcon = (p) => <Svg strokeWidth={2.6} {...p}><path d="M12 6v12M6
 export const PinIcon = (p) => <Svg {...p}><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z" /><circle cx="12" cy="9.5" r="2.5" /></Svg>;
 export const PhoneCallIcon = (p) => <Svg {...p}><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z" /></Svg>;
 export const NavigationIcon = (p) => <Svg {...p}><path d="M3 11l18-8-8 18-2-8-8-2z" /></Svg>;
+// Ingreso con QR: el tiquete que gira la tarjeta, el lector de la entrada y sus resultados.
+export const TicketIcon = (p) => <Svg {...p}><path d="M3 9V7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a2.5 2.5 0 0 0 0 5v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-3a2.5 2.5 0 0 0 0-5z" /><path d="M13 5v2M13 11v2M13 17v2" /></Svg>;
+export const QrIcon = (p) => <Svg {...p}><rect x="3.5" y="3.5" width="7" height="7" rx="1.5" /><rect x="13.5" y="3.5" width="7" height="7" rx="1.5" /><rect x="3.5" y="13.5" width="7" height="7" rx="1.5" /><path d="M13.5 13.5h3v3h-3zM19.5 13.5h1M20.5 17v3.5H17M13.5 20.5h1" /></Svg>;
+export const ScanIcon = (p) => <Svg {...p}><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2" /><path d="M4 12h16" /></Svg>;
+export const XIcon = (p) => <Svg strokeWidth={3} {...p}><path d="M7 7l10 10M17 7L7 17" /></Svg>;
+export const FlipIcon = (p) => <Svg {...p}><path d="M4 9a8 8 0 0 1 14-3l2 2" /><path d="M20 3v5h-5" /><path d="M20 15a8 8 0 0 1-14 3l-2-2" /><path d="M4 21v-5h5" /></Svg>;
