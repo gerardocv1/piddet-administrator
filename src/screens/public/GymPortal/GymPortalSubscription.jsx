@@ -6,6 +6,7 @@ import { whatsappHref } from '../whatsapp.js';
 import { AlertIcon, CashIcon, ChatIcon, CheckIcon, ClockIcon, FlipIcon, TicketIcon, TrendIcon } from './icons.jsx';
 import { longDayMonth, periodRange, subscriptionView, SUBSCRIPTION_STATE } from './gymPortalData.js';
 import { GymPortalGym } from './GymPortalGym.jsx';
+import { DaysRing } from './DaysRing.jsx';
 import s from './GymPortalSubscription.module.css';
 
 // Suscripción del socio: la tarjeta del plan (tipo pase), el período en curso o el saldo
@@ -13,31 +14,6 @@ import s from './GymPortalSubscription.module.css';
 // por pagar, cambia a la variante de alerta en naranja. El tiquete de la esquina la gira (efecto
 // de voltear) y por detrás está el QR de ingreso, que la entrada del gimnasio lee para dejarlo
 // pasar y anotar su visita.
-
-const RING_R = 48;
-const RING_C = 2 * Math.PI * RING_R;
-
-function DaysRing({ days, fraction, tone }) {
-  const offset = RING_C * (1 - Math.min(1, Math.max(0, fraction)));
-  return (
-    <div className={s.ring}>
-      <svg width="116" height="116" viewBox="0 0 116 116" aria-hidden="true">
-        <circle cx="58" cy="58" r={RING_R} className={tone === 'alert' ? s.ringTrackDim : s.ringTrack} />
-        <circle
-          cx="58" cy="58" r={RING_R}
-          className={s.ringValue}
-          strokeDasharray={RING_C.toFixed(1)}
-          strokeDashoffset={offset.toFixed(1)}
-          transform="rotate(-90 58 58)"
-        />
-      </svg>
-      <div className={s.ringCenter}>
-        <span className={s.ringDays}>{days}</span>
-        <span className={s.ringUnit}>{days === 1 ? 'día' : 'días'}</span>
-      </div>
-    </div>
-  );
-}
 
 function StatusBadge({ tone, children }) {
   return (
@@ -178,7 +154,7 @@ function PlanCard({ view, memberCode, memberName, accessQr }) {
       </div>
 
       <div className={s.planBody}>
-        <DaysRing days={view.daysLeft} fraction={view.ringFraction} tone={alert ? 'alert' : 'ok'} />
+        <DaysRing days={view.daysLeft} fraction={view.ringFraction} className={alert ? s.ringAlert : ''} />
         <div className={s.planDates}>
           <div className={s.due}>
             <span className={s.dueLabel}>{view.expired ? 'Venció el' : 'Vence el'}</span>

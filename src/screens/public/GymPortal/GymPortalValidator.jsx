@@ -1,7 +1,8 @@
 import React from 'react';
 import { Spinner } from '../../../components';
 import { CheckIcon, ScanIcon, XIcon } from './icons.jsx';
-import { longDayMonth } from './gymPortalData.js';
+import { daysBetween, longDayMonth } from './gymPortalData.js';
+import { DaysRing } from './DaysRing.jsx';
 import { useQrScanner } from './qrScanner.js';
 import { playAccessDenied, playAccessGranted, unlockSounds, vibrate } from './accessSounds.js';
 import s from './GymPortalValidator.module.css';
@@ -22,28 +23,43 @@ const initials = (name) => String(name || '')
   .join('')
   .toUpperCase();
 
-function daysLine(subscription) {
-  if (!subscription) return null;
-  const { days_left: left, days_overdue: overdue, end_date: end } = subscription;
-  if (overdue > 0) {
-    return { big: overdue, unit: overdue === 1 ? 'día de retraso' : 'días de retraso', small: `Venció el ${longDayMonth(end)} · en gracia` };
-  }
-  if (left === 0) return { big: 'Hoy', unit: 'vence', small: `Último día · ${longDayMonth(end)}` };
-  return { big: left, unit: left === 1 ? 'día' : 'días', small: `Vence el ${longDayMonth(end)}` };
-}
+// Lo que dice la etiqueta de estado, por motivo. Es lo único que se lee además de los días.
+const STATE_LABEL = {
+  active: 'Al día',
+  grace: 'En gracia',
+  period_closed: 'Plan vencido',
+  subscription_cancelled: 'Suscripción cancelada',
+  no_subscription: 'Sin plan',
+  member_inactive: 'Ficha inactiva',
+  member_not_found: 'Sin ficha',
+  qr_invalid: 'QR no válido',
+  qr_expired: 'QR vencido',
+};
 
-function visitLine(visit) {
-  if (!visit) return null;
-  if (visit.first_today) return 'Visita registrada';
-  const time = String(visit.visited_at || '').slice(11, 16);
-  return time ? `Ya había entrado hoy a las ${time}` : 'Ya había entrado hoy';
+// El anillo de la entrada: la misma cuenta regresiva de la tarjeta del socio. En gracia o
+// vencido queda vacío con 0 y la etiqueta dice hace cuántos días venció.
+function ringFor(subscription) {
+  if (!subscription || !subscription.end_date) return null;
+  const total = Math.max(1, daysBetween(subscription.start_date, subscription.end_date) + 1);
+  const left = Number(subscription.days_left) || 0;
+  return { days: left, fraction: left / total };
 }
 
 function Result({ result, onNext }) {
   const granted = result.result === 'granted';
   const member = result.member;
-  const days = granted ? daysLine(result.subscription) : null;
+  const sub = result.subscription;
+  const ring = ringFor(sub);
+  const overdue = Number(sub?.days_overdue) || 0;
   const [photoFailed, setPhotoFailed] = React.useState(false);
+
+  let detail = null;
+  if (sub?.end_date) {
+    if (overdue > 0) detail = `Venció hace ${overdue === 1 ? '1 día' : `${overdue} días`}`;
+    else if (ring?.days === 0) detail = 'Vence hoy';
+    else detail = `Vence el ${longDayMonth(sub.end_date)}`;
+  }
+  const repeat = granted && result.visit && !result.visit.first_today;
 
   // Vuelve sola al lector: en la puerta nadie quiere tocar el teléfono después de cada socio.
   React.useEffect(() => {
@@ -53,12 +69,9 @@ function Result({ result, onNext }) {
 
   return (
     <div className={[s.result, granted ? s.resultOk : s.resultNo].join(' ')} role="status" aria-live="assertive">
-      <div className={s.resultTop}>
-        <span className={s.resultIcon}>
-          {granted ? <CheckIcon size={56} /> : <XIcon size={56} />}
-        </span>
-        <span className={s.resultVerdict}>{granted ? 'Puede entrar' : 'No puede entrar'}</span>
-      </div>
+      <span className={s.resultIcon} aria-label={granted ? 'Puede entrar' : 'No puede entrar'}>
+        {granted ? <CheckIcon size={64} /> : <XIcon size={64} />}
+      </span>
 
       {member ? (
         <div className={s.person}>
@@ -68,23 +81,21 @@ function Result({ result, onNext }) {
               : <span>{initials(member.member_name)}</span>}
           </span>
           <span className={s.personName}>{member.member_name}</span>
-          {member.member_code && <span className={s.personCode}>{member.member_code}</span>}
         </div>
       ) : null}
 
-      {granted && days ? (
-        <div className={s.days}>
-          <span className={s.daysBig}>{days.big}</span>
-          <span className={s.daysUnit}>{days.unit}</span>
-          <span className={s.daysSmall}>{days.small}</span>
-        </div>
+      {ring ? (
+        <DaysRing days={ring.days} fraction={ring.fraction} size={190} className={s.ring} />
       ) : null}
 
-      <p className={s.resultText}>
-        {result.message}
-        {granted && result.subscription?.plan_name ? <span className={s.resultPlan}>{result.subscription.plan_name}</span> : null}
-        {granted && result.visit ? <span className={s.resultVisit}>{visitLine(result.visit)}</span> : null}
-      </p>
+      <div className={s.state}>
+        <span className={s.stateBadge}>
+          <span className={s.stateDot} />
+          {STATE_LABEL[result.reason] || (granted ? 'Puede entrar' : 'No puede entrar')}
+        </span>
+        {detail && <span className={s.stateDetail}>{detail}</span>}
+        {repeat && <span className={s.stateDetail}>Ya entró hoy · {String(result.visit.visited_at || '').slice(11, 16)}</span>}
+      </div>
 
       <button type="button" className={s.next} onClick={onNext}>Siguiente</button>
     </div>
@@ -203,11 +214,11 @@ export function GymPortalValidator({ gymName, validatorName, onValidate }) {
       {mode === 'result' && result && <Result result={result} onNext={next} />}
       {mode === 'result' && !result && (
         <div className={[s.result, s.resultNo].join(' ')} role="alert">
-          <div className={s.resultTop}>
-            <span className={s.resultIcon}><XIcon size={56} /></span>
-            <span className={s.resultVerdict}>No se pudo validar</span>
+          <span className={s.resultIcon}><XIcon size={64} /></span>
+          <div className={s.state}>
+            <span className={s.stateBadge}><span className={s.stateDot} />No se pudo validar</span>
+            <span className={s.stateDetail}>{failure}</span>
           </div>
-          <p className={s.resultText}>{failure}</p>
           <button type="button" className={s.next} onClick={next}>Intentar de nuevo</button>
         </div>
       )}
