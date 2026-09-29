@@ -204,6 +204,10 @@ export function GymMemberDetail() {
 
   const checkinsFetcher = React.useCallback(() => api.gymMemberCheckins(memberId, { perPage: 10 }), [memberId]);
   const { data: checkinsPage, loading: checkinsLoading, reload: reloadCheckins } = useResource(checkinsFetcher, { items: [] }, [memberId]);
+
+  // Visitas: las entradas que la puerta le validó con su QR (una por día). Solo las últimas.
+  const visitsFetcher = React.useCallback(() => api.gymMemberVisits(memberId, { perPage: 10 }), [memberId]);
+  const { data: visitsPage, loading: visitsLoading } = useResource(visitsFetcher, { items: [], pagination: null }, [memberId]);
   // Al tocar una fila de la tabla se abre el detalle de esa medición. El mismo modal sirve para
   // corregirla: `checkinForm` deja de ser null y las medidas pasan a campos editables. Es el
   // camino para las medidas cargadas con la fecha equivocada, o con un número mal digitado.
@@ -398,6 +402,32 @@ export function GymMemberDetail() {
               </span>
             )}
           </button>
+        )}
+      </Panel>
+
+      {/* ── Visitas: lo que registró la entrada al leer su QR (una por día) ── */}
+      <Panel title="Visitas"
+        action={visitsPage.pagination?.total ? <Badge variant="secondary">{visitsPage.pagination.total} en total</Badge> : null}>
+        {visitsLoading && <div className={s.mobileState}><Spinner size="sm" label="Cargando…" /></div>}
+        {!visitsLoading && (visitsPage.items || []).length === 0 && (
+          <p className={s.faint}>Aún no tiene visitas registradas. Se anotan cuando la entrada lee el QR de su tarjeta.</p>
+        )}
+        {!visitsLoading && (visitsPage.items || []).length > 0 && (
+          <ul className={g.checkinList}>
+            {(visitsPage.items || []).map((v) => (
+              <li key={v.id} className={g.visitRow}>
+                <span className={g.checkinDate}>
+                  {formatShortDate(v.visit_date)}
+                  <span className={g.visitTime}> · {String(v.visited_at || '').slice(11, 16)}</span>
+                </span>
+                <span className={g.checkinMeta}>
+                  <Badge variant={v.access_state === 'grace' ? 'warning' : 'success'}>
+                    {v.access_state === 'grace' ? 'En gracia' : 'Al día'}
+                  </Badge>
+                </span>
+              </li>
+            ))}
+          </ul>
         )}
       </Panel>
 

@@ -4986,6 +4986,90 @@ const mockGymPortalStores = [{
 const mockGymPortalCodes = {};
 const mockGymPortalClosedSessions = new Set();
 
+// Ingreso con QR (demo). El de recepción entra por la misma entrada general con este celular y
+// recibe una sesión `validator` (en el real, el celular de un usuario del panel con el permiso
+// `gym-access-validate`). Laura, además de socia, tiene el permiso: ve las dos cosas.
+const MOCK_GYM_VALIDATOR_PHONE = '3000000000';
+const MOCK_GYM_VALIDATOR = { user_id: 1, first_name: 'Gerardo', name: 'Gerardo Carvajal' };
+const MOCK_GYM_MEMBER_VALIDATORS = new Set([1]);
+
+// Visitas: una por socio y día, cuando la puerta le dio paso. Laura ya vino varios días.
+let mockGymVisits = [3, 5, 6, 8, 10, 12].map((daysAgo, i) => ({
+  id: i + 1, gym_member_id: 1, visit_date: isoDay(daysAgo), visited_at: `${isoDay(daysAgo)} 06:${String(40 + i).padStart(2, '0')}:00`,
+  access_state: 'active', validated_by_name: 'Gerardo Carvajal',
+}));
+
+// El QR de la demo es legible (`PDG1.1.{afiliado}.{emitido}.demo`); el real va firmado y el
+// portal no lo interpreta: solo lo pinta.
+const mockGymAccessQr = (member) => `PDG1.1.${member.id}.${Math.floor(Date.now() / 1000)}.demo`;
+
+// La regla de la puerta, espejo del backend: suscripción activa con el período en curso vigente
+// o en gracia entra (al día o en gracia); lo demás no.
+function mockGymValidateQr(qr) {
+  const denied = (reason, message, member = null, subscription = null) => ({
+    result: 'denied', reason, message, today: todayIso(), member, subscription, visit: null,
+  });
+  const match = String(qr || '').trim().match(/^PDG1\.1\.(\d+)\.(\d+)\.demo$/);
+  if (!match) return denied('qr_invalid', 'Este código no es de este gimnasio o no es válido.');
+  const member = mockGymMembers.find((m) => m.id === Number(match[1]));
+  if (!member) return denied('qr_invalid', 'Este código no es de este gimnasio o no es válido.');
+  const presentMember = {
+    member_name: member.member_name, first_name: member.member_name.split(' ')[0],
+    member_code: member.member_code, photo_url: member.photo_url || null,
+  };
+  if (member.status !== 1) return denied('member_inactive', 'La ficha del afiliado está inactiva.', presentMember);
+
+  const subs = mockGymSubscriptions
+    .filter((x) => x.gym_member_id === member.id)
+    .sort((a, b) => (a.subscribed_at < b.subscribed_at ? 1 : -1))
+    .map(gymSubDetailPresent);
+  const sub = subs.find((x) => x.status === GYM_SUB_ACTIVE) || null;
+  const presentSub = (x, p) => {
+    const diff = p ? Math.round((Date.UTC(...p.end_date.split('-').map((n, i) => Number(n) - (i === 1 ? 1 : 0))) - Date.UTC(...todayIso().split('-').map((n, i) => Number(n) - (i === 1 ? 1 : 0)))) / 86400000) : null;
+    return {
+      plan_name: x.plan_name, status: x.status, cancelled_at: x.cancelled_at, pending_total: x.pending_total,
+      period_number: p ? p.number : null, start_date: p ? p.start_date : null, end_date: p ? p.end_date : null,
+      grace_ends_at: p ? p.grace_ends_at : null, computed_status: p ? p.computed_status : null,
+      days_left: diff == null ? null : Math.max(0, diff), days_overdue: diff == null ? null : Math.max(0, -diff),
+    };
+  };
+  if (!sub) {
+    return subs[0]
+      ? denied('subscription_cancelled', 'Su suscripción está cancelada. Debe renovarla en recepción.', presentMember, presentSub(subs[0], null))
+      : denied('no_subscription', 'No tiene una suscripción. Debe pasar por recepción.', presentMember);
+  }
+  const live = sub.periods.filter((p) => p.status !== GYM_PER_CANCELLED);
+  const current = live[0] || null;
+  if (!current || (current.computed_status !== 1 && current.computed_status !== 2)) {
+    return denied('period_closed', 'Su plan venció y la gracia se agotó. Debe renovar en recepción.', presentMember, presentSub(sub, current));
+  }
+  const owesStarted = live.some((p) => Number(p.pending) > 0 && p.start_date <= todayIso());
+  const state = current.computed_status === 1 && !owesStarted ? 'active' : 'grace';
+
+  const today = todayIso();
+  let visit = mockGymVisits.find((v) => v.gym_member_id === member.id && v.visit_date === today);
+  const firstToday = !visit;
+  if (!visit) {
+    const now = new Date();
+    visit = {
+      id: mockGymVisits.reduce((max, v) => Math.max(max, v.id), 0) + 1, gym_member_id: member.id, visit_date: today,
+      visited_at: `${today} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:00`,
+      access_state: state, validated_by_name: MOCK_GYM_VALIDATOR.name,
+    };
+    mockGymVisits.push(visit);
+  }
+  const monthStart = today.slice(0, 8) + '01';
+  return {
+    result: 'granted', reason: state,
+    message: state === 'active' ? 'Al día. ¡Bienvenido!' : 'Puede entrar. Tiene saldo pendiente: recuérdale pasar por recepción.',
+    today, member: presentMember, subscription: presentSub(sub, current),
+    visit: {
+      first_today: firstToday, visited_at: visit.visited_at,
+      month_count: mockGymVisits.filter((v) => v.gym_member_id === member.id && v.visit_date >= monthStart && v.visit_date <= today).length,
+    },
+  };
+}
+
 function resolvePublicGymPortalMock(path, { method = 'GET', body } = {}) {
   // Gimnasios aliados de la entrada general: los gimnasios del directorio demo.
   if (path === '/public/gym/partners' && method === 'GET') {
@@ -5035,15 +5119,18 @@ function resolvePublicGymPortalMock(path, { method = 'GET', body } = {}) {
   if (path === '/public/gym/partners') return undefined;
   const platformMatch = path.match(/^\/public\/gym\/portal\/(code|verify)$/);
   if (platformMatch) {
-    const member = mockGymMembers.find((m) => m.status === 1 && m.phone_number === cleanPhone(body?.phone_number));
-    if (!member) throw notFound();
+    const phone = cleanPhone(body?.phone_number);
+    const member = mockGymMembers.find((m) => m.status === 1 && m.phone_number === phone);
+    // El de recepción no es socio: su cuenta se identifica por el celular fijo de la demo.
+    const validator = phone === MOCK_GYM_VALIDATOR_PHONE;
+    if (!member && !validator) throw notFound();
+    const codeKey = member ? member.id : 'validator';
     if (platformMatch[1] === 'code') {
       const code = String(Math.floor(Math.random() * 1000000)).padStart(6, '0');
-      mockGymPortalCodes[member.id] = { code, attempts: 0 };
-      const p = member.phone_number;
-      return { masked_phone: `+57 ${p.slice(0, 3)} *** ${p.slice(-4)}`, code_length: 6, expires_in: 600, resend_in: 30, demo_code: code };
+      mockGymPortalCodes[codeKey] = { code, attempts: 0 };
+      return { masked_phone: `+57 ${phone.slice(0, 3)} *** ${phone.slice(-4)}`, code_length: 6, expires_in: 600, resend_in: 30, demo_code: code };
     }
-    const issued = mockGymPortalCodes[member.id];
+    const issued = mockGymPortalCodes[codeKey];
     if (!issued || issued.attempts >= 5) throw Object.assign(new Error('Ese código ya no sirve. Pide uno nuevo.'), { status: 410 });
     if (String(body?.code || '') !== issued.code) {
       issued.attempts += 1;
@@ -5051,16 +5138,32 @@ function resolvePublicGymPortalMock(path, { method = 'GET', body } = {}) {
       if (left <= 0) throw Object.assign(new Error('Ese código ya no sirve. Pide uno nuevo.'), { status: 410 });
       throw Object.assign(new Error(`El código no es correcto. Te quedan ${left} intentos.`), { status: 400, data: { attempts_left: left } });
     }
-    delete mockGymPortalCodes[member.id];
+    delete mockGymPortalCodes[codeKey];
     // En la demo el socio es de un solo gimnasio: el de ejemplo del directorio.
     const gym = mockPublicCompanies.find((c) => c.username === 'norte_fitness');
+    const role = validator || (member && MOCK_GYM_MEMBER_VALIDATORS.has(member.id)) ? 'validator' : 'member';
     return {
       gyms: [{
         company: { username: gym.username, name: gym.name, icon: gym.icon, thumbnail_icon: gym.thumbnail_icon, brand_primary: gym.brand_primary },
-        member_name: member.member_name,
-        session_token: `demo-session:${member.id}:${Date.now().toString(36)}`,
+        role,
+        member_name: member ? member.member_name : null,
+        session_token: member ? `demo-session:${member.id}:${Date.now().toString(36)}` : `demo-validator:${Date.now().toString(36)}`,
       }],
     };
+  }
+
+  // La entrada leyó un QR: solo con sesión de validador.
+  if (/^\/public\/[^/]+\/gym\/portal\/access\/validate$/.test(path)) {
+    const token = String(body?.session_token || '');
+    if (mockGymPortalClosedSessions.has(token)) {
+      throw Object.assign(new Error('Tu sesión terminó. Vuelve a ingresar con tu celular.'), { status: 401 });
+    }
+    const memberId = parseInt(token.replace(/^demo-session:/, ''), 10);
+    const isValidator = token.startsWith('demo-validator:') || (token.startsWith('demo-session:') && MOCK_GYM_MEMBER_VALIDATORS.has(memberId));
+    if (!isValidator) {
+      throw Object.assign(new Error('Esta sesión no puede validar ingresos.'), { status: 403 });
+    }
+    return mockGymValidateQr(body?.qr);
   }
 
   if (/^\/public\/[^/]+\/gym\/portal\/logout$/.test(path)) {
@@ -5072,6 +5175,9 @@ function resolvePublicGymPortalMock(path, { method = 'GET', body } = {}) {
   // cifrado por el backend y el portal no lo interpreta.
   if (/^\/public\/[^/]+\/gym\/portal\/session$/.test(path)) {
     const token = String(body?.session_token || '');
+    if (token.startsWith('demo-validator:') && !mockGymPortalClosedSessions.has(token)) {
+      return gymValidatorPortalPayload(path, token);
+    }
     const id = parseInt(token.replace(/^demo-session:/, ''), 10);
     const member = !mockGymPortalClosedSessions.has(token) && mockGymMembers.find((m) => m.id === id);
     if (!member) {
@@ -5131,6 +5237,28 @@ function resolvePublicGymPortalMock(path, { method = 'GET', body } = {}) {
   return gymPortalPayload(member, path);
 }
 
+// La compañía del portal, por el username de la ruta.
+const gymPortalCompany = (path) => {
+  const username = decodeURIComponent(path.split('/')[2] || '');
+  const c = mockPublicCompanies.find((x) => x.username === username) || mockCompany;
+  return { name: c.name, username: c.username ?? null, icon: c.icon ?? null, thumbnail_icon: c.thumbnail_icon ?? null, brand_primary: c.brand_primary ?? null, brand_secondary: c.brand_secondary ?? null, app_name: c.app_name ?? null, app_icon_bg: c.app_icon_bg ?? null };
+};
+
+// El portal de quien valida ingresos sin ficha de afiliado: sesión y compañía, nada del socio.
+function gymValidatorPortalPayload(path, token) {
+  return {
+    session_token: token,
+    company: gymPortalCompany(path),
+    whatsapp_number: mockCompany.phone ?? null,
+    today: todayIso(),
+    role: 'validator',
+    validator: { first_name: MOCK_GYM_VALIDATOR.first_name, name: MOCK_GYM_VALIDATOR.name },
+    member: null, profile: null, goals: [], subscription: null, access_qr: null, payments: [],
+    stores: mockGymPortalStores,
+    measurements: { types: [], series: {}, checkins_count: 0, last_checkin: null },
+  };
+}
+
 function gymPortalPayload(member, path, token = null) {
   const subscriptions = mockGymSubscriptions
     .filter((sub) => sub.gym_member_id === member.id)
@@ -5170,13 +5298,14 @@ function gymPortalPayload(member, path, token = null) {
   return {
     // Como el real: una sesión nueva al entrar, y la misma mientras el socio no la cierre.
     session_token: token || `demo-session:${member.id}:${Date.now().toString(36)}`,
-    company: (() => {
-      const username = decodeURIComponent(path.split('/')[2] || '');
-      const c = mockPublicCompanies.find((x) => x.username === username) || mockCompany;
-      return { name: c.name, username: c.username ?? null, icon: c.icon ?? null, thumbnail_icon: c.thumbnail_icon ?? null, brand_primary: c.brand_primary ?? null, brand_secondary: c.brand_secondary ?? null, app_name: c.app_name ?? null, app_icon_bg: c.app_icon_bg ?? null };
-    })(),
+    company: gymPortalCompany(path),
     whatsapp_number: mockCompany.phone ?? null,
     today: todayIso(),
+    // Quien además valida ingresos (permiso `gym-access-validate`) ve el lector y su suscripción.
+    role: MOCK_GYM_MEMBER_VALIDATORS.has(member.id) ? 'validator' : 'member',
+    validator: MOCK_GYM_MEMBER_VALIDATORS.has(member.id) ? { first_name: personal.first_name, name: member.member_name } : null,
+    // El QR de ingreso, lo que la tarjeta muestra al girarla.
+    access_qr: mockGymAccessQr(member),
     member: {
       first_name: personal.first_name, member_name: member.member_name, member_code: member.member_code,
       sex: member.sex, height_cm: member.height_cm, goal: member.goal, joined_at: member.joined_at,
@@ -5650,6 +5779,16 @@ function resolveGymMock(path, query, { method = 'GET', body } = {}) {
       .filter((c) => c.gym_member_id === memberId)
       .sort((a, b) => (a.measured_at < b.measured_at ? 1 : -1))
       .map(gymCheckinPresent);
+    return mockPaginate(rows, query);
+  }
+
+  const memberVisitsMatch = sub.match(/^members\/(\d+)\/visits$/);
+  if (memberVisitsMatch) {
+    const memberId = Number(memberVisitsMatch[1]);
+    const rows = mockGymVisits
+      .filter((v) => v.gym_member_id === memberId)
+      .sort((a, b) => (a.visit_date < b.visit_date ? 1 : a.visit_date > b.visit_date ? -1 : b.id - a.id))
+      .map(({ id, visit_date, visited_at, access_state, validated_by_name }) => ({ id, visit_date, visited_at, access_state, validated_by_name }));
     return mockPaginate(rows, query);
   }
 
