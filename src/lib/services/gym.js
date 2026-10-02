@@ -113,6 +113,16 @@ export const gymService = {
   // existe para cuando no corrió. Responde el detalle actualizado de la suscripción.
   processGymSubscription: (subscriptionId) => http.post(`${base()}/subscriptions/${subscriptionId}/process`, {}),
 
+  // Cambia el plan con el que sigue la suscripción —o la renueva por adelantado con el mismo—
+  // (permiso `gym-subscriptions-create`). El backend lo aplica al PRIMER período sin pagos: si el
+  // último período vivo ya tiene abonos, crea el siguiente ahora con el plan nuevo (desde el día
+  // después de su vencimiento, sin esperar al cron); si no tiene ninguno, cambia ese mismo
+  // conservando su inicio y recalculando precio, vencimiento y gracia. `payment` (opcional, misma
+  // forma que en el alta; exige además `gym-payments-create`) se registra sobre ese período y se
+  // factura. Responde el detalle actualizado de la suscripción.
+  changeGymSubscriptionPlan: (subscriptionId, { plan_id, payment }) =>
+    http.post(`${base()}/subscriptions/${subscriptionId}/change-plan`, { plan_id, ...(payment ? { payment } : {}) }),
+
   // Mueve el inicio del período vigente (el último, vivo) y el backend recalcula vencimiento y
   // gracia con la duración del período. Para el afiliado que volvió días después de que se
   // encadenara su período. Responde el detalle actualizado de la suscripción.

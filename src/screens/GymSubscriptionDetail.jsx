@@ -9,7 +9,7 @@ import { useResource } from '../lib/useResource.js';
 import { usePermissions } from '../lib/permissions/usePermissions.js';
 import {
   gymMoney, gymSubscriptionStatusMeta, gymPeriodStatusMeta, gymPendingBalance,
-  gymSubscriptionPending, GYM_SUBSCRIPTION_STATUS, GYM_PERIOD_STATUS,
+  gymSubscriptionPending, gymPlanDurationLabel, GYM_SUBSCRIPTION_STATUS, GYM_PERIOD_STATUS,
 } from '../lib/gymLabels.js';
 import { formatShortDate, formatStayRangeShort, todayIso, addDaysIso } from '../lib/dates.js';
 import { useSetPageTitle, useSetPageBack } from '../lib/pageTitle.jsx';
@@ -26,6 +26,11 @@ import g from './GymSubscriptionDetail.module.css';
 // backend; si uno agota su gracia sin ningún abono, la suscripción entera se cancela sola.
 // Cuando esa corrida no ha pasado (el período vigente ya venció y no existe el siguiente), el
 // operador puede forzar el mismo ciclo desde aquí con "Generar período".
+// Lo que sí hay es "Cambiar de plan": el afiliado que termina su trimestre y sigue con el
+// mensual (o paga el siguiente por adelantado). El backend lo aplica al primer período sin
+// pagos —el vigente si no tiene abonos, o el siguiente, que se crea en ese momento— y admite el
+// pago en la misma llamada. Si el período creado empieza después de hoy, la tarjeta lo muestra
+// aparte como "Próximo período", debajo del que todavía corre.
 export function GymSubscriptionDetail() {
   const { subscriptionId } = useParams();
   const navigate = useNavigate();
@@ -40,6 +45,13 @@ export function GymSubscriptionDetail() {
   const methodOptions = React.useMemo(
     () => (paymentMethods || []).map((m) => ({ value: m.id, label: m.name })),
     [paymentMethods],
+  );
+
+  // Los planes activos, para el selector de "Cambiar de plan".
+  const { data: plansPage } = useResource(React.useCallback(() => api.gymPlans({ status: '1', perPage: 100 }), []), { items: [] }, []);
+  const planOptions = React.useMemo(
+    () => (plansPage.items || []).map((p) => ({ value: String(p.id), label: `${p.name} · ${gymMoney(p.price)}` })),
+    [plansPage],
   );
 
   // La tarjeta habla del plan, así que el afiliado da nombre a la pantalla desde la barra
@@ -225,6 +237,58 @@ export function GymSubscriptionDetail() {
     }
   };
 
+  // ── Cambiar de plan (con pago opcional del período que lo recibe) ────────
+  const emptyPlanForm = { plan_id: '', pay: false, payment_method: '', value: '', payment_date: '', notes: '', registers_income: true };
+  const [planOpen, setPlanOpen] = React.useState(false);
+  const [planForm, setPlanForm] = React.useState(emptyPlanForm);
+  const [planBusy, setPlanBusy] = React.useState(false);
+  const [planError, setPlanError] = React.useState('');
+  const selectedPlan = (plansPage.items || []).find((p) => String(p.id) === planForm.plan_id) || null;
+
+  const openPlan = () => {
+    setPlanForm(emptyPlanForm);
+    setPlanError('');
+    setPlanOpen(true);
+  };
+  // El precio del plan precarga el valor del pago; el operador lo ajusta si cobra menos.
+  const pickPlan = (planId) => {
+    const plan = (plansPage.items || []).find((p) => String(p.id) === planId);
+    setPlanForm((f) => ({ ...f, plan_id: planId, value: plan ? plan.price : f.value }));
+  };
+
+  const submitPlan = async () => {
+    if (planBusy || !planForm.plan_id) return;
+    if (planForm.pay && (!planForm.payment_method || !planForm.value)) return;
+    setPlanBusy(true);
+    setPlanError('');
+    try {
+      const updated = await api.changeGymSubscriptionPlan(subscriptionId, {
+        plan_id: Number(planForm.plan_id),
+        payment: planForm.pay ? {
+          payment_method: planForm.payment_method,
+          value: planForm.value,
+          payment_date: planForm.payment_date || undefined,
+          notes: planForm.notes.trim() || undefined,
+          registers_income: planForm.registers_income,
+        } : undefined,
+      });
+      const before = (data?.periods || []).length;
+      const after = (updated?.periods || []).length;
+      setData(updated);
+      toast({
+        tone: 'success',
+        title: after > before
+          ? `Período ${updated.current_period?.number ?? ''} creado: ${updated.plan_name}`
+          : `Período ${updated.current_period?.number ?? ''} cambiado a ${updated.plan_name}`,
+      });
+      setPlanOpen(false);
+    } catch (e) {
+      setPlanError(e?.message || 'No se pudo cambiar el plan.');
+    } finally {
+      setPlanBusy(false);
+    }
+  };
+
   if (loading) return <Spinner center label="Cargando suscripción…" />;
   if (error || !data) {
     return (
@@ -243,27 +307,41 @@ export function GymSubscriptionDetail() {
   // `current_period` viaja como resumen (sin pagos): el período completo, con sus abonos, está
   // en la lista. Lo que no es el vigente es historial, y ahí abajo va plegado.
   const periodsDesc = data.periods || [];
+  const today = todayIso();
+  // El último período no cancelado. Si empieza después de hoy (se creó por adelantado al
+  // cambiar de plan), es el "próximo": el que corre de verdad es el anterior.
+  const latestFull = (isActive ? periodsDesc.find((p) => p.id === currentPeriod?.id) : null) || null;
+  const runningBeforeLatest = latestFull
+    ? periodsDesc.find((p) => p.number < latestFull.number && Number(p.status) !== GYM_PERIOD_STATUS.CANCELLED) || null
+    : null;
+  const upcoming = latestFull && latestFull.start_date > today && runningBeforeLatest ? latestFull : null;
   // La tarjeta destacada es el período en curso; con la suscripción cancelada, el último que
   // existió —aunque sea el que el corte canceló—, porque es el que cuenta cómo terminó.
   const currentFull = (isActive
-    ? periodsDesc.find((p) => p.id === currentPeriod?.id)
+    ? (upcoming ? runningBeforeLatest : latestFull)
     : periodsDesc[0]) || null;
-  const pastPeriods = periodsDesc.filter((p) => p.id !== currentFull?.id);
+  const pastPeriods = periodsDesc.filter((p) => p.id !== currentFull?.id && p.id !== upcoming?.id);
   const currentPending = currentFull && Number(currentFull.status) !== GYM_PERIOD_STATUS.CANCELLED
     ? gymPendingBalance(currentFull)
     : 0;
+  const upcomingPending = upcoming ? gymPendingBalance(upcoming) : 0;
   // Lo que se debe de períodos ya pasados: el abono cae ahí primero, así que el recordatorio del
   // período en curso lo nombra en vez de esconderlo dentro del historial.
-  const olderPending = Math.max(0, pendingTotal - currentPending);
+  const olderPending = Math.max(0, pendingTotal - currentPending - upcomingPending);
 
   // `current_period` es el último no cancelado: si ya venció, el siguiente no existe todavía,
   // es decir, la corrida diaria del backend no ha pasado por esta suscripción. Forzarla genera
   // el período siguiente… o aplica el corte, si el vigente agotó su gracia sin ningún abono.
-  const today = todayIso();
   const nextPending = isActive && !!currentPeriod && currentPeriod.end_date < today;
   const wouldCancel = nextPending && currentUnpaid && currentPeriod.grace_ends_at < today;
   const canProcess = nextPending && can('gym-subscriptions-create');
   const openProcess = () => { setProcessError(''); setProcessOpen(true); };
+
+  // Cambiar de plan: el backend lo aplica al primer período sin pagos. Se calcula aquí solo para
+  // contarle al operador, antes de confirmar, a qué período le va a caer.
+  const canChangePlan = isActive && !!latestFull && can('gym-subscriptions-create');
+  const planReplacesLatest = !!latestFull && Number(latestFull.paid_total || 0) === 0
+    && [GYM_PERIOD_STATUS.CURRENT, GYM_PERIOD_STATUS.GRACE].includes(Number(latestFull.status));
 
   // Solo el período vigente (el último no cancelado, vivo) admite mover su inicio: los
   // anteriores ya tienen el siguiente encadenado. El anterior marca el mínimo permitido.
@@ -341,6 +419,9 @@ export function GymSubscriptionDetail() {
     ...(canProcess
       ? [<Button key="process" variant={wouldCancel || pendingTotal > 0 ? 'secondary' : 'primary'} icon="fas fa-calendar-plus" onClick={openProcess}>Generar período</Button>]
       : []),
+    ...(canChangePlan
+      ? [<Button key="plan" variant="secondary" icon="fas fa-arrow-right-arrow-left" onClick={openPlan}>Cambiar de plan</Button>]
+      : []),
   ];
 
   return (
@@ -385,30 +466,19 @@ export function GymSubscriptionDetail() {
                     {currentInGrace && <span className={g.rowHint}> · gracia hasta el {formatShortDate(currentFull.grace_ends_at)}</span>}
                   </dd>
                 </div>
+                {/* El plan del período solo cuando no es el de la suscripción: pasa cuando el
+                    afiliado cambió de plan y el ciclo viejo todavía corre. */}
+                {currentFull.plan_name && currentFull.plan_name !== data.plan_name && (
+                  <div className={g.row}>
+                    <dt>Plan</dt>
+                    <dd>{currentFull.plan_name}</dd>
+                  </div>
+                )}
                 <div className={g.row}>
                   <dt>Valor</dt>
                   <dd>{gymMoney(currentFull.price)}</dd>
                 </div>
-                {currentPayments.length === 0 ? (
-                  <div className={g.row}>
-                    <dt>Pagos</dt>
-                    <dd className={s.faint}>Sin pagos</dd>
-                  </div>
-                ) : currentPayments.map((pay) => {
-                  const annulled = Number(pay.status) !== 1;
-                  return (
-                    <div key={pay.id} className={g.row}>
-                      <dt>Pago{annulled ? ' anulado' : ''}</dt>
-                      <dd className={annulled ? g.payAnnulled : ''}>
-                        {gymMoney(pay.value)}
-                        <span className={g.rowHint}>
-                          {' '}· {formatShortDate(pay.payment_date)} · {pay.payment_method_name || '—'}
-                          {pay.registers_income === false && ' · sin factura'}
-                        </span>
-                      </dd>
-                    </div>
-                  );
-                })}
+                <PaymentRows payments={currentPayments} />
                 <div className={g.row}>
                   <dt>Saldo</dt>
                   <dd>
@@ -444,9 +514,13 @@ export function GymSubscriptionDetail() {
           {isActive && pendingTotal > 0 && currentFull && (
             <Alert variant="outline" tone={currentInGrace ? 'danger' : 'warning'}
               title={currentInGrace ? 'Pago vencido' : 'Pendiente de pago'}>
-              {currentPending <= 0 ? (
+              {currentPending <= 0 && olderPending > 0 ? (
                 <>Este período está pagado, pero quedan {gymMoney(olderPending)} de períodos
                   anteriores: el abono se aplica ahí primero.</>
+              ) : currentPending <= 0 ? (
+                <>Este período está pagado; el próximo (período {upcoming?.number}, desde el{' '}
+                  {upcoming ? formatShortDate(upcoming.start_date) : ''}) tiene un saldo de{' '}
+                  {gymMoney(upcomingPending)}.</>
               ) : currentInGrace ? (
                 currentUnpaid ? (
                   <>El período venció sin ningún abono: si no se registra el pago antes del{' '}
@@ -467,6 +541,44 @@ export function GymSubscriptionDetail() {
             </Alert>
           )}
         </div>
+
+        {/* ── El próximo período, cuando ya existe antes de empezar (cambio de plan o pago por
+            adelantado): su plan, desde cuándo y en qué va el dinero. Es el último vivo, así que
+            sus acciones (mover inicio, cancelar) van en su propio ⋮. ── */}
+        {upcoming && (
+          <div className={g.period}>
+            <div className={g.periodHead}>
+              <span className={g.periodEyebrow}>Próximo período</span>
+              <div className={g.periodTitleRow}>
+                <h4 className={g.periodTitle}>{periodTitle(upcoming)}</h4>
+                <span className={g.periodActions}>
+                  {upcomingPending > 0
+                    ? <Badge variant="warning">Saldo {gymMoney(upcomingPending)}</Badge>
+                    : <Badge variant="success">Pagado</Badge>}
+                  {periodMenu(upcoming).length > 0 && (
+                    <Dropdown items={periodMenu(upcoming)} width={230}
+                      trigger={<IconButton icon="fas fa-ellipsis-vertical" variant="light" size="sm" title="Acciones del período" />} />
+                  )}
+                </span>
+              </div>
+            </div>
+            <dl className={g.rows}>
+              <div className={g.row}>
+                <dt>Plan</dt>
+                <dd>{upcoming.plan_name}</dd>
+              </div>
+              <div className={g.row}>
+                <dt>Empieza</dt>
+                <dd>{formatShortDate(upcoming.start_date)}<span className={g.rowHint}> · vence el {formatShortDate(upcoming.end_date)}</span></dd>
+              </div>
+              <div className={g.row}>
+                <dt>Valor</dt>
+                <dd>{gymMoney(upcoming.price)}</dd>
+              </div>
+              <PaymentRows payments={upcoming.payments || []} />
+            </dl>
+          </div>
+        )}
 
         {/* ── Las acciones primarias ── */}
         {primaryActions.length > 0 && <div className={g.actions}>{primaryActions}</div>}
@@ -521,6 +633,64 @@ export function GymSubscriptionDetail() {
               : 'El pago queda registrado en la suscripción, pero sin factura: no entra a la caja. Es lo que corresponde a un dinero que se cobró antes de usar la plataforma.'}
           </p>
           {payError && <Alert tone="danger" onClose={() => setPayError('')}>{payError}</Alert>}
+        </div>
+      </Modal>
+
+      <Modal open={planOpen} title="Cambiar de plan" onClose={() => setPlanOpen(false)}
+        footer={<>
+          <Button variant="secondary" onClick={() => setPlanOpen(false)}>Cancelar</Button>
+          <Button variant="primary" loading={planBusy}
+            disabled={!planForm.plan_id || (planForm.pay && (!planForm.payment_method || !planForm.value))}
+            onClick={submitPlan}>
+            {planForm.pay ? 'Cambiar y registrar pago' : 'Cambiar de plan'}
+          </Button>
+        </>}>
+        <div className={s.formCol}>
+          <Select label="Plan nuevo" icon="fas fa-id-card" value={planForm.plan_id}
+            onChange={(e) => pickPlan(e.target.value)}
+            options={[{ value: '', label: planOptions.length ? 'Selecciona…' : 'No hay planes activos' }, ...planOptions]} />
+          {latestFull && (
+            <p className={s.faint}>
+              {planReplacesLatest ? (
+                <>El período {latestFull.number} ({formatStayRangeShort(latestFull.start_date, latestFull.end_date)})
+                  todavía no tiene pagos, así que es el que cambia: conserva su inicio y el
+                  vencimiento, la gracia y el valor se recalculan con el plan nuevo
+                  {selectedPlan ? <> ({gymPlanDurationLabel(selectedPlan).toLowerCase()}, {gymMoney(selectedPlan.price)})</> : null}.</>
+              ) : (
+                <>El período {latestFull.number} ya está cobrado con su plan, así que el nuevo rige desde el
+                  período {latestFull.number + 1}: se crea ahora, desde el {formatShortDate(addDaysIso(latestFull.end_date, 1))}
+                  {selectedPlan ? <> ({gymPlanDurationLabel(selectedPlan).toLowerCase()}, {gymMoney(selectedPlan.price)})</> : null},
+                  sin esperar la corrida diaria.</>
+              )}
+            </p>
+          )}
+          {can('gym-payments-create') && (
+            <>
+              <Checkbox label="Registrar el pago ahora"
+                checked={planForm.pay}
+                onChange={(e) => setPlanForm((f) => ({ ...f, pay: e.target.checked }))} />
+              {planForm.pay && (
+                <>
+                  <Select label="Método de pago" icon="fas fa-wallet" value={planForm.payment_method}
+                    onChange={(e) => setPlanForm((f) => ({ ...f, payment_method: e.target.value }))}
+                    options={[{ value: '', label: 'Selecciona…' }, ...methodOptions]} />
+                  <MoneyInput label="Valor" icon="fas fa-dollar-sign"
+                    value={planForm.value} onChange={(v) => setPlanForm((f) => ({ ...f, value: v }))} />
+                  <DatePicker label="Fecha del pago (opcional)" value={planForm.payment_date}
+                    onChange={(iso) => setPlanForm((f) => ({ ...f, payment_date: iso }))} />
+                  <Checkbox label="Registrar el cobro como ingreso"
+                    checked={planForm.registers_income}
+                    onChange={(e) => setPlanForm((f) => ({ ...f, registers_income: e.target.checked }))} />
+                  <p className={s.faint}>
+                    {planForm.registers_income
+                      ? 'El pago se aplica al período que recibe el plan nuevo y genera su factura en la fecha indicada.'
+                      : 'El pago queda registrado en el período que recibe el plan nuevo, pero sin factura: no entra a la caja.'}
+                  </p>
+                </>
+              )}
+            </>
+          )}
+          {planError && <Alert tone="danger" onClose={() => setPlanError('')}>{planError}</Alert>}
         </div>
       </Modal>
 
@@ -611,6 +781,36 @@ export function GymSubscriptionDetail() {
       </ConfirmDialog>
     </div>
   );
+}
+
+/**
+ * Los pagos de un período como filas etiqueta · valor de la tarjeta (los del período en curso y
+ * los del próximo): cada pago con su fecha y método, o una sola fila "Sin pagos".
+ */
+function PaymentRows({ payments }) {
+  if (payments.length === 0) {
+    return (
+      <div className={g.row}>
+        <dt>Pagos</dt>
+        <dd className={s.faint}>Sin pagos</dd>
+      </div>
+    );
+  }
+  return payments.map((pay) => {
+    const annulled = Number(pay.status) !== 1;
+    return (
+      <div key={pay.id} className={g.row}>
+        <dt>Pago{annulled ? ' anulado' : ''}</dt>
+        <dd className={annulled ? g.payAnnulled : ''}>
+          {gymMoney(pay.value)}
+          <span className={g.rowHint}>
+            {' '}· {formatShortDate(pay.payment_date)} · {pay.payment_method_name || '—'}
+            {pay.registers_income === false && ' · sin factura'}
+          </span>
+        </dd>
+      </div>
+    );
+  });
 }
 
 /**

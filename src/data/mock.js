@@ -4745,7 +4745,7 @@ const periodPaidTotal = (p) => (p.payments || [])
 const gymPeriodSummary = (p) => {
   const paidTotal = periodPaidTotal(p);
   return {
-    id: p.id, number: p.number, price: p.price,
+    id: p.id, number: p.number, plan_id: p.plan_id, plan_name: p.plan_name, price: p.price,
     start_date: p.start_date, end_date: p.end_date, grace_ends_at: p.grace_ends_at,
     status: p.status, computed_status: computePeriodStatus(p),
     paid_total: paidTotal.toFixed(2),
@@ -4756,7 +4756,7 @@ const gymPeriodSummary = (p) => {
 const gymPeriodFull = (p) => {
   const paidTotal = periodPaidTotal(p);
   return {
-    id: p.id, number: p.number, plan_name: p.plan_name, price: p.price,
+    id: p.id, number: p.number, plan_id: p.plan_id, plan_name: p.plan_name, price: p.price,
     duration_months: p.duration_months ?? null, duration_days: p.duration_days,
     grace_period_days: p.grace_period_days,
     start_date: p.start_date, end_date: p.end_date, grace_ends_at: p.grace_ends_at,
@@ -6022,6 +6022,69 @@ function resolveGymMock(path, query, { method = 'GET', body } = {}) {
     subscription.cancelled_at = new Date().toISOString();
     subscription.cancellation_reason = body.reason;
     subscription.cancelled_by = 1;
+    return gymSubDetailPresent(subscription);
+  }
+
+  // Cambia el plan con el que sigue la suscripción (espejo de `changePlan` del backend): rige
+  // desde el primer período sin pagos — el último vivo si no tiene abonos, o el siguiente, que se
+  // crea ya —, con pago opcional sobre ese período.
+  const subChangePlanMatch = sub.match(/^subscriptions\/([\w-]+)\/change-plan$/);
+  if (subChangePlanMatch) {
+    const subscription = mockGymSubscriptions.find((s) => s.id === subChangePlanMatch[1]);
+    if (!subscription) return null;
+    if (subscription.status !== GYM_SUB_ACTIVE) throw new Error('Solo se puede cambiar el plan de una suscripción activa');
+    const plan = mockGymPlans.find((pl) => pl.id === Number(body.plan_id));
+    if (!plan || plan.status !== 1) throw new Error('El plan no existe o no está activo');
+    const latest = currentPeriodOf(subscription.id);
+    if (!latest) throw new Error('La suscripción no tiene un período del que encadenar el plan nuevo');
+    const payment = body.payment && body.payment.value ? body.payment : null;
+    if (payment && Number(payment.value) > Number(plan.price) + 0.0001) {
+      throw new Error(`El valor supera el precio del plan ($ ${Math.round(Number(plan.price)).toLocaleString('es-CO')})`);
+    }
+
+    const replaceLatest = periodPaidTotal(latest) === 0 && [GYM_PER_CURRENT, GYM_PER_GRACE].includes(latest.status);
+    const startDate = replaceLatest ? latest.start_date : addDaysIso(latest.end_date, 1);
+    const endDate = gymPeriodEndIso(startDate, plan);
+    const snapshot = {
+      plan_id: plan.id, plan_name: plan.name, price: plan.price,
+      duration_months: plan.duration_months ?? null,
+      duration_days: 1 + Math.round((new Date(endDate) - new Date(startDate)) / 86400000),
+      grace_period_days: plan.grace_period_days,
+      start_date: startDate, end_date: endDate, grace_ends_at: addDaysIso(endDate, plan.grace_period_days),
+      status: todayIso() <= endDate ? GYM_PER_CURRENT : GYM_PER_GRACE,
+    };
+    let target;
+    if (replaceLatest) {
+      Object.assign(latest, snapshot);
+      target = latest;
+    } else {
+      target = {
+        id: 'gper-' + Date.now().toString(36) + '-' + (latest.number + 1),
+        subscription_id: subscription.id, gym_member_id: subscription.gym_member_id, member_name: subscription.member_name,
+        number: latest.number + 1, ...snapshot, payments: [],
+      };
+      mockGymSubscriptionPeriods.push(target);
+    }
+    subscription.plan_id = plan.id;
+    subscription.plan_name = plan.name;
+
+    if (payment) {
+      const registersIncome = payment.registers_income !== false;
+      target.payments.push({
+        id: 'gpay-' + Date.now().toString(36),
+        value: payment.value,
+        payment_method: payment.payment_method,
+        payment_method_name: paymentMethodName(payment.payment_method),
+        payment_date: payment.payment_date || todayIso(),
+        notes: payment.notes || null,
+        order_id: registersIncome ? 'ord-gym-' + Date.now().toString(36) : null,
+        registers_income: registersIncome,
+        status: 1,
+        created_by_name: 'Gerardo',
+        annulled_at: null,
+        annulment_reason: null,
+      });
+    }
     return gymSubDetailPresent(subscription);
   }
 

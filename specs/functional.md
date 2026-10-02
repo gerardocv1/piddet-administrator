@@ -435,8 +435,17 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
   cancelar), el **período en curso** en filas etiqueta · valor —vence, valor, cada pago con su
   fecha y método, y el saldo (*Al día* o lo que debe)— más el recordatorio de cobro cuando debe,
   y al pie las **acciones primarias** (*Registrar pago*, *Generar período* si el sistema no ha
-  corrido). El afiliado da nombre a la pantalla desde la barra superior (su nombre de pila en el
-  teléfono). Debajo, aparte y en letra menor, el **historial**: los períodos anteriores, cada uno
+  corrido, *Cambiar de plan*). **Cambiar de plan** (`POST …/subscriptions/{id}/change-plan`,
+  `gym-subscriptions-create`) es para el afiliado que termina su trimestre y sigue con el mensual,
+  o que paga el siguiente por adelantado: el backend aplica el plan nuevo al **primer período sin
+  pagos** —si el último período vivo ya tiene abonos crea el siguiente ahora, desde el día después
+  de su vencimiento, sin esperar la corrida diaria; si no tiene ninguno cambia ese mismo
+  conservando su inicio— y el modal lo dice de antemano; con *Registrar el pago ahora*
+  (`gym-payments-create`) cobra ese período en la misma llamada. Cuando el período creado empieza
+  después de hoy, la tarjeta lo muestra aparte como **Próximo período** (plan, desde cuándo,
+  valor y pagos, con su propio ⋮) debajo del que todavía corre, y la fila *Plan* del período en
+  curso aparece solo cuando su plan ya no es el de la suscripción. El afiliado da nombre a la
+  pantalla desde la barra superior (su nombre de pila en el teléfono). Debajo, aparte y en letra menor, el **historial**: los períodos anteriores, cada uno
   plegado en su tarjeta desplegable con sus pagos y su saldo dentro. Con la suscripción cancelada
   la tarjeta muestra el último período que existió (*Último período*). `/gym/subscriptions` es el listado operativo (con el botón *Revisar fechas* para el super-admin:
   recalcula por calendario las fechas de los períodos vigentes, con simulación previa), filtrable por estado y por próximas a
