@@ -360,7 +360,10 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
   llegada: el código de consulta es secreto y solo llegó a su celular, y saltarse la validación es
   justo lo que evita que abandone ahí y llegue sin el pre-check-in hecho. Si el enlace ya no vale,
   la pantalla cae al formulario de siempre con un aviso; si la reserva ya cerró, explica el motivo.
-  Ese código **no se muestra en el panel ni se dicta**: para eso está el código público.
+  El detalle de la reserva (y la pantalla de *Reserva creada*) comparte **ese mismo enlace**
+  (`checkin_link` del backend): el huésped entra directo, sin escribir código ni nombre, así que se
+  comparte solo con el titular; lo que se dicta es el código público. Al crear la reserva el
+  backend además le manda al titular un SMS corto ("Hemos registrado tu reserva…") con el enlace.
 
 - **En el teléfono** el detalle se descarga: la cabecera deja solo la acción principal del estado
   (confirmar, check-in, checkout o reabrir) y el menú ⋮, que absorbe actualizar y el enlace de
