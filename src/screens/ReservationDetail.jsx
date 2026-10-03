@@ -112,7 +112,9 @@ export function ReservationDetail() {
   const isCheckedIn = status === RESERVATION_STATUS.CHECKED_IN;
   const isCheckedOut = status === RESERVATION_STATUS.CHECKED_OUT;
   const isOpen = [RESERVATION_STATUS.PENDING, RESERVATION_STATUS.CONFIRMED, RESERVATION_STATUS.CHECKED_IN].includes(status);
-  const checkinLink = `${window.location.origin}/checkin?code=${data.code}`;
+  // El mismo enlace corto que le llega por SMS (piddet.com/r/…): abre el pre-check-in sin pedir
+  // código ni nombre. Si el backend aún no lo trae, cae a la entrada digitada.
+  const checkinLink = data.checkin_link || `${window.location.origin}/checkin?code=${data.code}`;
   // Sin pre-check-in del huésped no se puede registrar la entrada (regla del backend).
   const precheckinDone = !!data.precheckin_completed_at;
   const guestsCount = Number(data.guests_count) || data.guests.length;
@@ -516,7 +518,9 @@ export function ReservationDetail() {
                   <p className={t.linkHint}>
                     {data.precheckin_completed_at
                       ? `El huésped completó sus datos el ${String(data.precheckin_completed_at).slice(0, 10)}.`
-                      : 'Comparte el enlace para que el huésped complete sus datos. Para entrar le pedimos este código y su nombre.'}
+                      : data.checkin_link
+                        ? 'Comparte el enlace solo con el titular: abre su pre-check-in directo, sin pedir código ni nombre. Es el mismo que le llega por SMS.'
+                        : 'Comparte el enlace para que el huésped complete sus datos. Para entrar le pedimos este código y su nombre.'}
                   </p>
                 </Card.Body>
               </Card>

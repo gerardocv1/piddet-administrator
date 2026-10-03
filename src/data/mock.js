@@ -2370,6 +2370,10 @@ const MOCK_COMPANY_NAME = 'Cabanas El Roble';
 const mockTestNotificationKinds = [
   { key: 'custom', label: 'Texto libre', message: null },
   {
+    key: 'reservation_registered', label: 'Reservas: reserva registrada (enlace al pre-check-in)',
+    message: 'Hola Juan! Hemos registrado tu reserva para el sab 26/09.\nEn este enlace puedes hacer tu pre-check-in:\nhttps://piddet.com/r/EJEMPLO12345',
+  },
+  {
     key: 'reservation_checkin_pending', label: 'Reservas: recordatorio de llegada (pre-check-in pendiente)',
     message: 'Hola Juan! Hoy es tu llegada, te esperamos.\n\nReserva: RES-4F7K2M\nAlojamiento: Cabana 3 (2 personas)\nCheck-in: hoy desde las 3:00 pm\nCheck-out: mar 22/09 hasta las 12:00 m\n\nAun no has completado tu pre-check-in. Hazlo ahora para agilizar tu ingreso:\nhttps://piddet.com/r/EJEMPLO12345',
   },
@@ -3813,14 +3817,14 @@ const mockGuests = [
 
 // Reservas de ejemplo: las que entran hoy y mañana alimentan el widget de reservas del inicio
 // (cuatro, para que «Ver todas (4)» muestre el total con tres visibles).
-const demoReservation = ({ id, code, unit, holder, checkInOffset, nights, status, arrival = null, services = [], notes = null }) => {
+const demoReservation = ({ id, code, accessCode, unit, holder, checkInOffset, nights, status, arrival = null, services = [], notes = null }) => {
   // `isoDay` resta días: el offset positivo de la reserva es "días a partir de hoy".
   const checkIn = isoDay(-checkInOffset);
   const lodging = Number(unit.base_price_per_night) * nights;
   const servicesTotal = services.reduce((sum, sv) => sum + Number(sv.total), 0);
   const [first, ...rest] = holder.name.split(' ');
   return {
-    id, code, access_code: 'k7m2rq9xv4bd', rentable_unit_id: unit.id, rentable_unit_name: unit.name,
+    id, code, access_code: accessCode, rentable_unit_id: unit.id, rentable_unit_name: unit.name,
     guests_count: holder.guests, holder_user_id: holder.user_id, holder_user_name: holder.name,
     holder_document_number: holder.id_number, holder_first_name: first, holder_last_name: rest.join(' '),
     holder_phone_number: holder.phone_number, check_in_date: checkIn, check_out_date: isoDay(-(checkInOffset + nights)),
@@ -3835,20 +3839,20 @@ const demoReservation = ({ id, code, unit, holder, checkInOffset, nights, status
 
 const mockReservations = [
   demoReservation({
-    id: 'rsv-demo-1', code: 'RSV7K2M9QX', unit: mockRentableUnits[0], checkInOffset: 0, nights: 2, status: 2, arrival: '15-18',
+    id: 'rsv-demo-1', code: 'RSV7K2M9QX', accessCode: 'k7m2rq9xv4bd', unit: mockRentableUnits[0], checkInOffset: 0, nights: 2, status: 2, arrival: '15-18',
     holder: { user_id: 501, name: 'Laura Martínez', guests: 2, id_number: '43567890', phone_number: '3001112233' },
     services: [{ id: 1, item_id: 904, name: 'Decoración de aniversario', quantity: 1, unit_price: '80000.00', total: '80000.00' }],
   }),
   demoReservation({
-    id: 'rsv-demo-2', code: 'RSVB4N8XQW', unit: mockRentableUnits[1], checkInOffset: 0, nights: 1, status: 1,
+    id: 'rsv-demo-2', code: 'RSVB4N8XQW', accessCode: 'b4n8xq2wm7dc', unit: mockRentableUnits[1], checkInOffset: 0, nights: 1, status: 1,
     holder: { user_id: 502, name: 'Andrés Cardona', guests: 1, id_number: '71234567', phone_number: '3005558899' },
   }),
   demoReservation({
-    id: 'rsv-demo-3', code: 'RSVM7DC2P4', unit: mockRentableUnits[0], checkInOffset: 1, nights: 3, status: 2, arrival: '12-15',
+    id: 'rsv-demo-3', code: 'RSVM7DC2P4', accessCode: 'm7dc2p4rsv9k', unit: mockRentableUnits[0], checkInOffset: 1, nights: 3, status: 2, arrival: '12-15',
     holder: { user_id: 503, name: 'Marta Ruiz', guests: 4, id_number: '52987123', phone_number: '3009876543' },
   }),
   demoReservation({
-    id: 'rsv-demo-4', code: 'RSVQ9WT5HZ', unit: mockRentableUnits[1], checkInOffset: 1, nights: 2, status: 5, arrival: '18-21',
+    id: 'rsv-demo-4', code: 'RSVQ9WT5HZ', accessCode: 'q9wt5hzrsv3n', unit: mockRentableUnits[1], checkInOffset: 1, nights: 2, status: 5, arrival: '18-21',
     holder: { user_id: 504, name: 'Julián Ospina', guests: 2, id_number: '80123456', phone_number: '3112223344' },
   }),
 ];
@@ -4176,6 +4180,8 @@ function resolveReservationsCore(sub, query, { method, body }) {
     const stayUnit = mockRentableUnits.find((u) => u.id === r.rentable_unit_id);
     return {
       ...r,
+      // Como el backend: el enlace corto del SMS (aquí sobre el origen local para que abra la demo).
+      checkin_link: r.access_code ? `${window.location.origin}/r/${r.access_code}` : null,
       has_decoration: reservationHasDecoration(r),
       check_in_time: stayUnit?.check_in_time || null,
       check_out_time: stayUnit?.check_out_time || null,

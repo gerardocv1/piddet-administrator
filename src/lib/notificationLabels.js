@@ -32,6 +32,7 @@ export const NOTIFICATION_TYPE_OPTIONS = [
 // Por qué salió el mensaje. El backend devuelve los motivos que la compañía ha usado de verdad
 // (`source_reference`); los conocidos se muestran en lenguaje del negocio y el resto, tal cual.
 const SOURCE_REFERENCES = {
+  RESERVATION_REGISTERED: 'Reserva registrada',
   RESERVATION_CHECKIN_REMINDER: 'Recordatorio de llegada',
   RESERVATION_DAILY_SUMMARY: 'Resumen de reservas de mañana',
   GYM_PERIOD_EXPIRING: 'Gimnasio: la suscripción vence hoy',

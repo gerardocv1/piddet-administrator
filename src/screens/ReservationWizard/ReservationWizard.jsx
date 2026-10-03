@@ -187,13 +187,18 @@ export function ReservationWizard() {
   };
 
   if (created) {
-    const link = `${window.location.origin}/checkin?code=${created.code}`;
+    // El mismo enlace del SMS que se le acaba de enviar al titular: abre el pre-check-in directo.
+    const link = created.checkin_link || `${window.location.origin}/checkin?code=${created.code}`;
     return (
       <div className={s.page}>
         <div className={t.success}>
           <div className={t.successIcon}><i className="fas fa-circle-check" /></div>
           <h2 className={t.title}>Reserva creada</h2>
-          <p className={s.muted}>Comparte el enlace con el huésped para que complete sus datos. Para entrar necesita este código y su nombre.</p>
+          <p className={s.muted}>
+            {created.checkin_link
+              ? 'Le enviamos al titular un SMS con este enlace para que haga su pre-check-in. Si lo necesitas, compártelo también: abre directo, sin pedir código ni nombre.'
+              : 'Comparte el enlace con el huésped para que complete sus datos. Para entrar necesita este código y su nombre.'}
+          </p>
           <div className={t.codeBox}>
             <span className={t.code}>{created.code}</span>
             <span className={t.codeLink}>{link}</span>
