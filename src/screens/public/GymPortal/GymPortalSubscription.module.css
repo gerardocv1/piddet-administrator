@@ -336,6 +336,56 @@
   text-wrap: pretty;
 }
 
+/* ── Avance en medidas (uno por vez) ── */
+
+.progress {
+  display: flex;
+  align-items: center;
+  gap: var(--portal-space-2-5);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--portal-line);
+  border-radius: var(--portal-radius-md);
+  background-color: var(--portal-success-soft);
+  color: var(--portal-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.progress:hover { border-color: var(--portal-line-strong); }
+.progress:focus-visible { outline: 2px solid var(--portal-accent); outline-offset: 2px; }
+
+.progressIcon {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-pill);
+  background-color: var(--portal-success);
+  color: var(--portal-on-accent);
+}
+
+.progressText {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.progressTitle {
+  font-size: var(--portal-fs-body);
+  line-height: 1.25;
+}
+
+.progressTitle strong { color: var(--portal-success); }
+
+.progressSince {
+  font-size: var(--portal-fs-caption);
+  color: var(--portal-text-muted);
+}
+
 /* ── Saldo pendiente ── */
 
 .balance {

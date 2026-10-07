@@ -168,6 +168,45 @@ export const measureDeltaText = (m) => {
   return `${fmtDelta(m.delta)} ${unit}`;
 };
 
+// ── Avances para el inicio ──
+
+// Hacia dónde es avance cada medida. Las que no figuran (cuello, muslo, cadera…) dependen de
+// cada quien y no se celebran. El peso se lee según el objetivo del socio.
+const PROGRESS_UP = new Set(['muscle_mass', 'bicep', 'forearm', 'shoulders', 'chest', 'glute', 'calf']);
+const PROGRESS_DOWN = new Set(['body_fat_pct', 'waist', 'abdomen']);
+const GAIN_GOAL = /aumentar|ganar|masa/i;
+
+// Cómo se nombra cada medida en la frase ("Bajaste 0,8 pts de grasa corporal").
+const PROGRESS_NOUN = { weight: '', body_fat_pct: 'grasa corporal' };
+
+/**
+ * Avances del socio contra su toma anterior, listos para mostrar: solo las medidas cuya
+ * diferencia va en la dirección buena. Vacío si no hay al menos dos tomas.
+ */
+export function measureHighlights(measures, goal) {
+  const gain = GAIN_GOAL.test(goal || '');
+  return measures
+    .filter((m) => m.delta != null && Math.abs(Math.round(m.delta * 10) / 10) > 0)
+    .filter((m) => {
+      if (m.key === 'weight') return gain ? m.delta > 0 : m.delta < 0;
+      if (PROGRESS_UP.has(m.key)) return m.delta > 0;
+      if (PROGRESS_DOWN.has(m.key)) return m.delta < 0;
+      return false;
+    })
+    .map((m) => {
+      const up = m.delta > 0;
+      const amount = `${fmtNumber(Math.abs(m.delta))} ${m.unit === '%' ? 'pts' : m.unit}`;
+      const noun = PROGRESS_NOUN[m.key] ?? m.label.toLowerCase();
+      return {
+        key: m.key,
+        verb: up ? 'Aumentaste' : 'Bajaste',
+        amount,
+        tail: noun ? `${up ? 'en' : 'de'} ${noun}` : '',
+        since: m.prevDate,
+      };
+    });
+}
+
 /** Índice de masa corporal y su lectura. */
 export function bodyMassIndex(weightKg, heightCm) {
   const h = Number(heightCm) / 100;

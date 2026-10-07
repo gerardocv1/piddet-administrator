@@ -1,10 +1,12 @@
 import React from 'react';
 import QRCode from 'qrcode';
 import { gymMoney } from '../../../lib/gymLabels.js';
-import { formatShortDate } from '../../../lib/dates.js';
+import { formatDayMonth, formatShortDate } from '../../../lib/dates.js';
 import { whatsappHref } from '../whatsapp.js';
-import { AlertIcon, CashIcon, ChatIcon, CheckIcon, ClockIcon, FlipIcon, TicketIcon, TrendIcon } from './icons.jsx';
-import { longDayMonth, periodRange, subscriptionView, SUBSCRIPTION_STATE } from './gymPortalData.js';
+import { AlertIcon, BicepsIcon, CashIcon, ChatIcon, CheckIcon, ClockIcon, FlipIcon, TicketIcon, TrendIcon } from './icons.jsx';
+import {
+  longDayMonth, measureHighlights, periodRange, readMeasures, subscriptionView, SUBSCRIPTION_STATE,
+} from './gymPortalData.js';
 import { GymPortalGym } from './GymPortalGym.jsx';
 import { DaysRing } from './DaysRing.jsx';
 import s from './GymPortalSubscription.module.css';
@@ -188,6 +190,49 @@ function Balance({ view, whatsapp }) {
   );
 }
 
+// Un avance por vez: cada vez que se abre el inicio se muestra el siguiente de la lista, para
+// motivar sin saturar. El turno se guarda en el teléfono; sin almacenamiento, arranca del primero.
+const HIGHLIGHT_KEY = 'piddet_gym_portal_highlight:';
+
+function useHighlightTurn(memberCode, total) {
+  const key = HIGHLIGHT_KEY + (memberCode || '');
+  const [turn] = React.useState(() => {
+    try {
+      return Number(localStorage.getItem(key)) || 0;
+    } catch {
+      return 0;
+    }
+  });
+  React.useEffect(() => {
+    if (!total) return;
+    try {
+      localStorage.setItem(key, String(turn + 1));
+    } catch {
+      // Modo privado: se repite el mismo avance, no pasa nada.
+    }
+  }, [key, turn, total]);
+  return total ? turn % total : 0;
+}
+
+function Progress({ data, onShowMeasures }) {
+  const highlights = React.useMemo(
+    () => measureHighlights(readMeasures(data.measurements), data.member?.goal),
+    [data.measurements, data.member?.goal],
+  );
+  const index = useHighlightTurn(data.member?.member_code, highlights.length);
+  const h = highlights[index];
+  if (!h) return null;
+  return (
+    <button type="button" className={s.progress} onClick={onShowMeasures}>
+      <span className={s.progressIcon}><BicepsIcon size={18} /></span>
+      <span className={s.progressText}>
+        <span className={s.progressTitle}>{h.verb} <strong>{h.amount}</strong>{h.tail ? ` ${h.tail}` : ''}</span>
+        <span className={s.progressSince}>desde tu toma del {formatDayMonth(h.since)}</span>
+      </span>
+    </button>
+  );
+}
+
 function Closed({ title, text, whatsapp }) {
   return (
     <section aria-label="Plan actual" className={[s.plan, s.planClosed].join(' ')}>
@@ -273,6 +318,7 @@ export function GymPortalSubscription({ data, onShowMeasures }) {
   return (
     <>
       <PlanCard view={view} memberCode={data.member?.member_code} memberName={memberName} accessQr={data.access_qr} />
+      <Progress data={data} onShowMeasures={onShowMeasures} />
       {pending && <Balance view={view} whatsapp={whatsapp} />}
       <GymPortalGym data={data} />
       <Payments payments={payments} />
