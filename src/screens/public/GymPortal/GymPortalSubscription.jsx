@@ -24,22 +24,14 @@ function StatusBadge({ tone, children }) {
   );
 }
 
+// Una línea corta: desde cuándo debe y qué hacer. El monto ya lo dice todo.
 function balanceText(view) {
   const periods = view.pendingPeriods;
   const first = periods[0];
   if (!first) return null;
-  if (periods.length > 1) {
-    return <>Tienes <strong>{periods.length} períodos</strong> con saldo desde el <strong>{longDayMonth(first.start_date)}</strong>. Pásate por recepción para ponerte al día.</>;
-  }
-  if (Number(first.number) === Number(view.period.number)) {
-    return (
-      <>
-        {Number(first.number) > 1 ? 'Tu nuevo mes arrancó' : 'Tu plan arrancó'} el <strong>{longDayMonth(first.start_date)}</strong> y
-        aún no está pagado. Pásate por recepción para renovar y tomarte las medidas del mes.
-      </>
-    );
-  }
-  return <>Tienes saldo del período que arrancó el <strong>{longDayMonth(first.start_date)}</strong>. Pásate por recepción para ponerte al día.</>;
+  const since = <strong>{longDayMonth(first.start_date)}</strong>;
+  if (periods.length > 1) return <>{periods.length} períodos sin pagar desde el {since}. Pásate por recepción.</>;
+  return <>Sin pagar desde el {since}. Pásate por recepción.</>;
 }
 
 // El QR se pinta en el teléfono con la librería `qrcode` (la misma de los QR de mesa): el texto
@@ -179,16 +171,16 @@ function Balance({ view, whatsapp }) {
   return (
     <section aria-label="Saldo pendiente" className={s.balance}>
       <div className={s.balanceHead}>
+        <span className={s.balanceIcon}><ClockIcon size={22} /></span>
         <div className={s.balanceTitle}>
-          <span className={s.balanceEyebrow}>Saldo pendiente</span>
+          <span className={s.balanceEyebrow}>Pago pendiente</span>
           <span className={s.balanceAmount}>{gymMoney(view.pendingTotal)}</span>
         </div>
-        <ClockIcon size={40} />
       </div>
       <p className={s.balanceText}>{balanceText(view)}</p>
       {whatsapp && (
-        <a className={s.whatsapp} href={whatsapp} target="_blank" rel="noopener noreferrer">
-          <ChatIcon size={20} />
+        <a className={[s.whatsapp, s.whatsappCompact].join(' ')} href={whatsapp} target="_blank" rel="noopener noreferrer">
+          <ChatIcon size={18} />
           <span>Escribirle al gimnasio</span>
         </a>
       )}

@@ -341,19 +341,30 @@
 .balance {
   display: flex;
   flex-direction: column;
-  gap: var(--portal-space-3-5);
-  padding: var(--portal-space-4-5);
-  border-radius: var(--portal-radius-xl);
-  background-color: var(--portal-accent);
-  color: var(--portal-on-accent);
-  box-shadow: var(--portal-shadow-balance);
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: var(--portal-radius-lg);
+  background-color: var(--portal-paper);
+  color: var(--portal-on-paper);
+  box-shadow: var(--portal-shadow-paper);
 }
 
 .balanceHead {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+  align-items: center;
   gap: var(--space-3);
+}
+
+.balanceIcon {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-pill);
+  background-color: var(--portal-accent-soft);
+  color: var(--portal-accent);
 }
 
 .balanceTitle {
@@ -367,24 +378,25 @@
   font-weight: var(--fw-bold);
   letter-spacing: 0.10em;
   text-transform: uppercase;
-  color: var(--portal-on-accent-muted);
+  color: var(--portal-accent);
 }
 
 .balanceAmount {
   font-family: var(--font-logo);
   font-weight: var(--fw-heavy);
-  font-size: var(--portal-fs-display);
+  font-size: var(--portal-fs-date);
   line-height: 1;
-  letter-spacing: -0.01em;
 }
 
 .balanceText {
   margin: 0;
-  font-size: var(--portal-fs-body);
+  font-size: var(--portal-fs-small);
   line-height: var(--lh-base);
-  color: var(--portal-on-accent-soft);
+  color: var(--portal-on-paper-muted);
   text-wrap: pretty;
 }
+
+.balanceText strong { color: var(--portal-on-paper); }
 
 .whatsapp {
   position: relative;
@@ -400,6 +412,12 @@
   font-weight: var(--fw-heavy);
   font-size: var(--portal-fs-amount);
   text-decoration: none;
+}
+
+/* En la tarjeta blanca del saldo el botón es secundario: más bajo y con letra menor. */
+.whatsappCompact {
+  height: 44px;
+  font-size: var(--portal-fs-lead);
 }
 
 .whatsapp:hover { background-color: var(--portal-whatsapp-hover); color: var(--portal-on-accent); }
