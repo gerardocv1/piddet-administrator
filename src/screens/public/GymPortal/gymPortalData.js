@@ -109,6 +109,18 @@ export function readMeasure(type, entry) {
   const last = series[series.length - 1];
   const prev = series.length > 1 ? series[series.length - 2] : null;
 
+  // Historial completo, una fila por toma (la más reciente primero): el valor de la serie
+  // principal, en las de lado también el izquierdo, y la diferencia contra la toma anterior.
+  const leftByDate = Object.fromEntries(left.map((p) => [p.date, Number(p.value)]));
+  const history = series
+    .map((p, i) => ({
+      date: p.date,
+      value: Number(p.value),
+      left: type.sided && series === right ? leftByDate[p.date] ?? null : null,
+      delta: i > 0 ? Number(p.value) - Number(series[i - 1].value) : null,
+    }))
+    .reverse();
+
   return {
     key: type.key,
     label: type.label,
@@ -122,6 +134,7 @@ export function readMeasure(type, entry) {
     delta: prev ? Number(last.value) - Number(prev.value) : null,
     right: right.length ? Number(right[right.length - 1].value) : null,
     left: left.length ? Number(left[left.length - 1].value) : null,
+    history,
   };
 }
 

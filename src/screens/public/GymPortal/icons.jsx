@@ -21,6 +21,7 @@ const Svg = ({ size = 20, strokeWidth = 2.2, className, children }) => (
 );
 
 export const DumbbellIcon = (p) => <Svg strokeWidth={2.6} {...p}><path d="M6 8v8M3 10v4M18 8v8M21 10v4M6 12h12" /></Svg>;
+export const ChevronRightIcon = (p) => <Svg strokeWidth={2.4} {...p}><path d="M9 6l6 6-6 6" /></Svg>;
 export const ChevronDownIcon = (p) => <Svg strokeWidth={2.4} {...p}><path d="M6 9l6 6 6-6" /></Svg>;
 export const ArrowRightIcon = (p) => <Svg strokeWidth={2.6} {...p}><path d="M5 12h14M13 6l6 6-6 6" /></Svg>;
 export const LogoutIcon = (p) => <Svg {...p}><path d="M10 17l5-5-5-5M15 12H3M21 3v18" /></Svg>;

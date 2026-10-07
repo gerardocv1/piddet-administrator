@@ -270,7 +270,17 @@
   padding: var(--portal-space-3-5);
   border-radius: var(--portal-radius-lg);
   background-color: var(--portal-surface-soft);
+  /* Es un botón: abre el historial completo de la medida. */
+  width: 100%;
+  border: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
 }
+
+.detail:hover { background-color: var(--portal-surface-hover); }
+.detail:focus-visible { outline: 2px solid var(--portal-accent); outline-offset: 2px; }
 
 .detailText {
   flex: 1 1 auto;
@@ -353,6 +363,21 @@
   border-radius: var(--portal-radius-md);
   background-color: var(--portal-surface);
   border: 1px solid var(--portal-line);
+  /* Cada fila es un botón: abre el historial completo de la medida. */
+  width: 100%;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.row:hover { border-color: var(--portal-line-strong); }
+.row:focus-visible { outline: 2px solid var(--portal-accent); outline-offset: 2px; }
+
+.rowChevron {
+  flex: 0 0 auto;
+  margin-right: -4px;
+  color: var(--portal-text-faint);
 }
 
 .rowLabel {
@@ -397,3 +422,162 @@
   color: var(--portal-text-soft);
   text-wrap: pretty;
 }
+
+/* ── Historial de una medida (hoja inferior) ── */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background-color: var(--overlay-bg);
+  animation: pdOverlayIn 0.2s ease-out;
+}
+
+.sheet {
+  width: 100%;
+  max-width: 480px;
+  max-height: 85dvh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-2) var(--space-5) max(var(--space-6), env(safe-area-inset-bottom));
+  border-radius: var(--portal-radius-3xl) var(--portal-radius-3xl) 0 0;
+  background-color: var(--portal-surface);
+  border-top: 1px solid var(--portal-line-strong);
+  color: var(--portal-text);
+  box-shadow: var(--portal-shadow);
+  animation: pdSheetUp 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+  outline: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overlay, .sheet { animation: none; }
+}
+
+.grabber {
+  align-self: center;
+  width: 40px;
+  height: 5px;
+  border-radius: var(--radius-pill);
+  background-color: var(--portal-line-strong);
+}
+
+.sheetHead {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.sheetTitle {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sheetEyebrow {
+  font-size: var(--portal-fs-micro);
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--portal-label);
+}
+
+.sheetName {
+  margin: 0;
+  color: var(--portal-text);
+  font-family: var(--font-logo);
+  font-weight: var(--fw-heavy);
+  font-size: var(--portal-fs-date);
+  line-height: 1.1;
+}
+
+.sheetMeta {
+  font-size: var(--portal-fs-small);
+  color: var(--portal-text-muted);
+}
+
+.close {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 50%;
+  background-color: var(--portal-chip);
+  color: var(--portal-text);
+  cursor: pointer;
+}
+
+.close:focus-visible { outline: 2px solid var(--portal-accent); outline-offset: 2px; }
+
+.sheetChart {
+  padding: var(--space-3);
+  border-radius: var(--portal-radius-lg);
+  background-color: var(--portal-surface-soft);
+}
+
+.sheetSpark {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.historyList {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.historyRow {
+  display: flex;
+  align-items: baseline;
+  gap: var(--portal-space-2-5);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--portal-line);
+}
+
+.historyRow:last-child { border-bottom: 0; }
+
+.historyDate {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: var(--portal-fs-body);
+  color: var(--portal-text-soft);
+}
+
+.historyValue {
+  font-family: var(--font-logo);
+  font-weight: var(--fw-bold);
+  font-size: var(--portal-fs-amount);
+  white-space: nowrap;
+}
+
+.historyUnit {
+  margin-left: 3px;
+  font-family: var(--font-sans);
+  font-size: var(--portal-fs-caption);
+  font-weight: var(--fw-regular);
+  color: var(--portal-text-muted);
+}
+
+.historyDelta {
+  min-width: 76px;
+  text-align: right;
+  font-size: var(--portal-fs-caption);
+  font-weight: var(--fw-bold);
+  color: var(--portal-label);
+  white-space: nowrap;
+}
+
+/* La toma más reciente, resaltada en naranja. */
+.historyRowLast .historyValue { color: var(--portal-accent); }
