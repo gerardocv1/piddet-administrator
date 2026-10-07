@@ -20,7 +20,15 @@ const Svg = ({ size = 20, strokeWidth = 2.2, className, children }) => (
   </svg>
 );
 
+// Brazo flexionado: el avance en medidas (inicio del portal). Es `arm-flex` de Material Design
+// Icons (Apache-2.0), relleno en vez de trazo: el brazo dibujado a trazo no se leía.
+export const BicepsIcon = ({ size = 20, className }) => (
+  <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false">
+    <path d="M3 18.34C3 18.34 4 7.09 7 3L12 4L11 7.09H9V14.25H10C12 11.18 16.14 10.06 18.64 11.18C21.94 12.71 21.64 17.32 18.64 19.36C16.24 21 9 22.43 3 18.34Z" />
+  </svg>
+);
 export const DumbbellIcon = (p) => <Svg strokeWidth={2.6} {...p}><path d="M6 8v8M3 10v4M18 8v8M21 10v4M6 12h12" /></Svg>;
+export const ChevronRightIcon = (p) => <Svg strokeWidth={2.4} {...p}><path d="M9 6l6 6-6 6" /></Svg>;
 export const ChevronDownIcon = (p) => <Svg strokeWidth={2.4} {...p}><path d="M6 9l6 6 6-6" /></Svg>;
 export const ArrowRightIcon = (p) => <Svg strokeWidth={2.6} {...p}><path d="M5 12h14M13 6l6 6-6 6" /></Svg>;
 export const LogoutIcon = (p) => <Svg {...p}><path d="M10 17l5-5-5-5M15 12H3M21 3v18" /></Svg>;

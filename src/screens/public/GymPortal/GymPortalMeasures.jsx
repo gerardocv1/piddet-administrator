@@ -1,7 +1,7 @@
 import React from 'react';
 import { BODY_MAP_DOTS, BODY_MAP_IMAGES } from '../../../components';
 import { formatDayMonth, formatShortDate } from '../../../lib/dates.js';
-import { CalendarIcon } from './icons.jsx';
+import { CalendarIcon, ChevronRightIcon, CloseIcon } from './icons.jsx';
 import {
   bodyMassIndex, defaultFocus, fmtDelta, fmtNumber, measureDeltaText, measureValueText,
   readMeasures, sparkPoints,
@@ -29,15 +29,86 @@ function StatCard({ label, value, unit, note, noteTone, highlight }) {
   );
 }
 
-function Sparkline({ values }) {
-  const pts = sparkPoints(values);
+function Sparkline({ values, width = 132, height = 52, className }) {
+  const pts = sparkPoints(values, width, height);
   if (!pts.length) return null;
   const last = pts[pts.length - 1];
   return (
-    <svg className={s.spark} width="132" height="52" viewBox="0 0 132 52" aria-hidden="true">
+    <svg className={className || s.spark} width={width} height={height} viewBox={`0 0 ${width} ${height}`} aria-hidden="true">
       {pts.length > 1 && <polyline className={s.sparkLine} points={pts.map((p) => p.join(',')).join(' ')} />}
       <circle className={s.sparkDot} cx={last[0]} cy={last[1]} r="4.5" />
     </svg>
+  );
+}
+
+// Diferencia de una toma con su unidad; el % de grasa va en puntos, como en la lista.
+const historyDelta = (m, delta) => (delta == null ? 'Primera toma' : measureDeltaText({ ...m, delta }));
+
+// Hoja inferior con el historial completo de una medida: la curva y todas las tomas.
+function MeasureHistorySheet({ measure, onClose }) {
+  const sheetRef = React.useRef(null);
+
+  React.useEffect(() => {
+    if (!measure) return undefined;
+    sheetRef.current?.focus();
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.body.style.overflow = overflow;
+    };
+  }, [measure, onClose]);
+
+  if (!measure) return null;
+  const count = measure.history.length;
+
+  return (
+    <div className={s.overlay} onClick={onClose} role="presentation">
+      <section
+        ref={sheetRef}
+        tabIndex={-1}
+        className={s.sheet}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="portal-measure-history-title"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <span className={s.grabber} aria-hidden="true" />
+        <div className={s.sheetHead}>
+          <div className={s.sheetTitle}>
+            <span className={s.sheetEyebrow}>Historial{measure.sided ? ' · derecho / izquierdo' : ''}</span>
+            <h2 id="portal-measure-history-title" className={s.sheetName}>{measure.label}</h2>
+            <span className={s.sheetMeta}>{count} {count === 1 ? 'toma' : 'tomas'}</span>
+          </div>
+          <button type="button" className={s.close} onClick={onClose} aria-label="Cerrar">
+            <CloseIcon size={18} />
+          </button>
+        </div>
+
+        {count > 1 && (
+          <div className={s.sheetChart}>
+            <Sparkline values={measure.values} width={320} height={96} className={s.sheetSpark} />
+          </div>
+        )}
+
+        <ol className={s.historyList}>
+          {measure.history.map((h, i) => (
+            <li key={h.date} className={[s.historyRow, i === 0 ? s.historyRowLast : ''].filter(Boolean).join(' ')}>
+              <span className={s.historyDate}>{formatShortDate(h.date)}</span>
+              <span className={s.historyValue}>
+                {measure.sided && h.left != null
+                  ? `D ${fmtNumber(h.value)} · I ${fmtNumber(h.left)}`
+                  : fmtNumber(h.value)}
+                <span className={s.historyUnit}>{measure.unit}</span>
+              </span>
+              <span className={s.historyDelta}>{historyDelta(measure, h.delta)}</span>
+            </li>
+          ))}
+        </ol>
+      </section>
+    </div>
   );
 }
 
@@ -114,6 +185,8 @@ export function GymPortalMeasures({ data, gymName }) {
   const third = fat || muscle;
 
   const current = byKey[selected];
+  const [historyKey, setHistoryKey] = React.useState(null);
+  const closeHistory = React.useCallback(() => setHistoryKey(null), []);
   const count = Number(measurements.checkins_count) || 0;
   const last = measurements.last_checkin;
 
@@ -203,7 +276,12 @@ export function GymPortalMeasures({ data, gymName }) {
               </div>
 
               {current && (
-                <div className={s.detail} aria-live="polite">
+                <button
+                  type="button"
+                  className={s.detail}
+                  aria-live="polite"
+                  onClick={() => setHistoryKey(current.key)}
+                >
                   <div className={s.detailText}>
                     <span className={s.detailLabel}>{current.label}{current.sided ? ' · derecho' : ''}</span>
                     <span className={s.detailValue}>
@@ -217,9 +295,9 @@ export function GymPortalMeasures({ data, gymName }) {
                     </span>
                   </div>
                   <Sparkline values={current.values} />
-                </div>
+                </button>
               )}
-              <p className={s.hint}>Toca un punto para ver esa medida y su evolución.</p>
+              <p className={s.hint}>Toca un punto para ver esa medida, y la tarjeta para todo su historial.</p>
             </section>
           )}
 
@@ -227,16 +305,20 @@ export function GymPortalMeasures({ data, gymName }) {
             <h2 className={[s.h2, s.allTitle].join(' ')}>Todas las medidas</h2>
             <ul className={s.rows}>
               {measures.map((m) => (
-                <li key={m.key} className={s.row}>
-                  <span className={s.rowLabel}>{m.label}</span>
-                  <span className={s.rowValue}>{measureValueText(m)}</span>
-                  <span className={s.rowDelta}>{measureDeltaText(m)}</span>
+                <li key={m.key}>
+                  <button type="button" className={s.row} onClick={() => setHistoryKey(m.key)}>
+                    <span className={s.rowLabel}>{m.label}</span>
+                    <span className={s.rowValue}>{measureValueText(m)}</span>
+                    <span className={s.rowDelta}>{measureDeltaText(m)}</span>
+                    <ChevronRightIcon size={16} className={s.rowChevron} />
+                  </button>
                 </li>
               ))}
             </ul>
           </section>
         </>
       )}
+      <MeasureHistorySheet measure={historyKey ? byKey[historyKey] : null} onClose={closeHistory} />
     </>
   );
 }
