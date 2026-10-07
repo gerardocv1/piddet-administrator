@@ -231,9 +231,6 @@
   --portal-on-accent: #0b2630;
   --portal-on-accent-soft: rgba(11, 38, 48, 0.85);
   --portal-on-accent-muted: rgba(11, 38, 48, 0.72);
-  --portal-paper: #ffffff;                     /* tarjeta clara sobre el petróleo (aviso de saldo) */
-  --portal-on-paper: #0b2630;
-  --portal-on-paper-muted: rgba(11, 38, 48, 0.68);
   --portal-scrim: rgba(11, 38, 48, 0.35);
   --portal-nav-bg: rgba(11, 38, 48, 0.82); /* barra inferior: --portal-bg translúcido bajo el desenfoque */
   --portal-nav-h: 3.5rem;        /* 56px: alto de la barra inferior, sin la zona segura */
@@ -251,7 +248,6 @@
   --portal-shadow-soft: 0 24px 48px rgba(0, 0, 0, 0.35);
   --portal-shadow-pill: 0 6px 16px rgba(0, 0, 0, 0.35);
   --portal-shadow-cta: 0 12px 28px rgba(255, 124, 0, 0.35);
-  --portal-shadow-paper: 0 12px 28px rgba(0, 0, 0, 0.30);
   --portal-radius-sm: 0.75rem;   /* 12px */
   --portal-radius: 0.875rem;     /* 14px */
   --portal-radius-md: 1rem;      /* 16px */
