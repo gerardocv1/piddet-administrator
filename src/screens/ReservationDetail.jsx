@@ -361,6 +361,9 @@ export function ReservationDetail() {
 
       {errorBlock}
 
+      <PaymentPendingAlert status={status} deadline={data.payment_deadline} autoCancels={data.auto_cancels === true}
+        paid={summary.paid} total={accountTotal} />
+
       {isOpen && Number(extraInfo.count) > 0 && !extraInfo.configured && (
         <Alert tone="warning" title={`${extraInfo.count} ${Number(extraInfo.count) === 1 ? 'persona' : 'personas'} sobre la tarifa sin cobrar`}
           action={<Button size="sm" variant="secondary" icon="fas fa-gear"
@@ -952,6 +955,64 @@ function GuestProfile({ guest, detail, loading }) {
       )}
     </div>
   );
+}
+
+// Una pre-reserva (pendiente) o un pago reportado sin verificar todavía no es plata recibida: se
+// avisa arriba de todo para que nadie la trate como confirmada al abrirla.
+function PaymentPendingAlert({ status, deadline, autoCancels, paid, total }) {
+  const pending = status === RESERVATION_STATUS.PENDING;
+  const validating = status === RESERVATION_STATUS.VALIDATING_PAYMENT;
+  const now = useNow(pending && deadline ? 30000 : null);
+  if (!pending && !validating) return null;
+
+  const paidLine = Number(total) > 0
+    ? <> Pagado <strong>{reservationMoney(paid)}</strong> de <strong>{reservationMoney(total)}</strong>.</>
+    : null;
+
+  if (validating) {
+    return (
+      <Alert tone="info" variant="outline" title="Comprobante en validación">
+        El huésped reportó el pago pero aún no se ha verificado. Verifícalo antes de confirmar.{paidLine}
+      </Alert>
+    );
+  }
+
+  const deadlineDate = deadline ? new Date(deadline) : null;
+  const hasDeadline = deadlineDate && !Number.isNaN(deadlineDate.getTime());
+  const expired = hasDeadline && deadlineDate.getTime() <= now;
+
+  return (
+    <Alert tone={expired ? 'danger' : 'warning'} variant="outline" title="Pago pendiente">
+      Esta es una <strong>PRE-RESERVA</strong>: todavía no se ha pagado. Se confirma cuando se verifique el abono.
+      {hasDeadline && (
+        expired
+          ? <> <strong>Plazo para pagar vencido.</strong></>
+          : <> Plazo para pagar: <strong>{paymentDeadlineLabel(deadlineDate)}</strong>.</>
+      )}
+      {autoCancels && <> Si no se paga en el plazo, se cancela automáticamente.</>}
+      {paidLine}
+    </Alert>
+  );
+}
+
+// "hasta las 4:22 p. m."; si el plazo cae otro día, con la fecha delante.
+function paymentDeadlineLabel(date) {
+  const time = date.toLocaleTimeString('es-CO', { hour: 'numeric', minute: '2-digit' });
+  if (date.toDateString() === new Date().toDateString()) return `hasta las ${time}`;
+  const day = date.toLocaleDateString('es-CO', { day: 'numeric', month: 'short' });
+  return `hasta el ${day}, ${time}`;
+}
+
+// Reloj que se refresca cada `intervalMs` (null = detenido) para que el plazo pase a vencido sin
+// recargar la pantalla.
+function useNow(intervalMs) {
+  const [now, setNow] = React.useState(() => Date.now());
+  React.useEffect(() => {
+    if (!intervalMs) return undefined;
+    const timer = setInterval(() => setNow(Date.now()), intervalMs);
+    return () => clearInterval(timer);
+  }, [intervalMs]);
+  return now;
 }
 
 function SummaryRow({ label, value, strong }) {

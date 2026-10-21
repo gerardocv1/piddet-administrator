@@ -19,6 +19,7 @@ const weekdayIndex = (date) => (date.getDay() + 6) % 7;
 // Estilo del evento por estado (color del punto y de la barra).
 const STATUS_CLASS = {
   [RESERVATION_STATUS.PENDING]: t.evPending,
+  [RESERVATION_STATUS.VALIDATING_PAYMENT]: t.evValidating,
   [RESERVATION_STATUS.CONFIRMED]: t.evConfirmed,
   [RESERVATION_STATUS.CHECKED_IN]: t.evCheckedIn,
   [RESERVATION_STATUS.CHECKED_OUT]: t.evCheckedOut,
