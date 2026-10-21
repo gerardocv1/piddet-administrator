@@ -4,6 +4,7 @@ import { api } from '../lib/api.js';
 import { auth as authLib } from '../lib/auth/index.js';
 import { useResource } from '../lib/useResource.js';
 import { usePermissions } from '../lib/permissions/usePermissions.js';
+import { useFunctionalities } from '../lib/permissions/useFunctionalities.js';
 import { AiTokensCard } from './CompanyAiTokens.jsx';
 import { DangerZoneCard } from './CompanyDangerZone.jsx';
 import { FunctionalitiesCard } from './CompanyFunctionalities.jsx';
@@ -32,12 +33,17 @@ const DATA_FIELDS = [
   { key: 'website', label: 'Sitio web', primary: true },
 ];
 
+const RESERVATION_PAYMENT_INFO_FIELD = { key: 'reservation_payment_info', label: 'Datos de pago para reservas' };
+const RESERVATION_PAYMENT_INFO_MAX = 120;
+
 const initial = (name = '') => (name.trim()[0] || '?').toUpperCase();
 const href = (url = '') => (/^https?:\/\//i.test(url) ? url : `https://${url}`);
 
 export function CompanyProfile() {
   const { data: company, loading, error, reload, setData } = useResource(api.companyProfile, null, []);
   const { can } = usePermissions();
+  const { has } = useFunctionalities();
+  const reservationsOn = has('functionality_reservations');
   const editable = can('api-module-company');
   const [editing, setEditing] = React.useState(false);
 
@@ -80,6 +86,7 @@ export function CompanyProfile() {
   }
 
   const stats = RESUMEN.filter((r) => company[r.key] != null);
+  const dataFields = reservationsOn ? [...DATA_FIELDS, RESERVATION_PAYMENT_INFO_FIELD] : DATA_FIELDS;
   const edit = editable ? () => setEditing(true) : undefined;
 
   return (
@@ -130,7 +137,7 @@ export function CompanyProfile() {
           )} />
         <Card.Body>
           <dl className={t.facts}>
-            {DATA_FIELDS.map((f) => (
+            {dataFields.map((f) => (
               <div key={f.key} className={t.fact}>
                 <dt className={t.factLabel}>{f.label}</dt>
                 <dd className={[t.factValue, f.primary && company[f.key] ? t.factLink : ''].filter(Boolean).join(' ')}>
@@ -168,7 +175,7 @@ export function CompanyProfile() {
 
       {can('company-catalog-purge') && <DangerZoneCard onPurged={reload} />}
 
-      {editing && <CompanyEditModal company={company} onClose={() => setEditing(false)} onSaved={onSaved} />}
+      {editing && <CompanyEditModal company={company} reservationsOn={reservationsOn} onClose={() => setEditing(false)} onSaved={onSaved} />}
     </div>
   );
 }
@@ -176,7 +183,7 @@ export function CompanyProfile() {
 // ── Modal: editar datos + logo de la empresa ──
 // El logo se edita (recorte/giro) y solo al Guardar se sube a S3 (público); su `name` se manda
 // como `icon` junto al resto de campos.
-function CompanyEditModal({ company, onClose, onSaved }) {
+function CompanyEditModal({ company, reservationsOn, onClose, onSaved }) {
   const uploaderRef = React.useRef(null);
   // Catálogo de tipos de negocio: personaliza terminología y vistas del panel.
   const { data: companyTypes } = useResource(api.companyTypes, [], []);
@@ -189,6 +196,7 @@ function CompanyEditModal({ company, onClose, onSaved }) {
     phone: company.phone || '',
     email: company.email || '',
     website: company.website || '',
+    reservation_payment_info: company.reservation_payment_info || '',
     brand_primary: company.brand_primary || DEFAULT_BRAND_PRIMARY,
     brand_secondary: company.brand_secondary || DEFAULT_BRAND_SECONDARY,
     app_name: company.app_name || '',
@@ -216,6 +224,7 @@ function CompanyEditModal({ company, onClose, onSaved }) {
         phone: form.phone.trim(),
         email: form.email.trim(),
         website: form.website.trim(),
+        reservation_payment_info: form.reservation_payment_info.trim() || null,
         brand_primary: form.brand_primary,
         brand_secondary: form.brand_secondary,
         app_name: form.app_name.trim() || null,
@@ -253,6 +262,15 @@ function CompanyEditModal({ company, onClose, onSaved }) {
         </div>
         <Input label="Dirección" value={form.address} onChange={(e) => set('address', e.target.value)} />
         <Textarea label="Descripción" rows={3} value={form.description} onChange={(e) => set('description', e.target.value)} />
+
+        {reservationsOn && (
+          <div className={t.brandFields}>
+            <span className={t.sectionTitle}>Reservas</span>
+            <Input label={RESERVATION_PAYMENT_INFO_FIELD.label} maxLength={RESERVATION_PAYMENT_INFO_MAX}
+              hint="Se envía en el SMS de pre-reserva. Ej.: Nequi 3103697631 / Llave Bre-B 0092913173"
+              value={form.reservation_payment_info} onChange={(e) => set('reservation_payment_info', e.target.value)} />
+          </div>
+        )}
 
         <div className={t.brandFields}>
           <span className={t.sectionTitle}>Logo</span>

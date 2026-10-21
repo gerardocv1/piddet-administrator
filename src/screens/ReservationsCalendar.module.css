@@ -104,6 +104,10 @@
 /* Color del evento por estado. */
 .evPending { background: var(--color-warning-100); }
 .evPending .eventDot { background: var(--color-warning, #fb6340); }
+.evValidating { background: var(--color-warning-100); }
+/* Mismo tono que pendiente (aún no hay plata verificada) pero con el punto hueco: en el teléfono
+   el chip pierde el texto y el punto es lo único que distingue un estado del otro. */
+.evValidating .eventDot { background: transparent; box-shadow: inset 0 0 0 2px var(--color-warning, #fb6340); }
 .evConfirmed { background: var(--color-info-100); }
 .evConfirmed .eventDot { background: var(--color-info, #11cdef); }
 .evCheckedIn { background: var(--color-success-100); }

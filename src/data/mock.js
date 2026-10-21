@@ -4185,6 +4185,9 @@ function resolveReservationsCore(sub, query, { method, body }) {
       has_decoration: reservationHasDecoration(r),
       check_in_time: stayUnit?.check_in_time || null,
       check_out_time: stayUnit?.check_out_time || null,
+      // Plazo de la pre-reserva: las demo no guardan created_at, así que se simula a 40 minutos.
+      payment_deadline: r.status === 1 ? new Date(Date.now() + 40 * 60000).toISOString() : null,
+      auto_cancels: r.status === 1,
       summary: {
         lodging_subtotal: r.lodging_subtotal, services_total: r.services_total,
         charges_total: chargesTotal.toFixed(2), total: r.total, account_total: accountTotal.toFixed(2),
