@@ -108,6 +108,7 @@ export function ReservationDetail() {
   const status = Number(data.status);
   const meta = reservationStatusMeta(status);
   const isPending = status === RESERVATION_STATUS.PENDING;
+  const isValidatingPayment = status === RESERVATION_STATUS.VALIDATING_PAYMENT;
   const isConfirmed = status === RESERVATION_STATUS.CONFIRMED;
   const isCheckedIn = status === RESERVATION_STATUS.CHECKED_IN;
   const isCheckedOut = status === RESERVATION_STATUS.CHECKED_OUT;
@@ -327,6 +328,10 @@ export function ReservationDetail() {
         action={
           isPending ? (
             <Button variant="secondary" size="sm" icon="fas fa-circle-check" loading={busy} onClick={() => doConfirm()}>Confirmar</Button>
+          ) : isValidatingPayment ? (
+            <Button variant="primary" size="sm" icon="fas fa-circle-check" loading={busy}
+              title="Confirma la reserva después de verificar el comprobante del huésped"
+              onClick={() => doConfirm()}>Confirmar pago</Button>
           ) : isConfirmed ? (
             <Button variant="outline-primary" size="sm" icon="fas fa-door-open" disabled={!precheckinDone}
               title={precheckinDone ? 'Registrar la entrada del huésped' : 'El huésped debe completar su pre-check-in antes de la entrada (o usa el check-in forzado del menú de acciones)'}
