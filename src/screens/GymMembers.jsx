@@ -52,7 +52,7 @@ export function GymMembers() {
   const { toast } = useToast();
   const [params, setParams] = useSearchParams();
   const status = params.get('status') || undefined;
-  // Estado de la membresía (active | grace | pending | cancelled | none): llega desde el widget
+  // Estado de la membresía (active | grace | pending | paused | cancelled | none): llega desde el widget
   // «Afiliados» del inicio o del filtro, con las mismas reglas que sus contadores.
   const membershipFilter = params.get('membership') || undefined;
   // Mes de cumpleaños (1-12): llega desde el widget del inicio («Ver todos») o del filtro.
@@ -208,12 +208,15 @@ export function GymMembers() {
   // no su activo/inactivo administrativo. Sin suscripción activa, la acción es Suscribir.
   const membership = (r) => {
     if (!r.subscription) {
-      return { badge: { label: 'Sin suscripción', variant: 'neutral' }, endDate: null, detail: null, alive: false, pending: 0 };
+      return { badge: { label: 'Sin suscripción', variant: 'neutral' }, endDate: null, detail: null, canSubscribe: true, pending: 0 };
     }
     const active = Number(r.subscription.subscription_status) === GYM_SUBSCRIPTION_STATUS.ACTIVE;
+    const paused = Number(r.subscription.subscription_status) === GYM_SUBSCRIPTION_STATUS.PAUSED;
     const inGrace = active && Number(r.subscription.computed_status) === GYM_PERIOD_STATUS.GRACE;
     // El badge sigue la membresía que calcula el backend (la misma del filtro y del widget del
-    // inicio): «En gracia» en cuanto debe un período que ya arrancó, el vigente o uno anterior.
+    // inicio): «En gracia» en cuanto debe un período que ya arrancó, el vigente o uno anterior;
+    // «Pausada» si la suscripción que la representa está pausada (`membership` = paused, o
+    // status 3 si la fila no trae `membership`).
     const badge = r.membership
       ? gymMembershipMeta(r.membership)
       : (inGrace ? gymPeriodStatusMeta(GYM_PERIOD_STATUS.GRACE) : gymSubscriptionStatusMeta(r.subscription.subscription_status));
@@ -224,7 +227,8 @@ export function GymMembers() {
       badge,
       endDate,
       detail: active ? (endDate && `Vence ${endDate}`) : r.subscription.plan_name,
-      alive: active,
+      // Una pausada no se suscribe de nuevo (el backend lo rechaza): se reanuda desde la ficha.
+      canSubscribe: !active && !paused,
       pending: active ? Number(r.subscription.pending_total) || 0 : 0,
     };
   };
@@ -322,7 +326,7 @@ export function GymMembers() {
         )}
         {/* Cada afiliado es una tarjeta con marco: arriba quién es (avatar y nombre) y abajo su
             membresía. Toda la zona de identidad navega a la ficha; la única acción aparte es
-            Suscribir, y solo cuando no tiene membresía activa. */}
+            Suscribir, y solo cuando no tiene membresía activa ni pausada. */}
         {!loading && !error && rows.map((r) => {
           const ms = membership(r);
           return (
@@ -334,7 +338,7 @@ export function GymMembers() {
               meta={ms.pending > 0
                 ? <>{ms.detail && <>{ms.detail} · </>}<span className={gl.saldo}>saldo {gymMoney(ms.pending)}</span></>
                 : ms.detail}
-              action={!ms.alive ? (
+              action={ms.canSubscribe ? (
                 <Button variant="secondary" size="sm" icon="fas fa-plus"
                   onClick={() => navigate(`/gym/members/${r.id}?action=subscribe`)}>
                   Suscribir

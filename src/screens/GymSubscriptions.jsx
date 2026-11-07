@@ -15,7 +15,12 @@ const EMPTY = { items: [], pagination: null };
 const STATUS_OPTIONS = [
   { value: String(GYM_SUBSCRIPTION_STATUS.ACTIVE), label: 'Activa' },
   { value: String(GYM_SUBSCRIPTION_STATUS.CANCELLED), label: 'Cancelada' },
+  { value: String(GYM_SUBSCRIPTION_STATUS.PAUSED), label: 'Pausada' },
 ];
+
+// Solo una suscripción activa es deuda por cobrar: una cancelada o una pausada (no recibe pagos
+// hasta reanudarla) no muestra saldo.
+const listPending = (r) => (Number(r.status) === GYM_SUBSCRIPTION_STATUS.ACTIVE ? gymSubscriptionPending(r) : 0);
 
 // El badge de una suscripción activa refleja además su período vigente: "En gracia" es el aviso
 // de que el corte automático está cerca.
@@ -67,10 +72,10 @@ export function GymSubscriptions() {
     { key: 'end_date', header: 'Vence', width: 130, render: (r) => formatShortDate(r.current_period?.end_date) },
     { key: 'price', header: 'Precio', width: 120, align: 'right', render: (r) => <span className={s.priceCell}>{gymMoney(r.current_period?.price)}</span> },
     {
-      // El saldo suma los períodos no cancelados; una suscripción cancelada no es deuda.
+      // El saldo suma los períodos no cancelados; una suscripción cancelada o pausada no es deuda.
       key: 'saldo', header: 'Saldo', width: 110, align: 'right',
       render: (r) => {
-        const pending = Number(r.status) === GYM_SUBSCRIPTION_STATUS.CANCELLED ? 0 : gymSubscriptionPending(r);
+        const pending = listPending(r);
         return pending > 0 ? <span className={gl.saldo}>{gymMoney(pending)}</span> : <span className={s.faint}>—</span>;
       },
     },
@@ -134,7 +139,7 @@ export function GymSubscriptions() {
         )}
         {!loading && !error && rows.map((r) => {
           const m = subscriptionBadge(r);
-          const pending = Number(r.status) === GYM_SUBSCRIPTION_STATUS.CANCELLED ? 0 : gymSubscriptionPending(r);
+          const pending = listPending(r);
           return (
             <Card key={r.id} className={gl.cardPad}>
               <button type="button" className={gl.tapArea}

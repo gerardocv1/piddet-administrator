@@ -228,9 +228,9 @@ function GymBirthdaysCard({ rows, loading, error, onOpen, onSeeAll }) {
 const EXPIRING_LIMIT = 3;
 
 // Contadores del widget «Afiliados», en el orden en que se leen: quién está al día, a quién hay
-// que cobrar (debe un período que ya arrancó: corre la gracia hasta el corte automático) y quién
-// se fue. Cada uno abre Afiliados con el filtro de membresía puesto (`?membership=`), que aplica
-// las mismas reglas del backend. «Pendientes de pago» no va aparte: contaba casi a los mismos que
+// que cobrar (debe un período que ya arrancó: corre la gracia hasta el corte automático), quién
+// quedó en pausa (sin acceso hasta reanudarla) y quién se fue. Cada uno abre Afiliados con el
+// filtro de membresía puesto (`?membership=`), que aplica las mismas reglas del backend. «Pendientes de pago» no va aparte: contaba casi a los mismos que
 // «En gracia»; el saldo por cobrar va en la baldosa de la gracia.
 const MEMBERSHIP_TILES = [
   { key: 'active', label: 'Activos', icon: 'fas fa-circle-check', tone: 'success', meta: () => 'Al día con su pago' },
@@ -238,6 +238,7 @@ const MEMBERSHIP_TILES = [
     key: 'grace', label: 'En gracia', icon: 'fas fa-triangle-exclamation', tone: 'warning',
     meta: (data) => <>Por cobrar <strong>{gymMoney(data?.pending_amount)}</strong></>,
   },
+  { key: 'paused', label: 'Pausados', icon: 'fas fa-circle-pause', tone: 'info', meta: () => 'Sin acceso hasta reanudarla' },
   { key: 'cancelled', label: 'Cancelados', icon: 'fas fa-ban', tone: 'neutral', meta: () => 'Sin suscripción activa' },
 ];
 
@@ -251,6 +252,8 @@ function GymMembersSummaryCard({ data, loading, error, onOpen, onSeeAll }) {
   const barSegments = counts ? [
     { key: 'active', value: counts.active, className: s.memberBarActive },
     { key: 'grace', value: counts.grace, className: s.memberBarGrace },
+    // Un backend anterior a la pausa no manda `paused`: cuenta como 0.
+    { key: 'paused', value: counts.paused ?? 0, className: s.memberBarPaused },
     { key: 'cancelled', value: counts.cancelled, className: s.memberBarCancelled },
   ].filter((seg) => seg.value > 0) : [];
 

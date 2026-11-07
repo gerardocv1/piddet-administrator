@@ -58,14 +58,17 @@ export const gymPlanDurationLabel = (plan) => {
 };
 
 // Estados de una suscripción (deben coincidir con las constantes del modelo GymSubscription).
-// La suscripción es CONTINUA (una por afiliado): solo está activa o cancelada. La cancelación
-// puede ser manual o automática (corte por no pago del período).
-export const GYM_SUBSCRIPTION_STATUS = { ACTIVE: 1, CANCELLED: 2 };
+// La suscripción es CONTINUA (una por afiliado): activa, cancelada o pausada. La cancelación
+// puede ser manual o automática (corte por no pago del período). La pausada la detiene el ciclo
+// cuando el período siguiente al último cubierto no tuvo abono (`paused_at`, `pause_reason`):
+// no entra con QR ni recibe pagos, y se reanuda en lugar de suscribirse de nuevo.
+export const GYM_SUBSCRIPTION_STATUS = { ACTIVE: 1, CANCELLED: 2, PAUSED: 3 };
 
 export const gymSubscriptionStatusMeta = (status) => {
   switch (Number(status)) {
     case GYM_SUBSCRIPTION_STATUS.ACTIVE: return { label: 'Activa', variant: 'success' };
     case GYM_SUBSCRIPTION_STATUS.CANCELLED: return { label: 'Cancelada', variant: 'neutral' };
+    case GYM_SUBSCRIPTION_STATUS.PAUSED: return { label: 'Pausada', variant: 'warning' };
     default: return { label: '—', variant: 'neutral' };
   }
 };
@@ -118,13 +121,15 @@ export const gymSubscriptionPending = (sub) => Math.max(0, Number(sub?.pending_t
 // afiliados y los contadores del widget del inicio. El backend acepta además `pending` (quien debe
 // algo, cruzado con activa y en gracia), pero el panel no lo ofrece: contaba casi a los mismos que
 // «En gracia», que es a quien se le cobra.
+// `paused` = sin suscripción activa y con una pausada (no cuenta como activa ni en gracia).
 export const GYM_MEMBERSHIP = {
-  ACTIVE: 'active', GRACE: 'grace', PENDING: 'pending', CANCELLED: 'cancelled', NONE: 'none',
+  ACTIVE: 'active', GRACE: 'grace', PENDING: 'pending', PAUSED: 'paused', CANCELLED: 'cancelled', NONE: 'none',
 };
 
 export const GYM_MEMBERSHIP_OPTIONS = [
   { value: GYM_MEMBERSHIP.ACTIVE, label: 'Activa' },
   { value: GYM_MEMBERSHIP.GRACE, label: 'En gracia' },
+  { value: GYM_MEMBERSHIP.PAUSED, label: 'Pausada' },
   { value: GYM_MEMBERSHIP.CANCELLED, label: 'Cancelada' },
   { value: GYM_MEMBERSHIP.NONE, label: 'Sin suscripción' },
 ];
@@ -134,6 +139,7 @@ export const gymMembershipMeta = (membership) => {
   switch (membership) {
     case GYM_MEMBERSHIP.ACTIVE: return { label: 'Activa', variant: 'success' };
     case GYM_MEMBERSHIP.GRACE: return { label: 'En gracia', variant: 'warning' };
+    case GYM_MEMBERSHIP.PAUSED: return { label: 'Pausada', variant: 'warning' };
     case GYM_MEMBERSHIP.CANCELLED: return { label: 'Cancelada', variant: 'neutral' };
     default: return { label: 'Sin suscripción', variant: 'neutral' };
   }

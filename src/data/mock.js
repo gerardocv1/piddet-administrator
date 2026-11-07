@@ -4633,6 +4633,8 @@ let mockGymMembers = [
   // Miguel va sin sexo y sin fecha de nacimiento a propósito: hace visible el estado "Sin definir"
   // de la ficha y el aviso de sexo de la vista de progreso.
   { id: 5, user_id: 5005, member_code: 'M00005', member_name: 'Miguel Torres', document_snapshot: '1055443322', sex: null, birthdate: null, email: null, phone_number: '3025556677', id_type_id: 1, height_cm: null, goal_id: 6, goal: 'Salud general', health_notes: '', status: 1, joined_at: '2026-08-18' },
+  // Sofía tiene la suscripción PAUSADA: el estado «Pausada» del listado, el filtro y el inicio.
+  { id: 6, user_id: 5006, member_code: 'M00006', member_name: 'Sofía Vargas', document_snapshot: '1034567891', sex: 'F', birthdate: '1997-03-14', email: null, phone_number: '3031112233', id_type_id: 1, height_cm: '168.0', goal_id: 6, goal: 'Salud general', health_notes: '', status: 1, joined_at: '2026-07-20' },
 ];
 
 // Años cumplidos hoy: el backend manda la edad calculada junto a la fecha.
@@ -4678,12 +4680,13 @@ const gymMemberDetailPresent = (m) => ({
 });
 
 const gymMemberListPresent = (m) => {
-  // La suscripción es continua: si hay una activa, esa es "la membresía"; si no, la más
-  // reciente (cancelada) queda como historial de solo lectura — espejo del backend.
+  // La suscripción es continua: si hay una activa, esa es "la membresía"; si no, la pausada; si
+  // no, la más reciente (cancelada) queda como historial de solo lectura — espejo del backend.
   const subsForMember = mockGymSubscriptions
     .filter((sub) => sub.gym_member_id === m.id)
     .sort((a, b) => (a.subscribed_at < b.subscribed_at ? 1 : -1));
-  const sub = subsForMember.find((s) => s.status === GYM_SUB_ACTIVE) || subsForMember[0] || null;
+  const sub = subsForMember.find((s) => s.status === GYM_SUB_ACTIVE)
+    || subsForMember.find((s) => s.status === GYM_SUB_PAUSED) || subsForMember[0] || null;
   const period = sub ? currentPeriodOf(sub.id) : null;
   const active = !!sub && sub.status === GYM_SUB_ACTIVE;
   const pending = active
@@ -4705,8 +4708,8 @@ const gymMemberListPresent = (m) => {
 
 // Estado de la membresía del afiliado, espejo de GymMember::MEMBERSHIP_* del backend:
 // `grace` = suscripción activa con saldo en un período no cancelado que ya arrancó (el vigente o
-// uno anterior); `active` = activa y al día; `cancelled` = sin activa y con alguna cancelada;
-// `none` = nunca se suscribió. `pending` (activa con saldo en cualquier período no cancelado) se
+// uno anterior); `active` = activa y al día; `paused` = sin activa y con una pausada;
+// `cancelled` = sin activa ni pausada y con alguna cancelada; `none` = nunca se suscribió. `pending` (activa con saldo en cualquier período no cancelado) se
 // cruza con los dos primeros.
 const livePeriodsOf = (subscriptionId) => mockGymSubscriptionPeriods
   .filter((p) => p.subscription_id === subscriptionId && p.status !== GYM_PER_CANCELLED);
@@ -4714,7 +4717,10 @@ const periodOwes = (p) => Number(p.price) > periodPaidTotal(p);
 const gymMembershipOf = (m) => {
   const subs = mockGymSubscriptions.filter((sub) => sub.gym_member_id === m.id);
   const active = subs.find((sub) => sub.status === GYM_SUB_ACTIVE);
-  if (!active) return subs.length ? 'cancelled' : 'none';
+  if (!active) {
+    if (subs.some((sub) => sub.status === GYM_SUB_PAUSED)) return 'paused';
+    return subs.length ? 'cancelled' : 'none';
+  }
   const due = livePeriodsOf(active.id).some((p) => p.start_date <= todayIso() && periodOwes(p));
   return due ? 'grace' : 'active';
 };
@@ -4729,6 +4735,8 @@ const gymMembershipMatches = (m, membership) => (membership === 'pending'
 // `computed_status` se calcula en vivo aquí igual que en el backend.
 const GYM_SUB_ACTIVE = 1;
 const GYM_SUB_CANCELLED = 2;
+// Pausada: el ciclo la detuvo porque el período siguiente al último cubierto no tuvo abono.
+const GYM_SUB_PAUSED = 3;
 const GYM_PER_CURRENT = 1;
 const GYM_PER_GRACE = 2;
 const GYM_PER_CLOSED = 3;
@@ -4786,6 +4794,7 @@ const gymSubListRow = (sub) => {
     id: sub.id, gym_member_id: sub.gym_member_id, member_name: sub.member_name,
     plan_id: sub.plan_id, plan_name: sub.plan_name, status: sub.status,
     subscribed_at: sub.subscribed_at, cancelled_at: sub.cancelled_at,
+    paused_at: sub.paused_at ?? null,
     current_period: current ? gymPeriodSummary(current) : null,
     pending_total: pendingTotal.toFixed(2),
   };
@@ -4808,6 +4817,8 @@ const gymSubDetailPresent = (sub) => {
     cancellation_reason: sub.cancellation_reason,
     // NULL en cancelled_by = corte automático del sistema.
     cancelled_automatically: sub.status === GYM_SUB_CANCELLED && sub.cancelled_by == null,
+    paused_at: sub.paused_at ?? null,
+    pause_reason: sub.pause_reason ?? null,
     pending_total: pendingTotal.toFixed(2),
     current_period: current ? gymPeriodSummary(current) : null,
     periods: periods.map(gymPeriodFull),
@@ -4847,6 +4858,13 @@ let mockGymSubscriptions = [
   {
     id: 'gsub-5', gym_member_id: 5, member_name: 'Miguel Torres', plan_id: 1, plan_name: 'Plan mensual',
     status: GYM_SUB_ACTIVE, subscribed_at: isoDay(44), cancelled_at: null, cancellation_reason: null, cancelled_by: null,
+  },
+  // Sofía: PAUSADA por el ciclo — el período 1 quedó pago y el 2 agotó su gracia sin abono.
+  // No entra con QR ni recibe pagos hasta reanudarla.
+  {
+    id: 'gsub-6', gym_member_id: 6, member_name: 'Sofía Vargas', plan_id: 1, plan_name: 'Plan mensual',
+    status: GYM_SUB_PAUSED, subscribed_at: isoDay(70), cancelled_at: null, cancellation_reason: null, cancelled_by: null,
+    paused_at: isoDay(8), pause_reason: 'Sin abono del período 2',
   },
 ];
 
@@ -4915,6 +4933,21 @@ let mockGymSubscriptionPeriods = [
     payments: [
       { id: 'gpay-5a', registers_income: true, value: '90000.00', payment_method: 'cash', payment_method_name: 'Efectivo', payment_date: isoDay(1), notes: null, order_id: 'ord-gym-5a', status: 1, created_by_name: 'Gerardo', annulled_at: null, annulment_reason: null },
     ],
+  },
+  // ── Sofía (gsub-6) — pausada: período 1 pagado y concluido, período 2 sin abono ──
+  {
+    id: 'gper-6a', subscription_id: 'gsub-6', gym_member_id: 6, member_name: 'Sofía Vargas',
+    number: 1, plan_id: 1, plan_name: 'Plan mensual', price: '90000.00', duration_months: 1, duration_days: 30, grace_period_days: 3,
+    start_date: isoDay(70), end_date: isoDay(41), grace_ends_at: isoDay(38), status: GYM_PER_CLOSED,
+    payments: [
+      { id: 'gpay-6a', registers_income: true, value: '90000.00', payment_method: 'cash', payment_method_name: 'Efectivo', payment_date: isoDay(70), notes: null, order_id: 'ord-gym-6a', status: 1, created_by_name: 'Gerardo', annulled_at: null, annulment_reason: null },
+    ],
+  },
+  {
+    id: 'gper-6b', subscription_id: 'gsub-6', gym_member_id: 6, member_name: 'Sofía Vargas',
+    number: 2, plan_id: 1, plan_name: 'Plan mensual', price: '90000.00', duration_months: 1, duration_days: 30, grace_period_days: 3,
+    start_date: isoDay(40), end_date: isoDay(11), grace_ends_at: isoDay(8), status: GYM_PER_CANCELLED,
+    payments: [],
   },
 ];
 
@@ -5013,7 +5046,7 @@ let mockGymVisits = [3, 5, 6, 8, 10, 12].map((daysAgo, i) => ({
 const mockGymAccessQr = (member) => `PDG1.1.${member.id}.${Math.floor(Date.now() / 1000)}.demo`;
 
 // La regla de la puerta, espejo del backend: suscripción activa con el período en curso vigente
-// o en gracia entra (al día o en gracia); lo demás no.
+// o en gracia entra (al día o en gracia); una pausada no entra hasta reanudarla; lo demás no.
 function mockGymValidateQr(qr) {
   const denied = (reason, message, member = null, subscription = null) => ({
     result: 'denied', reason, message, today: todayIso(), member, subscription, visit: null,
@@ -5036,13 +5069,18 @@ function mockGymValidateQr(qr) {
   const presentSub = (x, p) => {
     const diff = p ? Math.round((Date.UTC(...p.end_date.split('-').map((n, i) => Number(n) - (i === 1 ? 1 : 0))) - Date.UTC(...todayIso().split('-').map((n, i) => Number(n) - (i === 1 ? 1 : 0)))) / 86400000) : null;
     return {
-      plan_name: x.plan_name, status: x.status, cancelled_at: x.cancelled_at, pending_total: x.pending_total,
+      plan_name: x.plan_name, status: x.status, cancelled_at: x.cancelled_at, paused_at: x.paused_at,
+      pending_total: x.pending_total,
       period_number: p ? p.number : null, start_date: p ? p.start_date : null, end_date: p ? p.end_date : null,
       grace_ends_at: p ? p.grace_ends_at : null, computed_status: p ? p.computed_status : null,
       days_left: diff == null ? null : Math.max(0, diff), days_overdue: diff == null ? null : Math.max(0, -diff),
     };
   };
   if (!sub) {
+    const paused = subs.find((x) => x.status === GYM_SUB_PAUSED);
+    if (paused) {
+      return denied('paused', 'Su suscripción está pausada por falta de pago. Debe reanudarla en recepción.', presentMember, presentSub(paused, null));
+    }
     return subs[0]
       ? denied('subscription_cancelled', 'Su suscripción está cancelada. Debe renovarla en recepción.', presentMember, presentSub(subs[0], null))
       : denied('no_subscription', 'No tiene una suscripción. Debe pasar por recepción.', presentMember);
@@ -5486,7 +5524,7 @@ function resolveGymMock(path, query, { method = 'GET', body } = {}) {
 
   // Afiliados por estado de membresía, con las mismas reglas del filtro `membership`.
   if (sub === 'dashboard/members-summary') {
-    const counts = { active: 0, grace: 0, pending: 0, cancelled: 0, none: 0, total: mockGymMembers.length };
+    const counts = { active: 0, grace: 0, pending: 0, paused: 0, cancelled: 0, none: 0, total: mockGymMembers.length };
     mockGymMembers.forEach((m) => {
       counts[gymMembershipOf(m)] += 1;
       if (gymMemberIsPending(m)) counts.pending += 1;
@@ -5688,6 +5726,8 @@ function resolveGymMock(path, query, { method = 'GET', body } = {}) {
       // sistema, no un alta nueva.
       const hasActive = mockGymSubscriptions.some((s) => s.gym_member_id === memberId && s.status === GYM_SUB_ACTIVE);
       if (hasActive) throw new Error('El afiliado ya tiene una suscripción activa');
+      const hasPaused = mockGymSubscriptions.some((s) => s.gym_member_id === memberId && s.status === GYM_SUB_PAUSED);
+      if (hasPaused) throw new Error('El afiliado tiene una suscripción pausada. Reanúdala en lugar de crear una nueva.');
 
       const startDate = body.start_date || todayIso();
       const endDate = gymPeriodEndIso(startDate, plan);
@@ -6102,6 +6142,7 @@ function resolveGymMock(path, query, { method = 'GET', body } = {}) {
     const subscription = mockGymSubscriptions.find((s) => s.id === subPaymentsMatch[1]);
     if (!subscription) return null;
     if (subscription.status === GYM_SUB_CANCELLED) throw new Error('No se pueden registrar pagos en una suscripción cancelada');
+    if (subscription.status === GYM_SUB_PAUSED) throw new Error('No se pueden registrar pagos en una suscripción pausada. Primero hay que reanudarla.');
 
     // El abono se aplica al período más antiguo con saldo (nunca se elige a mano).
     const target = mockGymSubscriptionPeriods
