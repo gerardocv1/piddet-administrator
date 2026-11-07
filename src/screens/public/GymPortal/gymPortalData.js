@@ -44,6 +44,7 @@ export const SUBSCRIPTION_STATE = {
   ACTIVE: 'active',
   PENDING: 'pending',
   GRACE: 'grace',
+  PAUSED: 'paused',
 };
 
 /**
@@ -56,8 +57,17 @@ export function subscriptionView(subscription, today) {
     return { state: SUBSCRIPTION_STATE.CANCELLED, planName: subscription.plan_name, cancelledAt: subscription.cancelled_at };
   }
 
+  // Pausada (status 3): el ciclo la detuvo por falta de abono. Trae el último período que alcanzó a
+  // correr (el que la pausa canceló no cuenta) y desde cuándo está pausada.
+  const paused = Number(subscription.status) === 3;
+  const pausedAt = paused ? subscription.paused_at || null : null;
+
   const period = subscription.current_period;
-  if (!period) return { state: SUBSCRIPTION_STATE.NONE };
+  if (!period) {
+    return paused
+      ? { state: SUBSCRIPTION_STATE.PAUSED, planName: subscription.plan_name, pausedAt, period: null }
+      : { state: SUBSCRIPTION_STATE.NONE };
+  }
 
   const pendingTotal = Number(subscription.pending_total) || 0;
   const pendingPeriods = subscription.pending_periods || [];
@@ -68,12 +78,14 @@ export function subscriptionView(subscription, today) {
   const currentPending = Number(period.pending) > 0;
 
   let state = SUBSCRIPTION_STATE.ACTIVE;
-  if (pendingTotal > 0) state = SUBSCRIPTION_STATE.PENDING;
+  if (paused) state = SUBSCRIPTION_STATE.PAUSED;
+  else if (pendingTotal > 0) state = SUBSCRIPTION_STATE.PENDING;
   else if (inGrace) state = SUBSCRIPTION_STATE.GRACE;
 
   return {
     state,
     planName: subscription.plan_name,
+    pausedAt,
     period,
     pendingTotal,
     pendingPeriods,
