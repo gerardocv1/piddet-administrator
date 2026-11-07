@@ -4741,6 +4741,9 @@ const GYM_PER_CURRENT = 1;
 const GYM_PER_GRACE = 2;
 const GYM_PER_CLOSED = 3;
 const GYM_PER_CANCELLED = 4;
+// Días desde el vencimiento del último período pagado a partir de los cuales renovar pregunta
+// desde cuándo (espejo de `config('gym.renewal_question_after_days')` del backend).
+const GYM_RENEWAL_QUESTION_AFTER_DAYS = 5;
 
 // El período vigente: el de mayor número no cancelado.
 const currentPeriodOf = (subscriptionId) => mockGymSubscriptionPeriods
@@ -6119,6 +6122,149 @@ function resolveGymMock(path, query, { method = 'GET', body } = {}) {
     }
     subscription.plan_id = plan.id;
     subscription.plan_name = plan.name;
+
+    if (payment) {
+      const registersIncome = payment.registers_income !== false;
+      target.payments.push({
+        id: 'gpay-' + Date.now().toString(36),
+        value: payment.value,
+        payment_method: payment.payment_method,
+        payment_method_name: paymentMethodName(payment.payment_method),
+        payment_date: payment.payment_date || todayIso(),
+        notes: payment.notes || null,
+        order_id: registersIncome ? 'ord-gym-' + Date.now().toString(36) : null,
+        registers_income: registersIncome,
+        status: 1,
+        created_by_name: 'Gerardo',
+        annulled_at: null,
+        annulment_reason: null,
+      });
+    }
+    return gymSubDetailPresent(subscription);
+  }
+
+  // Opciones de renovación (espejo de `renewalOptions` del backend, solo lectura). Parte del último
+  // período cubierto (el más reciente no cancelado con algún abono). En el demo: Carlos (gsub-2,
+  // activa, venció hace 32 días) y Sofía (gsub-6, pausada) responden `requires_start_choice: true`
+  // y su "Registrar pago" / "Renovar" abre el paso previo; una suscripción cuyo período cubierto
+  // venció hace menos de GYM_RENEWAL_QUESTION_AFTER_DAYS días responde `false` y el pago sigue
+  // igual (Laura, gsub-1, al día: 0 días). Con `?start_date=` agrega `calculated`, o rechaza la
+  // fecha que se solapa con el período cubierto (`start_date_overlap`).
+  const subRenewalOptionsMatch = sub.match(/^subscriptions\/([\w-]+)\/renewal-options$/);
+  if (subRenewalOptionsMatch) {
+    const subscription = mockGymSubscriptions.find((s) => s.id === subRenewalOptionsMatch[1]);
+    if (!subscription) return null;
+    const covered = mockGymSubscriptionPeriods
+      .filter((p) => p.subscription_id === subscription.id && p.status !== GYM_PER_CANCELLED && periodPaidTotal(p) > 0)
+      .sort((a, b) => b.number - a.number)[0];
+    if (!covered) throw new Error('La suscripción no tiene un período pagado desde el cual renovar');
+    const plan = mockGymPlans.find((pl) => pl.id === subscription.plan_id);
+    if (!plan) throw new Error('El plan de la suscripción ya no existe: cámbialo antes de renovar');
+    const today = todayIso();
+    const expiresAt = covered.end_date;
+    const daysElapsed = Math.max(0, Math.round((new Date(today) - new Date(expiresAt)) / 86400000));
+    const quote = (startIso) => ({
+      start_date: startIso,
+      end_date: gymPeriodEndIso(startIso, plan),
+      price: Number(plan.price).toFixed(2),
+    });
+    const firstFreeDay = addDaysIso(expiresAt, 1);
+    const data = {
+      subscription_id: subscription.id,
+      status: subscription.status,
+      plan_id: plan.id,
+      plan_name: plan.name,
+      expires_at: expiresAt,
+      days_elapsed: daysElapsed,
+      requires_start_choice: daysElapsed >= GYM_RENEWAL_QUESTION_AFTER_DAYS || subscription.status === GYM_SUB_PAUSED,
+      options: [
+        { key: 'from_expiration', ...quote(firstFreeDay), default: false },
+        { key: 'from_today', ...quote(today), default: true },
+        { key: 'custom_date', min_start_date: firstFreeDay, max_start_date: null, default: false },
+      ],
+    };
+    const startDate = query.get('start_date');
+    if (startDate) {
+      if (startDate <= expiresAt) {
+        const [y, m, d] = expiresAt.split('-');
+        const err = new Error(`La fecha de inicio se solapa con el último período cubierto (hasta el ${d}/${m}/${y})`);
+        err.status = 422;
+        err.data = { error: 'start_date_overlap' };
+        throw err;
+      }
+      data.calculated = quote(startDate);
+    }
+    return data;
+  }
+
+  // Renueva desde `start_date` (espejo de `renew` del backend): activa → mueve el inicio del
+  // período vivo sin abonos; pausada → período nuevo con el plan vigente y vuelve a activa. El
+  // pago opcional cae en ese período. Responde el detalle.
+  const subRenewMatch = sub.match(/^subscriptions\/([\w-]+)\/renew$/);
+  if (subRenewMatch) {
+    const subscription = mockGymSubscriptions.find((s) => s.id === subRenewMatch[1]);
+    if (!subscription) return null;
+    if (![GYM_SUB_ACTIVE, GYM_SUB_PAUSED].includes(subscription.status)) throw new Error('Solo se puede renovar una suscripción activa o pausada');
+    const startDate = body.start_date;
+    const periods = mockGymSubscriptionPeriods
+      .filter((p) => p.subscription_id === subscription.id)
+      .sort((a, b) => b.number - a.number);
+    const covered = periods.find((p) => p.status !== GYM_PER_CANCELLED && periodPaidTotal(p) > 0);
+    if (covered && startDate <= covered.end_date) {
+      const [y, m, d] = covered.end_date.split('-');
+      throw new Error(`La fecha de inicio se solapa con el último período cubierto (hasta el ${d}/${m}/${y})`);
+    }
+    const payment = body.payment && body.payment.value ? body.payment : null;
+
+    let target;
+    if (subscription.status === GYM_SUB_ACTIVE) {
+      const live = periods.find((p) => p.status !== GYM_PER_CANCELLED);
+      if (!live || ![GYM_PER_CURRENT, GYM_PER_GRACE].includes(live.status)) {
+        throw new Error('La suscripción no tiene un período vigente que renovar: genera el período con Generar período o cambia de plan');
+      }
+      if (periodPaidTotal(live) > 0) {
+        throw new Error('El período vigente ya tiene abonos: su inicio no se mueve. Renueva cuando el ciclo genere el siguiente o usa Cambiar de plan');
+      }
+      const previous = periods.find((p) => p.number < live.number && p.status !== GYM_PER_CANCELLED);
+      if (previous && startDate <= previous.end_date) {
+        const [y, m, d] = previous.end_date.split('-');
+        throw new Error(`El inicio no puede solaparse con el período anterior, que venció el ${d}/${m}/${y}`);
+      }
+      if (payment && Number(payment.value) > Number(live.price) + 0.0001) {
+        throw new Error(`El valor supera el precio del período (${Math.round(Number(live.price)).toLocaleString('es-CO')})`);
+      }
+      const endDate = gymPeriodEndIso(startDate, live);
+      live.start_date = startDate;
+      live.end_date = endDate;
+      live.grace_ends_at = addDaysIso(endDate, live.grace_period_days);
+      live.duration_days = 1 + Math.round((new Date(endDate) - new Date(startDate)) / 86400000);
+      live.status = todayIso() <= endDate ? GYM_PER_CURRENT : GYM_PER_GRACE;
+      if (live.number === 1) subscription.subscribed_at = startDate;
+      target = live;
+    } else {
+      const plan = mockGymPlans.find((pl) => pl.id === subscription.plan_id);
+      if (!plan) throw new Error('El plan de la suscripción ya no existe: cámbialo antes de renovar');
+      if (payment && Number(payment.value) > Number(plan.price) + 0.0001) {
+        throw new Error(`El valor supera el precio del período (${Math.round(Number(plan.price)).toLocaleString('es-CO')})`);
+      }
+      const endDate = gymPeriodEndIso(startDate, plan);
+      const number = (periods[0]?.number || 0) + 1;
+      target = {
+        id: 'gper-' + Date.now().toString(36) + '-' + number,
+        subscription_id: subscription.id, gym_member_id: subscription.gym_member_id, member_name: subscription.member_name,
+        number, plan_id: plan.id, plan_name: plan.name, price: plan.price,
+        duration_months: plan.duration_months ?? null,
+        duration_days: 1 + Math.round((new Date(endDate) - new Date(startDate)) / 86400000),
+        grace_period_days: plan.grace_period_days,
+        start_date: startDate, end_date: endDate, grace_ends_at: addDaysIso(endDate, plan.grace_period_days),
+        status: todayIso() <= endDate ? GYM_PER_CURRENT : GYM_PER_GRACE,
+        payments: [],
+      };
+      mockGymSubscriptionPeriods.push(target);
+      subscription.status = GYM_SUB_ACTIVE;
+      subscription.paused_at = null;
+      subscription.pause_reason = null;
+    }
 
     if (payment) {
       const registersIncome = payment.registers_income !== false;

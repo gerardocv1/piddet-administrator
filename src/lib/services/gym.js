@@ -168,6 +168,22 @@ export const gymService = {
   // Cada pago genera su factura (orden GYM) en la fecha del pago.
   addGymSubscriptionPayment: (subscriptionId, data) => http.post(`${base()}/subscriptions/${subscriptionId}/payments`, data),
 
+  // Opciones de renovación, ANTES del formulario de pago (solo lectura; permiso
+  // `gym-subscriptions-create`). Responde { expires_at, days_elapsed, requires_start_choice,
+  // plan_name, options: [{ key: 'from_expiration' | 'from_today', start_date, end_date, price,
+  // default }, { key: 'custom_date', min_start_date, max_start_date|null, default }] }. Con
+  // `startDate` (AAAA-MM-DD) agrega `calculated` { start_date, end_date, price }; si esa fecha se
+  // solapa con el último período cubierto, rechaza con `start_date_overlap` y un mensaje.
+  gymSubscriptionRenewalOptions: (subscriptionId, startDate) =>
+    http.get(`${base()}/subscriptions/${subscriptionId}/renewal-options${qs({ start_date: startDate })}`),
+
+  // Renueva desde `start_date` en una sola transacción: activa → mueve el inicio del período vivo
+  // sin abonos; pausada → período nuevo con el plan vigente y la suscripción vuelve a activa.
+  // `payment` opcional { payment_method, value, payment_date?, notes?, registers_income? } (exige
+  // además `gym-payments-create`). Responde el detalle actualizado de la suscripción.
+  renewGymSubscription: (subscriptionId, { start_date, payment }) =>
+    http.post(`${base()}/subscriptions/${subscriptionId}/renew`, { start_date, ...(payment ? { payment } : {}) }),
+
   // Anula el pago y cancela su factura (irreversible, motivo obligatorio).
   annulGymPayment: (paymentId, reason) => http.put(`${base()}/payments/${paymentId}/annul`, { reason }),
 

@@ -16,16 +16,30 @@ import { useSetPageTitle, useSetPageBack } from '../lib/pageTitle.jsx';
 import s from './screens.module.css';
 import g from './GymSubscriptionDetail.module.css';
 
+// `options` de renewal-options llega como lista con `key`: se busca por clave, sin depender del
+// orden.
+const renewalOption = (info, key) => (info?.options || []).find((o) => o.key === key) || null;
+
 // Detalle de LA suscripción continua del afiliado. Una sola tarjeta cuenta lo vigente, de
 // arriba abajo: el plan y desde cuándo (con las acciones secundarias en el ⋮), el período EN
 // CURSO con sus datos y —si debe— el recordatorio de cobro, y al pie las acciones primarias
 // (cobrar, generar el período que falta). Debajo, aparte y en letra menor, el historial: los
 // períodos anteriores, cada uno plegado y desplegable. El afiliado da nombre a la pantalla en
 // la barra superior.
-// No hay "renovar": el período siguiente aparece automáticamente con la corrida diaria del
-// backend; si uno agota su gracia sin ningún abono, la suscripción entera se cancela sola.
-// Cuando esa corrida no ha pasado (el período vigente ya venció y no existe el siguiente), el
-// operador puede forzar el mismo ciclo desde aquí con "Generar período".
+// El período siguiente aparece automáticamente con la corrida diaria del backend; si uno agota su
+// gracia sin ningún abono, la suscripción entera se cancela sola. Cuando esa corrida no ha pasado
+// (el período vigente ya venció y no existe el siguiente), el operador puede forzar el mismo ciclo
+// desde aquí con "Generar período".
+// Renovar desde una fecha: al tocar "Registrar pago" con el período a cobrar ya vencido (según su
+// estado en la API), o "Renovar" en una suscripción pausada, se consulta
+// `GET …/renewal-options`. Si responde `requires_start_choice` —o la suscripción está pausada, que
+// siempre pregunta—, antes del formulario sale el paso "¿Desde cuándo renueva?": los días
+// transcurridos desde el vencimiento y tres opciones (desde el vencimiento, desde hoy —marcada— u
+// otra fecha dentro del rango permitido), cada una con sus fechas y su cobro tal como los devuelve
+// la API (otra fecha vuelve a consultar con `start_date`). Al continuar, el formulario de pago
+// llega precargado con ese cobro y se envía con `POST …/renew`. Sin `requires_start_choice` el
+// pago sigue como siempre (`POST …/payments`). Aquí no se calcula ninguna fecha ni monto de la
+// renovación: solo se formatean.
 // Lo que sí hay es "Cambiar de plan": el afiliado que termina su trimestre y sigue con el
 // mensual (o paga el siguiente por adelantado). El backend lo aplica al primer período sin
 // pagos —el vigente si no tiene abonos, o el siguiente, que se crea en ese momento— y admite el
@@ -64,10 +78,11 @@ export function GymSubscriptionDetail() {
 
   const status = data ? Number(data.status) : null;
   const isActive = status === GYM_SUBSCRIPTION_STATUS.ACTIVE;
-  // Una pausada (el período siguiente al último cubierto no tuvo abono) es de solo lectura aquí:
-  // cuenta desde cuándo está pausada y conserva su historial, pero no admite pagos, ni anularlos,
-  // ni cancelar el período o la suscripción. Registrar pago, cambiar de plan, generar o mover el
-  // período y cancelar ya dependen de `isActive`; anular pagos se apaga con `isPaused`.
+  // Una pausada (el período siguiente al último cubierto no tuvo abono) cuenta desde cuándo está
+  // pausada y conserva su historial; su única acción es "Renovar" (paso previo de fecha + pago).
+  // No admite pagos sueltos, ni anularlos, ni cancelar el período o la suscripción. Registrar
+  // pago, cambiar de plan, generar o mover el período y cancelar ya dependen de `isActive`;
+  // anular pagos se apaga con `isPaused`.
   const isPaused = status === GYM_SUBSCRIPTION_STATUS.PAUSED;
 
   // El abono siempre se aplica al período más antiguo con saldo (regla del backend): se calcula
@@ -80,36 +95,174 @@ export function GymSubscriptionDetail() {
     (p) => Number(p.status) !== GYM_PERIOD_STATUS.CANCELLED && gymPendingBalance(p) > 0,
   );
 
-  // ── Registrar pago (abono al período pendiente más antiguo) ──────────────
+  // El período a cobrar ya venció según su estado en la API (en gracia o concluido, no vigente):
+  // antes de cobrarlo se pregunta al backend si la renovación necesita elegir desde cuándo.
+  const payTargetExpired = isActive && !!payTarget
+    && Number(payTarget.computed_status ?? payTarget.status) !== GYM_PERIOD_STATUS.CURRENT;
+
+  // ── Registrar pago (abono al período pendiente más antiguo, o pago de la renovación) ──
   const emptyPayForm = { payment_method: '', value: '', payment_date: '', notes: '', registers_income: true };
   const [payOpen, setPayOpen] = React.useState(false);
   const [payForm, setPayForm] = React.useState(emptyPayForm);
   const [payBusy, setPayBusy] = React.useState(false);
   const [payError, setPayError] = React.useState('');
+  // La renovación elegida en el paso previo ({ start_date, end_date, price }, tal como los mandó
+  // la API) o null en un pago normal. Con ella, el formulario se envía a `POST …/renew`.
+  const [payRenewal, setPayRenewal] = React.useState(null);
+  // Mientras "Registrar pago" consulta renewal-options, el botón muestra la ruedita.
+  const [payChecking, setPayChecking] = React.useState(false);
 
-  const openPay = () => {
-    setPayForm({ ...emptyPayForm, value: payTarget ? gymPendingBalance(payTarget) : '' });
+  // ── Renovar: paso previo "¿Desde cuándo renueva?" ────────────────────────
+  const [renewOpen, setRenewOpen] = React.useState(false);
+  const [renewLoading, setRenewLoading] = React.useState(false);
+  // La respuesta de renewal-options: expires_at, days_elapsed, plan_name y options.
+  const [renewInfo, setRenewInfo] = React.useState(null);
+  const [renewChoice, setRenewChoice] = React.useState('from_today');
+  const [renewCustomDate, setRenewCustomDate] = React.useState('');
+  // `calculated` de renewal-options con start_date: el cobro de "Otra fecha", lo calcula la API.
+  const [renewCalculated, setRenewCalculated] = React.useState(null);
+  const [renewCalcBusy, setRenewCalcBusy] = React.useState(false);
+  const [renewError, setRenewError] = React.useState('');
+  // Solo vale la respuesta de la última fecha pedida: cambiar de día rápido no debe pintar la
+  // cotización de un día anterior.
+  const renewCalcSeq = React.useRef(0);
+
+  // Formulario de pago. Con `renewal` se precarga con el cobro de la opción elegida; sin ella,
+  // con el saldo del período al que cae el abono (como siempre).
+  const openPayForm = (renewal = null) => {
+    setPayRenewal(renewal);
+    setPayForm({
+      ...emptyPayForm,
+      value: renewal ? renewal.price : (payTarget ? gymPendingBalance(payTarget) : ''),
+    });
     setPayError('');
     setPayOpen(true);
+  };
+
+  // Abre el paso previo con la respuesta de renewal-options, con la opción que la API marca
+  // como predeterminada ("Desde hoy").
+  const showRenewChoice = (info) => {
+    renewCalcSeq.current += 1;
+    setRenewInfo(info);
+    setRenewChoice((info?.options || []).find((o) => o.default)?.key || 'from_today');
+    setRenewCustomDate('');
+    setRenewCalculated(null);
+    setRenewCalcBusy(false);
+    setRenewError('');
+    setRenewOpen(true);
+  };
+
+  // "Registrar pago". Con el período a cobrar vencido se consulta renewal-options: si la API pide
+  // elegir la fecha de inicio (`requires_start_choice`), sale el paso previo; si no, el pago sigue
+  // igual que hoy. Si la consulta falla (p. ej. sin permiso de renovar, o nunca hubo un período
+  // pagado desde el cual renovar), también sigue el pago normal: el abono no depende de ella.
+  const openPay = async () => {
+    if (!payTargetExpired) {
+      openPayForm();
+      return;
+    }
+    setPayChecking(true);
+    try {
+      const info = await api.gymSubscriptionRenewalOptions(subscriptionId);
+      if (info?.requires_start_choice) showRenewChoice(info);
+      else openPayForm();
+    } catch {
+      openPayForm();
+    } finally {
+      setPayChecking(false);
+    }
+  };
+
+  // "Renovar" de una pausada: siempre pasa por el paso previo. Se abre de una vez y la consulta
+  // carga dentro; si falla, el error queda en el mismo paso.
+  const openRenew = async () => {
+    showRenewChoice(null);
+    const seq = renewCalcSeq.current;
+    setRenewLoading(true);
+    try {
+      const info = await api.gymSubscriptionRenewalOptions(subscriptionId);
+      if (seq === renewCalcSeq.current) showRenewChoice(info);
+    } catch (e) {
+      if (seq === renewCalcSeq.current) setRenewError(e?.message || 'No se pudieron consultar las opciones de renovación.');
+    } finally {
+      setRenewLoading(false);
+    }
+  };
+
+  // Cerrar el paso descarta cualquier respuesta en camino (que no lo reabra ni lo pinte).
+  const closeRenew = () => {
+    renewCalcSeq.current += 1;
+    setRenewCalcBusy(false);
+    setRenewOpen(false);
+  };
+
+  // "Otra fecha": al cambiar el día se vuelve a pedir renewal-options con start_date y se
+  // muestra `calculated`. Un solapamiento (`start_date_overlap`) llega como error con su mensaje.
+  const pickRenewDate = async (iso) => {
+    const seq = ++renewCalcSeq.current;
+    setRenewChoice('custom_date');
+    setRenewCustomDate(iso);
+    setRenewCalculated(null);
+    setRenewError('');
+    if (!iso) {
+      setRenewCalcBusy(false);
+      return;
+    }
+    setRenewCalcBusy(true);
+    try {
+      const info = await api.gymSubscriptionRenewalOptions(subscriptionId, iso);
+      if (seq === renewCalcSeq.current) setRenewCalculated(info?.calculated || null);
+    } catch (e) {
+      if (seq === renewCalcSeq.current) setRenewError(e?.message || 'No se pudo calcular la renovación con esa fecha.');
+    } finally {
+      if (seq === renewCalcSeq.current) setRenewCalcBusy(false);
+    }
+  };
+
+  // Lo que lleva la opción marcada: inicio, fin y cobro tal como los mandó la API.
+  const renewSelected = renewChoice === 'custom_date'
+    ? renewCalculated
+    : renewalOption(renewInfo, renewChoice);
+
+  const continueRenew = () => {
+    if (!renewSelected) return;
+    setRenewOpen(false);
+    openPayForm({
+      start_date: renewSelected.start_date,
+      end_date: renewSelected.end_date,
+      price: renewSelected.price,
+    });
+  };
+
+  // "Atrás" desde el formulario de una renovación: vuelve al paso previo tal como quedó.
+  const backToRenewChoice = () => {
+    setPayOpen(false);
+    setRenewOpen(true);
   };
 
   const submitPay = async () => {
     if (payBusy || !payForm.payment_method || !payForm.value) return;
     setPayBusy(true);
     setPayError('');
+    const payment = {
+      payment_method: payForm.payment_method,
+      value: payForm.value,
+      payment_date: payForm.payment_date || undefined,
+      notes: payForm.notes.trim() || undefined,
+      registers_income: payForm.registers_income,
+    };
     try {
-      const updated = await api.addGymSubscriptionPayment(subscriptionId, {
-        payment_method: payForm.payment_method,
-        value: payForm.value,
-        payment_date: payForm.payment_date || undefined,
-        notes: payForm.notes.trim() || undefined,
-        registers_income: payForm.registers_income,
-      });
+      // Una renovación se envía con su fecha de inicio a `POST …/renew` (fecha y pago en una
+      // sola transacción); un pago normal, a `POST …/payments`.
+      const updated = payRenewal
+        ? await api.renewGymSubscription(subscriptionId, { start_date: payRenewal.start_date, payment })
+        : await api.addGymSubscriptionPayment(subscriptionId, payment);
       setData(updated);
-      toast({ tone: 'success', title: 'Pago registrado' });
+      toast({ tone: 'success', title: payRenewal ? 'Suscripción renovada' : 'Pago registrado' });
       setPayOpen(false);
+      setPayRenewal(null);
     } catch (e) {
-      setPayError(e?.message || 'No se pudo registrar el pago.');
+      setPayError(e?.message || (payRenewal ? 'No se pudo renovar la suscripción.' : 'No se pudo registrar el pago.'));
     } finally {
       setPayBusy(false);
     }
@@ -416,10 +569,17 @@ export function GymSubscriptionDetail() {
   ];
 
   // Lo primario, al pie de la tarjeta: cobrar lo que se debe y, si el sistema no ha corrido,
-  // generar el período que falta. Sin nada que hacer, el pie no existe.
+  // generar el período que falta; en una pausada, renovarla. Sin nada que hacer, el pie no existe.
+  // Renovar siempre envía el pago, así que pide los dos permisos de la llamada.
+  // "Otra fecha" del paso previo: su rango permitido (min_start_date, max_start_date o null).
+  const renewCustom = renewalOption(renewInfo, 'custom_date');
+  const canRenew = isPaused && can('gym-subscriptions-create') && can('gym-payments-create');
   const primaryActions = [
     ...(isActive && pendingTotal > 0
-      ? [<Button key="pay" variant="primary" icon="fas fa-dollar-sign" onClick={openPay}>Registrar pago</Button>]
+      ? [<Button key="pay" variant="primary" icon="fas fa-dollar-sign" loading={payChecking} onClick={openPay}>Registrar pago</Button>]
+      : []),
+    ...(canRenew
+      ? [<Button key="renew" variant="primary" icon="fas fa-rotate-right" onClick={openRenew}>Renovar</Button>]
       : []),
     ...(canProcess
       ? [<Button key="process" variant={wouldCancel || pendingTotal > 0 ? 'secondary' : 'primary'} icon="fas fa-calendar-plus" onClick={openProcess}>Generar período</Button>]
@@ -615,37 +775,131 @@ export function GymSubscriptionDetail() {
         </section>
       )}
 
-      <Modal open={payOpen} title="Registrar pago" onClose={() => setPayOpen(false)}
-        footer={<>
-          <Button variant="secondary" onClick={() => setPayOpen(false)}>Cancelar</Button>
-          <Button variant="primary" loading={payBusy} disabled={!payForm.payment_method || !payForm.value} onClick={submitPay}>Registrar</Button>
-        </>}>
-        <div className={s.formCol}>
-          {payTarget && (
+      {/* ── Renovar, paso previo: ¿desde cuándo? Las fechas y el cobro de cada opción son los de
+          la API; aquí solo se formatean. En el teléfono es una hoja a pantalla completa con las
+          acciones sobre el teclado (g.renewSheet); en escritorio, un modal normal. ── */}
+      <div className={g.renewSheet}>
+        <Modal open={renewOpen} title="¿Desde cuándo renueva?" onClose={closeRenew}
+          footer={<>
+            <Button variant="secondary" onClick={closeRenew}>Cancelar</Button>
+            <Button variant="primary" disabled={!renewSelected || renewCalcBusy} onClick={continueRenew}>Continuar</Button>
+          </>}>
+          <div className={s.formCol}>
+            {renewLoading && <Spinner center label="Consultando opciones de renovación…" />}
+            {renewInfo && (
+              <>
+                <p className={g.renewElapsed}>
+                  {renewInfo.plan_name} · venció el {formatShortDate(renewInfo.expires_at)} ·{' '}
+                  <strong>{renewInfo.days_elapsed} {Number(renewInfo.days_elapsed) === 1 ? 'día' : 'días'}</strong> transcurridos
+                </p>
+                <div className={g.renewOptions} role="radiogroup" aria-label="Desde cuándo renueva">
+                  {[
+                    { key: 'from_expiration', label: 'Desde el vencimiento' },
+                    { key: 'from_today', label: 'Desde hoy' },
+                  ].map(({ key, label }) => {
+                    const option = renewalOption(renewInfo, key);
+                    if (!option) return null;
+                    return (
+                      <label key={key} className={g.renewOption} data-selected={renewChoice === key}>
+                        <input type="radio" name="renew-start" className={g.renewRadio}
+                          checked={renewChoice === key} onChange={() => { setRenewChoice(key); setRenewError(''); }} />
+                        <span className={g.renewOptionText}>
+                          <span className={g.renewOptionTitle}>{label}</span>
+                          <span className={g.renewOptionDates}>
+                            {formatShortDate(option.start_date)} → {formatShortDate(option.end_date)}
+                          </span>
+                        </span>
+                        <span className={g.renewOptionPrice}>{gymMoney(option.price)}</span>
+                      </label>
+                    );
+                  })}
+                  {renewCustom && (
+                    <div className={g.renewOption} data-selected={renewChoice === 'custom_date'}>
+                      <label className={g.renewOptionLabel}>
+                        <input type="radio" name="renew-start" className={g.renewRadio}
+                          checked={renewChoice === 'custom_date'}
+                          onChange={() => { setRenewChoice('custom_date'); setRenewError(''); }} />
+                        <span className={g.renewOptionText}>
+                          <span className={g.renewOptionTitle}>Otra fecha</span>
+                          <span className={g.renewOptionDates}>
+                            {renewCustom.max_start_date
+                              ? `Entre ${formatShortDate(renewCustom.min_start_date)} y ${formatShortDate(renewCustom.max_start_date)}`
+                              : `Desde el ${formatShortDate(renewCustom.min_start_date)}`}
+                          </span>
+                        </span>
+                        {renewChoice === 'custom_date' && renewCalculated && (
+                          <span className={g.renewOptionPrice}>{gymMoney(renewCalculated.price)}</span>
+                        )}
+                      </label>
+                      <div className={g.renewOptionField}>
+                        <DatePicker label="Fecha de inicio" value={renewCustomDate}
+                          min={renewCustom.min_start_date} max={renewCustom.max_start_date || undefined}
+                          onChange={pickRenewDate} />
+                        {renewChoice === 'custom_date' && renewCalcBusy && (
+                          <span className={g.renewOptionDates}>Calculando el cobro…</span>
+                        )}
+                        {renewChoice === 'custom_date' && renewCalculated && (
+                          <span className={g.renewOptionDates}>
+                            {formatShortDate(renewCalculated.start_date)} → {formatShortDate(renewCalculated.end_date)}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+            {renewError && <Alert tone="danger" onClose={() => setRenewError('')}>{renewError}</Alert>}
+          </div>
+        </Modal>
+      </div>
+
+      {/* El formulario de pago. En una renovación llega precargado con el cobro de la opción
+          elegida, muestra la fecha de inicio y se envía a `POST …/renew`; también va como hoja
+          a pantalla completa en el teléfono, porque el valor abre el teclado. */}
+      <div className={payRenewal ? g.renewSheet : g.sheetHost}>
+        <Modal open={payOpen} title={payRenewal ? 'Renovar y registrar pago' : 'Registrar pago'} onClose={() => setPayOpen(false)}
+          footer={<>
+            {payRenewal
+              ? <Button variant="secondary" onClick={backToRenewChoice}>Atrás</Button>
+              : <Button variant="secondary" onClick={() => setPayOpen(false)}>Cancelar</Button>}
+            <Button variant="primary" loading={payBusy} disabled={!payForm.payment_method || !payForm.value} onClick={submitPay}>
+              {payRenewal ? 'Renovar' : 'Registrar'}
+            </Button>
+          </>}>
+          <div className={s.formCol}>
+            {payRenewal && (
+              <p className={g.renewSummary}>
+                Renueva desde el <strong>{formatShortDate(payRenewal.start_date)}</strong> hasta el{' '}
+                {formatShortDate(payRenewal.end_date)} · cobro <strong>{gymMoney(payRenewal.price)}</strong>
+              </p>
+            )}
+            {!payRenewal && payTarget && (
+              <p className={s.faint}>
+                El abono se aplica al período {payTarget.number}{' '}
+                ({formatStayRangeShort(payTarget.start_date, payTarget.end_date)}) · saldo{' '}
+                <strong>{gymMoney(gymPendingBalance(payTarget))}</strong>.
+              </p>
+            )}
+            <Select label="Método de pago" icon="fas fa-wallet" value={payForm.payment_method}
+              onChange={(e) => setPayForm((f) => ({ ...f, payment_method: e.target.value }))}
+              options={[{ value: '', label: 'Selecciona…' }, ...methodOptions]} />
+            <MoneyInput label="Valor" icon="fas fa-dollar-sign"
+              value={payForm.value} onChange={(v) => setPayForm((f) => ({ ...f, value: v }))} />
+            <DatePicker label="Fecha del pago (opcional)" value={payForm.payment_date}
+              onChange={(iso) => setPayForm((f) => ({ ...f, payment_date: iso }))} />
+            <Checkbox label="Registrar el cobro como ingreso"
+              checked={payForm.registers_income}
+              onChange={(e) => setPayForm((f) => ({ ...f, registers_income: e.target.checked }))} />
             <p className={s.faint}>
-              El abono se aplica al período {payTarget.number}{' '}
-              ({formatStayRangeShort(payTarget.start_date, payTarget.end_date)}) · saldo{' '}
-              <strong>{gymMoney(gymPendingBalance(payTarget))}</strong>.
+              {payForm.registers_income
+                ? 'El pago genera su factura en la fecha indicada.'
+                : 'El pago queda registrado en la suscripción, pero sin factura: no entra a la caja. Es lo que corresponde a un dinero que se cobró antes de usar la plataforma.'}
             </p>
-          )}
-          <Select label="Método de pago" icon="fas fa-wallet" value={payForm.payment_method}
-            onChange={(e) => setPayForm((f) => ({ ...f, payment_method: e.target.value }))}
-            options={[{ value: '', label: 'Selecciona…' }, ...methodOptions]} />
-          <MoneyInput label="Valor" icon="fas fa-dollar-sign"
-            value={payForm.value} onChange={(v) => setPayForm((f) => ({ ...f, value: v }))} />
-          <DatePicker label="Fecha del pago (opcional)" value={payForm.payment_date}
-            onChange={(iso) => setPayForm((f) => ({ ...f, payment_date: iso }))} />
-          <Checkbox label="Registrar el cobro como ingreso"
-            checked={payForm.registers_income}
-            onChange={(e) => setPayForm((f) => ({ ...f, registers_income: e.target.checked }))} />
-          <p className={s.faint}>
-            {payForm.registers_income
-              ? 'El pago genera su factura en la fecha indicada.'
-              : 'El pago queda registrado en la suscripción, pero sin factura: no entra a la caja. Es lo que corresponde a un dinero que se cobró antes de usar la plataforma.'}
-          </p>
-          {payError && <Alert tone="danger" onClose={() => setPayError('')}>{payError}</Alert>}
-        </div>
-      </Modal>
+            {payError && <Alert tone="danger" onClose={() => setPayError('')}>{payError}</Alert>}
+          </div>
+        </Modal>
+      </div>
 
       <Modal open={planOpen} title="Cambiar de plan" onClose={() => setPlanOpen(false)}
         footer={<>
