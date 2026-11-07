@@ -38,11 +38,15 @@ export function GymMemberDetail() {
 
   const subsFetcher = React.useCallback(() => api.gymMemberSubscriptions(memberId), [memberId]);
   const { data: subscriptions, reload: reloadSubs } = useResource(subsFetcher, EMPTY_SUBS, [memberId]);
-  // La suscripción es continua: solo puede haber una activa; si no hay, se muestra la última
-  // (cancelada) como historial de solo lectura.
+  // La suscripción es continua: solo puede haber una vigente, activa o pausada; si no hay, se
+  // muestra la última (cancelada) como historial de solo lectura.
   const current = subscriptions.find((sub) => Number(sub.status) === GYM_SUBSCRIPTION_STATUS.ACTIVE)
+    || subscriptions.find((sub) => Number(sub.status) === GYM_SUBSCRIPTION_STATUS.PAUSED)
     || subscriptions[0] || null;
   const currentIsActive = current ? Number(current.status) === GYM_SUBSCRIPTION_STATUS.ACTIVE : false;
+  // Una pausada no admite una suscripción nueva (el backend la rechaza): se renueva desde su
+  // propio detalle.
+  const currentIsPaused = current ? Number(current.status) === GYM_SUBSCRIPTION_STATUS.PAUSED : false;
 
   const { data: plansPage } = useResource(React.useCallback(() => api.gymPlans({ status: '1', perPage: 100 }), []), { items: [] }, []);
   const planOptions = React.useMemo(
@@ -64,7 +68,7 @@ export function GymMemberDetail() {
   // se publica directo desde la pantalla.
   useSetPageBack(goBack);
 
-  // ── Suscribir (solo si el afiliado no tiene una suscripción activa) ──────
+  // ── Suscribir (solo si el afiliado no tiene una suscripción activa ni pausada) ──
   const emptySubscribeForm = { plan_id: '', start_date: todayIso(), payment_method: '', value: '', registers_income: true };
   const [subscribeOpen, setSubscribeOpen] = React.useState(false);
   const [subscribeForm, setSubscribeForm] = React.useState(emptySubscribeForm);
@@ -80,13 +84,13 @@ export function GymMemberDetail() {
   // ?action=subscribe (acción rápida desde el listado): abre el formulario apenas hay datos.
   const wantsSubscribe = params.get('action') === 'subscribe';
   React.useEffect(() => {
-    if (wantsSubscribe && data && !currentIsActive && !subscribeOpen) {
+    if (wantsSubscribe && data && !currentIsActive && !currentIsPaused && !subscribeOpen) {
       openSubscribe();
       const q = new URLSearchParams(params);
       q.delete('action');
       setParams(q, { replace: true });
     }
-  }, [wantsSubscribe, data, currentIsActive]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [wantsSubscribe, data, currentIsActive, currentIsPaused]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const pickSubscribePlan = (planId) => {
     const plan = (plansPage.items || []).find((p) => String(p.id) === planId);
@@ -315,7 +319,8 @@ export function GymMemberDetail() {
   const meta = gymMemberStatusMeta(data.status);
   // El cobro a mano solo tiene sentido con deuda, y lo manda quien registra pagos: es la gente
   // del mostrador. El saldo que manda es el de la suscripción, no el del período vigente.
-  const canRemind = can('gym-payments-create') && gymSubscriptionPending(current) > 0;
+  // Una pausada no recibe avisos de cobro (el backend los rechaza).
+  const canRemind = can('gym-payments-create') && !currentIsPaused && gymSubscriptionPending(current) > 0;
   // Con una activa cuyo período está en gracia, el badge advierte eso; si no, el estado de
   // la suscripción (activa/cancelada).
   const subMeta = current
@@ -366,8 +371,15 @@ export function GymMemberDetail() {
       </InfoCard>
 
       {/* ── Suscripción: resumen compacto; el detalle (períodos y pagos) vive en su propia vista ── */}
+      {/* Con una pausada no se ofrece «Suscribir» (el backend rechaza una nueva): la acción lleva
+          al detalle de esa suscripción, que es donde se renueva. */}
       <Panel title="Suscripción"
-        action={!currentIsActive ? (
+        action={currentIsPaused ? (
+          <Button variant="outline-primary" size="sm" icon="fas fa-rotate-right"
+            onClick={() => navigate(`/gym/subscriptions/${current.id}`)}>
+            Renovar suscripción
+          </Button>
+        ) : !currentIsActive ? (
           <Button variant="outline-primary" size="sm" icon="fas fa-plus" onClick={openSubscribe}>
             Suscribir
           </Button>
@@ -381,7 +393,7 @@ export function GymMemberDetail() {
               <span className={g.subInfo}>
                 <span className={g.subPlan}>{current.plan_name}</span>
                 <span className={g.subDates}>
-                  {current.current_period ? (
+                  {currentIsPaused && current.paused_at ? `Pausada desde el ${formatShortDate(current.paused_at)}` : current.current_period ? (
                     Number(current.current_period.computed_status ?? current.current_period.status) === GYM_PERIOD_STATUS.GRACE
                       ? `Venció el ${formatShortDate(current.current_period.end_date)}`
                       : `Vence el ${formatShortDate(current.current_period.end_date)}`

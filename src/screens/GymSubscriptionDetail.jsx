@@ -64,6 +64,11 @@ export function GymSubscriptionDetail() {
 
   const status = data ? Number(data.status) : null;
   const isActive = status === GYM_SUBSCRIPTION_STATUS.ACTIVE;
+  // Una pausada (el período siguiente al último cubierto no tuvo abono) es de solo lectura aquí:
+  // cuenta desde cuándo está pausada y conserva su historial, pero no admite pagos, ni anularlos,
+  // ni cancelar el período o la suscripción. Registrar pago, cambiar de plan, generar o mover el
+  // período y cancelar ya dependen de `isActive`; anular pagos se apaga con `isPaused`.
+  const isPaused = status === GYM_SUBSCRIPTION_STATUS.PAUSED;
 
   // El abono siempre se aplica al período más antiguo con saldo (regla del backend): se calcula
   // aquí solo para precargar el valor y nombrarlo en el modal.
@@ -363,7 +368,7 @@ export function GymSubscriptionDetail() {
   // Anular un pago es la excepción, no la acción de cada fila: vive en el menú ⋮ del período,
   // un ítem por pago activo (nombrado por su valor y fecha cuando hay más de uno).
   const annulItems = (p) => {
-    if (!canAnnulPayments) return [];
+    if (!canAnnulPayments || isPaused) return [];
     const active = activePaymentsOf(p);
     return active.map((pay) => ({
       label: active.length === 1 ? 'Anular pago' : `Anular pago de ${gymMoney(pay.value)} (${formatShortDate(pay.payment_date)})`,
@@ -444,6 +449,12 @@ export function GymSubscriptionDetail() {
         {status === GYM_SUBSCRIPTION_STATUS.CANCELLED && data.cancellation_reason && (
           <p className={g.subNote}>
             Cancelada{data.cancelled_automatically ? ' automáticamente' : ''}: {data.cancellation_reason}
+          </p>
+        )}
+        {isPaused && (
+          <p className={g.subNote}>
+            {data.paused_at ? `Pausada desde el ${formatShortDate(data.paused_at)}` : 'Pausada'}
+            {data.pause_reason ? `: ${data.pause_reason}` : ''}
           </p>
         )}
 
