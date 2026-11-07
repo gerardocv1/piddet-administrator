@@ -336,6 +336,9 @@
   text-wrap: pretty;
 }
 
+/* La fecha de la pausa resalta igual que en el aviso de saldo. */
+.closedText strong { color: var(--portal-text); }
+
 /* ── Avance en medidas (uno por vez) ── */
 
 .progress {

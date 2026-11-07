@@ -101,6 +101,7 @@ function PlanCard({ view, memberCode, memberName, accessQr }) {
   let badge = <StatusBadge tone="success">Activa</StatusBadge>;
   if (view.state === SUBSCRIPTION_STATE.PENDING) badge = <StatusBadge tone="accent">Pago pendiente</StatusBadge>;
   else if (view.state === SUBSCRIPTION_STATE.GRACE) badge = <StatusBadge tone="accent">En gracia</StatusBadge>;
+  else if (view.state === SUBSCRIPTION_STATE.PAUSED) badge = <StatusBadge tone="accent">Pausada</StatusBadge>;
 
   let status = (
     <div className={s.statusLine}>
@@ -111,6 +112,7 @@ function PlanCard({ view, memberCode, memberName, accessQr }) {
   if (alert) {
     let text = 'En período de gracia';
     if (view.state === SUBSCRIPTION_STATE.PENDING) text = view.currentPending ? 'Período sin pagar' : 'Saldo de meses anteriores';
+    else if (view.state === SUBSCRIPTION_STATE.PAUSED) text = 'Pausada';
     status = (
       <div className={[s.statusLine, s.statusLineAlert].join(' ')}>
         <span className={[s.statusIcon, s.statusIconAlert].join(' ')}><AlertIcon size={13} /></span>
@@ -180,6 +182,32 @@ function Balance({ view, whatsapp }) {
         </div>
       </div>
       <p className={s.balanceText}>{balanceText(view)}</p>
+      {whatsapp && (
+        <a className={[s.whatsapp, s.whatsappCompact].join(' ')} href={whatsapp} target="_blank" rel="noopener noreferrer">
+          <ChatIcon size={18} />
+          <span>Escribirle al gimnasio</span>
+        </a>
+      )}
+    </section>
+  );
+}
+
+// Pausada: desde cuándo y qué hacer. Mismo aviso en naranja que el saldo pendiente.
+function pausedText(view) {
+  const since = view.pausedAt ? <> desde el <strong>{longDayMonth(view.pausedAt)}</strong></> : null;
+  return <>Tu suscripción está pausada{since}. Pásate por recepción para renovarla.</>;
+}
+
+function PausedNotice({ view, whatsapp }) {
+  return (
+    <section aria-label="Suscripción pausada" className={s.balance}>
+      <div className={s.balanceHead}>
+        <span className={s.balanceIcon}><AlertIcon size={22} /></span>
+        <div className={s.balanceTitle}>
+          <span className={s.balanceEyebrow}>Suscripción pausada</span>
+        </div>
+      </div>
+      <p className={s.balanceText}>{pausedText(view)}</p>
       {whatsapp && (
         <a className={[s.whatsapp, s.whatsappCompact].join(' ')} href={whatsapp} target="_blank" rel="noopener noreferrer">
           <ChatIcon size={18} />
@@ -313,11 +341,27 @@ export function GymPortalSubscription({ data, onShowMeasures }) {
     );
   }
 
+  // Pausada: la tarjeta en alerta con «Pausada» (si alcanzó a correr un período) y el aviso de
+  // desde cuándo, en vez de «Estás al día» o del cierre de una cancelada.
+  const paused = view.state === SUBSCRIPTION_STATE.PAUSED;
+  const renewWhatsapp = whatsappHref(data.whatsapp_number, `Hola, soy ${memberName}. Quiero renovar mi plan.`);
+
+  if (paused && !view.period) {
+    return (
+      <>
+        <Closed title={view.planName} text={pausedText(view)} whatsapp={renewWhatsapp} />
+        <GymPortalGym data={data} />
+        <Payments payments={payments} />
+      </>
+    );
+  }
+
   const pending = view.state === SUBSCRIPTION_STATE.PENDING;
 
   return (
     <>
       <PlanCard view={view} memberCode={data.member?.member_code} memberName={memberName} accessQr={data.access_qr} />
+      {paused && <PausedNotice view={view} whatsapp={renewWhatsapp} />}
       <Progress data={data} onShowMeasures={onShowMeasures} />
       {pending && <Balance view={view} whatsapp={whatsapp} />}
       <GymPortalGym data={data} />

@@ -434,9 +434,11 @@ export function GymPortal({ companyUsername }) {
       </div>
     );
   }
-  // El resplandor del fondo acompaña el estado: naranja cuando hay algo pendiente de pago.
+  // El resplandor del fondo acompaña el estado: naranja cuando hay algo pendiente de pago o la
+  // suscripción está pausada.
   const subState = subscriptionView(session.subscription, session.today).state;
-  const warm = subState === SUBSCRIPTION_STATE.PENDING || subState === SUBSCRIPTION_STATE.GRACE;
+  const warm = subState === SUBSCRIPTION_STATE.PENDING || subState === SUBSCRIPTION_STATE.GRACE
+    || subState === SUBSCRIPTION_STATE.PAUSED;
   let glow = s.glowTeal;
   if (tab !== 'subscription') glow = s.glowMeasures;
   else if (warm) glow = s.glowAccent;

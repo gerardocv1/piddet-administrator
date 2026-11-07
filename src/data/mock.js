@@ -5311,7 +5311,10 @@ function gymPortalPayload(member, path, token = null) {
     .filter((sub) => sub.gym_member_id === member.id)
     .sort((a, b) => (a.subscribed_at < b.subscribed_at ? 1 : -1))
     .map(gymSubDetailPresent);
-  const sub = subscriptions.find((x) => x.status === GYM_SUB_ACTIVE) || subscriptions[0] || null;
+  // Como el real: la activa; si no, la pausada; si no, la más reciente (cancelada).
+  const sub = subscriptions.find((x) => x.status === GYM_SUB_ACTIVE)
+    || subscriptions.find((x) => x.status === GYM_SUB_PAUSED)
+    || subscriptions[0] || null;
   const livePeriods = sub ? sub.periods.filter((p) => p.status !== GYM_PER_CANCELLED) : [];
   const current = livePeriods[0] || null;
 
@@ -5367,7 +5370,7 @@ function gymPortalPayload(member, path, token = null) {
     goals: mockGymGoals.map(({ id, key, label }) => ({ id, key, label })),
     subscription: sub ? {
       plan_name: sub.plan_name, status: sub.status, subscribed_at: sub.subscribed_at,
-      cancelled_at: sub.cancelled_at, pending_total: sub.pending_total,
+      cancelled_at: sub.cancelled_at, paused_at: sub.paused_at ?? null, pending_total: sub.pending_total,
       current_period: current ? {
         number: current.number, price: current.price, start_date: current.start_date,
         end_date: current.end_date, grace_ends_at: current.grace_ends_at, status: current.status,
