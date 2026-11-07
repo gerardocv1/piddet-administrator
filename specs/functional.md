@@ -438,7 +438,14 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
   cancelar), el **período en curso** en filas etiqueta · valor —vence, valor, cada pago con su
   fecha y método, y el saldo (*Al día* o lo que debe)— más el recordatorio de cobro cuando debe,
   y al pie las **acciones primarias** (*Registrar pago*, *Generar período* si el sistema no ha
-  corrido, *Cambiar de plan*). **Cambiar de plan** (`POST …/subscriptions/{id}/change-plan`,
+  corrido, *Cambiar de plan*; en una pausada, *Renovar*). **Renovar desde una fecha:** *Registrar
+  pago* con el período a cobrar ya vencido, o *Renovar* en una pausada, consulta
+  `GET …/subscriptions/{id}/renewal-options`; si responde `requires_start_choice` (o está
+  pausada), antes del pago sale el paso *¿Desde cuándo renueva?* —días transcurridos desde el
+  vencimiento y tres opciones: desde el vencimiento, desde hoy (marcada) u otra fecha en el rango
+  permitido, cada una con fechas y cobro de la API— y el formulario precargado se envía a
+  `POST …/subscriptions/{id}/renew`; si no, el pago sigue igual. En el teléfono es una hoja a
+  pantalla completa con las acciones sobre el teclado (`--kb-h`). **Cambiar de plan** (`POST …/subscriptions/{id}/change-plan`,
   `gym-subscriptions-create`) es para el afiliado que termina su trimestre y sigue con el mensual,
   o que paga el siguiente por adelantado: el backend aplica el plan nuevo al **primer período sin
   pagos** —si el último período vivo ya tiene abonos crea el siguiente ahora, desde el día después

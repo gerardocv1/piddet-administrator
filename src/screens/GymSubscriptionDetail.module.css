@@ -139,3 +139,81 @@
 }
 .historyHead { display: flex; align-items: baseline; gap: 10px; padding: 0 2px; }
 .historyCount { font-size: var(--text-sm); color: var(--text-muted); }
+
+/* ── Renovar: paso previo "¿Desde cuándo renueva?" y su formulario de pago ─────────────────
+   Los dos son el Modal del barril. En escritorio (data-sheet=false) es un modal normal y nada de
+   lo de abajo aplica. En el teléfono el Modal ya es hoja (data-sheet=true); aquí la llevamos a
+   pantalla completa y apoyamos su barra de acciones sobre el teclado virtual: el overlay reserva
+   abajo `--kb-h` (lo publica useKeyboardInset desde el Layout; vale 0px donde el navegador ya
+   encoge el viewport) y el pie descuenta la franja de gestos que el teclado ya tapa, como las
+   `.actionBar` de los asistentes (specs/tech.md → «El teclado virtual y las barras fijas»).
+   El contenedor no genera caja (`display: contents`): no ocupa lugar en la página. */
+.sheetHost,
+.renewSheet { display: contents; }
+.renewSheet > [data-sheet='true'][data-no-pull] { padding-bottom: var(--kb-h, 0px); }
+.renewSheet [role='dialog'][data-sheet='true'] {
+  height: 100%;
+  max-height: none;
+  border-radius: 0;
+}
+/* A pantalla completa no hay hoja que arrastrar: sin asa, y la cabecera con su línea. */
+.renewSheet [role='dialog'][data-sheet='true'] > :first-child:not([data-sheet]) { display: none; }
+.renewSheet [role='dialog'][data-sheet='true'] > [data-sheet='true']:not(:last-child) {
+  padding-top: 1rem;
+  border-bottom: 1px solid var(--border-color);
+}
+.renewSheet [role='dialog'][data-sheet='true'] > [data-sheet='true']:last-child {
+  border-top: 1px solid var(--border-color);
+  padding-bottom: calc(1rem + max(0px, env(safe-area-inset-bottom) - var(--kb-h, 0px)));
+}
+/* Las dos acciones, mitad y mitad, al alcance del pulgar. */
+.renewSheet [role='dialog'][data-sheet='true'] > [data-sheet='true']:last-child > * { flex: 1 1 0; min-width: 0; }
+
+/* Cuánto lleva vencida: el aviso que encabeza el paso, en el tono de advertencia. */
+.renewElapsed {
+  margin: 0;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--color-warning-100);
+  border-radius: var(--radius-lg);
+  background: var(--badge-warning-bg);
+  color: var(--badge-warning-fg);
+  font-size: var(--text-sm);
+  line-height: 1.45;
+}
+/* La renovación elegida, a la vista sobre el formulario de pago. */
+.renewSummary {
+  margin: 0;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--color-primary-100);
+  border-radius: var(--radius-lg);
+  background: var(--color-primary-050);
+  color: var(--text-heading);
+  font-size: var(--text-sm);
+  line-height: 1.45;
+}
+
+/* Las tres opciones: tarjetas con su radio; la marcada lleva el color de acción. */
+.renewOptions { display: flex; flex-direction: column; gap: 10px; }
+.renewOption {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 0.85rem 0.95rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  background: var(--surface-card);
+  cursor: pointer;
+}
+.renewOption[data-selected='true'] {
+  border-color: var(--color-primary);
+  background: var(--color-primary-050);
+}
+/* "Otra fecha" no es un label entero (lleva el selector dentro): el label es su primera fila. */
+.renewOptionLabel { display: flex; align-items: center; gap: 12px; flex: 1 1 100%; min-width: 0; cursor: pointer; }
+.renewRadio { flex: 0 0 auto; width: 18px; height: 18px; margin: 0; accent-color: var(--color-primary); }
+.renewOptionText { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.renewOptionTitle { font-weight: var(--fw-bold); color: var(--text-heading); }
+.renewOptionDates { font-size: var(--text-sm); color: var(--text-muted); }
+.renewOptionPrice { flex: 0 0 auto; font-weight: var(--fw-bold); color: var(--text-heading); }
+.renewOptionField { flex: 1 1 100%; display: flex; flex-direction: column; gap: 6px; padding-left: 30px; cursor: default; }
