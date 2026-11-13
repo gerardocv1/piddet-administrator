@@ -109,6 +109,21 @@ export const reservationsService = {
   reservationsCalendar: ({ from, to }) =>
     list(http.get(`${base()}/reservations/calendar${qs({ from, to })}`)),
 
+  // ── Días bloqueados del calendario ──────────────────────────────────────
+  // Noches que la compañía no ofrece (31 de diciembre, mantenimiento…), de `start_date` a
+  // `end_date` AMBAS incluidas, para una unidad o para todas (`rentable_unit_id` null). Quien
+  // consulta disponibilidad ve el día ocupado sin saber si es reserva o bloqueo; `reason` es una
+  // nota interna. Cada fila: { id, rentable_unit_id, rentable_unit_name, applies_to_all,
+  // start_date, end_date, reason, created_by, created_at, updated_at }. Con `from`/`to` solo los
+  // que tocan algún día del rango.
+  reservationDateBlocks: ({ from = '', to = '' } = {}) =>
+    list(http.get(`${base()}/reservation-date-blocks${qs({ from, to })}`)),
+  // { start_date, end_date, rentable_unit_id (null = todas), reason? }.
+  createReservationDateBlock: (data) => http.post(`${base()}/reservation-date-blocks`, data),
+  // Cambio parcial: solo los campos que viajan; `rentable_unit_id: null` lo vuelve de todas.
+  updateReservationDateBlock: (blockId, data) => http.patch(`${base()}/reservation-date-blocks/${blockId}`, data),
+  deleteReservationDateBlock: (blockId) => http.del(`${base()}/reservation-date-blocks/${blockId}`),
+
   // Reservas pendientes de recibir (vivas y sin check-in) con entrada hoy o mañana, para el
   // widget del dashboard. Lista plana ordenada por fecha de entrada; cada fila trae los campos
   // del listado más `expected_arrival_time`, `precheckin_completed` y `has_decoration`.

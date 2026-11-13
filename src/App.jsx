@@ -32,6 +32,7 @@ import { RentableUnits } from './screens/RentableUnits.jsx';
 import { RentableUnitDetail } from './screens/RentableUnitDetail.jsx';
 import { Reservations } from './screens/Reservations.jsx';
 import { ReservationsCalendar } from './screens/ReservationsCalendar.jsx';
+import { ReservationDateBlocks } from './screens/ReservationDateBlocks.jsx';
 import { ReservationDetail } from './screens/ReservationDetail.jsx';
 import { ReservationWizard } from './screens/ReservationWizard/ReservationWizard.jsx';
 import { ReservationManagers } from './screens/ReservationManagers.jsx';
@@ -310,6 +311,7 @@ function AdminApp() {
             <Route path="rentable-units/:unitId" element={<RequirePermission path="/rentable-units"><RentableUnitDetail /></RequirePermission>} />
             <Route path="reservations" element={<RequirePermission path="/reservations"><Reservations /></RequirePermission>} />
             <Route path="reservations/calendar" element={<RequirePermission path="/reservations"><ReservationsCalendar /></RequirePermission>} />
+            <Route path="reservations/date-blocks" element={<RequirePermission path="/reservations"><ReservationDateBlocks /></RequirePermission>} />
             <Route path="reservations/new" element={<RequirePermission path="/reservations"><ReservationWizard /></RequirePermission>} />
             <Route path="reservations/managers" element={<RequirePermission path="/reservations/managers"><ReservationManagers /></RequirePermission>} />
             <Route path="reservations/:reservationId" element={<RequirePermission path="/reservations"><ReservationDetail /></RequirePermission>} />

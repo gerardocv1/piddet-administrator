@@ -4,6 +4,7 @@ import { Card, Button, IconButton, Badge, Modal, Alert, Spinner, PageHeader } fr
 import { api } from '../lib/api.js';
 import { useResource } from '../lib/useResource.js';
 import { formatStayRange } from '../lib/dates.js';
+import { formatBlockRange } from './ReservationDateBlocks.jsx';
 import { reservationMoney, reservationStatusMeta, RESERVATION_STATUS, DECORATION_EMOJI, DECORATION_LABEL } from '../lib/reservationLabels.js';
 import { useSetPageTitle } from '../lib/pageTitle.jsx';
 import s from './screens.module.css';
@@ -37,6 +38,7 @@ export function ReservationsCalendar() {
   const today = React.useMemo(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }, []);
   const [cursor, setCursor] = React.useState(() => new Date(today.getFullYear(), today.getMonth(), 1));
   const [selected, setSelected] = React.useState(null);
+  const [selectedBlock, setSelectedBlock] = React.useState(null);
 
   // Rejilla de 6 semanas que arranca el lunes de la semana del día 1 del mes.
   const grid = React.useMemo(() => {
@@ -59,6 +61,15 @@ export function ReservationsCalendar() {
   );
   const { data: reservations, loading, error, reload } = useResource(fetcher, [], [gridFrom, gridTo]);
 
+  // Días bloqueados que tocan la rejilla. Van aparte de las reservas: el calendario del panel sí
+  // distingue un bloqueo de una reserva (quien consulta disponibilidad no).
+  const blocksFetcher = React.useCallback(
+    () => api.reservationDateBlocks({ from: gridFrom, to: gridTo }),
+    [gridFrom, gridTo],
+  );
+  const { data: blocks, loading: blocksLoading, reload: reloadBlocks } = useResource(blocksFetcher, [], [gridFrom, gridTo]);
+  const reloadAll = () => { reload(); reloadBlocks(); };
+
   // Reservas que ocupan cada día (check_in <= día < check_out), indexadas por fecha ISO.
   const byDay = React.useMemo(() => {
     const map = {};
@@ -73,6 +84,20 @@ export function ReservationsCalendar() {
     return map;
   }, [reservations, grid]);
 
+  // Bloqueos de cada día (start_date <= día <= end_date: ambas fechas incluidas).
+  const blocksByDay = React.useMemo(() => {
+    const map = {};
+    (blocks || []).forEach((b) => {
+      grid.forEach((d) => {
+        const key = iso(d);
+        if (b.start_date <= key && key <= b.end_date) {
+          (map[key] ||= []).push(b);
+        }
+      });
+    });
+    return map;
+  }, [blocks, grid]);
+
   const monthName = MONTHS[cursor.getMonth()];
   const monthLabel = `${monthName[0].toUpperCase()}${monthName.slice(1)} ${cursor.getFullYear()}`;
   const shift = (delta) => setCursor((c) => new Date(c.getFullYear(), c.getMonth() + delta, 1));
@@ -83,9 +108,14 @@ export function ReservationsCalendar() {
       <PageHeader
         onBack={() => navigate(`/reservations${params.toString() ? `?${params.toString()}` : ''}`)}
         title="Calendario de reservas"
-        action={<Button variant="primary" size="sm" icon="fas fa-plus" onClick={() => navigate('/reservations/new')}>Nueva reserva</Button>}
+        action={
+          <span className={t.headerActions}>
+            <Button variant="secondary" size="sm" icon="fas fa-lock" onClick={() => navigate('/reservations/date-blocks')}>Días bloqueados</Button>
+            <Button variant="primary" size="sm" icon="fas fa-plus" onClick={() => navigate('/reservations/new')}>Nueva reserva</Button>
+          </span>
+        }
         menu={[
-          { label: 'Actualizar', icon: 'fas fa-rotate-right', disabled: loading, onClick: reload },
+          { label: 'Actualizar', icon: 'fas fa-rotate-right', disabled: loading || blocksLoading, onClick: reloadAll },
         ]}
       />
 
@@ -114,10 +144,20 @@ export function ReservationsCalendar() {
                   const inMonth = d.getMonth() === cursor.getMonth();
                   const isToday = key === iso(today);
                   const events = byDay[key] || [];
+                  const dayBlocks = blocksByDay[key] || [];
                   return (
-                    <div key={key} className={[t.cell, inMonth ? '' : t.cellOut, isToday ? t.cellToday : ''].filter(Boolean).join(' ')}>
+                    <div key={key} className={[t.cell, inMonth ? '' : t.cellOut, dayBlocks.length ? t.cellBlocked : '', isToday ? t.cellToday : ''].filter(Boolean).join(' ')}>
                       <span className={t.dayNum}>{d.getDate()}</span>
                       <div className={t.events}>
+                        {/* Bloqueo: candado y motivo. El detalle (unidad y fechas) va en el title al
+                            pasar y en un modal al tocar, porque en el teléfono no hay hover. */}
+                        {dayBlocks.map((b) => (
+                          <button key={`block-${b.id}`} type="button" className={t.blockChip}
+                            title={blockTitle(b)} onClick={() => setSelectedBlock(b)}>
+                            <i className={`fas fa-lock ${t.blockIcon}`} aria-hidden="true" />
+                            <span className={t.blockText}>{b.reason || 'Bloqueado'}</span>
+                          </button>
+                        ))}
                         {events.slice(0, MAX_CHIPS).map((r) => (
                           <button key={r.id} type="button"
                             className={[t.event, STATUS_CLASS[r.status] || ''].filter(Boolean).join(' ')}
@@ -139,12 +179,41 @@ export function ReservationsCalendar() {
               </div>
             </div>
           )}
+          <div className={t.legend}>
+            <span className={t.legendItem}><span className={`${t.legendSwatch} ${t.legendBlocked}`} />Día bloqueado (el motivo se ve al pasar o tocar)</span>
+            <span className={t.legendItem}><span className={t.legendSwatch} />Reserva</span>
+          </div>
         </Card.Body>
       </Card>
 
       <EventModal reservation={selected} onClose={() => setSelected(null)}
         onOpen={(id) => navigate(`/reservations/${id}`)} />
+      <BlockModal block={selectedBlock} onClose={() => setSelectedBlock(null)}
+        onManage={() => navigate('/reservations/date-blocks')} />
     </div>
+  );
+}
+
+const blockUnitLabel = (b) => (b.rentable_unit_id == null ? 'Todas las unidades' : (b.rentable_unit_name || `Unidad ${b.rentable_unit_id}`));
+const blockTitle = (b) => ['Día bloqueado', blockUnitLabel(b), b.reason].filter(Boolean).join(' · ');
+
+// Resumen de un bloqueo al tocarlo en el calendario, con acceso a la pantalla que los administra.
+function BlockModal({ block, onClose, onManage }) {
+  if (!block) return null;
+  return (
+    <Modal open size="sm" title="Día bloqueado" subtitle={block.reason || 'Sin motivo'} onClose={onClose}
+      footer={<>
+        <Button variant="secondary" onClick={onClose}>Cerrar</Button>
+        <Button variant="primary" icon="fas fa-lock" onClick={onManage}>Administrar bloqueos</Button>
+      </>}>
+      <div className={t.modalBody}>
+        <div className={t.modalRow}><span className={s.muted}>Fechas</span><span>{formatBlockRange(block.start_date, block.end_date)}</span></div>
+        <div className={t.modalRow}><span className={s.muted}>Unidad</span>
+          {block.rentable_unit_id == null ? <Badge variant="danger">Todas las unidades</Badge> : <strong>{blockUnitLabel(block)}</strong>}
+        </div>
+        <div className={t.modalRow}><span className={s.muted}>Motivo</span><span>{block.reason || '—'}</span></div>
+      </div>
+    </Modal>
   );
 }
 
