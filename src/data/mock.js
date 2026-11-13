@@ -3907,6 +3907,10 @@ function resolveReservationsMock(path, query, { method = 'GET', body } = {}) {
   const managersResult = resolveReservationManagersMock(sub, query, { method, body });
   if (managersResult !== undefined) return managersResult;
 
+  // Días bloqueados del calendario: /reservation-date-blocks[/{id}].
+  const blocksResult = resolveReservationDateBlocksMock(sub, query, { method, body });
+  if (blocksResult !== undefined) return blocksResult;
+
   // Huéspedes: /guests[?q=] y /guests/{userId}
   if (sub === 'guests') {
     const q = (query.get('q') || '').toLowerCase();
@@ -4155,6 +4159,68 @@ function resolveReservationManagersMock(sub, query, { method, body }) {
     if (idx < 0) { const e = new Error('El usuario no es encargado de reservas'); e.status = 404; throw e; }
     mockReservationManagers.splice(idx, 1);
     return mockReservationManagers.map(managerRow);
+  }
+
+  return undefined;
+}
+
+// CONTRATO BACKEND: /companies/{company}/reservation-date-blocks (GET ?from&to, POST, PATCH {id},
+// DELETE {id}). Noches de `start_date` a `end_date` (ambas incluidas) que la compañía no ofrece,
+// para una unidad o para todas (`rentable_unit_id` null). `reason` es una nota interna.
+const mockDateBlocksYear = new Date().getFullYear();
+const mockReservationDateBlocks = [
+  { id: 1, rentable_unit_id: null, start_date: `${mockDateBlocksYear}-12-31`, end_date: `${mockDateBlocksYear + 1}-01-01`, reason: 'Cierre de fin de año' },
+  { id: 2, rentable_unit_id: mockRentableUnits[1]?.id ?? null, start_date: isoDay(-5), end_date: isoDay(-5), reason: 'Mantenimiento' },
+];
+
+function dateBlockRow(b) {
+  const unit = b.rentable_unit_id != null ? mockRentableUnits.find((u) => u.id === b.rentable_unit_id) : null;
+  return {
+    id: b.id, rentable_unit_id: b.rentable_unit_id, rentable_unit_name: unit?.name ?? null,
+    applies_to_all: b.rentable_unit_id == null, start_date: b.start_date, end_date: b.end_date,
+    reason: b.reason || null, created_by: mockUser.id, created_at: null, updated_at: null,
+  };
+}
+
+function resolveReservationDateBlocksMock(sub, query, { method, body }) {
+  const fail = (message, status = 422) => { const e = new Error(message); e.status = status; throw e; };
+  const normalize = (data, current = {}) => {
+    const next = { ...current };
+    if ('start_date' in data) next.start_date = data.start_date || null;
+    if ('end_date' in data) next.end_date = data.end_date || null;
+    if ('rentable_unit_id' in data) next.rentable_unit_id = data.rentable_unit_id == null || data.rentable_unit_id === '' ? null : Number(data.rentable_unit_id);
+    if ('reason' in data) next.reason = (data.reason || '').trim() || null;
+    if (!next.start_date || !next.end_date || next.end_date < next.start_date) fail('La fecha de fin no puede ser anterior a la de inicio.');
+    if (next.rentable_unit_id != null && !mockRentableUnits.some((u) => u.id === next.rentable_unit_id)) fail('La unidad no existe en esta compañía.');
+    return next;
+  };
+
+  if (sub === 'reservation-date-blocks') {
+    if (method === 'POST') {
+      const row = normalize(body || {}, { id: Math.max(0, ...mockReservationDateBlocks.map((b) => b.id)) + 1, rentable_unit_id: null, reason: null });
+      mockReservationDateBlocks.push(row);
+      return dateBlockRow(row);
+    }
+    const from = query.get('from');
+    const to = query.get('to');
+    return mockReservationDateBlocks
+      .filter((b) => (!from || b.end_date >= from) && (!to || b.start_date <= to))
+      .sort((a, b) => a.start_date.localeCompare(b.start_date))
+      .map(dateBlockRow);
+  }
+
+  const m = sub.match(/^reservation-date-blocks\/(\d+)$/);
+  if (m) {
+    const idx = mockReservationDateBlocks.findIndex((b) => b.id === Number(m[1]));
+    if (idx < 0) fail('El bloqueo no existe.', 404);
+    if (method === 'PATCH') {
+      mockReservationDateBlocks[idx] = normalize(body || {}, mockReservationDateBlocks[idx]);
+      return dateBlockRow(mockReservationDateBlocks[idx]);
+    }
+    if (method === 'DELETE') {
+      mockReservationDateBlocks.splice(idx, 1);
+      return { id: Number(m[1]) };
+    }
   }
 
   return undefined;

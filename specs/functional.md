@@ -338,6 +338,15 @@ contratada de la compañía. Catálogo completo: [`permissions-catalog.md`](perm
   siendo tabla, con los anchos en **porcentaje** para que la proporción aguante cualquier ancho
   (`table-layout: fixed` reparte lo que sobra, así que mezclar píxeles y columnas flexibles
   ahogaba a estas últimas).
+- **Días bloqueados** (`/reservations/date-blocks`, mismo permiso que Reservas; botón «Días
+  bloqueados» junto a «Calendario» en el listado y junto a «Nueva reserva» en el calendario):
+  noches que la compañía no ofrece (31 de diciembre, mantenimiento…), de fecha inicio a fecha fin
+  **ambas incluidas**, para una unidad o para «Todas las unidades». Lista con editar y eliminar
+  (con confirmación) y modal con inicio, fin, unidad y motivo opcional. El backend valida y
+  responde los errores tal cual; para quien consulta disponibilidad el día sale ocupado, sin
+  distinguir bloqueo de reserva (el motivo es interno). El calendario del panel sí los distingue:
+  celda con rayas rosadas, borde de peligro y candado con el motivo (title al pasar, modal al
+  tocar), cargados aparte con `GET /reservation-date-blocks?from&to`.
 - **Encargados de reservas** (`/reservations/managers`, permiso `reservation-managers-config`):
   la lista de empleados que reciben cada noche a las 20:00 el resumen por SMS de las reservas que
   llegan mañana, con la decoración y los servicios que hay que preparar. Se agregan eligiéndolos

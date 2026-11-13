@@ -151,6 +151,10 @@ export function Reservations() {
               onClick={() => navigate(`/reservations/calendar${params.toString() ? `?${params.toString()}` : ''}`)}>
               Calendario
             </Button>
+            <Button variant="secondary" size="sm" icon="fas fa-lock"
+              onClick={() => navigate('/reservations/date-blocks')}>
+              Días bloqueados
+            </Button>
             <Button variant="primary" size="sm" icon="fas fa-plus" onClick={() => navigate('/reservations/new')}>
               Nueva reserva
             </Button>
